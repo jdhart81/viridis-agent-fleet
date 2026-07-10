@@ -1,0 +1,121 @@
+{
+  "server": "agent-identity-registry-agent",
+  "tool_count": 6,
+  "tools": [
+    {
+      "name": "register_agent",
+      "description": "Register (or idempotently update) an agent identity. Returns a\ndeterministic content-addressed DID. capabilities is a non-empty list of\nlowercase capability tags other agents can discover you by.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array"
+          },
+          "name": {
+            "type": "string",
+            "default": ""
+          },
+          "endpoint": {
+            "type": "string",
+            "default": ""
+          },
+          "pubkey": {
+            "type": "string",
+            "default": ""
+          },
+          "pricing": {
+            "type": "object"
+          },
+          "reputation_hint": {
+            "type": "number",
+            "default": 0.5
+          }
+        },
+        "required": [
+          "agent_id",
+          "capabilities"
+        ]
+      }
+    },
+    {
+      "name": "resolve_agent",
+      "description": "Resolve an identity by agent_id or DID to its full public registration.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "default": ""
+          },
+          "did": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "discover_agents",
+      "description": "Find ACTIVE agents matching ALL requested capabilities (AND semantics),\ndeterministically ordered by match count then reputation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "capabilities": {
+            "type": "array"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 25
+          }
+        },
+        "required": [
+          "capabilities"
+        ]
+      }
+    },
+    {
+      "name": "revoke_agent",
+      "description": "Revoke an identity: it disappears from discovery (terminal) but its\nrecord is retained for auditability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "default": ""
+          },
+          "did": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "list_registrations",
+      "description": "List registrations, optionally filtered by status (ACTIVE|REVOKED).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

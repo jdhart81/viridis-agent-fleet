@@ -1,0 +1,135 @@
+{
+  "server": "agent-compute-ledger-agent",
+  "tool_count": 7,
+  "tools": [
+    {
+      "name": "record_work",
+      "description": "Record a unit of agent compute work. energy_j = power_w * duration_s;\ncarbon_g follows from grid intensity. If bit_ops is declared, the entry is\nvalidated against the Landauer floor (bit_ops * kB * T * ln2) \u2014 physically\nimpossible claims are rejected. Idempotent on entry_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "entry_id": {
+            "type": "string"
+          },
+          "power_w": {
+            "type": "number"
+          },
+          "duration_s": {
+            "type": "number"
+          },
+          "task": {
+            "type": "string",
+            "default": ""
+          },
+          "bit_ops": {
+            "type": "number"
+          },
+          "temperature_k": {
+            "type": "number",
+            "default": 300.0
+          },
+          "grid_intensity_g_per_kwh": {
+            "type": "number",
+            "default": 400.0
+          },
+          "price_minor_per_kwh": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "agent_id",
+          "entry_id",
+          "power_w",
+          "duration_s"
+        ]
+      }
+    },
+    {
+      "name": "footprint",
+      "description": "Aggregate footprint for an agent: total J, kWh, gCO2e, cost, and mean\nLandauer efficiency. Totals are exact sums of the ledger entries.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "attest",
+      "description": "Issue a content-addressed attestation for a ledger entry (verifiable\ngreen-compute / energy claim).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entry_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_attestation",
+      "description": "Verify an attestation by recomputing the entry hash.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "attestation": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "attestation"
+        ]
+      }
+    },
+    {
+      "name": "verify_chain",
+      "description": "Verify the tamper-evident hash chain of an agent's ledger.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "list_entries",
+      "description": "List all ledger entries for an agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

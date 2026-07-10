@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "earth.viridis/agent-escrow",
+  "description": "Trustless escrow & settlement for A2A transactions: exactly-once state machine, frozen fees, tamper-evident audit chain. Pay on delivery, no trusted middleman.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/jdhart81/viridis-agent-fleet",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.viridis.earth/escrow/mcp"
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "server": "agent-metering-agent",
+  "tool_count": 8,
+  "tools": [
+    {
+      "name": "create_meter",
+      "description": "Create a usage meter between a provider and a consumer agent.\n\nunit: what is being counted (call, token, kwh, ...). Price is in minor\ncurrency units (cents) per unit. Returns the meter_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "consumer": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "price_minor_per_unit": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "default": "USD"
+          },
+          "sla_target": {
+            "type": "number",
+            "default": 0.99
+          }
+        },
+        "required": [
+          "provider",
+          "consumer",
+          "unit",
+          "price_minor_per_unit"
+        ]
+      }
+    },
+    {
+      "name": "record_usage",
+      "description": "Record a usage event. Idempotent on event_id (safe to retry \u2014 never\ndouble-billed). outcome is 'ok' or 'error' and feeds the SLA report.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meter_id": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "outcome": {
+            "type": "string",
+            "default": "ok"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "meter_id",
+          "event_id",
+          "quantity"
+        ]
+      }
+    },
+    {
+      "name": "usage_summary",
+      "description": "Totals for a meter: event count, total quantity, accrued minor units.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meter_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meter_id"
+        ]
+      }
+    },
+    {
+      "name": "sla_report",
+      "description": "Pure SLA report: success_rate vs sla_target, breach flag. No mutation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meter_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meter_id"
+        ]
+      }
+    },
+    {
+      "name": "close_period",
+      "description": "Freeze all open events into an immutable invoice (exactly-once).\nThe invoice amount is what agent-escrow-agent should settle.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meter_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meter_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_chain",
+      "description": "Verify the tamper-evident event hash chain for a meter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meter_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meter_id"
+        ]
+      }
+    },
+    {
+      "name": "list_meters",
+      "description": "List all meters with event/invoice counts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

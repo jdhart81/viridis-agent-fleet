@@ -1,0 +1,138 @@
+{
+  "server": "agent-covenant-agent",
+  "tool_count": 7,
+  "tools": [
+    {
+      "name": "grant_covenant",
+      "description": "Grant an agent a covenant: an explicit lease of authority. scopes support\nwildcards ('payments.*', '*'); budget_minor is the total spend ceiling in\nminor units; expires_at is ISO-8601. Returns the covenant_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "principal": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array"
+          },
+          "budget_minor": {
+            "type": "integer"
+          },
+          "expires_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal",
+          "agent_id",
+          "scopes",
+          "budget_minor",
+          "expires_at"
+        ]
+      }
+    },
+    {
+      "name": "check_act",
+      "description": "Check (and if allowed, record) a proposed act against a covenant.\nDeny-by-default. Idempotent on act_id \u2014 retries never double-consume\nbudget. Every check lands on the audit chain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "covenant_id": {
+            "type": "string"
+          },
+          "act_id": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "amount_minor": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "required": [
+          "covenant_id",
+          "act_id",
+          "scope"
+        ]
+      }
+    },
+    {
+      "name": "revoke_covenant",
+      "description": "Revoke a covenant immediately and terminally. All subsequent checks deny.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "covenant_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "covenant_id"
+        ]
+      }
+    },
+    {
+      "name": "covenant_status",
+      "description": "Current state, consumed/remaining budget, and check count.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "covenant_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "covenant_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_audit",
+      "description": "Verify the tamper-evident audit chain of allowed/denied acts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "covenant_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "covenant_id"
+        ]
+      }
+    },
+    {
+      "name": "list_covenants",
+      "description": "List covenants, optionally filtered by state (ACTIVE|REVOKED|EXPIRED)\nand/or the bound agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

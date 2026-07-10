@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "earth.viridis/agent-covenant",
+  "description": "Machine-checkable authority leases for agents: scoped, budgeted, expiring, revocable, audited. Deny-by-default.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/jdhart81/viridis-agent-fleet",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.viridis.earth/covenant/mcp"
+    }
+  ]
+}

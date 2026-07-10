@@ -1,0 +1,121 @@
+{
+  "server": "protogen-agent",
+  "tool_count": 6,
+  "tools": [
+    {
+      "name": "create_cad_workspace",
+      "description": "Create a ProtoGen CAD workspace for another agent or workflow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_name": {
+            "type": "string"
+          },
+          "owner_agent": {
+            "type": "string"
+          },
+          "design_goal": {
+            "type": "string"
+          },
+          "constraints": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "project_name",
+          "owner_agent",
+          "design_goal"
+        ]
+      }
+    },
+    {
+      "name": "generate_cad_design",
+      "description": "Generate a parametric CAD design contract in a ProtoGen workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace_id": {
+            "type": "string"
+          },
+          "part_name": {
+            "type": "string"
+          },
+          "dimensions_mm": {
+            "type": "object"
+          },
+          "material": {
+            "type": "string",
+            "default": "aluminum"
+          },
+          "design_intent": {
+            "type": "string",
+            "default": ""
+          },
+          "features": {
+            "type": "array"
+          },
+          "output_formats": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "part_name",
+          "dimensions_mm"
+        ]
+      }
+    },
+    {
+      "name": "export_cad_design",
+      "description": "Export a CAD design as OpenSCAD, STEP contract metadata, or manufacturing brief.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "design_id": {
+            "type": "string"
+          },
+          "export_format": {
+            "type": "string",
+            "default": "openscad"
+          }
+        },
+        "required": [
+          "design_id"
+        ]
+      }
+    },
+    {
+      "name": "manufacturing_plan_from_spec",
+      "description": "Generate a manufacturing plan, BOM, DFM notes, and cost estimate from a product spec.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "product_spec": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "product_spec"
+        ]
+      }
+    },
+    {
+      "name": "describe",
+      "description": "Return ProtoGen capabilities and current CAD environment status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "health",
+      "description": "Return ProtoGen health and workspace counts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

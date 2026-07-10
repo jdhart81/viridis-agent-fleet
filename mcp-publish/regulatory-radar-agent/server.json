@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "earth.viridis/regulatory-radar",
+  "description": "Environmental regulation monitoring, compliance scoring, and CSRD/TNFD reporting for companies with disclosure deadlines.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/jdhart81/viridis-agent-fleet",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.viridis.earth/regulatory-radar/mcp"
+    }
+  ]
+}

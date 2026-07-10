@@ -1,0 +1,20 @@
+# Fly.io config example — `fly launch --copy-config` from the fleet root
+# (rename to fly.toml; set your app name)
+app = "viridis-agent-stable"
+primary_region = "sea"
+
+[build]
+  dockerfile = "deploy/gateway/Dockerfile"
+
+[http_service]
+  internal_port = 8402
+  force_https = true
+  auto_stop_machines = false   # in-memory state: keep the machine alive
+  min_machines_running = 1
+
+[checks.health]
+  port = 8402
+  type = "http"
+  path = "/healthz"
+  interval = "30s"
+  timeout = "5s"

@@ -1,0 +1,4 @@
+# Viridis Agent Stable gateway — deployment round 1
+mcp>=1.0
+uvicorn>=0.29
+starlette>=0.37

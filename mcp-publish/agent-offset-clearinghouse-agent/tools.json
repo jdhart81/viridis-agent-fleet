@@ -1,0 +1,127 @@
+{
+  "server": "agent-offset-clearinghouse-agent",
+  "tool_count": 7,
+  "tools": [
+    {
+      "name": "list_credit",
+      "description": "List a conservation credit on the book. verification_ref (a D-Score /\nland-verification attestation) is REQUIRED \u2014 unverified credits cannot\nenter the book.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issuer": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "mass_g": {
+            "type": "integer"
+          },
+          "price_minor_per_kg": {
+            "type": "integer"
+          },
+          "verification_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "issuer",
+          "project_id",
+          "mass_g",
+          "price_minor_per_kg",
+          "verification_ref"
+        ]
+      }
+    },
+    {
+      "name": "buy_offset",
+      "description": "Retire mass_g of verified credits for a buyer: cheapest-first matching,\nexactly-once (idempotent on purchase_id), returns a content-addressed\noffset certificate with per-fill costs. Payment settles via escrow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "buyer": {
+            "type": "string"
+          },
+          "purchase_id": {
+            "type": "string"
+          },
+          "mass_g": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "buyer",
+          "purchase_id",
+          "mass_g"
+        ]
+      }
+    },
+    {
+      "name": "net_position",
+      "description": "Buyer's carbon position: emitted (from agent-compute-ledger) minus\nretired. carbon_accountable == true when fully offset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "buyer": {
+            "type": "string"
+          },
+          "emitted_g": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "buyer",
+          "emitted_g"
+        ]
+      }
+    },
+    {
+      "name": "verify_certificate",
+      "description": "Verify an offset certificate: recompute its hash and check the ledger.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "certificate": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "certificate"
+        ]
+      }
+    },
+    {
+      "name": "book",
+      "description": "The full credit book with per-credit and book-wide mass conservation totals.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_purchase",
+      "description": "Fetch a past purchase / offset certificate by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "purchase_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "purchase_id"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

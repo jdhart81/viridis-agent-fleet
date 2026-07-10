@@ -1,0 +1,67 @@
+{
+  "server": "smartscale-agent",
+  "tool_count": 4,
+  "tools": [
+    {
+      "name": "credit_card_photo_instructions",
+      "description": "Return user-facing capture instructions for credit-card calibrated measurement.\n\nUse this before asking for a photo. The user should place a standard\ncredit/debit card flat in the same plane as the target objects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "measurement_goal": {
+            "type": "string",
+            "default": ""
+          },
+          "objects_to_measure": {
+            "type": "array"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "scale_objects_from_credit_card",
+      "description": "Scale object pixel dimensions using a standard CR80 credit card reference.\n\nArgs:\n    image_id: Unique photo identifier.\n    credit_card_pixel_width: Pixel width of the visible credit/debit card.\n    objects: Objects to scale. Each object needs pixel_width and pixel_height;\n        label, pixel_area, pixel_perimeter, and confidence are optional.\n    credit_card_pixel_height: Optional card pixel height for distortion check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "image_id": {
+            "type": "string"
+          },
+          "credit_card_pixel_width": {
+            "type": "number"
+          },
+          "objects": {
+            "type": "array"
+          },
+          "credit_card_pixel_height": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "image_id",
+          "credit_card_pixel_width",
+          "objects"
+        ]
+      }
+    },
+    {
+      "name": "describe",
+      "description": "Return SmartScale capabilities and input contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "health",
+      "description": "Return SmartScale health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}
