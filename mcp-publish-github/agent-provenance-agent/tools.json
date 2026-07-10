@@ -1,0 +1,114 @@
+{
+  "server": "agent-provenance-agent",
+  "tool_count": 7,
+  "tools": [
+    {
+      "name": "register_genesis",
+      "description": "Register an agent's birth. Issues a content-addressed genesis\ncertificate with a strictly monotone index (epoch 0 = the founding\ncohort). parent_id records lineage; children of recalled/quarantined\nparents are quarantined at birth. Idempotent \u2014 an agent is born once.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "string"
+          },
+          "artifact_hash": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "get_certificate",
+      "description": "Fetch an agent's genesis certificate + recall/quarantine status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_certificate",
+      "description": "Verify a certificate: recompute its content hash and check the ledger.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "certificate": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "certificate"
+        ]
+      }
+    },
+    {
+      "name": "lineage",
+      "description": "Full ancestry and descendants of an agent, plus its generation number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "recall",
+      "description": "Recall an agent: flags it and quarantines every transitive descendant.\nReports exactly which agents were quarantined.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "list_records",
+      "description": "List genesis records, optionally by epoch (0 = founding cohort).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "epoch": {
+            "type": "integer"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

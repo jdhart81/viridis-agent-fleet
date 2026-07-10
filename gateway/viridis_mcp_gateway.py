@@ -91,8 +91,25 @@ def build_app():
 
     # stateless_http: no session persistence needed for these tools; makes the
     # endpoints trivially load-balancer-friendly.
+    # Round-1 posture: endpoints are open. The MCP streamable-http default
+    # DNS-rebinding guard only trusts localhost and 421s real callers, so we
+    # accept any Host — the gateway must work behind fly.dev and
+    # mcp.viridis.earth. (Auth/allowlist attaches before money moves.)
+    _sec = None
+    try:
+        from mcp.server.transport_security import TransportSecuritySettings
+        _sec = TransportSecuritySettings(
+            enable_dns_rebinding_protection=False,
+            allowed_hosts=["*"], allowed_origins=["*"])
+    except Exception:
+        _sec = None
     for s in servers.values():
         s.settings.stateless_http = True
+        if _sec is not None:
+            try:
+                s.settings.transport_security = _sec
+            except Exception:
+                pass
 
     routes = [Mount(f"/{path}", app=s.streamable_http_app())
               for path, s in servers.items()]

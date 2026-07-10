@@ -1,0 +1,172 @@
+{
+  "server": "agent-escrow-agent",
+  "tool_count": 9,
+  "tools": [
+    {
+      "name": "open_escrow",
+      "description": "Open an escrow between payer and payee. amount_minor is a positive\ninteger in minor units (cents). The platform fee is computed and FROZEN at\nopen (ceil bps). Returns the escrow_id (state OPEN).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "payer": {
+            "type": "string"
+          },
+          "payee": {
+            "type": "string"
+          },
+          "amount_minor": {
+            "type": "integer"
+          },
+          "currency": {
+            "type": "string",
+            "default": "USD"
+          },
+          "terms": {
+            "type": "string",
+            "default": ""
+          },
+          "deadline": {
+            "type": "string",
+            "default": ""
+          },
+          "fee_bps": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "payer",
+          "payee",
+          "amount_minor"
+        ]
+      }
+    },
+    {
+      "name": "fund_escrow",
+      "description": "Mark an OPEN escrow as FUNDED (idempotent). payment_ref links the\npayment-rail transaction.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "escrow_id": {
+            "type": "string"
+          },
+          "payment_ref": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "escrow_id"
+        ]
+      }
+    },
+    {
+      "name": "release_escrow",
+      "description": "Release a FUNDED/DISPUTED escrow to the payee (exactly-once \u2014 a repeat\nrelease returns the existing terminal record, never a double payout).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "escrow_id": {
+            "type": "string"
+          },
+          "delivery_proof": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "escrow_id"
+        ]
+      }
+    },
+    {
+      "name": "refund_escrow",
+      "description": "Refund an OPEN/FUNDED/DISPUTED escrow to the payer (exactly-once).\nRefunding an OPEN escrow is a cancel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "escrow_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "escrow_id"
+        ]
+      }
+    },
+    {
+      "name": "dispute_escrow",
+      "description": "Move a FUNDED escrow to DISPUTED. An arbiter (agent-arbitration-agent)\nthen resolves it to release or refund.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "escrow_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "escrow_id"
+        ]
+      }
+    },
+    {
+      "name": "escrow_status",
+      "description": "Current record for an escrow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "escrow_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "escrow_id"
+        ]
+      }
+    },
+    {
+      "name": "list_escrows",
+      "description": "List escrows, optionally filtered by state\n(OPEN|FUNDED|RELEASED|REFUNDED|DISPUTED).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "verify_audit",
+      "description": "Validate the tamper-evident audit hash chain for an escrow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "escrow_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "escrow_id"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

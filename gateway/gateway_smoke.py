@@ -2,11 +2,11 @@
 """Live-gateway smoke: real MCP client over streamable-http against a running
 gateway (default http://127.0.0.1:8402). Run the gateway first, then this.
 Exits non-zero on any failure. 7 protocol checks across 5 agents."""
-import asyncio, json
+import asyncio, json, os
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
-BASE = "http://127.0.0.1:8402"
+BASE = os.environ.get("BASE", "http://127.0.0.1:8402").rstrip("/")
 
 async def call(path, tool, args):
     async with streamablehttp_client(f"{BASE}/{path}/mcp") as (r, w, _):

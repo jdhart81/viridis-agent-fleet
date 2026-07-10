@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.jdhart81/narrative-engine",
+  "description": "Grant, investor & policy narrative generation for conservation work.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/jdhart81/viridis-agent-fleet",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://viridis-agent-stable.fly.dev/narrative-engine/mcp"
+    }
+  ]
+}

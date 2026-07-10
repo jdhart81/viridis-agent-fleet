@@ -52,7 +52,13 @@ agent action, with typed input/output schemas.
 
 ## Status
 
-Round-1 launch. Endpoints are open (read-tool posture); no funds move — escrow,
+**LIVE (2026-07-09).** All 13 published on the MCP registry under
+`io.github.jdhart81/*` and hosted at `https://viridis-agent-stable.fly.dev`
+(`/healthz` = 13 ok). The as-shipped manifests are in `mcp-publish-github/`
+(the `mcp-publish/` set holds the branded `earth.viridis` variants for the
+round-1b rebrand + custom domain `mcp.viridis.earth`).
+
+Round-1 posture: endpoints are open (read-tool posture); no funds move — escrow,
 offsets, and metering are state machines, with payment rails (x402 for A2A,
 Stripe for human-facing services) attaching in a later round. See
 `docs/A2A_ECONOMY.md`.

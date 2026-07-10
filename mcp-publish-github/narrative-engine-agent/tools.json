@@ -1,0 +1,41 @@
+{
+  "server": "narrative-engine-agent",
+  "tool_count": 2,
+  "tools": [
+    {
+      "name": "translate_narrative",
+      "description": "Translate raw ecological/agent data into a decision-maker-ready narrative.\n\naudience_type: board_member | general_public | grant_funder |\n    institutional_investor | journalist | policymaker | regulator |\n    retail_investor | scientist\nformat_type: academic_paper | executive_summary | grant_proposal |\n    investor_deck | newsletter | policy_brief | press_release",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_output": {
+            "type": "object"
+          },
+          "audience_type": {
+            "type": "string"
+          },
+          "format_type": {
+            "type": "string"
+          },
+          "key_message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_output",
+          "audience_type",
+          "format_type"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description: capabilities, inputs, outputs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

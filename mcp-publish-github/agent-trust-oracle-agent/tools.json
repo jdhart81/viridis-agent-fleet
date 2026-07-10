@@ -1,0 +1,114 @@
+{
+  "server": "agent-trust-oracle-agent",
+  "tool_count": 6,
+  "tools": [
+    {
+      "name": "record_outcome",
+      "description": "Record an interaction outcome for an agent. kind: success | delivered |\ndispute_won | failure | undelivered | dispute_lost | timeout |\nsecurity_incident (security incidents carry a 3x penalty).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number",
+            "default": 1.0
+          },
+          "counterparty": {
+            "type": "string",
+            "default": ""
+          },
+          "note": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "agent_id",
+          "kind"
+        ]
+      }
+    },
+    {
+      "name": "score_agent",
+      "description": "Get an agent's decay-weighted trust score in [0,1] and tier. Unknown\nagents get a neutral 0.5 prior \u2014 no blind trust, no unfair zero.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "attest",
+      "description": "Issue a tamper-evident (hash-chained) trust attestation for an agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "claim": {
+            "type": "string",
+            "default": "reputation-snapshot"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_attestation",
+      "description": "Verify a previously issued attestation by recomputing its hash.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "attestation_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "attestation_id"
+        ]
+      }
+    },
+    {
+      "name": "history",
+      "description": "Full outcome history + attestation count + current score for an agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

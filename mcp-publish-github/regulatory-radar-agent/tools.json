@@ -1,0 +1,78 @@
+{
+  "server": "regulatory-radar-agent",
+  "tool_count": 4,
+  "tools": [
+    {
+      "name": "scan_regulations",
+      "description": "Scan the regulatory landscape for a jurisdiction (e.g. EU, US), optionally filtered by sector.\n\nReturns regulations with urgency flags and effective dates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jurisdiction": {
+            "type": "string"
+          },
+          "sector": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "jurisdiction"
+        ]
+      }
+    },
+    {
+      "name": "assess_compliance",
+      "description": "Assess a company's compliance posture against applicable regulations.\n\nReturns compliance level, percentage, gaps, and remediation priorities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "company_name": {
+            "type": "string"
+          },
+          "sector": {
+            "type": "string"
+          },
+          "jurisdiction": {
+            "type": "string"
+          },
+          "disclosures": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "company_name",
+          "sector",
+          "jurisdiction"
+        ]
+      }
+    },
+    {
+      "name": "monitor_changes",
+      "description": "Monitor recent regulatory changes in a jurisdiction over a trailing window.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jurisdiction": {
+            "type": "string"
+          },
+          "since_days": {
+            "type": "integer",
+            "default": 90
+          }
+        },
+        "required": [
+          "jurisdiction"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description: capabilities, inputs, outputs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}
