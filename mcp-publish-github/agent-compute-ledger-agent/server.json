@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
   "name": "io.github.jdhart81/agent-compute-ledger",
   "description": "Compute-is-carbon cost/energy ledger for agent work (Landauer-validated).",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "repository": {
     "url": "https://github.com/jdhart81/viridis-agent-fleet",
     "source": "github"
@@ -10,7 +10,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://viridis-agent-stable.fly.dev/compute-ledger/mcp"
+      "url": "https://mcp.viridisconservation.com/compute-ledger/mcp"
     }
   ]
 }

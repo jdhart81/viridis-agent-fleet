@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
   "name": "io.github.jdhart81/protogen",
   "description": "MCP CAD services; bundles with SmartScale (measure to CAD).",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "repository": {
     "url": "https://github.com/jdhart81/viridis-agent-fleet",
     "source": "github"
@@ -10,7 +10,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://viridis-agent-stable.fly.dev/protogen/mcp"
+      "url": "https://mcp.viridisconservation.com/protogen/mcp"
     }
   ]
 }
