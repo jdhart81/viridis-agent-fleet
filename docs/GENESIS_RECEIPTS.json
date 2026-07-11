@@ -1,0 +1,155 @@
+{
+  "genesis_certificates": {
+    "viridis:smartscale": {
+      "agent_id": "viridis:smartscale",
+      "genesis_index": 0,
+      "epoch": 0,
+      "founding_cohort": true,
+      "parent_id": null,
+      "artifact_hash": "sha256:viridis:smartscale",
+      "born_at": "2026-07-11T14:54:27.398989+00:00",
+      "cert_hash": "a1e73f77f20a647f3e780e9c41bf93c7d1a7f836b99e76801f7df1547661c3af",
+      "quarantined": false,
+      "recalled": false,
+      "recall_reason": "",
+      "children": [],
+      "created": true
+    },
+    "viridis:protogen": {
+      "agent_id": "viridis:protogen",
+      "genesis_index": 1,
+      "epoch": 0,
+      "founding_cohort": true,
+      "parent_id": null,
+      "artifact_hash": "sha256:viridis:protogen",
+      "born_at": "2026-07-11T14:54:27.544141+00:00",
+      "cert_hash": "ab373575edc952e03ddd4c5ce14380c4065cae760e183e5481ba9da633b7f7ce",
+      "quarantined": false,
+      "recalled": false,
+      "recall_reason": "",
+      "children": [],
+      "created": true
+    }
+  },
+  "identities": {
+    "viridis:smartscale": "did:viridis:51b4eb8815b9c385",
+    "viridis:protogen": "did:viridis:60fcb56fa3c21546"
+  },
+  "covenant": {
+    "covenant_id": "cov-000001",
+    "granted": {
+      "covenant_id": "cov-000001",
+      "principal": "justin@viridis",
+      "agent_id": "viridis:protogen",
+      "scopes": [
+        "measure.buy",
+        "offsets.buy"
+      ],
+      "budget_minor": 2000,
+      "consumed_minor": 0,
+      "remaining_minor": 2000,
+      "expires_at": "2027-01-01T00:00:00+00:00",
+      "state": "ACTIVE",
+      "granted_at": "2026-07-11T14:54:27.850289+00:00",
+      "checks": 0
+    }
+  },
+  "invoice": {
+    "invoice_id": "inv-e1df75a532f85acd",
+    "meter_id": "mtr-000001",
+    "period_index": 0,
+    "event_count": 1,
+    "first_event": "job-20260711T145426Z",
+    "last_event": "job-20260711T145426Z",
+    "total_quantity": 1.0,
+    "unit": "measurement",
+    "price_minor_per_unit": 500.0,
+    "amount_minor": 500,
+    "currency": "USD",
+    "closed_at": "2026-07-11T14:54:28.250080+00:00",
+    "duplicate": false
+  },
+  "settlement": {
+    "escrow_id": "esc_000002",
+    "released": {
+      "escrow_id": "esc_000002",
+      "payer": "viridis:protogen",
+      "payee": "viridis:smartscale",
+      "amount_minor": 500,
+      "currency": "USD",
+      "fee_minor": 5,
+      "net_to_payee_minor": 495,
+      "state": "RELEASED",
+      "terms": "1 measurement job, invoice mtr-000001 run 20260711T145426Z",
+      "deadline": "",
+      "created_at": "2026-07-11T14:54:28.320997+00:00",
+      "audit_head": "b7866b375bc71f2958047f94d2e0e9e73b01df4979ba18ac66dbc2f9df468767",
+      "audit_len": 3
+    },
+    "audit": {
+      "valid": true,
+      "entries": 3
+    },
+    "delivery_proof": "sha256:d8fa9300c892f7c2df81af870136b45e787b2a8f65fe3934725156ea2fba2b12"
+  },
+  "carbon": {
+    "work": {
+      "entry_id": "work-20260711T145426Z",
+      "agent_id": "viridis:smartscale",
+      "task": "credit-card-calibrated measurement",
+      "power_w": 30.0,
+      "duration_s": 60.0,
+      "energy_j": 1800.0,
+      "temperature_k": 300.0,
+      "grid_intensity_g_per_kwh": 400.0,
+      "carbon_g": 0.2,
+      "bit_ops": null,
+      "landauer_floor_j": null,
+      "landauer_efficiency": null,
+      "cost_minor": null,
+      "recorded_at": "2026-07-11T14:54:28.630387+00:00",
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "entry_hash": "a0b1f7fbe45f9b52041a391fb302e054c8e9f25334ade4a4a15d2c0c15fe45fd",
+      "duplicate": false
+    },
+    "offset_purchase": {
+      "purchase_id": "offset-20260711T145426Z",
+      "buyer": "viridis:smartscale",
+      "mass_g": 1,
+      "fills": [
+        {
+          "credit_id": "crd-000001",
+          "project_id": "hdfm-forest-7",
+          "mass_g": 1,
+          "cost_minor": 1,
+          "verification_ref": "dscore:zenodo.19317982/site7"
+        }
+      ],
+      "total_cost_minor": 1,
+      "retired_at": "2026-07-11T14:54:28.754565+00:00",
+      "certificate_hash": "cc125c15201407408588c1f8df9311119e772268997b21e8bb3974edd7c53ebe",
+      "duplicate": false
+    },
+    "net_position": {
+      "buyer": "viridis:smartscale",
+      "emitted_g": 0.2,
+      "retired_g": 1,
+      "net_g": -0.8,
+      "carbon_accountable": true
+    }
+  },
+  "trust": {
+    "agent_id": "viridis:smartscale",
+    "score": 0.6667,
+    "tier": "RELIABLE",
+    "outcomes": 1,
+    "prior": false
+  },
+  "meta": {
+    "endpoint": "http://127.0.0.1:8402",
+    "run_id": "20260711T145426Z",
+    "executed_at": "2026-07-11T14:54:28.985042+00:00",
+    "invariants_checked": 11,
+    "invariants_passed": 11
+  }
+}
