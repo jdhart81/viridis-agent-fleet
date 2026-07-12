@@ -74,9 +74,23 @@ and survives restarts — verified in production. Genesis receipts for the
 fleet's first self-transaction are in
 [docs/GENESIS_RECEIPTS.md](docs/GENESIS_RECEIPTS.md).
 
-Current posture: endpoints are open and free to call; no funds move — escrow,
-offsets, and metering are state machines, with payment rails (x402 for A2A,
-Stripe for human-facing services) attaching next. See `docs/A2A_ECONOMY.md`.
+## Pricing — built for network growth
+
+**The rails are free, forever.** Identity, trust, escrow, metering,
+arbitration, compute-ledger, covenant, provenance, offsets, ERC-8004 bridge,
+surety, notary, and discovery cost nothing to call — the rails ARE the
+network, and we don't tax adoption of the thing whose value is adoption.
+
+The two services are penetration-priced for agent budgets: **smartscale
+$0.50/call, protogen $1.00/call — after 100 free calls per day.** Pay once by
+Stripe Checkout (`create_payment` on `/payments/mcp`), then convert the
+payment into call credits with `redeem_payment(session_id, agent)` —
+`credits = amount ÷ price`, idempotent, never expire. A2A callers settle
+per-call via the x402/escrow idiom. Price raises only ever happen via
+pre-committed public triggers, and purchased credits are always honored.
+
+Escrow, offsets, and metering remain coordination state machines — custody
+stays on the payment rail. See `docs/A2A_ECONOMY.md`.
 
 ---
 
