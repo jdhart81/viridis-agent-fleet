@@ -6,7 +6,7 @@
 > live gateway over MCP streamable-http; 12/12 cross-agent invariants passed.
 > The rails it ran on are live at the same endpoint, free to call.
 
-The public MCP-facing surface of the **Viridis agent stable**: an 18-agent
+The public MCP-facing surface of the **Viridis agent stable**: a 19-agent
 agent-to-agent (A2A) economy published on the [Model Context Protocol
 registry](https://registry.modelcontextprotocol.io) under the
 `io.github.jdhart81` namespace. This repository is the **callable spec +
@@ -28,9 +28,9 @@ as composable MCP services:
 | **Settlement** | `agent-escrow` | [`/escrow/mcp`](https://mcp.viridisconservation.com/escrow/mcp) | Trustless escrow with an exactly-once state machine + audit hash chain |
 | **Metering** | `agent-metering` | [`/metering/mcp`](https://mcp.viridisconservation.com/metering/mcp) | Usage metering + SLA accounting — the meter behind x402 |
 | **Arbitration** | `agent-arbitration` | [`/arbitration/mcp`](https://mcp.viridisconservation.com/arbitration/mcp) | Dispute-resolution oracle consuming trust signals |
-| **Compute ledger** | `agent-compute-ledger` | [`/compute-ledger/mcp`](https://mcp.viridisconservation.com/compute-ledger/mcp) | "Compute is carbon" cost/energy accounting for agent work |
+| **Compute ledger** | `agent-compute-ledger` | [`/compute-ledger/mcp`](https://mcp.viridisconservation.com/compute-ledger/mcp) | "Compute is carbon" accounting plus an immutable GHG-inventory chain |
 | **Covenant** | `agent-covenant` | [`/covenant/mcp`](https://mcp.viridisconservation.com/covenant/mcp) | Deny-by-default authority leases for agents wielding real power |
-| **Provenance** | `agent-provenance` | [`/provenance/mcp`](https://mcp.viridisconservation.com/provenance/mcp) | Genesis certificates, lineage, cascading recalls |
+| **Provenance** | `agent-provenance` | [`/provenance/mcp`](https://mcp.viridisconservation.com/provenance/mcp) | Genesis lineage plus a content-addressed artifact DAG |
 | **Offsets** | `agent-offset-clearinghouse` | [`/offsets/mcp`](https://mcp.viridisconservation.com/offsets/mcp) | Verified-credit carbon accountability — the conservation flywheel |
 | **Interop** | `agent-erc8004-bridge` | [`/erc8004/mcp`](https://mcp.viridisconservation.com/erc8004/mcp) | MCP-native bridge to ERC-8004 identity and reputation |
 | **Surety** | `agent-surety` | [`/surety/mcp`](https://mcp.viridisconservation.com/surety/mcp) | Deterministic bonding and ruling-gated slashing |
@@ -40,6 +40,7 @@ as composable MCP services:
 | **Revenue** | `protogen` | [`/protogen/mcp`](https://mcp.viridisconservation.com/protogen/mcp) | MCP CAD services; bundles with SmartScale (measure → CAD) |
 | **Revenue** | `regulatory-radar` | [`/regulatory-radar/mcp`](https://mcp.viridisconservation.com/regulatory-radar/mcp) | CSRD/TNFD compliance-as-a-service |
 | **Revenue** | `taxcredit-engine` | [`/taxcredit-engine/mcp`](https://mcp.viridisconservation.com/taxcredit-engine/mcp) | Auditable 45Q/45V/45Y/48E/45X scenarios |
+| **Revenue · climate** | `ghg-ledger` | [`/ghg-ledger/mcp`](https://mcp.viridisconservation.com/ghg-ledger/mcp) | Deterministic Scope 1/2/3 inventories with dual Scope 2 and audit hashes |
 | **Enabler** | `narrative-engine` | [`/narrative-engine/mcp`](https://mcp.viridisconservation.com/narrative-engine/mcp) | Grant / investor / policy narrative generation |
 
 **Federated member:** [EnergyAI](https://api.energyaisolution.com/mcp) — energy
@@ -59,7 +60,7 @@ agent action, with typed input/output schemas.
 
 ## Tools
 
-The aggregate bridge exposes 117 namespaced tools. Tool names use `<agent>__<tool>` so every call routes unambiguously to its live fleet member.
+The aggregate bridge exposes 131 namespaced tools. Tool names use `<agent>__<tool>` so every call routes unambiguously to its live fleet member.
 
 | Tool | Description |
 |---|---|
@@ -106,6 +107,10 @@ The aggregate bridge exposes 117 namespaced tools. Tool names use `<agent>__<too
 | `compute-ledger__verify_attestation` | Verify an attestation by recomputing the entry hash. |
 | `compute-ledger__verify_chain` | Verify the tamper-evident hash chain of an agent's ledger. |
 | `compute-ledger__list_entries` | List all ledger entries for an agent. |
+| `compute-ledger__record_inventory` | Record an audited GHG inventory in a separate append-only chain. mass_g is exact integer grams; content and factor-pack digests are bare lowercase SHA-256 hex. Idempotent on inventory_id. |
+| `compute-ledger__get_inventory` | Fetch one immutable inventory record by inventory_id. |
+| `compute-ledger__list_inventories` | List the separate GHG inventory chain for an agent. |
+| `compute-ledger__verify_inventory_chain` | Verify an agent's inventory hash chain independently of compute work. |
 | `compute-ledger__describe_agent` | Fleet-standard self-description. |
 | `smartscale__credit_card_photo_instructions` | Return user-facing capture instructions for credit-card calibrated measurement. Use this before asking for a photo. The user should place a standard credit/debit card flat in the same plane as the target objects. |
 | `smartscale__scale_objects_from_credit_card` | Scale object pixel dimensions using a standard CR80 credit card reference. Args: image_id: Unique photo identifier. credit_card_pixel_width: Pixel width of the visible credit/debit card. objects: Objects to scale. Each object needs pixel_width and pixel_height; label, pixel_area, pixel_perimeter, and confidence are optional. credit_card_pixel_height: Optional card pixel height for distortion check. |
@@ -136,6 +141,10 @@ The aggregate bridge exposes 117 namespaced tools. Tool names use `<agent>__<too
 | `provenance__lineage` | Full ancestry and descendants of an agent, plus its generation number. |
 | `provenance__recall` | Recall an agent: flags it and quarantines every transitive descendant. Reports exactly which agents were quarantined. |
 | `provenance__list_records` | List genesis records, optionally by epoch (0 = founding cohort). |
+| `provenance__register_artifact` | Register a content-addressed artifact in a separate provenance DAG. Parent hashes may be registered artifacts or external content roots. Idempotent on artifact_id; does not consume a genesis index. |
+| `provenance__get_artifact` | Fetch one registered artifact by artifact_id. |
+| `provenance__verify_artifact` | Recompute an artifact record hash and verify it against the DAG ledger. |
+| `provenance__list_artifacts` | List artifacts, optionally filtered by producer agent. |
 | `provenance__describe_agent` | Fleet-standard self-description. |
 | `offsets__list_credit` | List a conservation credit on the book. verification_ref (a D-Score / land-verification attestation) is REQUIRED — unverified credits cannot enter the book. |
 | `offsets__buy_offset` | Retire mass_g of verified credits for a buyer: cheapest-first matching, exactly-once (idempotent on purchase_id), returns a content-addressed offset certificate with per-fill costs. Payment settles via escrow. dry_run=true previews the exact fills/cost without mutating the book. |
@@ -180,6 +189,12 @@ The aggregate bridge exposes 117 namespaced tools. Tool names use `<agent>__<too
 | `taxcredit-engine__get_rule_pack` | Return the bundled rules and official source metadata for one credit. |
 | `taxcredit-engine__verify_tax_credit_result` | Verify an engine result's audit_sha256. Pass the prior result object as JSON; any changed amount, fact, rule step, or source digest fails. |
 | `taxcredit-engine__describe_agent` | Return fleet-standard capabilities, version, and pricing. |
+| `ghg-ledger__calculate_inventory` | Calculate an auditable GHG inventory from explicit activity records. Returns per-line gas/CO2e results, Scope 1/2/3 and category rollups, dual Scope 2 reporting, indeterminate lines, factor lineage, notary payload, and an offset-clearinghouse dry-run weave. This is calculation, not advice. |
+| `ghg-ledger__classify_activity` | Suggest scope and Scope 3 category from the bundled deterministic map. No inference is used; unknown activity types return no suggestion. |
+| `ghg-ledger__list_factor_packs` | List the bundled pack version/digest, supported regions and years, activity types, GWP set, and explicit MVP coverage. |
+| `ghg-ledger__get_factor_pack` | Return factors, GWP values, conversions, sources, and pack SHA for one exact bundled region/year. No nearest-region or nearest-year substitution. |
+| `ghg-ledger__verify_result` | Recompute a prior inventory's audit hash and conservation checks. Pass the prior result object as JSON; tampering or stale factor lineage is flagged. |
+| `ghg-ledger__describe_agent` | Return fleet-standard capabilities, version, pack digest, and pricing. |
 
 ## Layout
 
@@ -188,16 +203,16 @@ mcp-publish/<agent>/server.json   # MCP registry manifest
 mcp-publish/<agent>/tools.json    # JSON-Schema tool definitions (one per action)
 mcp-publish/<agent>/DEPLOY.md     # env, endpoints, how a caller uses it
 contracts/<agent>.md              # public agent contract (capabilities, invariants)
-gateway/                          # reference gateway: one process hosts all 18 over streamable-http
-deploy/glama/                     # single-install 18-agent / 117-tool aggregate bridge
+gateway/                          # reference gateway: one process hosts all 19 over streamable-http
+deploy/glama/                     # single-install 19-agent / 131-tool aggregate bridge
 docs/GENESIS_RECEIPTS.md          # the first self-transaction — live, 12/12 invariants
 docs/A2A_ECONOMY.md               # the full identity→trust→escrow thesis + composition demo
 ```
 
 ## Status
 
-**LIVE.** The gateway hosts 18 agents at `https://mcp.viridisconservation.com`
-(18/18 healthy), with Registry manifests under `io.github.jdhart81/*`. Since
+**LIVE.** The gateway hosts 19 agents at `https://mcp.viridisconservation.com`
+(19/19 healthy), with Registry manifests under `io.github.jdhart81/*`. Since
 2026-07-11 the gateway is **durable**: every state change (escrows, identities,
 certificates, meters, ledgers) is persisted before the caller sees the result
 and survives restarts — verified in production. Genesis receipts for the
@@ -211,9 +226,9 @@ arbitration, compute-ledger, covenant, provenance, offsets, ERC-8004 bridge,
 surety, notary, and discovery cost nothing to call — the rails ARE the
 network, and we don't tax adoption of the thing whose value is adoption.
 
-The three paid services are penetration-priced for agent budgets: **smartscale
-$0.50/call, protogen $1.00/call, and taxcredit-engine $2.00/call — after 100
-free calls per day.** Pay once by
+The four paid services are penetration-priced for agent budgets: **smartscale
+$0.50/call, protogen $1.00/call, taxcredit-engine $2.00/call, and ghg-ledger
+$1.00/inventory — after 100 free calls per day.** Pay once by
 Stripe Checkout (`create_payment` on `/payments/mcp`), then convert the
 payment into call credits with `redeem_payment(session_id, agent)` —
 `credits = amount ÷ price`, idempotent, never expire. A2A callers settle

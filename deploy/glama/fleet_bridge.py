@@ -13,7 +13,8 @@ automated safety/quality checks):
 
   * Tool LISTING is network-independent — it is served from a bundled manifest
     (`fleet_manifest.json`, generated from the live fleet). The server always
-    advertises all 117 tools even if the check sandbox blocks outbound network.
+    advertises the bundled fleet tools (131 expected for the 19-agent release)
+    even if the check sandbox blocks outbound network.
   * Tool CALLS forward to the live hosted endpoint at runtime (works wherever
     the container has network, i.e. real user installs).
   * Built on the low-level `mcp.server.Server` API (stable across SDK versions)
@@ -56,6 +57,7 @@ ROLE = {
     "regulatory-radar": "CSRD/TNFD compliance-as-a-service",
     "narrative-engine": "grant/investor/policy narrative generation",
     "taxcredit-engine": "clean-energy tax-credit scenarios (45Q/45V/45Y/48E/45X)",
+    "ghg-ledger": "deterministic GHG inventories (Scope 1/2/3 + dual Scope 2)",
 }
 
 

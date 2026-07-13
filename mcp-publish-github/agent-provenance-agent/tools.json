@@ -1,6 +1,6 @@
 {
   "server": "agent-provenance-agent",
-  "tool_count": 7,
+  "tool_count": 11,
   "tools": [
     {
       "name": "register_genesis",
@@ -96,6 +96,83 @@
         "properties": {
           "epoch": {
             "type": "integer"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "register_artifact",
+      "description": "Register a content-addressed artifact in a separate provenance DAG.\nParent hashes may be registered artifacts or external content roots.\nIdempotent on artifact_id; does not consume a genesis index.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "artifact_hash": {
+            "type": "string"
+          },
+          "producer_agent_id": {
+            "type": "string"
+          },
+          "parent_hashes": {
+            "type": "array"
+          },
+          "relation": {
+            "type": "string",
+            "default": "derived_from"
+          },
+          "metadata_digest": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "artifact_id",
+          "artifact_hash",
+          "producer_agent_id"
+        ]
+      }
+    },
+    {
+      "name": "get_artifact",
+      "description": "Fetch one registered artifact by artifact_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_artifact",
+      "description": "Recompute an artifact record hash and verify it against the DAG ledger.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "artifact": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "artifact"
+        ]
+      }
+    },
+    {
+      "name": "list_artifacts",
+      "description": "List artifacts, optionally filtered by producer agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "producer_agent_id": {
+            "type": "string"
           }
         },
         "required": []

@@ -8,13 +8,15 @@
 - `describe() -> dict` — sync; `{name, version, capabilities, inputs, outputs, a2a_role}`.
 
 ## Actions
-register_genesis, get_certificate, verify_certificate, lineage, recall, list
+register_genesis, get_certificate, verify_certificate, lineage, recall, list,
+register_artifact, get_artifact, verify_artifact, list_artifacts
 
 Full input/output shapes: `describe()` and the action handlers in `src/core.py`.
 
-## Invariants (V1–V8)
+## Invariants (V1–V8, A1–A7)
 See the `src/core.py` module docstring for the authoritative list — one test
-per invariant in `tests/test_core.py`.
+per invariant in `tests/test_core.py`. Artifacts use a separate content-addressed
+DAG; exact replays are idempotent and conflicting duplicate IDs fail closed.
 
 ## Deploy
 Primary: MCP server (`adapters/mcp_server.py`). Secondary: FastAPI. Core is

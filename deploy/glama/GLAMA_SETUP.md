@@ -23,10 +23,14 @@ Claude Desktop / Cursor:
   "args": ["run","-i","--rm","ghcr.io/jdhart81/viridis-fleet-bridge"] } } }
 ```
 
-Verified 2026-07-12: 18/18 agents reachable, 117 tools aggregated, call
-forwarding confirmed (`escrow__list_escrows` → live escrows,
-`surety__list_bonds` → live bonds, and `taxcredit-engine__calculate_tax_credit`
-→ the deployed deterministic tax-credit engine).
+Release target 2026-07-13: 19 agents and an expected 131-tool aggregate (the
+prior 117 tools, six GHG Ledger tools, four Compute Ledger v0.2.0 tools, and
+four Provenance v0.2.0 tools). Call forwarding includes
+`escrow__list_escrows`, `surety__list_bonds`,
+`taxcredit-engine__calculate_tax_credit`, and
+`ghg-ledger__calculate_inventory`. Regenerate `fleet_manifest.json` from the
+live 19-agent fleet before the Glama build to turn this expected count into the
+released aggregate.
 
 ## Steps (the two account actions are yours — Justin)
 
@@ -69,8 +73,9 @@ Dockerfile `COPY` to `deploy/glama/fleet_bridge.py`.
 
 ## Notes
 
-- Rails are free; the three services (smartscale, protogen, taxcredit-engine) offer 100 free
-  calls/day then paid — the bridge surfaces that in each tool's namespaced
-  description.
+- Rails are free; the four priced services (smartscale, protogen,
+  taxcredit-engine, ghg-ledger) offer 100 free calls/day then paid — GHG Ledger
+  charges $1.00 per inventory calculation — and the bridge surfaces that in
+  each tool's namespaced description.
 - If an endpoint is momentarily down, the bridge skips it and still starts
   (per-endpoint timeout), so the quality check never hangs on one agent.
