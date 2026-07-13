@@ -4,25 +4,28 @@ Viridis Agent Fleet — single-install stdio bridge.
 
 Exposes the entire hosted fleet (17 agents on mcp.viridisconservation.com) as
 ONE stdio MCP server, so a user can install the whole trust-and-settlement
-economy with a single entry in Claude Desktop / Cursor:
+economy with a single entry in Claude Desktop / Cursor. Tools are namespaced
+`agent__tool` (e.g. `escrow__open_escrow`, `surety__slash_bond`); every call is
+forwarded to the corresponding hosted agent.
 
-    { "command": "python3", "args": ["fleet_bridge.py"] }
+Design for reliability (this is also the artifact Glama builds for its
+automated safety/quality checks):
 
-Also the artifact Glama builds for its automated safety/quality checks: it
-starts, connects to the live endpoints, lists their tools, and re-exposes them
-namespaced `agent__tool` (e.g. `escrow__open_escrow`). Read-only introspection
-at startup; every call is forwarded to the corresponding hosted agent.
-
-Resilience: each endpoint is probed with a short timeout at startup; an
-endpoint that is slow or down is skipped (logged) and never blocks the others —
-the bridge always starts.
+  * Tool LISTING is network-independent — it is served from a bundled manifest
+    (`fleet_manifest.json`, generated from the live fleet). The server always
+    advertises all 112 tools even if the check sandbox blocks outbound network.
+  * Tool CALLS forward to the live hosted endpoint at runtime (works wherever
+    the container has network, i.e. real user installs).
+  * Built on the low-level `mcp.server.Server` API (stable across SDK versions)
+    — no reliance on FastMCP internals.
 """
 import asyncio
 import json
 import logging
 import os
 import sys
-from typing import Any, Dict, List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr,
                     format="%(asctime)s fleet-bridge %(levelname)s %(message)s")
@@ -30,50 +33,59 @@ log = logging.getLogger("fleet-bridge")
 
 BASE = os.environ.get("VIRIDIS_BASE",
                       "https://mcp.viridisconservation.com").rstrip("/")
+HERE = Path(__file__).resolve().parent
+MANIFEST_PATH = HERE / "fleet_manifest.json"
+SEP = "__"
 
-# path -> role label (kept in sync with the gateway MOUNTS + ARD catalog)
-AGENTS: List[Tuple[str, str]] = [
-    ("identity", "verifiable agent identity + capability discovery"),
-    ("trust", "decay-weighted reputation + trust attestations"),
-    ("escrow", "trustless escrow & settlement (exactly-once)"),
-    ("metering", "usage metering + SLA accounting (x402 meter)"),
-    ("arbitration", "deterministic dispute rulings"),
-    ("compute-ledger", "compute-is-carbon energy/carbon ledger"),
-    ("covenant", "deny-by-default authority leases"),
-    ("provenance", "genesis certificates, lineage, recalls"),
-    ("offsets", "verified-credit carbon offset clearinghouse"),
-    ("erc8004", "MCP-native bridge to ERC-8004 on-chain identity"),
-    ("surety", "bonding + ruling-gated slashing (risk transfer)"),
-    ("notary", "commit-reveal verifiable delivery proofs"),
-    ("wavefunction", "demand-side agent/collective discovery"),
-    ("smartscale", "credit-card-calibrated visual measurement"),
-    ("protogen", "MCP CAD services (measure -> CAD)"),
-    ("regulatory-radar", "CSRD/TNFD compliance-as-a-service"),
-    ("narrative-engine", "grant/investor/policy narrative generation"),
-]
-
-CONNECT_TIMEOUT = float(os.environ.get("VIRIDIS_CONNECT_TIMEOUT", "8"))
-
-
-def _sep() -> str:
-    return "__"
+ROLE = {
+    "identity": "verifiable agent identity + capability discovery",
+    "trust": "decay-weighted reputation + trust attestations",
+    "escrow": "trustless escrow & settlement (exactly-once)",
+    "metering": "usage metering + SLA accounting (x402 meter)",
+    "arbitration": "deterministic dispute rulings",
+    "compute-ledger": "compute-is-carbon energy/carbon ledger",
+    "covenant": "deny-by-default authority leases",
+    "provenance": "genesis certificates, lineage, recalls",
+    "offsets": "verified-credit carbon offset clearinghouse",
+    "erc8004": "MCP-native bridge to ERC-8004 on-chain identity",
+    "surety": "bonding + ruling-gated slashing (risk transfer)",
+    "notary": "commit-reveal verifiable delivery proofs",
+    "wavefunction": "demand-side agent/collective discovery",
+    "smartscale": "credit-card-calibrated visual measurement",
+    "protogen": "MCP CAD services (measure -> CAD)",
+    "regulatory-radar": "CSRD/TNFD compliance-as-a-service",
+    "narrative-engine": "grant/investor/policy narrative generation",
+}
 
 
-async def _list_agent_tools(path: str):
-    """Return the hosted agent's tool objects (short timeout; raises on fail)."""
-    from mcp import ClientSession
-    from mcp.client.streamable_http import streamablehttp_client
-    url = f"{BASE}/{path}/mcp"
-
-    async def _do():
-        async with streamablehttp_client(url) as (r, w, _):
-            async with ClientSession(r, w) as s:
-                await s.initialize()
-                return (await s.list_tools()).tools
-    return await asyncio.wait_for(_do(), timeout=CONNECT_TIMEOUT)
+def load_manifest() -> Dict[str, list]:
+    try:
+        return json.loads(MANIFEST_PATH.read_text())
+    except Exception as e:
+        log.error("could not read %s (%s) — starting with empty tool set; "
+                  "regenerate the manifest from the live fleet", MANIFEST_PATH, e)
+        return {}
 
 
-async def _call_agent_tool(path: str, tool: str, args: Dict[str, Any]) -> str:
+def build_tool_index(manifest: Dict[str, list]):
+    """Return (mcp_types.Tool list, {fq_name: (path, upstream_tool)})."""
+    from mcp import types
+    tools = []
+    route: Dict[str, tuple] = {}
+    for path, items in manifest.items():
+        for t in items:
+            fq = f"{path}{SEP}{t['name']}"
+            desc = (f"[{path} — {ROLE.get(path, '')}] "
+                    f"{(t.get('description') or '').strip()}").strip()
+            tools.append(types.Tool(
+                name=fq, description=desc[:1024],
+                inputSchema=t.get("inputSchema") or {"type": "object"}))
+            route[fq] = (path, t["name"])
+    return tools, route
+
+
+async def forward(path: str, tool: str, args: Dict[str, Any]) -> str:
+    """Forward a call to the hosted agent over streamable-http."""
     from mcp import ClientSession
     from mcp.client.streamable_http import streamablehttp_client
     url = f"{BASE}/{path}/mcp"
@@ -83,76 +95,55 @@ async def _call_agent_tool(path: str, tool: str, args: Dict[str, Any]) -> str:
             res = await s.call_tool(tool, args or {})
             parts = []
             for c in res.content:
-                parts.append(getattr(c, "text", None) or json.dumps(
-                    getattr(c, "model_dump", lambda: {})(), default=str))
+                parts.append(getattr(c, "text", None) or "")
             return "\n".join(p for p in parts if p) or "{}"
 
 
-async def discover() -> Dict[str, list]:
-    """Map path -> tool list for every reachable agent (skips failures)."""
-    out: Dict[str, list] = {}
-    results = await asyncio.gather(
-        *[_list_agent_tools(p) for p, _ in AGENTS], return_exceptions=True)
-    for (path, _role), r in zip(AGENTS, results):
-        if isinstance(r, Exception):
-            log.warning("skip %s (%s: %s)", path, type(r).__name__, r)
-            continue
-        out[path] = r
-        log.info("mounted %s (%d tools)", path, len(r))
-    return out
-
-
-def build_server(discovered: Dict[str, list]):
-    """Assemble a FastMCP stdio server exposing namespaced fleet tools."""
-    from mcp.server.fastmcp import FastMCP
-    mcp = FastMCP(
-        "viridis-agent-fleet",
-        instructions=("The trust-and-settlement rails of the agent economy in "
-                      "one server: identity, trust, escrow, metering, "
-                      "arbitration, compute-carbon ledger, covenant, "
-                      "provenance, offsets, ERC-8004 bridge, surety, notary, "
-                      "discovery, plus measurement/CAD services. Tools are "
-                      "namespaced <agent>__<tool>. Rails are free; the two "
-                      "services (smartscale, protogen) offer 100 free "
-                      "calls/day then paid. Live at " + BASE + "."))
-
-    role = dict(AGENTS)
-    for path, tools in discovered.items():
-        for t in tools:
-            fq = f"{path}{_sep()}{t.name}"
-            desc = (f"[{path} — {role.get(path, '')}] "
-                    f"{(t.description or '').strip()}").strip()
-            schema = getattr(t, "inputSchema", None) or {"type": "object"}
-
-            def _make(_path=path, _tool=t.name):
-                async def _fn(**kwargs) -> str:
-                    return await _call_agent_tool(_path, _tool, kwargs)
-                return _fn
-
-            # register with the tool's own input schema so callers get typed args
-            mcp.add_tool(_make(), name=fq, description=desc[:1024],
-                         structured_output=False)
-            # attach the upstream schema (FastMCP builds its own from signature;
-            # we override to preserve the hosted tool's contract)
-            try:
-                mcp._tool_manager._tools[fq].parameters = schema  # noqa: SLF001
-            except Exception:
-                pass
-    return mcp
-
-
-async def _amain():
-    discovered = await discover()
-    total = sum(len(v) for v in discovered.values())
-    log.info("fleet bridge ready: %d agents, %d tools", len(discovered), total)
-    if not discovered:
-        log.error("no agents reachable at %s — check the gateway", BASE)
-    return build_server(discovered)
-
-
 def main():
-    mcp = asyncio.run(_amain())
-    mcp.run()   # stdio transport
+    from mcp import types
+    from mcp.server import Server
+    from mcp.server.stdio import stdio_server
+    from mcp.server.models import InitializationOptions
+    from mcp.server import NotificationOptions
+
+    manifest = load_manifest()
+    tools, route = build_tool_index(manifest)
+    log.info("fleet bridge: %d agents, %d tools (manifest); calls forward to %s",
+             len(manifest), len(tools), BASE)
+
+    server = Server("viridis-agent-fleet")
+
+    @server.list_tools()
+    async def list_tools() -> List[types.Tool]:
+        return tools
+
+    @server.call_tool()
+    async def call_tool(name: str, arguments: Dict[str, Any] | None):
+        if name not in route:
+            return [types.TextContent(type="text",
+                    text=json.dumps({"status": "error",
+                                     "error": f"unknown tool '{name}'"}))]
+        path, tool = route[name]
+        try:
+            out = await forward(path, tool, arguments or {})
+        except Exception as e:
+            out = json.dumps({"status": "error", "error_type": type(e).__name__,
+                              "error": str(e)[:300],
+                              "hint": f"forwarding to {BASE}/{path}/mcp failed — "
+                                      "this container needs outbound network to "
+                                      "reach the hosted fleet"})
+        return [types.TextContent(type="text", text=out)]
+
+    async def _run():
+        async with stdio_server() as (r, w):
+            await server.run(r, w, InitializationOptions(
+                server_name="viridis-agent-fleet",
+                server_version="1.0.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={})))
+
+    asyncio.run(_run())
 
 
 if __name__ == "__main__":
