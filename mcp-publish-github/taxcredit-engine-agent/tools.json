@@ -1,0 +1,73 @@
+{
+  "server": "taxcredit-engine-agent",
+  "tool_count": 5,
+  "tools": [
+    {
+      "name": "calculate_tax_credit",
+      "description": "Calculate an auditable tax-credit scenario. credit is 45Q, 45V, 45Y,\n48E, or 45X. facts must contain the explicit credit-specific eligibility\nfacts; missing facts return indeterminate. This is not tax or filing advice.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "credit": {
+            "type": "string"
+          },
+          "facts": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "credit",
+          "facts"
+        ]
+      }
+    },
+    {
+      "name": "list_rule_packs",
+      "description": "List supported credits and the current bundled rule-pack digest.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_rule_pack",
+      "description": "Return the bundled rules and official source metadata for one credit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "credit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "credit"
+        ]
+      }
+    },
+    {
+      "name": "verify_tax_credit_result",
+      "description": "Verify an engine result's audit_sha256. Pass the prior result object as\nJSON; any changed amount, fact, rule step, or source digest fails.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "result_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_json"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return fleet-standard capabilities, version, and pricing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

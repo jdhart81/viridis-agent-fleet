@@ -6,7 +6,7 @@
 > live gateway over MCP streamable-http; 12/12 cross-agent invariants passed.
 > The rails it ran on are live at the same endpoint, free to call.
 
-The public MCP-facing surface of the **Viridis agent stable**: a 13-agent
+The public MCP-facing surface of the **Viridis agent stable**: an 18-agent
 agent-to-agent (A2A) economy published on the [Model Context Protocol
 registry](https://registry.modelcontextprotocol.io) under the
 `io.github.jdhart81` namespace. This repository is the **callable spec +
@@ -32,9 +32,14 @@ as composable MCP services:
 | **Covenant** | `agent-covenant` | [`/covenant/mcp`](https://mcp.viridisconservation.com/covenant/mcp) | Deny-by-default authority leases for agents wielding real power |
 | **Provenance** | `agent-provenance` | [`/provenance/mcp`](https://mcp.viridisconservation.com/provenance/mcp) | Genesis certificates, lineage, cascading recalls |
 | **Offsets** | `agent-offset-clearinghouse` | [`/offsets/mcp`](https://mcp.viridisconservation.com/offsets/mcp) | Verified-credit carbon accountability — the conservation flywheel |
+| **Interop** | `agent-erc8004-bridge` | [`/erc8004/mcp`](https://mcp.viridisconservation.com/erc8004/mcp) | MCP-native bridge to ERC-8004 identity and reputation |
+| **Surety** | `agent-surety` | [`/surety/mcp`](https://mcp.viridisconservation.com/surety/mcp) | Deterministic bonding and ruling-gated slashing |
+| **Notary** | `agent-notary` | [`/notary/mcp`](https://mcp.viridisconservation.com/notary/mcp) | Commit-reveal delivery proofs and verification |
+| **Discovery** | `wavefunction-search` | [`/wavefunction/mcp`](https://mcp.viridisconservation.com/wavefunction/mcp) | Demand-side agent and collective discovery |
 | **Revenue** | `smartscale` | [`/smartscale/mcp`](https://mcp.viridisconservation.com/smartscale/mcp) | Credit-card-calibrated measurement — the first sellable service |
 | **Revenue** | `protogen` | [`/protogen/mcp`](https://mcp.viridisconservation.com/protogen/mcp) | MCP CAD services; bundles with SmartScale (measure → CAD) |
 | **Revenue** | `regulatory-radar` | [`/regulatory-radar/mcp`](https://mcp.viridisconservation.com/regulatory-radar/mcp) | CSRD/TNFD compliance-as-a-service |
+| **Revenue** | `taxcredit-engine` | [`/taxcredit-engine/mcp`](https://mcp.viridisconservation.com/taxcredit-engine/mcp) | Auditable 45Q/45V/45Y/48E/45X scenarios |
 | **Enabler** | `narrative-engine` | [`/narrative-engine/mcp`](https://mcp.viridisconservation.com/narrative-engine/mcp) | Grant / investor / policy narrative generation |
 
 **Federated member:** [EnergyAI](https://api.energyaisolution.com/mcp) — energy
@@ -59,15 +64,16 @@ mcp-publish/<agent>/server.json   # MCP registry manifest
 mcp-publish/<agent>/tools.json    # JSON-Schema tool definitions (one per action)
 mcp-publish/<agent>/DEPLOY.md     # env, endpoints, how a caller uses it
 contracts/<agent>.md              # public agent contract (capabilities, invariants)
-gateway/                          # reference gateway: one process hosts all 13 over streamable-http
+gateway/                          # reference gateway: one process hosts all 18 over streamable-http
+deploy/glama/                     # single-install 18-agent / 117-tool aggregate bridge
 docs/GENESIS_RECEIPTS.md          # the first self-transaction — live, 12/12 invariants
 docs/A2A_ECONOMY.md               # the full identity→trust→escrow thesis + composition demo
 ```
 
 ## Status
 
-**LIVE.** All 13 published on the MCP registry under `io.github.jdhart81/*`,
-hosted at `https://mcp.viridisconservation.com` (13/13 healthy). Since
+**LIVE.** The gateway hosts 18 agents at `https://mcp.viridisconservation.com`
+(18/18 healthy), with Registry manifests under `io.github.jdhart81/*`. Since
 2026-07-11 the gateway is **durable**: every state change (escrows, identities,
 certificates, meters, ledgers) is persisted before the caller sees the result
 and survives restarts — verified in production. Genesis receipts for the
@@ -81,8 +87,9 @@ arbitration, compute-ledger, covenant, provenance, offsets, ERC-8004 bridge,
 surety, notary, and discovery cost nothing to call — the rails ARE the
 network, and we don't tax adoption of the thing whose value is adoption.
 
-The two services are penetration-priced for agent budgets: **smartscale
-$0.50/call, protogen $1.00/call — after 100 free calls per day.** Pay once by
+The three paid services are penetration-priced for agent budgets: **smartscale
+$0.50/call, protogen $1.00/call, and taxcredit-engine $2.00/call — after 100
+free calls per day.** Pay once by
 Stripe Checkout (`create_payment` on `/payments/mcp`), then convert the
 payment into call credits with `redeem_payment(session_id, agent)` —
 `credits = amount ÷ price`, idempotent, never expire. A2A callers settle

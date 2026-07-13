@@ -2,7 +2,7 @@
 """
 Viridis Agent Fleet — single-install stdio bridge.
 
-Exposes the entire hosted fleet (17 agents on mcp.viridisconservation.com) as
+Exposes the entire hosted fleet on mcp.viridisconservation.com as
 ONE stdio MCP server, so a user can install the whole trust-and-settlement
 economy with a single entry in Claude Desktop / Cursor. Tools are namespaced
 `agent__tool` (e.g. `escrow__open_escrow`, `surety__slash_bond`); every call is
@@ -13,7 +13,7 @@ automated safety/quality checks):
 
   * Tool LISTING is network-independent — it is served from a bundled manifest
     (`fleet_manifest.json`, generated from the live fleet). The server always
-    advertises all 112 tools even if the check sandbox blocks outbound network.
+    advertises all 117 tools even if the check sandbox blocks outbound network.
   * Tool CALLS forward to the live hosted endpoint at runtime (works wherever
     the container has network, i.e. real user installs).
   * Built on the low-level `mcp.server.Server` API (stable across SDK versions)
@@ -55,6 +55,7 @@ ROLE = {
     "protogen": "MCP CAD services (measure -> CAD)",
     "regulatory-radar": "CSRD/TNFD compliance-as-a-service",
     "narrative-engine": "grant/investor/policy narrative generation",
+    "taxcredit-engine": "clean-energy tax-credit scenarios (45Q/45V/45Y/48E/45X)",
 }
 
 
