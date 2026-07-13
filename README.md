@@ -7,7 +7,8 @@
 > The rails it ran on are live at the same endpoint, free to call.
 
 The public MCP-facing surface of the **Viridis agent stable**: a 19-agent
-agent-to-agent (A2A) economy published on the [Model Context Protocol
+agent-to-agent (A2A) economy plus a B2B subscriptions infrastructure surface,
+published on the [Model Context Protocol
 registry](https://registry.modelcontextprotocol.io) under the
 `io.github.jdhart81` namespace. This repository is the **callable spec +
 provenance** for those listings — the registry manifests, the JSON-Schema tool
@@ -41,6 +42,7 @@ as composable MCP services:
 | **Revenue** | `regulatory-radar` | [`/regulatory-radar/mcp`](https://mcp.viridisconservation.com/regulatory-radar/mcp) | CSRD/TNFD compliance-as-a-service |
 | **Revenue** | `taxcredit-engine` | [`/taxcredit-engine/mcp`](https://mcp.viridisconservation.com/taxcredit-engine/mcp) | Auditable 45Q/45V/45Y/48E/45X scenarios |
 | **Revenue · climate** | `ghg-ledger` | [`/ghg-ledger/mcp`](https://mcp.viridisconservation.com/ghg-ledger/mcp) | Deterministic Scope 1/2/3 inventories with dual Scope 2 and audit hashes |
+| **Revenue infrastructure** | `subscriptions` | [`/subscriptions/mcp`](https://mcp.viridisconservation.com/subscriptions/mcp) | Bearer-attributed monthly seats, deterministic entitlements, included quota, overage, and MRR |
 | **Enabler** | `narrative-engine` | [`/narrative-engine/mcp`](https://mcp.viridisconservation.com/narrative-engine/mcp) | Grant / investor / policy narrative generation |
 
 **Federated member:** [EnergyAI](https://api.energyaisolution.com/mcp) — energy
@@ -60,7 +62,9 @@ agent action, with typed input/output schemas.
 
 ## Tools
 
-The aggregate bridge exposes 131 namespaced tools. Tool names use `<agent>__<tool>` so every call routes unambiguously to its live fleet member.
+The aggregate bridge exposes 141 namespaced tools across 19 hosted agents and
+the subscriptions infrastructure surface. Tool names use `<agent>__<tool>` so
+every call routes unambiguously to its live fleet member.
 
 | Tool | Description |
 |---|---|
@@ -195,6 +199,16 @@ The aggregate bridge exposes 131 namespaced tools. Tool names use `<agent>__<too
 | `ghg-ledger__get_factor_pack` | Return factors, GWP values, conversions, sources, and pack SHA for one exact bundled region/year. No nearest-region or nearest-year substitution. |
 | `ghg-ledger__verify_result` | Recompute a prior inventory's audit hash and conservation checks. Pass the prior result object as JSON; tampering or stale factor lineage is flagged. |
 | `ghg-ledger__describe_agent` | Return fleet-standard capabilities, version, pack digest, and pricing. |
+| `subscriptions__list_plans` | List the versioned monthly-seat catalog, exact prices and coverage, catalog SHA-256, readiness flags, and pending owner-confirmation notice. |
+| `subscriptions__get_plan` | Get one exact monthly plan and its versioned catalog lineage. |
+| `subscriptions__create_account` | Create a free account for bearer attribution. The full account key is returned once; only its SHA-256 and last four characters are retained. |
+| `subscriptions__create_checkout_link` | Prepare a Stripe-hosted subscription Checkout URL. It never charges a card. Draft plans, missing owner approval, unavailable covered agents, or missing recurring Price IDs fail closed. |
+| `subscriptions__record_subscription` | Pull-verify a Stripe session or subscription and idempotently activate its exact subscription period. |
+| `subscriptions__subscription_status` | Return bearer-owned subscription lifecycle and current-period quota. The account key is always masked. |
+| `subscriptions__customer_portal_link` | Return a bearer-owned Stripe-hosted billing-portal URL. The human manages or cancels there; this tool never moves money. |
+| `subscriptions__usage_summary` | Return bearer-owned, period-resolved included and overage usage with exact catalog lineage and conservation totals. |
+| `subscriptions__mrr_summary` | Return aggregate active live-mode subscription count, MRR minor units, and plan mix without account or Stripe identifiers. |
+| `subscriptions__describe_agent` | Return the fleet-standard version, catalog digest, security posture, lifecycle policy, and capabilities. |
 
 ## Layout
 
@@ -203,16 +217,17 @@ mcp-publish/<agent>/server.json   # MCP registry manifest
 mcp-publish/<agent>/tools.json    # JSON-Schema tool definitions (one per action)
 mcp-publish/<agent>/DEPLOY.md     # env, endpoints, how a caller uses it
 contracts/<agent>.md              # public agent contract (capabilities, invariants)
-gateway/                          # reference gateway: one process hosts all 19 over streamable-http
-deploy/glama/                     # single-install 19-agent / 131-tool aggregate bridge
+gateway/                          # reference gateway: 19 hosted agents + subscriptions infrastructure
+deploy/glama/                     # single-install 20-surface / 141-tool aggregate bridge
 docs/GENESIS_RECEIPTS.md          # the first self-transaction — live, 12/12 invariants
 docs/A2A_ECONOMY.md               # the full identity→trust→escrow thesis + composition demo
 ```
 
 ## Status
 
-**LIVE.** The gateway hosts 19 agents at `https://mcp.viridisconservation.com`
-(19/19 healthy), with Registry manifests under `io.github.jdhart81/*`. Since
+**LIVE.** The gateway hosts 19 agents plus `/subscriptions/mcp` at
+`https://mcp.viridisconservation.com` (19/19 agents healthy; subscriptions
+v0.1.0 healthy), with Registry manifests under `io.github.jdhart81/*`. Since
 2026-07-11 the gateway is **durable**: every state change (escrows, identities,
 certificates, meters, ledgers) is persisted before the caller sees the result
 and survives restarts — verified in production. Genesis receipts for the
@@ -226,14 +241,21 @@ arbitration, compute-ledger, covenant, provenance, offsets, ERC-8004 bridge,
 surety, notary, and discovery cost nothing to call — the rails ARE the
 network, and we don't tax adoption of the thing whose value is adoption.
 
-The four paid services are penetration-priced for agent budgets: **smartscale
-$0.50/call, protogen $1.00/call, taxcredit-engine $2.00/call, and ghg-ledger
-$1.00/inventory — after 100 free calls per day.** Pay once by
+The paid services are penetration-priced for agent budgets: **smartscale
+$0.50/call, protogen $1.00/call, taxcredit-engine $2.00/call, ghg-ledger
+$1.00/inventory, narrative-engine $0.50/call, and regulatory-radar $0.25/call
+— after 10 free calls per day.** Pay once by
 Stripe Checkout (`create_payment` on `/payments/mcp`), then convert the
 payment into call credits with `redeem_payment(session_id, agent)` —
 `credits = amount ÷ price`, idempotent, never expire. A2A callers settle
 per-call via the x402/escrow idiom. Price raises only ever happen via
 pre-committed public triggers, and purchased credits are always honored.
+
+The separate B2B catalog currently exposes five **draft** monthly-seat plans at
+$99–$249/month with 1,000 included calls and exact per-call overage. Checkout
+remains fail-closed until Viridis approves final prices and quota and adds the
+corresponding recurring Stripe Price IDs. No plan is active merely because it
+appears in the catalog.
 
 Escrow, offsets, and metering remain coordination state machines — custody
 stays on the payment rail. See `docs/A2A_ECONOMY.md`.

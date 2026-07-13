@@ -13,8 +13,9 @@ automated safety/quality checks):
 
   * Tool LISTING is network-independent — it is served from a bundled manifest
     (`fleet_manifest.json`, generated from the live fleet). The server always
-    advertises the bundled fleet tools (131 expected for the 19-agent release)
-    even if the check sandbox blocks outbound network.
+    advertises the bundled fleet tools (141 expected for 19 hosted agents plus
+    the subscriptions infrastructure surface) even if the check sandbox blocks
+    outbound network.
   * Tool CALLS forward to the live hosted endpoint at runtime (works wherever
     the container has network, i.e. real user installs).
   * Built on the low-level `mcp.server.Server` API (stable across SDK versions)
@@ -58,7 +59,25 @@ ROLE = {
     "narrative-engine": "grant/investor/policy narrative generation",
     "taxcredit-engine": "clean-energy tax-credit scenarios (45Q/45V/45Y/48E/45X)",
     "ghg-ledger": "deterministic GHG inventories (Scope 1/2/3 + dual Scope 2)",
+    "subscriptions": "B2B monthly seats, entitlement quota, overage, and MRR",
 }
+
+
+def upstream_headers() -> Dict[str, str] | None:
+    """Return opt-in bearer attribution for a *private* bridge install.
+
+    The public Glama build must not set VIRIDIS_ACCOUNT_KEY: one shared key
+    would pool every Glama user's usage into the same buyer account.  A human
+    running this bridge privately may set the variable to forward their own
+    account key without putting it in tool arguments or the manifest.
+    """
+    token = os.environ.get("VIRIDIS_ACCOUNT_KEY", "").strip()
+    if not token:
+        return None
+    if len(token) > 256 or any(ord(ch) < 33 for ch in token):
+        log.warning("VIRIDIS_ACCOUNT_KEY is malformed; forwarding anonymously")
+        return None
+    return {"Authorization": f"Bearer {token}"}
 
 
 def load_manifest() -> Dict[str, list]:
@@ -92,7 +111,8 @@ async def forward(path: str, tool: str, args: Dict[str, Any]) -> str:
     from mcp import ClientSession
     from mcp.client.streamable_http import streamablehttp_client
     url = f"{BASE}/{path}/mcp"
-    async with streamablehttp_client(url) as (r, w, _):
+    async with streamablehttp_client(
+            url, headers=upstream_headers()) as (r, w, _):
         async with ClientSession(r, w) as s:
             await s.initialize()
             res = await s.call_tool(tool, args or {})

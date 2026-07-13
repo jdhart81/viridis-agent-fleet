@@ -2530,6 +2530,159 @@
       }
     }
   ],
+  "subscriptions": [
+    {
+      "name": "list_plans",
+      "description": "List the versioned monthly-seat catalog, exact prices/coverage, catalog\n    SHA-256, readiness flags, and pending owner-confirmation notice.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_plansArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_plan",
+      "description": "Get one exact monthly plan and its versioned catalog lineage.",
+      "inputSchema": {
+        "properties": {
+          "plan_id": {
+            "title": "Plan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id"
+        ],
+        "title": "get_planArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "create_account",
+      "description": "Create a free account for bearer attribution. The full account key is\n    returned once; only its SHA-256 and last four characters are retained.",
+      "inputSchema": {
+        "properties": {
+          "account_ref": {
+            "title": "Account Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_ref"
+        ],
+        "title": "create_accountArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "create_checkout_link",
+      "description": "Prepare a Stripe-hosted subscription Checkout URL. It never charges a\n    card. Draft plans, missing owner approval, unavailable covered agents, or\n    missing recurring Price IDs fail closed without creating a session.",
+      "inputSchema": {
+        "properties": {
+          "plan_id": {
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "account_ref": {
+            "title": "Account Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "account_ref"
+        ],
+        "title": "create_checkout_linkArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "record_subscription",
+      "description": "Pull-verify a Stripe session/subscription and idempotently activate its\n    exact subscription period. A newly created account receives its key once.",
+      "inputSchema": {
+        "properties": {
+          "stripe_session_or_sub_id": {
+            "title": "Stripe Session Or Sub Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stripe_session_or_sub_id"
+        ],
+        "title": "record_subscriptionArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "subscription_status",
+      "description": "Return bearer-owned subscription lifecycle and current-period quota.\n    The account key is always masked in output.",
+      "inputSchema": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "subscription_statusArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "customer_portal_link",
+      "description": "Return a bearer-owned Stripe-hosted billing-portal URL. The human\n    manages or cancels there; this tool never moves money.",
+      "inputSchema": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "customer_portal_linkArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "usage_summary",
+      "description": "Return bearer-owned, period-resolved included and overage usage with\n    exact catalog lineage and conservation totals.",
+      "inputSchema": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "usage_summaryArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "mrr_summary",
+      "description": "Return aggregate active live-mode subscription count, MRR minor units,\n    and plan mix. No account or Stripe identifiers are exposed.",
+      "inputSchema": {
+        "properties": {},
+        "title": "mrr_summaryArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return the fleet-standard version, catalog digest, security posture,\n    lifecycle policy, and capabilities.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
   "surety": [
     {
       "name": "post_bond",

@@ -23,14 +23,15 @@ Claude Desktop / Cursor:
   "args": ["run","-i","--rm","ghcr.io/jdhart81/viridis-fleet-bridge"] } } }
 ```
 
-Release target 2026-07-13: 19 agents and an expected 131-tool aggregate (the
-prior 117 tools, six GHG Ledger tools, four Compute Ledger v0.2.0 tools, and
-four Provenance v0.2.0 tools). Call forwarding includes
+Release target 2026-07-13: 19 hosted agents plus the auxiliary subscriptions
+surface, with an expected 141-tool aggregate (131 live fleet tools plus ten
+subscription/account/catalog tools). Call forwarding includes
 `escrow__list_escrows`, `surety__list_bonds`,
 `taxcredit-engine__calculate_tax_credit`, and
-`ghg-ledger__calculate_inventory`. Regenerate `fleet_manifest.json` from the
-live 19-agent fleet before the Glama build to turn this expected count into the
-released aggregate.
+`ghg-ledger__calculate_inventory`, `subscriptions__list_plans`, and
+`subscriptions__mrr_summary`. Regenerate `fleet_manifest.json` from the live
+19-agent fleet plus `/subscriptions/mcp` before the Glama build to turn this
+expected count into the released aggregate.
 
 ## Steps (the two account actions are yours — Justin)
 
@@ -73,9 +74,12 @@ Dockerfile `COPY` to `deploy/glama/fleet_bridge.py`.
 
 ## Notes
 
-- Rails are free; the four priced services (smartscale, protogen,
-  taxcredit-engine, ghg-ledger) offer 100 free calls/day then paid — GHG Ledger
-  charges $1.00 per inventory calculation — and the bridge surfaces that in
-  each tool's namespaced description.
+- Rails are free; priced services offer 10 free calls/day then their published
+  per-call rate. B2B subscriptions add a separate monthly-seat entitlement
+  layer without changing anonymous callers.
+- `VIRIDIS_ACCOUNT_KEY` is an opt-in for a buyer's **private self-hosted bridge**.
+  When set, it is forwarded as `Authorization: Bearer` without entering MCP
+  tool arguments. Never set it in the public Glama build: a public shared key
+  would pool unrelated users into one buyer account.
 - If an endpoint is momentarily down, the bridge skips it and still starts
   (per-endpoint timeout), so the quality check never hangs on one agent.
