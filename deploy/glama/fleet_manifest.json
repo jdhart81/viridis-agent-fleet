@@ -621,6 +621,109 @@
       }
     }
   ],
+  "disclosure-compiler": [
+    {
+      "name": "compile_disclosure",
+      "description": "Compile a deterministic, cited disclosure draft from supplied company\n    facts and an optional verified GHG-ledger result. Missing required\n    datapoints remain explicit gaps; no prose or values are fabricated.",
+      "inputSchema": {
+        "properties": {
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "company_facts": {
+            "additionalProperties": true,
+            "title": "Company Facts",
+            "type": "object"
+          },
+          "ghg_result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Ghg Result"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options"
+          }
+        },
+        "required": [
+          "framework",
+          "company_facts"
+        ],
+        "title": "compile_disclosureArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_frameworks",
+      "description": "List bundled framework IDs, coverage, source lineage, version, and the\n    framework-pack digest.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_frameworksArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_framework",
+      "description": "Return one bundled framework's required datapoints, mappings, sources,\n    and framework-pack lineage.",
+      "inputSchema": {
+        "properties": {
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          }
+        },
+        "required": [
+          "framework"
+        ],
+        "title": "get_frameworkArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_result",
+      "description": "Recompute a disclosure draft audit hash, notary payload, structural\n    invariants, and framework-pack currency. Pass the prior result as JSON.",
+      "inputSchema": {
+        "properties": {
+          "result_json": {
+            "title": "Result Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_json"
+        ],
+        "title": "verify_resultArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return deterministic capabilities, version, pack digest, pricing,\n    composition, and the professional-review disclaimer.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
   "erc8004": [
     {
       "name": "import_registration",

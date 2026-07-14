@@ -6,7 +6,7 @@
 > live gateway over MCP streamable-http; 12/12 cross-agent invariants passed.
 > The rails it ran on are live at the same endpoint, free to call.
 
-The public MCP-facing surface of the **Viridis agent stable**: a 20-agent
+The public MCP-facing surface of the **Viridis agent stable**: a 21-agent
 agent-to-agent (A2A) economy plus a B2B subscriptions infrastructure surface,
 published on the [Model Context Protocol
 registry](https://registry.modelcontextprotocol.io) under the
@@ -43,6 +43,7 @@ as composable MCP services:
 | **Revenue** | `taxcredit-engine` | [`/taxcredit-engine/mcp`](https://mcp.viridisconservation.com/taxcredit-engine/mcp) | Auditable 45Q/45V/45Y/48E/45X scenarios |
 | **Revenue · climate** | `ghg-ledger` | [`/ghg-ledger/mcp`](https://mcp.viridisconservation.com/ghg-ledger/mcp) | Deterministic Scope 1/2/3 inventories with dual Scope 2 and audit hashes |
 | **Revenue · construction** | `quantity-takeoff` | [`/quantity-takeoff/mcp`](https://mcp.viridisconservation.com/quantity-takeoff/mcp) | Auditable material takeoffs with locked waste factors and conservative purchase rounding |
+| **Revenue · compliance** | `disclosure-compiler` | [`/disclosure-compiler/mcp`](https://mcp.viridisconservation.com/disclosure-compiler/mcp) | Deterministic, cited ESRS E1 / 2024 SEC climate-rule structured draft (stayed; rescission proposed May 2026; applicability never presumed) / IFRS S2 / TNFD drafts with verified GHG lineage |
 | **Revenue infrastructure** | `subscriptions` | [`/subscriptions/mcp`](https://mcp.viridisconservation.com/subscriptions/mcp) | Bearer-attributed monthly seats, deterministic entitlements, included quota, overage, and MRR |
 | **Enabler** | `narrative-engine` | [`/narrative-engine/mcp`](https://mcp.viridisconservation.com/narrative-engine/mcp) | Grant / investor / policy narrative generation |
 
@@ -63,7 +64,7 @@ agent action, with typed input/output schemas.
 
 ## Tools
 
-The aggregate bridge exposes 148 namespaced tools across 20 hosted agents and
+The aggregate bridge exposes 153 namespaced tools across 21 hosted agents and
 the subscriptions infrastructure surface. Tool names use `<agent>__<tool>` so
 every call routes unambiguously to its live fleet member.
 
@@ -207,6 +208,11 @@ every call routes unambiguously to its live fleet member.
 | `quantity-takeoff__get_material_pack` | Return the bundled factors, densities, coverages, waste defaults, purchase increments, unit conversions, sources, and raw-pack SHA. |
 | `quantity-takeoff__verify_result` | Recompute a takeoff audit hash, notary payload, pack currency, and QT9 unit-resolved conservation. Pass the prior result object as JSON. |
 | `quantity-takeoff__describe_agent` | Return fleet-standard capabilities, version, pack digest, disclaimer, composition role, and pricing. |
+| `disclosure-compiler__compile_disclosure` | Compile a deterministic, cited disclosure draft from supplied company facts and an optional verified GHG-ledger result. Missing required datapoints remain explicit gaps; no prose or values are fabricated. |
+| `disclosure-compiler__list_frameworks` | List bundled framework IDs, coverage, source lineage, version, and framework-pack digest. |
+| `disclosure-compiler__get_framework` | Return one bundled framework's required datapoints, mappings, sources, and framework-pack lineage. |
+| `disclosure-compiler__verify_result` | Recompute a disclosure draft's audit hash and report framework-pack currency. Pass the prior result object as JSON; tampering is rejected. |
+| `disclosure-compiler__describe_agent` | Return deterministic capabilities, version, framework-pack digest, pricing, composition, and professional-review disclaimer. |
 | `subscriptions__list_plans` | List the versioned monthly-seat catalog, exact prices and coverage, catalog SHA-256, readiness flags, and pending owner-confirmation notice. |
 | `subscriptions__get_plan` | Get one exact monthly plan and its versioned catalog lineage. |
 | `subscriptions__create_account` | Create a free account for bearer attribution. The full account key is returned once; only its SHA-256 and last four characters are retained. |
@@ -225,16 +231,16 @@ mcp-publish-github/<agent>/server.json # official MCP registry manifest
 mcp-publish-github/<agent>/tools.json  # exact JSON-Schema tool definitions
 mcp-publish-github/<agent>/DEPLOY.md   # endpoint and publication notes
 contracts/<agent>.md              # public agent contract (capabilities, invariants)
-gateway/                          # reference gateway: 20 hosted agents + subscriptions infrastructure
-deploy/glama/                     # single-install 21-surface / 148-tool aggregate bridge
+gateway/                          # reference gateway scaffold; live surface is defined by manifests
+deploy/glama/                     # single-install 22-surface / 153-tool aggregate bridge
 docs/GENESIS_RECEIPTS.md          # the first self-transaction — live, 12/12 invariants
 docs/A2A_ECONOMY.md               # the full identity→trust→escrow thesis + composition demo
 ```
 
 ## Status
 
-**LIVE.** The gateway hosts 20 agents plus `/subscriptions/mcp` at
-`https://mcp.viridisconservation.com` (20/20 agents healthy; subscriptions
+**LIVE.** The gateway hosts 21 agents plus `/subscriptions/mcp` at
+`https://mcp.viridisconservation.com` (21/21 agents healthy; subscriptions
 v0.1.0 healthy), with Registry manifests under `io.github.jdhart81/*`. Since
 2026-07-11 the gateway is **durable**: every state change (escrows, identities,
 certificates, meters, ledgers) is persisted before the caller sees the result
@@ -251,8 +257,8 @@ network, and we don't tax adoption of the thing whose value is adoption.
 
 The paid services are penetration-priced for agent budgets: **smartscale
 $0.50/call, protogen $1.00/call, taxcredit-engine $2.00/call, ghg-ledger
-$1.00/inventory, quantity-takeoff $0.50/takeoff, narrative-engine $0.50/call,
-and regulatory-radar $0.25/call
+$1.00/inventory, quantity-takeoff $0.50/takeoff, disclosure-compiler $2.00/draft,
+narrative-engine $0.50/call, and regulatory-radar $0.25/call
 — after 10 free calls per day.** Pay once by
 Stripe Checkout (`create_payment` on `/payments/mcp`), then convert the
 payment into call credits with `redeem_payment(session_id, agent)` —
@@ -261,10 +267,11 @@ per-call via the x402/escrow idiom. Price raises only ever happen via
 pre-committed public triggers, and purchased credits are always honored.
 
 The separate B2B catalog currently exposes five **draft** monthly-seat plans at
-$99–$249/month with 1,000 included calls and exact per-call overage. Checkout
-remains fail-closed until Viridis approves final prices and quota and adds the
-corresponding recurring Stripe Price IDs. No plan is active merely because it
-appears in the catalog.
+$99–$249/month with 1,000 included calls and exact per-call overage. All five
+are coverage-ready, including the Energy, Climate, and Compliance bundles now
+unlocked by `disclosure-compiler`. Checkout remains fail-closed until Viridis
+approves final prices and quota and adds the corresponding recurring Stripe
+Price IDs. No plan is active merely because it appears in the catalog.
 
 Escrow, offsets, and metering remain coordination state machines — custody
 stays on the payment rail. See `docs/A2A_ECONOMY.md`.

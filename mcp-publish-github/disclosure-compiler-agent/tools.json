@@ -1,0 +1,79 @@
+{
+  "server": "disclosure-compiler-agent",
+  "tool_count": 5,
+  "tools": [
+    {
+      "name": "compile_disclosure",
+      "description": "Compile a deterministic, cited disclosure draft from supplied company\nfacts and an optional verified GHG-ledger result. Missing required\ndatapoints remain explicit gaps; no prose or values are fabricated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "framework": {
+            "type": "string"
+          },
+          "company_facts": {
+            "type": "object"
+          },
+          "ghg_result": {
+            "type": "object"
+          },
+          "options": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "framework",
+          "company_facts"
+        ]
+      }
+    },
+    {
+      "name": "list_frameworks",
+      "description": "List bundled framework IDs, coverage, source lineage, version, and the\nframework-pack digest.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_framework",
+      "description": "Return one bundled framework's required datapoints, mappings, sources,\nand framework-pack lineage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "framework": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "framework"
+        ]
+      }
+    },
+    {
+      "name": "verify_result",
+      "description": "Recompute a disclosure draft audit hash, notary payload, structural\ninvariants, and framework-pack currency. Pass the prior result as JSON.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "result_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_json"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return deterministic capabilities, version, pack digest, pricing,\ncomposition, and the professional-review disclaimer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

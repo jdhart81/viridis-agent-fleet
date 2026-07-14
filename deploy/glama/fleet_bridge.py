@@ -13,7 +13,7 @@ automated safety/quality checks):
 
   * Tool LISTING is network-independent — it is served from a bundled manifest
     (`fleet_manifest.json`, generated from the live fleet). The server always
-    advertises the bundled fleet tools (148 expected for 20 hosted agents plus
+    advertises the bundled fleet tools (153 expected for 21 hosted agents plus
     the subscriptions infrastructure surface) even if the check sandbox blocks
     outbound network.
   * Tool CALLS forward to the live hosted endpoint at runtime (works wherever
@@ -60,6 +60,7 @@ ROLE = {
     "taxcredit-engine": "clean-energy tax-credit scenarios (45Q/45V/45Y/48E/45X)",
     "ghg-ledger": "deterministic GHG inventories (Scope 1/2/3 + dual Scope 2)",
     "quantity-takeoff": "auditable construction material takeoffs (locked waste + purchase rounding)",
+    "disclosure-compiler": "deterministic cited compliance disclosure drafts (ESRS E1/SEC/IFRS S2/TNFD)",
     "subscriptions": "B2B monthly seats, entitlement quota, overage, and MRR",
 }
 
