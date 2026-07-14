@@ -74,6 +74,54 @@ CASES = {
                          "price_minor_per_kg": 500,
                          "verification_ref": "dscore:x"}, ["crd-"]),
     ],
+    "agent-erc8004-bridge-agent": [
+        ("describe_agent", {}, ["agent-erc8004-bridge-agent"]),
+    ],
+    "agent-surety-agent": [
+        ("describe_agent", {}, ["agent-surety-agent"]),
+    ],
+    "agent-notary-agent": [
+        ("describe_agent", {}, ["agent-notary-agent"]),
+    ],
+    "wavefunction-search-agent": [
+        ("describe_agent", {}, ["wavefunction-search-agent"]),
+    ],
+    "taxcredit-engine-agent": [
+        ("calculate_tax_credit", {"credit": "45V", "facts": {
+            "tax_year": 2026, "kg_hydrogen": "1000",
+            "lifecycle_kg_co2e_per_kg_h2": "0.44",
+            "greet_version": "45VH2-GREET-2025",
+            "evidence_digest": "7b87a55c5cf303b36d2171c46c1fc28ad0f31c04d973a4b7370c715d2cf6f6fe",
+            "pwa_met": True, "produced_in_us": True,
+            "construction_begin_date": "2026-01-01",
+            "placed_in_service_date": "2026-01-01",
+            "section_45q_claimed_for_facility": False,
+            "tax_exempt_bond_financing_percent": "0"}},
+        ["3280.00", "audit_sha256"]),
+    ],
+    "ghg-ledger-agent": [
+        ("calculate_inventory", {"activities": [{
+            "activity_type": "purchased_electricity",
+            "quantity": "1000", "unit": "kwh",
+            "region": "US", "year": 2023,
+        }], "options": {}}, ["349.742", "audit_sha256"]),
+    ],
+    "quantity-takeoff-agent": [
+        ("calculate_takeoff", {"items": [{
+            "assembly": "concrete_slab",
+            "unit_system": "imperial",
+            "dimensions": {
+                "length": {"value": "20", "unit": "ft"},
+                "width": {"value": "30", "unit": "ft"},
+                "thickness": {"value": "4", "unit": "in"},
+            },
+        }], "options": {}}, ["7.78", "audit_sha256"]),
+    ],
+    # Auxiliary revenue-infrastructure surface: catalog read is deterministic
+    # and needs neither bearer credentials nor live Stripe access.
+    "subscriptions-agent": [
+        ("list_plans", {}, ["catalog_sha256", "energy-seat"]),
+    ],
 }
 
 
@@ -106,7 +154,7 @@ if tools is None:  # real FastMCP: fall back to module-level functions
     tools = {{name: getattr(mod, name) for name in {json.dumps([c[0] for c in cases])}}}
 failures = []
 import asyncio, inspect
-for tool, kwargs, expects in {json.dumps(cases)}:
+for tool, kwargs, expects in {cases!r}:
     out = tools[tool](**kwargs)
     if inspect.iscoroutine(out):
         out = asyncio.run(out)

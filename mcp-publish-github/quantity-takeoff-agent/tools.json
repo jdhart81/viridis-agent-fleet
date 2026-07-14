@@ -1,0 +1,90 @@
+{
+  "server": "quantity-takeoff-agent",
+  "tool_count": 7,
+  "tools": [
+    {
+      "name": "calculate_takeoff",
+      "description": "Calculate an auditable material takeoff from explicit geometry or a\nsupported SmartScale/ProtoGen measurement payload. Returns net, explicit\nwaste-adjusted, and conservative purchase quantities. This is a planning\nestimate, not a guaranteed material order or professional certification.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array"
+          },
+          "options": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      }
+    },
+    {
+      "name": "list_assemblies",
+      "description": "List supported assemblies, required dimensions, formulas, waste\ndefaults, and the current material-pack digest.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_assembly",
+      "description": "Return one assembly's formula, required dimensions, material factors,\npurchase increment, sources, and material-pack lineage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assembly_type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "assembly_type"
+        ]
+      }
+    },
+    {
+      "name": "list_material_pack",
+      "description": "List the bundled material pack version, digest, coverage, shapes,\nrebar sizes, roof pitches, and explicit unsupported policy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_material_pack",
+      "description": "Return the bundled factors, densities, coverages, waste defaults,\npurchase increments, unit conversions, sources, and raw-pack SHA.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "verify_result",
+      "description": "Recompute a takeoff audit hash, notary payload, pack currency, and QT9\nunit-resolved conservation. Pass the prior result object as JSON.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "result_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_json"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return fleet-standard capabilities, version, pack digest, disclaimer,\ncomposition role, and pricing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

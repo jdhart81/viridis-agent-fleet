@@ -23,14 +23,14 @@ Claude Desktop / Cursor:
   "args": ["run","-i","--rm","ghcr.io/jdhart81/viridis-fleet-bridge"] } } }
 ```
 
-Release target 2026-07-13: 19 hosted agents plus the auxiliary subscriptions
-surface, with an expected 141-tool aggregate (131 live fleet tools plus ten
+Release target 2026-07-13: 20 hosted agents plus the auxiliary subscriptions
+surface, with an expected 148-tool aggregate (138 live fleet tools plus ten
 subscription/account/catalog tools). Call forwarding includes
 `escrow__list_escrows`, `surety__list_bonds`,
 `taxcredit-engine__calculate_tax_credit`, and
-`ghg-ledger__calculate_inventory`, `subscriptions__list_plans`, and
-`subscriptions__mrr_summary`. Regenerate `fleet_manifest.json` from the live
-19-agent fleet plus `/subscriptions/mcp` before the Glama build to turn this
+`ghg-ledger__calculate_inventory`, `quantity-takeoff__calculate_takeoff`,
+`subscriptions__list_plans`, and `subscriptions__mrr_summary`. Regenerate
+`fleet_manifest.json` from the live 20-agent fleet plus `/subscriptions/mcp` before the Glama build to turn this
 expected count into the released aggregate.
 
 ## Steps (the two account actions are yours — Justin)

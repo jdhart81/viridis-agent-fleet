@@ -2333,6 +2333,112 @@
       }
     }
   ],
+  "quantity-takeoff": [
+    {
+      "name": "calculate_takeoff",
+      "description": "Calculate an auditable material takeoff from explicit geometry or a\n    supported SmartScale/ProtoGen measurement payload. Returns net, explicit\n    waste-adjusted, and conservative purchase quantities. This is a planning\n    estimate, not a guaranteed material order or professional certification.",
+      "inputSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "calculate_takeoffArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_assemblies",
+      "description": "List supported assemblies, required dimensions, formulas, waste\n    defaults, and the current material-pack digest.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_assembliesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_assembly",
+      "description": "Return one assembly's formula, required dimensions, material factors,\n    purchase increment, sources, and material-pack lineage.",
+      "inputSchema": {
+        "properties": {
+          "assembly_type": {
+            "title": "Assembly Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assembly_type"
+        ],
+        "title": "get_assemblyArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_material_pack",
+      "description": "List the bundled material pack version, digest, coverage, shapes,\n    rebar sizes, roof pitches, and explicit unsupported policy.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_material_packArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_material_pack",
+      "description": "Return the bundled factors, densities, coverages, waste defaults,\n    purchase increments, unit conversions, sources, and raw-pack SHA.",
+      "inputSchema": {
+        "properties": {},
+        "title": "get_material_packArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_result",
+      "description": "Recompute a takeoff audit hash, notary payload, pack currency, and QT9\n    unit-resolved conservation. Pass the prior result object as JSON.",
+      "inputSchema": {
+        "properties": {
+          "result_json": {
+            "title": "Result Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_json"
+        ],
+        "title": "verify_resultArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return fleet-standard capabilities, version, pack digest, disclaimer,\n    composition role, and pricing.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
   "regulatory-radar": [
     {
       "name": "scan_regulations",
