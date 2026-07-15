@@ -1,26 +1,12 @@
-# DEPLOY — narrative-engine-agent
+# Publish narrative-engine
 
-Ecological data -> grant/investor/policy narratives.
+Remote: `https://mcp.viridisconservation.com/narrative-engine/mcp`
 
-## Serve
+After the matching gateway build is live and healthy:
+
+```bash
+mcp-publisher validate deploy/mcp-publish-github/narrative-engine-agent/server.json
+mcp-publisher publish deploy/mcp-publish-github/narrative-engine-agent/server.json
 ```
-cd narrative-engine-agent
-pip install "mcp[cli]"                      # only dependency for MCP serving
-python adapters/mcp_server.py               # smoke: describe + health
-python adapters/mcp_server.py --serve       # stdio MCP server
-```
-Hosted remote target: `https://mcp.viridis.earth/narrative-engine/mcp` (streamable-http).
 
-## Environment
-none
-
-## How a calling agent uses it
-Connect any MCP client to the server and call the tools in `tools.json`
-(key tools: translate_narrative). Every tool returns the fleet-standard JSON envelope:
-`{"status": "ok", "data": ...}` or a structured error envelope — callers
-never see an exception.
-
-## Before publish
-1. `python3 deploy/mcp-publish/smoke_all.py narrative-engine-agent`
-2. Fill the placeholders in `server.json` (repository.url, remote URL).
-3. Follow the shared click-path in `deploy/mcp-publish/README.md`.
+Publishing mutates the official registry and requires the owner account; do not publish before live health and version checks pass.

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Viridis Fleet — Usage Statistics</title>
+<style>
+  :root{
+    --bg:#0b1210; --panel:#111b17; --panel2:#0e1714; --line:#1e2f28;
+    --text:#d7e5de; --dim:#7f958a; --green:#34d399; --teal:#2dd4bf;
+    --amber:#fbbf24; --red:#f87171; --violet:#a78bfa; --blue:#60a5fa;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);padding:20px 24px 60px}
+  h1{font-size:17px;margin:0 0 2px;letter-spacing:.04em}
+  h1 .live{color:var(--green)}
+  .sub{color:var(--dim);font-size:11.5px;margin-bottom:18px}
+  h2{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;
+     margin:26px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+  .kpi .v{font-size:22px;margin-top:4px}
+  .kpi .l{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  .kpi .d{font-size:10.5px;color:var(--dim);margin-top:3px}
+  .chart{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+  .legend{font-size:10.5px;color:var(--dim);margin-top:8px}
+  .legend b{font-weight:normal}
+  .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 12px;vertical-align:-1px}
+  table{width:100%;border-collapse:collapse;font-size:11.5px;background:var(--panel);
+        border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-weight:normal;text-transform:uppercase;font-size:10px;letter-spacing:.08em}
+  tr:last-child td{border-bottom:none}
+  td.num,th.num{text-align:right}
+  .pill{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;border:1px solid var(--line)}
+  .pill.external{color:var(--green);border-color:var(--green)}
+  .pill.internal{color:var(--violet);border-color:var(--violet)}
+  .pill.unknown{color:var(--dim)}
+  .pill.err{color:var(--red);border-color:var(--red)}
+  .pill.test{color:var(--amber);border-color:var(--amber)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:900px){.row{grid-template-columns:1fr}}
+  .note{color:var(--dim);font-size:11px;margin-top:8px;line-height:1.5}
+  .err-box{background:#1a1112;border:1px solid #3a2224;color:var(--red);
+           border-radius:8px;padding:10px 14px;font-size:12px;margin:10px 0;display:none}
+  .controls{margin:10px 0;font-size:11.5px;color:var(--dim)}
+  .controls label{margin-right:16px;cursor:pointer}
+  input[type=password],input[type=text]{background:var(--panel2);border:1px solid var(--line);
+      color:var(--text);border-radius:6px;padding:6px 9px;font:inherit;font-size:11.5px;width:280px}
+  button{background:var(--panel2);border:1px solid var(--green);color:var(--green);
+      border-radius:6px;padding:6px 12px;font:inherit;font-size:11.5px;cursor:pointer}
+  button:hover{background:#14251e}
+  pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+      padding:12px;font-size:11px;overflow:auto;max-height:420px}
+  #updated{color:var(--dim);font-size:10.5px}
+</style>
+</head>
+<body>
+<h1>VIRIDIS FLEET <span class="live">— USAGE STATISTICS</span></h1>
+<div class="sub">consumer-class–resolved demand · channel attribution · ledger vs cash ·
+  <span id="updated">loading…</span></div>
+
+<div class="err-box" id="errbox"></div>
+
+<h2>Last 7 days — external demand is the only KPI that matters</h2>
+<div class="kpis" id="kpis"></div>
+
+<h2>Daily calls (30d) — stacked by consumer class</h2>
+<div class="chart"><svg id="tschart" width="100%" height="190" viewBox="0 0 960 190"
+  preserveAspectRatio="none"></svg>
+  <div class="legend">
+    <span class="sw" style="background:var(--green)"></span><b>external</b>
+    <span class="sw" style="background:var(--violet)"></span><b>internal (self-test)</b>
+    <span class="sw" style="background:#3a4a44"></span><b>unknown / pre-v0.2.0</b>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <h2>Channel mix (30d, external+unknown)</h2>
+    <table id="channels"><thead><tr><th>channel</th><th class="num">calls</th>
+      <th class="num">share</th></tr></thead><tbody></tbody></table>
+    <div class="note">smithery-proxy = Smithery hosted path · script = curl/httpx/etc ·
+      unknown = pre-v0.2.0 events (honest legacy baseline, never reclassified)</div>
+  </div>
+  <div>
+    <h2>By provider (30d)</h2>
+    <table id="providers"><thead><tr><th>provider</th><th class="num">calls</th>
+      <th class="num">errors</th><th class="num">est value</th></tr></thead><tbody></tbody></table>
+    <div class="note">est value = calls × list price (activity measure, includes free tier;
+      authoritative billing = usage_summary / invoices)</div>
+  </div>
+</div>
+
+<h2>Recent events</h2>
+<div class="controls">
+  <label><input type="checkbox" id="inctest"> include internal/self-test + flagged-test</label>
+  <label><input type="checkbox" id="errsonly"> errors only</label>
+</div>
+<table id="events"><thead><tr><th>recorded (UTC)</th><th>provider</th><th>class</th>
+  <th>channel</th><th>caller</th><th>outcome</th><th class="num">qty</th></tr></thead>
+  <tbody></tbody></table>
+
+<h2>Revenue reconciliation (admin)</h2>
+<div class="controls">
+  <input type="password" id="admintok" placeholder="VIRIDIS_ADMIN_TOKEN (never stored)">
+  <button id="reconbtn">reconcile 30d</button>
+</div>
+<pre id="recon" style="display:none"></pre>
+<div class="note">Read-only. Four honest numbers: gross usage value (activity) ·
+  frozen invoices (internal ledger) · redeemed sessions (cash→credits) ·
+  Stripe live settled (actual cash). Discrepancies are enumerated, never netted.</div>
+
+<script>
+"use strict";
+/* ---- MCP streamable-http (stateless) JSON-RPC from the browser ---------- */
+let _id = 0;
+async function mcpCall(mount, tool, args) {
+  const body = {jsonrpc: "2.0", id: ++_id, method: "tools/call",
+                params: {name: tool, arguments: args || {}}};
+  const r = await fetch(`/${mount}/mcp`, {
+    method: "POST",
+    headers: {"content-type": "application/json",
+              "accept": "application/json, text/event-stream"},
+    body: JSON.stringify(body)});
+  if (!r.ok) throw new Error(`${mount}/${tool}: HTTP ${r.status}`);
+  const ctype = (r.headers.get("content-type") || "");
+  let msg;
+  if (ctype.includes("text/event-stream")) {          // SSE: last data: line wins
+    const text = await r.text();
+    const datas = text.split("\n").filter(l => l.startsWith("data:"))
+                      .map(l => l.slice(5).trim()).filter(Boolean);
+    if (!datas.length) throw new Error(`${tool}: empty SSE stream`);
+    msg = JSON.parse(datas[datas.length - 1]);
+  } else {
+    msg = await r.json();
+  }
+  if (msg.error) throw new Error(`${tool}: ${msg.error.message || "rpc error"}`);
+  const res = msg.result || {};
+  if (res.isError) {
+    const t = ((res.content || [])[0] || {}).text || "tool error";
+    throw new Error(`${tool}: ${t.slice(0, 300)}`);
+  }
+  if (res.structuredContent !== undefined) {
+    const sc = res.structuredContent;
+    return (sc && typeof sc === "object" && "result" in sc && Object.keys(sc).length === 1)
+      ? sc.result : sc;
+  }
+  const t = ((res.content || [])[0] || {}).text;
+  try { return JSON.parse(t); } catch (e) { return t; }
+}
+/* Metering tools return the fleet envelope {status, data} as a JSON string. */
+async function metering(tool, args) {
+  const env = await mcpCall("metering", tool, args);
+  const obj = (typeof env === "string") ? JSON.parse(env) : env;
+  if (obj && obj.status === "error") throw new Error(`${tool}: ${obj.message}`);
+  return obj.data !== undefined ? obj.data : obj;
+}
+
+/* ---- helpers ------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const isoDaysAgo = d => new Date(Date.now() - d*864e5).toISOString().slice(0,10);
+const fmtMoney = m => "$" + (Number(m||0)/100).toFixed(2);
+function showErr(e){ const b=$("errbox"); b.style.display="block";
+  b.textContent = "⚠ " + e; }
+
+/* ---- KPIs + timeseries --------------------------------------------------- */
+function sumSeries(series, cls){
+  return series.reduce((a,b)=>a+((b.by_consumer_class||{})[cls]||0),0);
+}
+function renderKpis(s7, s7all){
+  const ext = sumSeries(s7.series,"external");
+  const unk = sumSeries(s7.series,"unknown");
+  const int_ = sumSeries(s7all.series,"internal");
+  const events = s7.series.reduce((a,b)=>a+b.events,0);
+  const errs = s7.series.reduce((a,b)=>a+b.error,0);
+  const estv = s7.series.reduce((a,b)=>a+(b.est_accrued_minor||0),0);
+  const callers = "—"; // per-caller depth: use list_events grouping below
+  const cells = [
+    ["external calls", ext, "classified real demand"],
+    ["unknown / legacy", unk, "pre-v0.2.0 + unattributed"],
+    ["internal / self-test", int_, "nightkeeper + harnesses"],
+    ["error rate", events ? (100*errs/events).toFixed(1)+"%" : "0%",
+       errs + " of " + events + " calls"],
+    ["est usage value", fmtMoney(estv), "incl. free tier (activity)"],
+  ];
+  $("kpis").innerHTML = cells.map(([l,v,d]) =>
+    `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div>
+     <div class="d">${d}</div></div>`).join("");
+}
+function renderChart(s30){
+  const days=[]; for(let i=29;i>=0;i--) days.push(isoDaysAgo(i));
+  const byDay = Object.fromEntries(s30.series.map(b=>[b.bucket_start,b]));
+  const vals = days.map(d=>{
+    const b = byDay[d]||{by_consumer_class:{}};
+    const c = b.by_consumer_class||{};
+    return {d, ext:c.external||0, int_:c.internal||0, unk:c.unknown||0};
+  });
+  const max = Math.max(1, ...vals.map(v=>v.ext+v.int_+v.unk));
+  const W=960,H=190,pad=18,bw=(W-2*pad)/30;
+  let svg="";
+  vals.forEach((v,i)=>{
+    const x=pad+i*bw, usable=H-30;
+    let y=H-16;
+    for(const [n,color] of [["unk","#3a4a44"],["int_","#a78bfa"],["ext","#34d399"]]){
+      const h=usable*(v[n]/max);
+      if(h>0){ y-=h; svg+=`<rect x="${x+1}" y="${y}" width="${bw-2}" height="${h}"
+        fill="${color}"><title>${v.d}: ${v.ext} ext / ${v.int_} int / ${v.unk} unk</title></rect>`;}
+    }
+    if(i%5===0) svg+=`<text x="${x}" y="${H-3}" font-size="9" fill="#7f958a">${v.d.slice(5)}</text>`;
+  });
+  svg+=`<text x="${W-pad}" y="12" font-size="9" fill="#7f958a" text-anchor="end">max ${max}/day</text>`;
+  $("tschart").innerHTML=svg;
+}
+function renderBreakdown(tableId, dim, series, filterCls){
+  const agg={};
+  for(const b of series){
+    const cls=b.by_consumer_class||{};
+    // channel table excludes pure-internal buckets’ internal share implicitly:
+    for(const [k,v] of Object.entries(b[dim]||{})) agg[k]=(agg[k]||0)+v;
+  }
+  if(filterCls) delete agg["internal"];
+  const total=Object.values(agg).reduce((a,b)=>a+b,0)||1;
+  const rows=Object.entries(agg).sort((a,b)=>b[1]-a[1]);
+  $(tableId).querySelector("tbody").innerHTML = rows.map(([k,v])=>
+    `<tr><td>${esc(k)}</td><td class="num">${v}</td>
+     <td class="num">${(100*v/total).toFixed(1)}%</td></tr>`).join("")
+    || `<tr><td colspan="3" style="color:var(--dim)">no data yet</td></tr>`;
+}
+async function renderProviders(){
+  // Authoritative per-meter summaries (M3 ceil), aggregated per provider.
+  // Billing meters only (origin gateway/legacy, unflagged), 30d window.
+  const meters = (await metering("list_meters", {})).meters || [];
+  const cutoff = isoDaysAgo(30);
+  const billing = meters.filter(m => m.origin !== "public" && !m.is_test
+                                     && (m.created_at||"") >= cutoff);
+  const sums = await Promise.all(billing.map(m =>
+    metering("usage_summary", {meter_id: m.meter_id}).catch(()=>null)));
+  const agg = {};
+  billing.forEach((m, i) => {
+    const s = sums[i]; if (!s) return;
+    const a = agg[m.provider] = agg[m.provider] || {calls:0, errors:0, est:0};
+    a.calls  += s.event_count;
+    a.errors += s.error_events;
+    a.est    += s.accrued_minor;
+  });
+  const rows = Object.entries(agg).sort((a,b)=>b[1].calls-a[1].calls);
+  $("providers").querySelector("tbody").innerHTML = rows.map(([p,a])=>
+    `<tr><td>${esc(p)}</td><td class="num">${a.calls}</td>
+     <td class="num">${a.errors}</td><td class="num">${fmtMoney(a.est)}</td></tr>`).join("")
+    || `<tr><td colspan="4" style="color:var(--dim)">no data yet</td></tr>`;
+}
+async function renderEvents(){
+  const args={limit:50, include_test: $("inctest").checked, since: isoDaysAgo(30)};
+  if($("errsonly").checked) args.outcome="error";
+  const d = await metering("list_events", args);
+  const rows=(d.events||[]).slice().reverse();
+  $("events").querySelector("tbody").innerHTML = rows.map(e=>{
+    const cls=e.consumer_class||"unknown";
+    return `<tr><td>${esc((e.recorded_at||"").slice(0,19).replace("T"," "))}</td>
+     <td>${esc(e.provider||e.meter_id)}</td>
+     <td><span class="pill ${cls}">${cls}</span>${e.is_test?' <span class="pill test">test</span>':''}</td>
+     <td>${esc(e.channel||"unknown")}</td><td>${esc(e.caller||"—")}</td>
+     <td>${e.outcome==="error"?'<span class="pill err">error</span>':"ok"}</td>
+     <td class="num">${e.quantity}</td></tr>`;}).join("")
+    || `<tr><td colspan="7" style="color:var(--dim)">no events in window</td></tr>`;
+}
+
+/* ---- reconciliation (admin) ---------------------------------------------- */
+$("reconbtn").onclick = async () => {
+  const tok=$("admintok").value.trim();
+  if(!tok) return showErr("admin token required for reconciliation");
+  $("recon").style.display="block"; $("recon").textContent="running…";
+  try{
+    const rep = await mcpCall("payments","reconcile_revenue",{admin_token:tok,days:30});
+    const o = (typeof rep==="string")?JSON.parse(rep):rep;
+    $("recon").textContent = JSON.stringify(o,null,2);
+  }catch(e){ $("recon").textContent="✗ "+e.message; }
+  finally{ $("admintok").value=""; }               // never stored
+};
+
+/* ---- main loop ------------------------------------------------------------ */
+async function refresh(){
+  $("errbox").style.display="none";
+  try{
+    const [s7, s7all, s30] = await Promise.all([
+      metering("usage_timeseries",{bucket:"day", since: isoDaysAgo(7)}),
+      metering("usage_timeseries",{bucket:"day", since: isoDaysAgo(7), include_test:true}),
+      metering("usage_timeseries",{bucket:"day", since: isoDaysAgo(30), include_test:true}),
+    ]);
+    renderKpis(s7, s7all);
+    renderChart(s30);
+    renderBreakdown("channels","by_channel",
+      (await metering("usage_timeseries",{bucket:"day", since: isoDaysAgo(30)})).series, true);
+    await renderProviders();
+    await renderEvents();
+    $("updated").textContent = "updated " + new Date().toISOString().slice(11,19) + "Z · auto-refresh 60s";
+  }catch(e){ showErr(e.message + " — is metering v0.2.0 deployed?"); }
+}
+$("inctest").onchange = renderEvents;
+$("errsonly").onchange = renderEvents;
+refresh();
+setInterval(refresh, 60000);
+</script>
+</body>
+</html>

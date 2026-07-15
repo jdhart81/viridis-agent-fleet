@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.jdhart81/wavefunction-search",
+  "description": "Demand-side discovery for the agent economy: turn ambiguous intentions into commitments and match th",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/jdhart81/viridis-agent-fleet",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.viridisconservation.com/wavefunction/mcp"
+    }
+  ]
+}

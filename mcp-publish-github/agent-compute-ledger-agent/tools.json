@@ -1,6 +1,6 @@
 {
   "server": "agent-compute-ledger-agent",
-  "tool_count": 7,
+  "tool_count": 11,
   "tools": [
     {
       "name": "record_work",
@@ -110,6 +110,89 @@
     {
       "name": "list_entries",
       "description": "List all ledger entries for an agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "record_inventory",
+      "description": "Record an audited GHG inventory in a separate append-only chain.\nmass_g is exact integer grams; content and factor-pack digests are bare\nlowercase SHA-256 hex. Idempotent on inventory_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "inventory_id": {
+            "type": "string"
+          },
+          "mass_g": {
+            "type": "integer"
+          },
+          "content_digest": {
+            "type": "string"
+          },
+          "factor_pack_version": {
+            "type": "string"
+          },
+          "factor_pack_digest": {
+            "type": "string"
+          },
+          "source_ids": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "agent_id",
+          "inventory_id",
+          "mass_g",
+          "content_digest",
+          "factor_pack_version",
+          "factor_pack_digest"
+        ]
+      }
+    },
+    {
+      "name": "get_inventory",
+      "description": "Fetch one immutable inventory record by inventory_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "inventory_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "inventory_id"
+        ]
+      }
+    },
+    {
+      "name": "list_inventories",
+      "description": "List the separate GHG inventory chain for an agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_inventory_chain",
+      "description": "Verify an agent's inventory hash chain independently of compute work.",
       "inputSchema": {
         "type": "object",
         "properties": {

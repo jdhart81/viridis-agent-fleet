@@ -1,26 +1,12 @@
-# DEPLOY — agent-metering-agent
+# Publish agent-metering
 
-The meter behind x402: tamper-evident usage counting, SLA reports, frozen invoices that become escrow amounts.
+Remote: `https://mcp.viridisconservation.com/metering/mcp`
 
-## Serve
+After the matching gateway build is live and healthy:
+
+```bash
+mcp-publisher validate deploy/mcp-publish-github/agent-metering-agent/server.json
+mcp-publisher publish deploy/mcp-publish-github/agent-metering-agent/server.json
 ```
-cd agent-metering-agent
-pip install "mcp[cli]"                      # only dependency for MCP serving
-python adapters/mcp_server.py               # smoke: describe + health
-python adapters/mcp_server.py --serve       # stdio MCP server
-```
-Hosted remote target: `https://mcp.viridis.earth/metering/mcp` (streamable-http).
 
-## Environment
-none (stdlib core; in-memory state)
-
-## How a calling agent uses it
-Connect any MCP client to the server and call the tools in `tools.json`
-(key tools: create_meter / record_usage / close_period). Every tool returns the fleet-standard JSON envelope:
-`{"status": "ok", "data": ...}` or a structured error envelope — callers
-never see an exception.
-
-## Before publish
-1. `python3 deploy/mcp-publish/smoke_all.py agent-metering-agent`
-2. Fill the placeholders in `server.json` (repository.url, remote URL).
-3. Follow the shared click-path in `deploy/mcp-publish/README.md`.
+Publishing mutates the official registry and requires the owner account; do not publish before live health and version checks pass.

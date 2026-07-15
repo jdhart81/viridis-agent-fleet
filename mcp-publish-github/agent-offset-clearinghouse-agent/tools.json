@@ -1,6 +1,6 @@
 {
   "server": "agent-offset-clearinghouse-agent",
-  "tool_count": 7,
+  "tool_count": 9,
   "tools": [
     {
       "name": "list_credit",
@@ -35,7 +35,7 @@
     },
     {
       "name": "buy_offset",
-      "description": "Retire mass_g of verified credits for a buyer: cheapest-first matching,\nexactly-once (idempotent on purchase_id), returns a content-addressed\noffset certificate with per-fill costs. Payment settles via escrow.",
+      "description": "Retire mass_g of verified credits for a buyer: cheapest-first matching,\nexactly-once (idempotent on purchase_id), returns a content-addressed\noffset certificate with per-fill costs. Payment settles via escrow.\ndry_run=true previews the exact fills/cost without mutating the book.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -47,12 +47,62 @@
           },
           "mass_g": {
             "type": "integer"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
           }
         },
         "required": [
           "buyer",
           "purchase_id",
           "mass_g"
+        ]
+      }
+    },
+    {
+      "name": "buy_offset_budget",
+      "description": "Money-denominated offset purchase: retire the maximum cheapest-first\nverified mass whose exact cost fits inside budget_minor (never overspends).\nBuilt for callers whose restoration obligation is a currency amount \u2014\ne.g. a revenue share accrued in a ledger. Idempotent on purchase_id;\ndry_run=true previews without mutating.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "buyer": {
+            "type": "string"
+          },
+          "purchase_id": {
+            "type": "string"
+          },
+          "budget_minor": {
+            "type": "integer"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "buyer",
+          "purchase_id",
+          "budget_minor"
+        ]
+      }
+    },
+    {
+      "name": "settlement_batch",
+      "description": "Read-only cash-settlement summary for a buyer: the list + exact sums\n(purchases, mass_g, cost_minor) of their retirements, optionally since an\nISO-8601 timestamp \u2014 the statement a human settles in one transfer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "buyer": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "buyer"
         ]
       }
     },

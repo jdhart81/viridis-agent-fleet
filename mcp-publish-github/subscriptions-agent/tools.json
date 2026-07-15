@@ -1,0 +1,142 @@
+{
+  "server": "subscriptions-agent",
+  "tool_count": 10,
+  "tools": [
+    {
+      "name": "list_plans",
+      "description": "List the versioned monthly-seat catalog, exact prices/coverage, catalog\nSHA-256, readiness flags, and pending owner-confirmation notice.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_plan",
+      "description": "Get one exact monthly plan and its versioned catalog lineage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id"
+        ]
+      }
+    },
+    {
+      "name": "create_account",
+      "description": "Create a free account for bearer attribution. The full account key is\nreturned once; only its SHA-256 and last four characters are retained.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_ref"
+        ]
+      }
+    },
+    {
+      "name": "create_checkout_link",
+      "description": "Prepare a Stripe-hosted subscription Checkout URL. It never charges a\ncard. Draft plans, missing owner approval, unavailable covered agents, or\nmissing recurring Price IDs fail closed without creating a session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "string"
+          },
+          "account_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "account_ref"
+        ]
+      }
+    },
+    {
+      "name": "record_subscription",
+      "description": "Pull-verify a Stripe session/subscription and idempotently activate its\nexact subscription period. A newly created account receives its key once.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stripe_session_or_sub_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stripe_session_or_sub_id"
+        ]
+      }
+    },
+    {
+      "name": "subscription_status",
+      "description": "Return bearer-owned subscription lifecycle and current-period quota.\nThe account key is always masked in output.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ]
+      }
+    },
+    {
+      "name": "customer_portal_link",
+      "description": "Return a bearer-owned Stripe-hosted billing-portal URL. The human\nmanages or cancels there; this tool never moves money.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ]
+      }
+    },
+    {
+      "name": "usage_summary",
+      "description": "Return bearer-owned, period-resolved included and overage usage with\nexact catalog lineage and conservation totals.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ]
+      }
+    },
+    {
+      "name": "mrr_summary",
+      "description": "Return aggregate active live-mode subscription count, MRR minor units,\nand plan mix. No account or Stripe identifiers are exposed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return the fleet-standard version, catalog digest, security posture,\nlifecycle policy, and capabilities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

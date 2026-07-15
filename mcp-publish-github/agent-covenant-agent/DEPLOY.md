@@ -1,25 +1,12 @@
-# DEPLOY — agent-covenant-agent
+# Publish agent-covenant
 
-Deny-by-default authority leases: the safety envelope every real-authority agent needs. The audit chain is the product.
+Remote: `https://mcp.viridisconservation.com/covenant/mcp`
 
-## Serve
+After the matching gateway build is live and healthy:
+
+```bash
+mcp-publisher validate deploy/mcp-publish-github/agent-covenant-agent/server.json
+mcp-publisher publish deploy/mcp-publish-github/agent-covenant-agent/server.json
 ```
-cd agent-covenant-agent
-pip install "mcp[cli]"                      # only dependency for MCP serving
-python adapters/mcp_server.py               # smoke: describe + health
-python adapters/mcp_server.py --serve       # stdio MCP server
-```
-Hosted remote target: `https://mcp.viridis.earth/covenant/mcp` (streamable-http).
 
-## Environment
-none (stdlib core; in-memory state)
-
-## How a calling agent uses it
-Connect any MCP client and call the tools in `tools.json`
-(key tools: grant_covenant / check_act / revoke_covenant). Every tool returns the fleet-standard JSON envelope:
-`{"status": "ok", "data": ...}` or a structured error envelope.
-
-## Before publish
-1. `python3 deploy/mcp-publish/smoke_all.py agent-covenant-agent`
-2. Fill the placeholders in `server.json` (repository.url, remote URL).
-3. Follow the shared click-path in `deploy/mcp-publish/README.md`.
+Publishing mutates the official registry and requires the owner account; do not publish before live health and version checks pass.

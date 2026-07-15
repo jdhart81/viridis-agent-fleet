@@ -1,0 +1,115 @@
+{
+  "server": "agent-notary-agent",
+  "tool_count": 6,
+  "tools": [
+    {
+      "name": "commit",
+      "description": "Commit to a deliverable BEFORE handover. commit_hash =\nsha256(salt || sha256(content)) as 64 hex chars; deadline is ISO-8601;\ncontext links the escrow/job. Idempotent per (committer, nonce).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "committer": {
+            "type": "string"
+          },
+          "nonce": {
+            "type": "string"
+          },
+          "commit_hash": {
+            "type": "string"
+          },
+          "deadline": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "committer",
+          "nonce",
+          "commit_hash",
+          "deadline"
+        ]
+      }
+    },
+    {
+      "name": "reveal",
+      "description": "Reveal the committed content's digest + salt after handover. Verifies\nagainst the commitment (one bit of drift fails); returns a delivery_proof\nstring for escrow release. Late reveals expire the commitment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commitment_id": {
+            "type": "string"
+          },
+          "salt": {
+            "type": "string"
+          },
+          "content_digest": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "commitment_id",
+          "salt",
+          "content_digest"
+        ]
+      }
+    },
+    {
+      "name": "verify",
+      "description": "Independently verify a revealed commitment; optionally check it against\nthe digest of content you received.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commitment_id": {
+            "type": "string"
+          },
+          "content_digest": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "commitment_id"
+        ]
+      }
+    },
+    {
+      "name": "commitment_status",
+      "description": "Current record for a commitment (pre-reveal, salt/digest stay hidden).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commitment_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "commitment_id"
+        ]
+      }
+    },
+    {
+      "name": "list_commitments",
+      "description": "List commitments, optionally filtered by state\n(PENDING|REVEALED|EXPIRED).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

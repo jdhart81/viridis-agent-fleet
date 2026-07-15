@@ -1,0 +1,91 @@
+{
+  "server": "ghg-ledger-agent",
+  "tool_count": 6,
+  "tools": [
+    {
+      "name": "calculate_inventory",
+      "description": "Calculate an auditable GHG inventory from explicit activity records.\nReturns per-line gas/CO2e results, Scope 1/2/3 and category rollups, dual\nScope 2 reporting, indeterminate lines, factor lineage, notary payload, and\nan offset-clearinghouse dry-run weave. This is calculation, not advice.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "activities": {
+            "type": "array"
+          },
+          "options": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "activities"
+        ]
+      }
+    },
+    {
+      "name": "classify_activity",
+      "description": "Suggest scope and Scope 3 category from the bundled deterministic map.\nNo inference is used; unknown activity types return no suggestion.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "activity": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "activity"
+        ]
+      }
+    },
+    {
+      "name": "list_factor_packs",
+      "description": "List the bundled pack version/digest, supported regions and years,\nactivity types, GWP set, and explicit MVP coverage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_factor_pack",
+      "description": "Return factors, GWP values, conversions, sources, and pack SHA for one\nexact bundled region/year. No nearest-region or nearest-year substitution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "region",
+          "year"
+        ]
+      }
+    },
+    {
+      "name": "verify_result",
+      "description": "Recompute a prior inventory's audit hash and conservation checks. Pass\nthe prior result object as JSON; tampering or stale factor lineage is flagged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "result_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_json"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return fleet-standard capabilities, version, pack digest, and pricing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

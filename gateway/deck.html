@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viridis Agent Fleet — Command Deck</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: light;
+    --bg:#f7f8f6; --card:#ffffff; --ink:#1a2b23; --muted:#5f7268;
+    --line:#e3e8e2; --green:#1c7c4a; --green-soft:#e6f4ec;
+    --red:#b0322c; --red-soft:#fbeae9; --amber:#9a6b00; --amber-soft:#fdf3dd;
+    --accent:#245c40;
+    --revenue:#1c7c4a; --demand:#2f77c2; --settlement:#7a4bd0; --network:#c07f0a; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
+  .lg { display:flex; gap:8px; align-items:flex-start; font-size:11.5px; flex:1; min-width:200px; }
+  .lg .sw { width:12px; height:12px; border-radius:3px; margin-top:2px; flex:none; }
+  .lg b { display:block; font-size:12px; }
+  .lg .sub { display:block; }
+  .cat-rev { color:var(--revenue); } .cat-dem { color:var(--demand); }
+  .cat-set { color:var(--settlement); } .cat-net { color:var(--network); }
+  .compbar { display:flex; height:9px; width:120px; border-radius:5px; overflow:hidden; background:var(--line); }
+  .compbar span { display:block; height:100%; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--ink);
+    font:14px/1.45 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:1080px; margin:0 auto; padding:20px 22px 40px; }
+  h1 { font-size:19px; letter-spacing:.2px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.09em;
+       color:var(--muted); margin:26px 0 10px; }
+  .topbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .pill { padding:4px 12px; border-radius:999px; font-weight:600; font-size:12px; }
+  .ok    { background:var(--green-soft); color:var(--green); }
+  .bad   { background:var(--red-soft); color:var(--red); }
+  .warn  { background:var(--amber-soft); color:var(--amber); }
+  .sub { color:var(--muted); font-size:12px; }
+  .grid { display:grid; gap:12px; }
+  .kpis { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+  .card { background:var(--card); border:1px solid var(--line);
+          border-radius:12px; padding:14px 16px; }
+  .kpi .n { font-size:24px; font-weight:700; letter-spacing:-.02em; }
+  .kpi .l { font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .kpi .d { font-size:11px; margin-top:4px; font-weight:600; }
+  .up { color:var(--green); } .flat { color:var(--muted); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th { text-align:left; color:var(--muted); font-weight:600; font-size:11px;
+       text-transform:uppercase; letter-spacing:.06em; padding:6px 8px;
+       border-bottom:1px solid var(--line); }
+  td { padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%;
+         margin-right:6px; }
+  .dot.ok { background:var(--green); } .dot.bad { background:var(--red); }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px;
+          color:var(--muted); }
+  .chartbox { height:220px; position:relative; }
+  #err { display:none; }
+  .foot { margin-top:22px; font-size:11px; color:var(--muted); }
+  .badge { font-size:10.5px; background:var(--green-soft); color:var(--accent);
+           border-radius:6px; padding:2px 7px; font-weight:600; }
+  .funnel-strip { display:grid; grid-template-columns:repeat(7,auto); align-items:center;
+                  gap:8px; margin-top:12px; padding-top:12px;
+                  border-top:1px solid var(--line); }
+  .funnel-step { min-width:70px; }
+  .funnel-step b { display:block; font-size:18px; font-variant-numeric:tabular-nums; }
+  .funnel-step span { color:var(--muted); font-size:10.5px; }
+  .funnel-arrow { color:var(--muted); text-align:center; }
+  @media (max-width:620px) {
+    .funnel-strip { grid-template-columns:1fr; }
+    .funnel-arrow { transform:rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>Viridis Agent Fleet</h1>
+    <span id="status" class="pill warn">loading…</span>
+    <span id="meta" class="sub"></span>
+  </div>
+  <div id="err" class="card" style="border-color:var(--red);margin-top:14px">
+    <b style="color:var(--red)">Could not reach the gateway.</b>
+    <div class="sub" id="errdetail" style="margin-top:4px"></div>
+    <div class="sub" style="margin-top:4px">Endpoint: mcp.viridisconservation.com/healthz — try Reload; if it persists, check the droplet (192.34.62.16): <span class="mono">docker compose ps</span></div>
+  </div>
+
+  <h2>CEO — adoption &amp; economy</h2>
+  <div class="grid kpis" id="ceo"></div>
+
+  <h2>Agent value leaderboard <span class="badge">value = Revenue + Demand + Settlement + Network</span></h2>
+  <div class="card" style="padding:10px 14px">
+    <div class="legend">
+      <div class="lg"><span class="sw" style="background:var(--revenue)"></span><span><b class="cat-rev">Revenue 💰</b><span class="sub">money captured — prepaid credits × price</span></span></div>
+      <div class="lg"><span class="sw" style="background:var(--demand)"></span><span><b class="cat-dem">Demand ⚙️</b><span class="sub">how much it's used — metered calls, reports, entries</span></span></div>
+      <div class="lg"><span class="sw" style="background:var(--settlement)"></span><span><b class="cat-set">Settlement ⚖️</b><span class="sub">value moving through — escrows, bonds, rulings, proofs</span></span></div>
+      <div class="lg"><span class="sw" style="background:var(--network)"></span><span><b class="cat-net">Network 🕸️</b><span class="sub">moat — identities, attestations, covenants, discovery</span></span></div>
+    </div>
+    <div class="chartbox" style="height:360px"><canvas id="leader"></canvas></div>
+    <table id="ranks" style="margin-top:10px">
+      <thead><tr><th>#</th><th>Agent</th><th>Role</th><th class="num">Value</th>
+        <th class="num cat-rev">Rev</th><th class="num cat-dem">Dem</th>
+        <th class="num cat-set">Set</th><th class="num cat-net">Net</th><th>Composition</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Trend <span class="badge">snapshots accumulate each time you open this</span></h2>
+  <div class="card chartbox"><canvas id="trend"></canvas></div>
+
+  <h2>Engineer — per-agent health</h2>
+  <div class="card" style="padding:6px 8px"><table id="agents">
+    <thead><tr><th>Agent</th><th>Status</th><th>Version</th><th>Key state</th></tr></thead>
+    <tbody></tbody></table>
+  </div>
+
+  <h2>Engineer — platform</h2>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))" id="platform"></div>
+
+  <div class="foot">
+    Live from <span class="mono">https://mcp.viridisconservation.com/healthz</span> ·
+    Hosted agent fleet + subscription infrastructure ·
+    MCP registry + Smithery (<span class="mono">hartjustin6/*</span>) ·
+    <span class="mono">docs/deployment/GENESIS_RECEIPTS.md</span> ·
+    Auto-refreshes every 5 minutes.
+  </div>
+</div>
+
+<script>
+const HKEY = "viridis_fleet_history_v1";
+
+function num(x){ return (typeof x === "number" && isFinite(x)) ? x : 0; }
+
+function safeText(x){
+  return String(x ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  })[c]);
+}
+
+// Subscription state is a top-level infrastructure surface, not a hosted
+// fleet agent.  Accept the compact health shape and the richer aggregate
+// shape so the deck remains version-tolerant while exposing aggregate capital
+// metrics only (never account, Stripe, or bearer identifiers).
+function subscriptionMetrics(d){
+  const surface = (d && typeof d.subscriptions === "object" && d.subscriptions) || {};
+  const checks = (surface.checks && typeof surface.checks === "object") ? surface.checks : surface;
+  const summary = (surface.mrr_summary && typeof surface.mrr_summary === "object")
+    ? surface.mrr_summary
+    : ((surface.mrr && typeof surface.mrr === "object") ? surface.mrr : {});
+  const funnel = (surface.frontdoor_funnel && typeof surface.frontdoor_funnel === "object")
+    ? surface.frontdoor_funnel
+    : ((summary.frontdoor_funnel && typeof summary.frontdoor_funnel === "object")
+        ? summary.frontdoor_funnel
+        : ((checks.frontdoor_funnel && typeof checks.frontdoor_funnel === "object")
+            ? checks.frontdoor_funnel : {}));
+  const mixSource = summary.plan_mix ?? checks.plan_mix;
+  const mix = (mixSource && typeof mixSource === "object" &&
+               !Array.isArray(mixSource)) ? mixSource : {};
+  return {
+    present: Object.keys(surface).length > 0,
+    status: surface.status || "unknown",
+    version: surface.version || "",
+    active: num(summary.active_subscriptions ?? checks.active_subscriptions),
+    mrrMinor: num(summary.mrr_minor ?? checks.mrr_minor),
+    currency: String(summary.currency || surface.currency || "usd").toUpperCase(),
+    planMix: mix,
+    pageViews: num(funnel.page_views),
+    checkoutsStarted: num(funnel.checkouts_started ?? funnel.checkout_starts),
+    checkoutReadyPlans: num(checks.checkout_ready_plans),
+    catalogVersion: checks.plan_catalog_version || (summary.catalog||{}).version || "",
+    catalogSha: checks.plan_catalog_sha256 || (summary.catalog||{}).sha256 || ""
+  };
+}
+
+function planMixText(mix){
+  const rows = Object.entries(mix).sort(([a],[b]) => a.localeCompare(b));
+  if (!rows.length) return "No active live subscriptions";
+  return rows.map(([plan, raw]) => {
+    const item = (raw && typeof raw === "object") ? raw : {};
+    return `${safeText(plan)}: ${num(item.active_subscriptions)} · $${
+      (num(item.mrr_minor)/100).toFixed(2)}`;
+  }).join(" &nbsp;|&nbsp; ");
+}
+
+function extractJson(text){
+  const i = text.indexOf("{");
+  if (i < 0) throw new Error("no JSON body in fetch result");
+  return JSON.parse(text.slice(i));
+}
+
+const LAST = "viridis_fleet_last_healthz_v1";
+
+async function fetchHealth(){
+  const r = await fetch("/healthz");            // same-origin: always works
+  if (!r.ok && r.status !== 503) throw new Error("HTTP " + r.status);
+  return await r.json();                        // 503 = degraded, still JSON
+}
+
+function kpi(label, value, delta){
+  const d = (delta === null || delta === undefined) ? "" :
+    (delta > 0 ? `<div class="d up">\u25b2 +${delta} today</div>`
+               : `<div class="d flat">\u2014 no change</div>`);
+  return `<div class="card kpi"><div class="n">${value}</div>
+          <div class="l">${label}</div>${d}</div>`;
+}
+
+function snapshot(m){
+  let h = [];
+  try { h = JSON.parse(localStorage.getItem(HKEY) || "[]"); } catch(e){}
+  const today = new Date().toISOString().slice(0,10);
+  const last = h[h.length-1];
+  if (last && last.day === today) h[h.length-1] = { day: today, ...m };
+  else h.push({ day: today, ...m });
+  h = h.slice(-120);
+  localStorage.setItem(HKEY, JSON.stringify(h));
+  return h;
+}
+
+function deltas(h){
+  if (h.length < 2) return {};
+  const a = h[h.length-2], b = h[h.length-1], out = {};
+  for (const k of Object.keys(b)) if (k !== "day") out[k] = num(b[k]) - num(a[k]);
+  return out;
+}
+
+let chartRef = null;
+let leaderRef = null;
+
+// --- Agent value model (transparent, revisable) -----------------------------
+// value = 2 x prepaid revenue (cents) + sum(weight x activity counters).
+// Weights favor settlement-of-record events (money & risk) over registrations.
+const ROLE = { energyai:"federated \u00b7 energy", identity:"rails", trust:"rails", escrow:"settlement",
+  metering:"settlement", arbitration:"settlement", "compute-ledger":"physics",
+  covenant:"safety", provenance:"safety", offsets:"conservation",
+  erc8004:"interop", surety:"risk-transfer", notary:"delivery-proof",
+  wavefunction:"discovery", smartscale:"revenue service", protogen:"revenue service",
+  "regulatory-radar":"revenue service", "narrative-engine":"revenue service",
+  "taxcredit-engine":"revenue · energy", "ghg-ledger":"revenue · climate",
+  "quantity-takeoff":"revenue · construction",
+  "disclosure-compiler":"revenue · compliance" };
+const W = {   // per-counter weights
+  escrows_total:5, escrows_active:2, slashed_minor:0.05, bonds_total:5,
+  bonds_active:2, ruled:5, cases:2, events:2, meters:1, commitments:4,
+  purchases:3, retired_g:0.003, credits:1, registrations:2, registered:2,
+  active:1, subjects:1, attestations:2, covenants:2, recalled:1, quarantined:1,
+  entries:2, accounts:1, reports_processed:3, plans_generated:2,
+  cad_workspaces:1, cad_designs:2, regulations_in_db:0.1,
+  wavefunctions:2, collectives:2 };
+const PRICE_L = { smartscale:50, protogen:100, "taxcredit-engine":200, "ghg-ledger":100, "narrative-engine":50, "regulatory-radar":25, "quantity-takeoff":50, "disclosure-compiler":200 };
+// counter -> value category (Revenue is computed from prepaid credits, not counters)
+const CATEGORY = {
+  events:"demand", meters:"demand", reports_processed:"demand", plans_generated:"demand",
+  cad_workspaces:"demand", cad_designs:"demand", entries:"demand", accounts:"demand",
+  escrows_total:"settlement", escrows_active:"settlement", bonds_total:"settlement",
+  bonds_active:"settlement", slashed_minor:"settlement", ruled:"settlement", cases:"settlement",
+  purchases:"settlement", retired_g:"settlement", commitments:"settlement", revealed:"settlement", pending:"settlement",
+  registrations:"network", registered:"network", active:"network", subjects:"network",
+  attestations:"network", covenants:"network", recalled:"network", quarantined:"network",
+  wavefunctions:"network", collectives:"network", credits:"network", regulations_in_db:"network" };
+function fmtV(n){ return n >= 1000 ? (n/1000).toFixed(1)+"k" : (Math.round(n*10)/10); }
+function compBar(c, total){
+  if (total <= 0) return `<div class="compbar"></div>`;
+  const seg = (v,col) => v>0 ? `<span style="width:${(100*v/total).toFixed(1)}%;background:${col}"></span>` : "";
+  return `<div class="compbar" title="Rev ${fmtV(c.revenue)} · Dem ${fmtV(c.demand)} · Set ${fmtV(c.settlement)} · Net ${fmtV(c.network)}">`
+    + seg(c.revenue,"var(--revenue)") + seg(c.demand,"var(--demand)")
+    + seg(c.settlement,"var(--settlement)") + seg(c.network,"var(--network)") + `</div>`;
+}
+
+function agentValue(name, ag, gate){
+  const cats = { revenue:0, demand:0, settlement:0, network:0 };
+  if (ag.federated){                       // federated members: live + capability + realized revenue
+    if (ag.status === "ok") cats.network += 6;
+    const tools = num((ag.checks||{}).tools);
+    if (tools) cats.demand += 2 * tools;
+    if (name === "energyai") cats.revenue += 2 * 7500;   // realized $75 lead (cents x2)
+  } else {
+    const src = ag.checks && Object.keys(ag.checks).length ? ag.checks :
+      Object.fromEntries(Object.entries(ag).filter(([k,x]) =>
+        typeof x === "number" && !["timestamp"].includes(k)));
+    for (const [k, raw] of Object.entries(src)){
+      const x = num(raw), w = W[k] ?? 1;
+      if (x > 0 && w > 0) cats[CATEGORY[k] || "network"] += w * x;
+    }
+    const credits = num((gate.credits||{})[name]);
+    if (credits > 0) cats.revenue += 2 * credits * (PRICE_L[name]||50);
+  }
+  const value = cats.revenue + cats.demand + cats.settlement + cats.network;
+  return { value: Math.round(value*10)/10, cats };
+}
+
+function renderLeaderboard(a, gate, hist){
+  const rows = Object.keys(a).map(k => {
+    const s = agentValue(k, a[k], gate);
+    return { name:k, role: ROLE[k]||"", federated: !!a[k].federated, ...s };
+  }).sort((x,y) => y.value - x.value);
+
+  const medals = ["\ud83e\udd47","\ud83e\udd48","\ud83e\udd49"];
+  document.querySelector("#ranks tbody").innerHTML = rows.map((r,i) => {
+    const c = r.cats;
+    return `<tr><td>${medals[i]||i+1}</td><td><b>${r.name}</b></td>
+      <td class="sub">${r.role}</td><td class="num"><b>${fmtV(r.value)}</b></td>
+      <td class="num cat-rev">${c.revenue?fmtV(c.revenue):"\u2014"}</td>
+      <td class="num cat-dem">${c.demand?fmtV(c.demand):"\u2014"}</td>
+      <td class="num cat-set">${c.settlement?fmtV(c.settlement):"\u2014"}</td>
+      <td class="num cat-net">${c.network?fmtV(c.network):"\u2014"}</td>
+      <td>${compBar(c, r.value)}</td></tr>`;
+  }).join("");
+
+  if (leaderRef){ leaderRef.destroy(); leaderRef = null; }
+  leaderRef = new Chart(document.getElementById("leader"), {
+    type: "bar",
+    data: { labels: rows.map(r => r.name),
+      datasets: [{ label: "value",
+        data: rows.map(r => Math.max(r.value, 0.4)),   // floor zeros to a sliver
+        backgroundColor: rows.map(r => r.federated ? "#b8860b"
+          : (r===rows[0] ? "#1c7c4a" : "#8fb8a2")) }]},
+    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: (c) => "value " + rows[c.dataIndex].value } } },
+      scales: { x: { type: "logarithmic", min: 0.4,
+        title: { display: true, text: "value (log scale)" } } } }
+  });
+  return Object.fromEntries(rows.map(r => [r.name, r.value]));
+}
+
+function render(d, mode){
+  const a = { ...(d.agents || {}), ...(d.federated || {}) };  // federated (EnergyAI) join the roster
+  const fed = d.federated || {};
+  const names = Object.keys(a);
+  const okCount = names.filter(k => a[k].status === "ok").length;
+  const persist = d.persistence || {};
+  const gate = d.payment_gate || {};
+  const subs = subscriptionMetrics(d);
+  const allOk = d.status === "ok";
+
+  const st = document.getElementById("status");
+  st.textContent = (allOk ? `OK \u2014 ${okCount}/${names.length} agents`
+                          : `DEGRADED \u2014 ${okCount}/${names.length}`)
+                   + (mode === "cache" ? " (cached)" : "");
+  st.className = "pill " + (mode === "cache" ? "warn" : (allOk ? "ok" : "bad"));
+  document.getElementById("meta").textContent = mode === "cache"
+    ? `showing last snapshot from ${d._saved_at || "earlier"} \u2014 fetching live\u2026`
+    : "live \u00b7 checked " + new Date().toLocaleString();
+  if (mode !== "cache") document.getElementById("err").style.display = "none";
+
+  const c = k => a[k]?.checks || {};
+  const m = {
+    identities: num(c("identity").registered),
+    escrows: num(c("escrow").escrows_total),
+    escrows_active: num(c("escrow").escrows_active),
+    meters: num(c("metering").meters),
+    usage_events: num(c("metering").events),
+    bonds: num(c("surety").bonds_total),
+    bonds_active: num(c("surety").bonds_active),
+    slashed: num(c("surety").slashed_minor),
+    commitments: num(c("notary").commitments),
+    offsets_retired_g: num(c("offsets").retired_g),
+    credits_out: 0,
+    erc8004: num(c("erc8004").registrations),
+    genesis: num(c("provenance").registered),
+    credits: Object.values(gate.credits||{}).reduce((s,v)=>s+num(v),0),
+    seat_page_views: subs.pageViews,
+    seat_checkouts_started: subs.checkoutsStarted,
+    active_subscriptions: subs.active,
+    subscription_mrr_minor: subs.mrrMinor
+  };
+  let hist = mode === "cache"
+    ? (JSON.parse(localStorage.getItem(HKEY) || "[]"))
+    : snapshot(m);
+  const dl = deltas(hist);
+  const scores = renderLeaderboard(a, gate, hist);
+  if (mode !== "cache" && hist.length){          // persist scores for deltas
+    hist[hist.length-1].scores = scores;
+    localStorage.setItem(HKEY, JSON.stringify(hist));
+  }
+
+  document.getElementById("ceo").innerHTML =
+    kpi("Agent identities registered", m.identities, dl.identities) +
+    kpi("Escrows (total / active)", `${m.escrows} / ${m.escrows_active}`, dl.escrows) +
+    kpi("Metered usage events", m.usage_events, dl.usage_events) +
+    kpi("Bonds active \u00b7 slashed \u00a2", `${m.bonds_active} \u00b7 ${m.slashed}`, dl.bonds) +
+    kpi("Notarized deliveries", m.commitments, dl.commitments) +
+    kpi("Offsets retired (gCO\u2082e)", m.offsets_retired_g, dl.offsets_retired_g) +
+    kpi("ERC-8004 bridged", m.erc8004, dl.erc8004) +
+    kpi("Genesis certificates", m.genesis, dl.genesis) +
+    kpi("Prepaid credits outstanding", m.credits, dl.credits) +
+    kpi("Seat page views", m.seat_page_views, dl.seat_page_views) +
+    kpi("Seat checkouts started", m.seat_checkouts_started, dl.seat_checkouts_started) +
+    kpi("Active B2B subscriptions", m.active_subscriptions, dl.active_subscriptions) +
+    kpi("Recurring MRR", `$${(m.subscription_mrr_minor/100).toFixed(2)}`, null);
+
+  const PRICE = { smartscale: 50, protogen: 100, "taxcredit-engine": 200, "ghg-ledger": 100, "quantity-takeoff": 50, "disclosure-compiler": 200, "narrative-engine": 50, "regulatory-radar": 25 };
+  const BURN_MONTHLY_CENTS = 725;
+  const prepaidCents = Object.entries(gate.credits||{})
+      .reduce((s,[k,v]) => s + num(v) * (PRICE[k]||50), 0);
+  const pct = Math.min(100, Math.round(100 * prepaidCents / BURN_MONTHLY_CENTS));
+  document.getElementById("ceo").innerHTML +=
+    `<div class="card kpi"><div class="n">$${(prepaidCents/100).toFixed(2)}
+       <span style="font-size:12px;color:var(--muted)">/ $7.25 burn</span></div>
+     <div class="l">Prepaid revenue vs monthly burn</div>
+     <div class="d ${pct>=100?"up":"flat"}">${pct}% of bootstrap threshold${pct>=100?" \u2014 SELF-FUNDING":""}</div></div>`;
+
+  const tb = document.querySelector("#agents tbody");
+  tb.innerHTML = names.map(k => {
+    const ag = a[k]; const ok = ag.status === "ok";
+    const checks = ag.checks ? Object.entries(ag.checks)
+        .map(([kk,vv]) => `${kk}:${vv}`).join("  ") :
+      Object.entries(ag).filter(([kk]) =>
+        !["status","agent","version","timestamp","capabilities"].includes(kk))
+        .map(([kk,vv]) => `${kk}:${vv}`).join("  ");
+    const badge = fed[k] ? ` <span class="badge">federated</span>` : "";
+    return `<tr><td><b>${k}</b>${badge}<div class="mono">${ag.agent||""}</div></td>
+      <td><span class="dot ${ok?"ok":"bad"}"></span>${ag.status}</td>
+      <td class="mono">${ag.version||"\u2014"}</td>
+      <td class="mono">${checks||"\u2014"}</td></tr>`;
+  }).join("");
+
+  const pOk = persist.available && !Object.keys(persist.errors||{}).length;
+  const gOk = !Object.keys(gate.errors||{}).length;
+  const sOk = subs.present && subs.status === "ok";
+  document.getElementById("platform").innerHTML = `
+    <div class="card"><b>Persistence</b>
+      <div style="margin-top:6px"><span class="pill ${pOk?"ok":"bad"}">${pOk?"durable":"AT RISK"}</span></div>
+      <div class="mono" style="margin-top:6px">${persist.db_path||"?"}</div>
+      ${Object.keys(persist.errors||{}).length?`<div class="mono" style="color:var(--red)">${JSON.stringify(persist.errors)}</div>`:""}
+    </div>
+    <div class="card"><b>Payment gate</b>
+      <div style="margin-top:6px"><span class="pill ${gOk?"ok":"warn"}">${(gate.gated_agents||[]).join(", ")||"none"}</span></div>
+      <div class="sub" style="margin-top:6px">${gate.free_calls_per_day??"?"} free calls/day \u2192 credits \u2192 402 (Stripe packs + x402)</div>
+      <div class="mono" style="margin-top:4px">credits: ${Object.entries(gate.credits||{}).map(([k,v])=>k+":"+v).join("  ")||"\u2014"} \u00b7 smartscale 50\u00a2 \u00b7 protogen $1 \u00b7 taxcredit-engine $2 \u00b7 ghg-ledger $1 \u00b7 quantity-takeoff 50\u00a2 \u00b7 disclosure-compiler $2</div>
+      ${Object.keys(gate.errors||{}).length?`<div class="mono" style="color:var(--red)">${JSON.stringify(gate.errors)}</div>`:""}
+    </div>
+    <div class="card"><b>Subscription capital engine</b>
+      <div style="margin-top:6px"><span class="pill ${sOk?"ok":"warn"}">${
+        sOk ? `${subs.active} active · $${(subs.mrrMinor/100).toFixed(2)} MRR`
+            : (subs.present ? safeText(subs.status) : "not reported")}</span></div>
+      <div class="sub" style="margin-top:6px">${planMixText(subs.planMix)}</div>
+      <div class="mono" style="margin-top:4px">${safeText(subs.currency)} · checkout-ready plans: ${subs.checkoutReadyPlans}
+        ${subs.catalogVersion?` · catalog ${safeText(subs.catalogVersion)}`:""}
+        ${subs.catalogSha?` · sha ${safeText(subs.catalogSha).slice(0,12)}…`:""}</div>
+      <div class="funnel-strip" aria-label="Seat conversion funnel">
+        <div class="funnel-step"><b>${subs.pageViews}</b><span>page views</span></div>
+        <div class="funnel-arrow" aria-hidden="true">→</div>
+        <div class="funnel-step"><b>${subs.checkoutsStarted}</b><span>checkout starts</span></div>
+        <div class="funnel-arrow" aria-hidden="true">→</div>
+        <div class="funnel-step"><b>${subs.active}</b><span>active seats</span></div>
+        <div class="funnel-arrow" aria-hidden="true">→</div>
+        <div class="funnel-step"><b>$${(subs.mrrMinor/100).toFixed(2)}</b><span>MRR</span></div>
+      </div>
+    </div>
+    <div class="card"><b>Distribution</b>
+      <div class="sub" style="margin-top:6px">Official MCP registry · Smithery · PulseMCP · Glama · mcp.so<br>
+      <b>New surfaces publish only after their live health and version gates pass.</b></div>
+    </div>`;
+
+  const labels = hist.map(x => x.day);
+  if (chartRef) { chartRef.destroy(); chartRef = null; }
+  chartRef = new Chart(document.getElementById("trend"), {
+    type: "line",
+    data: { labels,
+      datasets: [
+        { label:"Escrows", data:hist.map(x=>num(x.escrows)), borderColor:"#245c40", backgroundColor:"#245c4022", tension:.3, fill:true },
+        { label:"Identities", data:hist.map(x=>num(x.identities)), borderColor:"#3b82c4", tension:.3 },
+        { label:"Usage events", data:hist.map(x=>num(x.usage_events)), borderColor:"#9a6b00", tension:.3 },
+        { label:"Bonds", data:hist.map(x=>num(x.bonds)), borderColor:"#7a4bd0", tension:.3 }
+      ]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ boxWidth:12, font:{ size:11 } } } },
+      scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } }
+  });
+}
+
+(async function tick(){
+  try {
+    const live = await fetchHealth();
+    live._saved_at = new Date().toLocaleString();
+    localStorage.setItem(LAST, JSON.stringify(live));
+    render(live, "live");
+  } catch(e){
+    try {
+      const cached = JSON.parse(localStorage.getItem(LAST) || "null");
+      if (cached) render(cached, "cache");
+    } catch(_){}
+    document.getElementById("err").style.display = "block";
+    document.getElementById("errdetail").textContent = String(e);
+  }
+  setTimeout(tick, 300000);   // refresh every 5 minutes
+})();
+</script>
+</body>
+</html>

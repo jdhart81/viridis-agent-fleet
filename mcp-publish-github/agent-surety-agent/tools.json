@@ -1,0 +1,263 @@
+{
+  "server": "agent-surety-agent",
+  "tool_count": 10,
+  "tools": [
+    {
+      "name": "post_bond",
+      "description": "Post a surety bond behind an agent's promises. principal is a positive\n    integer in minor units; expires_at is the ISO-8601 coverage window end.\n    The bond fee (2% default) is computed and frozen at post.",
+      "inputSchema": {
+        "properties": {
+          "principal_agent": {
+            "title": "Principal Agent",
+            "type": "string"
+          },
+          "principal": {
+            "title": "Principal",
+            "type": "integer"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "coverage": {
+            "default": "",
+            "title": "Coverage",
+            "type": "string"
+          },
+          "currency": {
+            "default": "USD",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal_agent",
+          "principal",
+          "expires_at"
+        ],
+        "title": "post_bondArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "activate_bond",
+      "description": "Mark a POSTED bond ACTIVE (idempotent). funding_ref links the payment\n    rail transaction that funded the stake.",
+      "inputSchema": {
+        "properties": {
+          "bond_id": {
+            "title": "Bond Id",
+            "type": "string"
+          },
+          "funding_ref": {
+            "default": "",
+            "title": "Funding Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bond_id"
+        ],
+        "title": "activate_bondArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "file_claim",
+      "description": "File a claim against an ACTIVE bond. Claims pay out ONLY when an\n    arbitration ruling upholds them (see slash_bond).",
+      "inputSchema": {
+        "properties": {
+          "bond_id": {
+            "title": "Bond Id",
+            "type": "string"
+          },
+          "claimant": {
+            "title": "Claimant",
+            "type": "string"
+          },
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bond_id",
+          "claimant",
+          "amount_minor"
+        ],
+        "title": "file_claimArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "slash_bond",
+      "description": "Execute an arbitration ruling against a claim. Requires the ruling's\n    case id + content hash from agent-arbitration \u2014 no ruling, no slash; a\n    given ruling pays at most once. Payout caps at the bond's available\n    balance (over-claims exhaust the bond).",
+      "inputSchema": {
+        "properties": {
+          "bond_id": {
+            "title": "Bond Id",
+            "type": "string"
+          },
+          "claim_id": {
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "ruling_case_id": {
+            "title": "Ruling Case Id",
+            "type": "string"
+          },
+          "ruling_hash": {
+            "title": "Ruling Hash",
+            "type": "string"
+          },
+          "upheld": {
+            "default": true,
+            "title": "Upheld",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "bond_id",
+          "claim_id",
+          "ruling_case_id",
+          "ruling_hash"
+        ],
+        "title": "slash_bondArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "release_bond",
+      "description": "Release the remaining stake to the principal after the coverage window\n    elapses \u2014 refused while any claim is still open.",
+      "inputSchema": {
+        "properties": {
+          "bond_id": {
+            "title": "Bond Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bond_id"
+        ],
+        "title": "release_bondArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "bond_status",
+      "description": "Current record for a bond (state, balances, claims, audit head).",
+      "inputSchema": {
+        "properties": {
+          "bond_id": {
+            "title": "Bond Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bond_id"
+        ],
+        "title": "bond_statusArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_bonds",
+      "description": "List bonds, optionally filtered by state\n    (POSTED|ACTIVE|RELEASED|EXHAUSTED).",
+      "inputSchema": {
+        "properties": {
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "State"
+          }
+        },
+        "title": "list_bondsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_audit",
+      "description": "Validate the tamper-evident audit hash chain for a bond.",
+      "inputSchema": {
+        "properties": {
+          "bond_id": {
+            "title": "Bond Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bond_id"
+        ],
+        "title": "verify_auditArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "price_bond",
+      "description": "Underwrite a surety bond: deterministic actuarial premium quote from a\n    counterparty's track record (attestations, notarized deliveries, completed\n    bonds lower the rate; slashes raise it or decline outright). Integer-only\n    model uw-v1; the returned quote_hash lets any party recompute and verify\n    the quote. Pure \u2014 never mutates bond state.",
+      "inputSchema": {
+        "properties": {
+          "coverage_minor": {
+            "title": "Coverage Minor",
+            "type": "integer"
+          },
+          "duration_days": {
+            "title": "Duration Days",
+            "type": "integer"
+          },
+          "attestations": {
+            "default": 0,
+            "title": "Attestations",
+            "type": "integer"
+          },
+          "successful_deliveries": {
+            "default": 0,
+            "title": "Successful Deliveries",
+            "type": "integer"
+          },
+          "bonds_completed": {
+            "default": 0,
+            "title": "Bonds Completed",
+            "type": "integer"
+          },
+          "slashes": {
+            "default": 0,
+            "title": "Slashes",
+            "type": "integer"
+          },
+          "slashed_minor": {
+            "default": 0,
+            "title": "Slashed Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "coverage_minor",
+          "duration_days"
+        ],
+        "title": "price_bondArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ]
+}
