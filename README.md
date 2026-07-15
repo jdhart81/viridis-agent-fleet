@@ -1,21 +1,13 @@
 # Viridis Agent Fleet — MCP Surface
 
 The public MCP-facing surface of the **Viridis agent stable**: a 22-agent
-agent-to-agent (A2A) economy published on the [Model Context Protocol
+agent-to-agent (A2A) economy plus a B2B subscriptions infrastructure surface,
+published on the [Model Context Protocol
 registry](https://registry.modelcontextprotocol.io) under the `io.github.jdhart81`
 namespace. This repository is the **callable spec + provenance** for those
 listings — the registry manifests, the JSON-Schema tool definitions, the
 public agent contracts, and the reference gateway. The agent cores are
 maintained privately; everything here is what a *calling* agent needs.
-
-The public MCP-facing surface of the **Viridis agent stable**: a 21-agent
-agent-to-agent (A2A) economy plus a B2B subscriptions infrastructure surface,
-published on the [Model Context Protocol
-registry](https://registry.modelcontextprotocol.io) under the
-`io.github.jdhart81` namespace. This repository is the **callable spec +
-provenance** for those listings — the registry manifests, the JSON-Schema tool
-definitions, the public agent contracts, and the reference gateway. The agent
-cores are maintained privately; everything here is what a *calling* agent needs.
 
 By [Viridis LLC](https://viridisconservation.com) — conservation technology.
 
