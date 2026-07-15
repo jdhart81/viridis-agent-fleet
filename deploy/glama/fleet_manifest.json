@@ -2361,6 +2361,47 @@
    }
   },
   {
+   "name": "disbursement_schedule",
+   "description": "Automated disbursement preview: for each verified restoration project,\n    splits its newly-accrued proceeds into the Viridis Conservation withhold\n    (default 15%, seeds the software/business) and the project payout (85%).\n    Read-only. Funded-but-unregistered projects are surfaced separately as\n    pending_registration (can't pay an unverified project).",
+   "inputSchema": {
+    "properties": {
+     "project_id": {
+      "default": "",
+      "title": "Project Id",
+      "type": "string"
+     }
+    },
+    "title": "disbursement_scheduleArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "certify_disbursement",
+   "description": "Freeze the current disbursement schedule into a certified, tamper-evident\n    batch (content-addressed, hash-chained). Idempotent on batch_id; only\n    newly-accrued proceeds for verified projects are certified (never disbursed\n    twice). This is the certified investment record the CEO executes the actual\n    Stripe transfers against.",
+   "inputSchema": {
+    "properties": {
+     "batch_id": {
+      "title": "Batch Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "batch_id"
+    ],
+    "title": "certify_disbursementArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "verify_disbursement",
+   "description": "Recompute the disbursement certificate hash chain and confirm whole-book\n    conservation of disbursed proceeds. Any party can audit disbursements.",
+   "inputSchema": {
+    "properties": {},
+    "title": "verify_disbursementArguments",
+    "type": "object"
+   }
+  },
+  {
    "name": "describe_agent",
    "description": "Fleet-standard self-description.",
    "inputSchema": {

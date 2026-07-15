@@ -117,6 +117,18 @@ A live run: 0.2956 gCO2e of Landauer-validated inference work, neutralized by
 1 g of D-Score-verified conservation credit, emitted as an `x402c/0.1` receipt
 whose neutrality is independently confirmed by `verify_retirement`.
 
+**The conservation flywheel is closed and certified.** Beyond retirement, the
+clearinghouse (v0.3.0) attributes every retirement's proceeds to the verified
+restoration project that supplied the credit (`register_project` /
+`project_funding`), then automatically splits each project's accrued proceeds
+into a configurable Viridis Conservation withhold (default 15%, seeds the
+conservation software/business) and the project payout (85%), and freezes the
+split into a tamper-evident, hash-chained certificate
+(`disbursement_schedule` → `certify_disbursement` → `verify_disbursement`).
+Only registered, verified projects can be paid. No cash moves in the agent —
+it produces the certified, audit-ready disbursement batch the operator
+executes against.
+
 First conforming transaction on record: 2026-07-11 — an agent-to-agent job
 settled, carbon-accounted at 0.200 gCO2e via Landauer-floor method, offset
 against a D-Score-verified credit (`dscore:zenodo.19317982/site7`), all
