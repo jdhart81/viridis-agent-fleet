@@ -8,16 +8,13 @@
 - `describe() -> dict` — sync; `{name, version, capabilities, inputs, outputs, a2a_role}`.
 
 ## Actions
-record_work, footprint, attest, verify_attestation, verify_chain, list_entries,
-record_inventory, get_inventory, list_inventories, verify_inventory_chain
+record_work, footprint, attest, verify_attestation, verify_chain, list_entries
 
 Full input/output shapes: `describe()` and the action handlers in `src/core.py`.
 
-## Invariants (L1–L8, I1–I6)
+## Invariants (L1–L8)
 See the `src/core.py` module docstring for the authoritative list — one test
-per invariant in `tests/test_core.py`. Inventory records use a separate
-append-only chain, exact integer grams, explicit content/factor lineage, and
-payload-consistent idempotency; a conflicting duplicate ID fails closed.
+per invariant in `tests/test_core.py`.
 
 ## Deploy
 Primary: MCP server (`adapters/mcp_server.py`). Secondary: FastAPI. Core is

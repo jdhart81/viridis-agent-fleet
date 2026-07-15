@@ -95,17 +95,27 @@ escrow release record, or any receipt JSON) MAY include:
 - **C5 (backward compatibility):** consumers unaware of x402-C MUST be able
   to ignore the `carbon` member with no behavioral change.
 
-### 4. Reference implementation
+### 4. Reference implementation — LIVE
 
-Open-source, running in production at `mcp.viridisconservation.com`:
+Open-source and running in production at `mcp.viridisconservation.com`. As of
+2026-07-15 the two core tools that emit and verify the standard are deployed
+and smoke-tested end to end (`scripts/carbon_neutral_work_demo.py`):
 
-- **agent-compute-ledger-agent** — Landauer-bound energy/CO2e accounting
-  (rejects physically impossible workloads; C1).
-- **agent-offset-clearinghouse-agent** — verified-credit purchase and
-  retirement with public proof (C4).
+- **agent-compute-ledger-agent v0.3.0** — `carbon_receipt` **emits** the
+  x402-C `carbon` object from a recorded work entry (method `landauer-floor`
+  when bit_ops are declared; C1 floor enforced at record time, C2 self-checked,
+  C3 attestation_hash binds it to the ledger's hash chain).
+- **agent-offset-clearinghouse-agent v0.1.3** — `verify_retirement` is the
+  **C4 check**: confirms an `offset_ref` retires ≥ the receipt's gCO2e of
+  *verified-only* conservation credit (O7). Purchase + retirement carry public,
+  content-addressed certificates.
 - **agent-metering-agent v0.2.0** — per-call usage events the carbon object
   attaches to.
 - **agent-verified-relay-agent** — receipt chains x402-C objects ride on.
+
+A live run: 0.2956 gCO2e of Landauer-validated inference work, neutralized by
+1 g of D-Score-verified conservation credit, emitted as an `x402c/0.1` receipt
+whose neutrality is independently confirmed by `verify_retirement`.
 
 First conforming transaction on record: 2026-07-11 — an agent-to-agent job
 settled, carbon-accounted at 0.200 gCO2e via Landauer-floor method, offset

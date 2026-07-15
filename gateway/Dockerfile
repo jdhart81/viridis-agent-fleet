@@ -36,6 +36,7 @@ COPY deploy/gateway/payment_gate.py deploy/gateway/
 COPY deploy/gateway/account_auth.py deploy/gateway/
 COPY deploy/gateway/request_context.py deploy/gateway/
 COPY deploy/gateway/reconciliation.py deploy/gateway/
+COPY deploy/gateway/underwriting_bridge.py deploy/gateway/
 COPY deploy/gateway/persistence_probe.py deploy/gateway/
 COPY deploy/gateway/deck.html deploy/gateway/
 COPY deploy/gateway/stats.html deploy/gateway/

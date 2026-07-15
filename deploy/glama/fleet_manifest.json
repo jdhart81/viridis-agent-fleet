@@ -331,6 +331,28 @@
    }
   },
   {
+   "name": "carbon_receipt",
+   "description": "Emit an x402-C carbon receipt for a recorded work entry \u2014 the\n    physically-grounded {version, g_co2e, energy_j, method, landauer_*, ...}\n    object an x402 machine-payment receipt can carry. method is\n    'landauer-floor' when the workload declared bit_ops (thermodynamically\n    validated), else 'measured'. Pass offset_ref (a retirement id from the\n    offset clearinghouse) to assert carbon-neutrality. Read-only; the returned\n    attestation_hash binds the receipt to the ledger's hash chain.",
+   "inputSchema": {
+    "properties": {
+     "entry_id": {
+      "title": "Entry Id",
+      "type": "string"
+     },
+     "offset_ref": {
+      "default": "",
+      "title": "Offset Ref",
+      "type": "string"
+     }
+    },
+    "required": [
+     "entry_id"
+    ],
+    "title": "carbon_receiptArguments",
+    "type": "object"
+   }
+  },
+  {
    "name": "record_inventory",
    "description": "Record an audited GHG inventory in a separate append-only chain.\n    mass_g is exact integer grams; content and factor-pack digests are bare\n    lowercase SHA-256 hex. Idempotent on inventory_id.",
    "inputSchema": {
@@ -2242,6 +2264,99 @@
      "purchase_id"
     ],
     "title": "get_purchaseArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "verify_retirement",
+   "description": "x402-C C4 check: confirm a retirement (offset_ref = purchase_id)\n    actually retires at least required_g grams of verified conservation\n    credit \u2014 the check that lets a carbon receipt's neutrality claim be\n    honored. Returns covered / retired_g / shortfall_g and the backing\n    credits. Read-only.",
+   "inputSchema": {
+    "properties": {
+     "purchase_id": {
+      "title": "Purchase Id",
+      "type": "string"
+     },
+     "required_g": {
+      "default": 0,
+      "title": "Required G",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "purchase_id"
+    ],
+    "title": "verify_retirementArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "register_project",
+   "description": "Register a VERIFIED restoration project so retirements against its\n    credits can be funded. verification_ref (D-Score / land-verification /\n    registry id) is required \u2014 only verified conservation is funded.\n    project_id is immutable once registered.",
+   "inputSchema": {
+    "properties": {
+     "project_id": {
+      "title": "Project Id",
+      "type": "string"
+     },
+     "verification_ref": {
+      "title": "Verification Ref",
+      "type": "string"
+     },
+     "name": {
+      "default": "",
+      "title": "Name",
+      "type": "string"
+     },
+     "location": {
+      "default": "",
+      "title": "Location",
+      "type": "string"
+     },
+     "methodology": {
+      "default": "",
+      "title": "Methodology",
+      "type": "string"
+     },
+     "beneficiary": {
+      "default": "",
+      "title": "Beneficiary",
+      "type": "string"
+     },
+     "registry_ref": {
+      "default": "",
+      "title": "Registry Ref",
+      "type": "string"
+     }
+    },
+    "required": [
+     "project_id",
+     "verification_ref"
+    ],
+    "title": "register_projectArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "project_funding",
+   "description": "Supply-side disbursement ledger: how much each restoration project has\n    earned from retirements and is owed (gross_proceeds_minor + retired_g).\n    Pass a project_id for one project, else all. Read-only \u2014 the CEO settles\n    the actual payout. This is what makes the clearinghouse fund restoration.",
+   "inputSchema": {
+    "properties": {
+     "project_id": {
+      "default": "",
+      "title": "Project Id",
+      "type": "string"
+     }
+    },
+    "title": "project_fundingArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "list_projects",
+   "description": "List all registered restoration projects with their metadata.",
+   "inputSchema": {
+    "properties": {},
+    "title": "list_projectsArguments",
     "type": "object"
    }
   },

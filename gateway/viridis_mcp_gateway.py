@@ -998,6 +998,24 @@ def build_app():
             return await reconciliation.build_report(
                 cores["metering"], gate, days=days)
 
+        @pay.tool()
+        async def underwrite_service_bond(service_id: str, coverage_minor: int,
+                                          duration_days: int = 30) -> dict:
+            """Price a surety bond behind a Viridis Verified provider from its
+            tamper-evident delivery track record (composition: Verified
+            receipts -> surety underwriter uw-v1). Read-only, deterministic;
+            the returned quote carries a recomputable quote_hash. A provider
+            with more proven successful relays gets a lower premium; one with
+            no track record prices at the unknown-counterparty rate (or is
+            declined). This is a quote, not a bound policy."""
+            if "verified" not in cores or "surety" not in cores:
+                return {"status": "error", "error_type": "unavailable",
+                        "message": "verified and surety mounts are required"}
+            import underwriting_bridge
+            return await underwriting_bridge.quote_bond_for_service(
+                cores["verified"], cores["surety"], service_id,
+                coverage_minor, duration_days)
+
         pay.settings.stateless_http = True
         if _sec is not None:
             try:
