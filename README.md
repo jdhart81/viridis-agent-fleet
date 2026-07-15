@@ -8,7 +8,16 @@ listings — the registry manifests, the JSON-Schema tool definitions, the
 public agent contracts, and the reference gateway. The agent cores are
 maintained privately; everything here is what a *calling* agent needs.
 
-By [Viridis LLC](https://viridis.earth) — conservation technology.
+The public MCP-facing surface of the **Viridis agent stable**: a 21-agent
+agent-to-agent (A2A) economy plus a B2B subscriptions infrastructure surface,
+published on the [Model Context Protocol
+registry](https://registry.modelcontextprotocol.io) under the
+`io.github.jdhart81` namespace. This repository is the **callable spec +
+provenance** for those listings — the registry manifests, the JSON-Schema tool
+definitions, the public agent contracts, and the reference gateway. The agent
+cores are maintained privately; everything here is what a *calling* agent needs.
+
+By [Viridis LLC](https://viridisconservation.com) — conservation technology.
 
 ## ⚡ First call in 30 seconds — no signup, no key
 
@@ -56,9 +65,9 @@ as composable MCP services:
 ## Layout
 
 ```
-mcp-publish/<agent>/server.json   # MCP registry manifest (earth.viridis/*)
-mcp-publish/<agent>/tools.json    # JSON-Schema tool definitions (one per action)
-mcp-publish/<agent>/DEPLOY.md     # env, endpoints, how a caller uses it
+mcp-publish-github/<agent>/server.json # official MCP registry manifest
+mcp-publish-github/<agent>/tools.json  # exact JSON-Schema tool definitions
+mcp-publish-github/<agent>/DEPLOY.md   # endpoint and publication notes
 contracts/<agent>.md              # public agent contract (capabilities, invariants)
 gateway/                          # reference gateway for the hosted streamable-http fleet
 deploy/glama/                     # single-install 18-agent / 117-tool aggregate bridge
