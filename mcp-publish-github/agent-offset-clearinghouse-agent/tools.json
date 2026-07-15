@@ -1,6 +1,6 @@
 {
   "server": "agent-offset-clearinghouse-agent",
-  "tool_count": 17,
+  "tool_count": 18,
   "tools": [
     {
       "name": "list_credit",
@@ -70,6 +70,28 @@
       "inputSchema": {
         "properties": {},
         "title": "verra_supplyArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verra_retirement_record",
+      "description": "Generate the Verra-portal-ready retirement record(s) for a retirement\n    made against Verra supply \u2014 VCS project id, serial, vintage, methodology,\n    quantity (tCO2e), beneficiary, and the registry.verra.org cross-reference.\n    Read-only. Submit these under the Viridis Verra account to finalize the\n    on-registry retirement (portal today; auto-posts when Verra's transaction\n    API is live).",
+      "inputSchema": {
+        "properties": {
+          "purchase_id": {
+            "title": "Purchase Id",
+            "type": "string"
+          },
+          "retirement_reason": {
+            "default": "",
+            "title": "Retirement Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purchase_id"
+        ],
+        "title": "verra_retirement_recordArguments",
         "type": "object"
       }
     },

@@ -2150,6 +2150,28 @@
    }
   },
   {
+   "name": "verra_retirement_record",
+   "description": "Generate the Verra-portal-ready retirement record(s) for a retirement\n    made against Verra supply \u2014 VCS project id, serial, vintage, methodology,\n    quantity (tCO2e), beneficiary, and the registry.verra.org cross-reference.\n    Read-only. Submit these under the Viridis Verra account to finalize the\n    on-registry retirement (portal today; auto-posts when Verra's transaction\n    API is live).",
+   "inputSchema": {
+    "properties": {
+     "purchase_id": {
+      "title": "Purchase Id",
+      "type": "string"
+     },
+     "retirement_reason": {
+      "default": "",
+      "title": "Retirement Reason",
+      "type": "string"
+     }
+    },
+    "required": [
+     "purchase_id"
+    ],
+    "title": "verra_retirement_recordArguments",
+    "type": "object"
+   }
+  },
+  {
    "name": "buy_offset",
    "description": "Retire mass_g of verified credits for a buyer: cheapest-first matching,\n    exactly-once (idempotent on purchase_id), returns a content-addressed\n    offset certificate with per-fill costs. Payment settles via escrow.\n    dry_run=true previews the exact fills/cost without mutating the book.",
    "inputSchema": {
