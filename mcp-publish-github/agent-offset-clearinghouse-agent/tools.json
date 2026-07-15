@@ -1,10 +1,10 @@
 {
   "server": "agent-offset-clearinghouse-agent",
-  "tool_count": 16,
+  "tool_count": 17,
   "tools": [
     {
       "name": "list_credit",
-      "description": "List a conservation credit on the book. verification_ref (a D-Score /\n    land-verification attestation) is REQUIRED \u2014 unverified credits cannot\n    enter the book.",
+      "description": "List a conservation credit on the book. verification_ref (a D-Score /\n    land-verification attestation) is REQUIRED \u2014 unverified credits cannot\n    enter the book. To trade on the Verra network, pass registry=\"verra\" with\n    the VCS provenance (vcs_project_id, serial_number, vintage, methodology) so\n    retirements are cross-referenceable on registry.verra.org.",
       "inputSchema": {
         "properties": {
           "issuer": {
@@ -26,6 +26,31 @@
           "verification_ref": {
             "title": "Verification Ref",
             "type": "string"
+          },
+          "registry": {
+            "default": "",
+            "title": "Registry",
+            "type": "string"
+          },
+          "vcs_project_id": {
+            "default": "",
+            "title": "Vcs Project Id",
+            "type": "string"
+          },
+          "vintage": {
+            "default": "",
+            "title": "Vintage",
+            "type": "string"
+          },
+          "serial_number": {
+            "default": "",
+            "title": "Serial Number",
+            "type": "string"
+          },
+          "methodology": {
+            "default": "",
+            "title": "Methodology",
+            "type": "string"
           }
         },
         "required": [
@@ -36,6 +61,15 @@
           "verification_ref"
         ],
         "title": "list_creditArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verra_supply",
+      "description": "The tradeable Verra VCS book: verified credits carrying genuine Verra\n    provenance (project id + serial + vintage), cross-referenceable on\n    registry.verra.org. Read-only. Every retirement nets the project 85% and\n    Viridis the 15% marketplace take.",
+      "inputSchema": {
+        "properties": {},
+        "title": "verra_supplyArguments",
         "type": "object"
       }
     },

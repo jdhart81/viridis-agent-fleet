@@ -1016,6 +1016,24 @@ def build_app():
                 cores["verified"], cores["surety"], service_id,
                 coverage_minor, duration_days)
 
+        @pay.tool()
+        async def quote_insured_job(service_id: str, job_amount_minor: int,
+                                    coverage_minor: int,
+                                    duration_days: int = 30) -> dict:
+            """One call to price + plan an INSURED agent-to-agent job. Given a
+            Viridis Verified provider and a job, returns the itemized cost of
+            insuring it (surety bond premium from the provider's track record +
+            escrow settlement fee + total protection), whether it's insurable,
+            and the exact ordered playbook to run it. Read-only. This is the
+            insured-delivery product in a single call."""
+            if "verified" not in cores or "surety" not in cores:
+                return {"status": "error", "error_type": "unavailable",
+                        "message": "verified and surety mounts are required"}
+            import insured_job_bridge
+            return await insured_job_bridge.quote_insured_job(
+                cores["verified"], cores["surety"], service_id,
+                job_amount_minor, coverage_minor, duration_days)
+
         pay.settings.stateless_http = True
         if _sec is not None:
             try:
