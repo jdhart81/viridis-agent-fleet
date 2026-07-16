@@ -71,12 +71,13 @@ PG16 Escrow consumption is idempotent on escrow id (persisted
      payment_ref never grants a second batch of credits; the original grant
      record is retained and reported. payment_ref is always stripped from
      the payload before it reaches the wrapped core.
-(PG17 — real-cash settlement over this rail — is intentionally NOT claimed:
-     the escrow core custodies no funds today (its fund action is a pure
-     state transition), so escrow-settled value is a closed-loop internal
-     ledger quantity. Reporting keeps it in its own bucket, never summed
-     into Stripe settled cash. Wiring real custody requires explicit
-     sign-off and a new invariant before any claim of revenue.)
+PG17 Real-cash settlement over this rail exists ONLY through the custody
+     bridge (escrow_custody.py, EC1-EC8): an escrow counts as cash iff it
+     was funded through a pull-verified PAID Stripe Checkout session
+     recorded in the persisted custody registry. Escrows funded any other
+     way remain a closed-loop internal ledger and are reported as such
+     (RV6 split). Cash out (third-party payouts, refunds) is never
+     executed by software — only certified for the account owner (EC5).
 """
 from __future__ import annotations
 
@@ -918,10 +919,11 @@ class PaymentGate:
                     "enabled": self.subscriptions is not None,
                     "errors": dict(self._subscription_errors),
                 },
-                "a2a_escrow": {                                # PG13-PG16
+                "a2a_escrow": {                                # PG13-PG17
                     "enabled": self.escrow is not None,
-                    "note": "internal-ledger settlement — not cash (PG17 "
-                            "deferred; see reconcile_revenue)",
+                    "note": "cash iff custody-verified (PG17/EC3 — see "
+                            "escrow_custody + reconcile_revenue); "
+                            "otherwise internal ledger, not cash",
                     "consumed": {
                         n: {"escrows": len(g.get("consumed_escrows", {})),
                             "credits_granted": sum(

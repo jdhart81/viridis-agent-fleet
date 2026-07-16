@@ -933,6 +933,12 @@ def build_app():
         if path in cores:
             gate.attach(path, cores[path])
 
+    # PG17 custody bridge (EC1-EC8, see escrow_custody.py): escrows become
+    # CASH-funded through pull-verified Stripe Checkout; cash out is only
+    # ever CERTIFIED for Justin, never executed by software.
+    from escrow_custody import EscrowCustody
+    custody = EscrowCustody(store, cores["escrow"])
+
     # stateless_http: no session persistence needed for these tools; makes the
     # endpoints trivially load-balancer-friendly.
     # Round-1 posture: endpoints are open. The MCP streamable-http default
@@ -1001,7 +1007,50 @@ def build_app():
                                    "(VIRIDIS_ADMIN_TOKEN)"}
             import reconciliation
             return await reconciliation.build_report(
-                cores["metering"], gate, days=days)
+                cores["metering"], gate, days=days, custody=custody)
+
+        @pay.tool()
+        async def escrow_checkout(escrow_id: str) -> dict:
+            """PG17: create a Stripe Checkout URL that CASH-funds an existing
+            OPEN USD escrow for exactly its amount_minor. Pay the URL, then
+            call confirm_escrow_funding — the escrow turns FUNDED only after
+            the session pull-verifies as paid (EC1/EC2)."""
+            return custody.create_funding_checkout(escrow_id)
+
+        @pay.tool()
+        async def confirm_escrow_funding(escrow_id: str,
+                                         session_id: str = "") -> dict:
+            """PG17: pull-verify the escrow's Checkout session and mark the
+            escrow FUNDED with real cash. Fail-closed on anything but a paid,
+            sufficient session; idempotent on both escrow and session
+            (EC2-EC4). A cash-funded escrow spends on any gated agent via
+            payment_ref=<escrow_id> (PG13) and is reported as CASH."""
+            return custody.confirm_funding(escrow_id,
+                                           session_id.strip() or None)
+
+        @pay.tool()
+        async def escrow_settlement_instruction(escrow_id: str) -> dict:
+            """PG17/EC5: deterministic settlement paperwork for a terminal
+            cash-funded escrow — a certified payout (net of the escrow's
+            frozen 1% fee) or refund instruction for the account owner, or a
+            revenue-recognition record for viridis:* payees. NEVER moves
+            money; software cannot execute cash out on this fleet."""
+            return custody.settlement_instruction(escrow_id)
+
+        @pay.tool()
+        async def mark_escrow_payout_executed(admin_token: str,
+                                              escrow_id: str) -> dict:
+            """Admin: record that a certified payout/refund instruction was
+            manually executed in Stripe. Idempotent. Requires
+            VIRIDIS_ADMIN_TOKEN."""
+            import hmac as _hmac
+            expected = os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
+            if not expected or not isinstance(admin_token, str) \
+                    or not _hmac.compare_digest(admin_token, expected):
+                return {"status": "error", "error_type": "unauthorized",
+                        "message": "valid admin_token required "
+                                   "(VIRIDIS_ADMIN_TOKEN)"}
+            return custody.mark_executed(escrow_id)
 
         @pay.tool()
         async def underwrite_service_bond(service_id: str, coverage_minor: int,
@@ -1119,6 +1168,7 @@ def build_app():
                              "gateway": "viridis-agent-stable",
                              "persistence": persistence,
                              "payment_gate": gate.status(),
+                             "escrow_custody": custody.status(),
                              "subscriptions": subscription_health,
                              "agents": checks,
                              "federated": federated}, status_code=200 if ok else 503)

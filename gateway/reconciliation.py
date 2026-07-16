@@ -30,11 +30,15 @@ RV4  Degrades structurally: a Stripe failure (no key, API error) yields a
 RV5  Test traffic is visible but separate: gateway meters flagged is_test
      and internal/self-test events never inflate the headline numbers
      (they ride on the metering core's G7 exclusion).
-RV6  A2A escrow settlement (PG13-PG16) is a CLOSED-LOOP INTERNAL LEDGER
-     quantity — the escrow core custodies no funds (PG17 deferred). It is
-     reported in its own a2a_escrow bucket with an explicit non-cash label
-     and is never summed into settled_minor, redeemed_minor, or any number
-     presented as cash.
+RV6  A2A escrow settlement (PG13-PG16) is reported in its own a2a_escrow
+     bucket and never summed into settled_minor or redeemed_minor. With the
+     PG17 custody bridge (escrow_custody.py) the bucket is SPLIT honestly:
+     an escrow counts as cash iff it appears in the custody registry
+     (pull-verified paid Checkout session, EC3); everything else remains
+     labeled internal-ledger/non-cash. Custody cash arrives through
+     Checkout, so it is a SUBSET of settled_minor — reported alongside it,
+     never added to it — and custody-funded sessions are excluded from the
+     paid_not_redeemed discrepancy (they bought an escrow, not credits).
 """
 from __future__ import annotations
 
@@ -49,7 +53,8 @@ def _now() -> str:
 
 async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
                        list_sessions: Optional[Callable[..., dict]] = None,
-                       now_epoch: Optional[int] = None) -> dict:
+                       now_epoch: Optional[int] = None,
+                       custody: Any = None) -> dict:
     """Compose the reconciliation report. `gate` is the PaymentGate (for
     redemption records); `list_sessions` is injectable for tests and defaults
     to stripe_payments.list_checkout_sessions (RV1: all reads)."""
@@ -115,29 +120,54 @@ async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
         for sid in sessions:
             redeemed_ids[sid] = name
 
-    # ---- 2b. A2A escrow settlement: internal ledger, NOT cash (RV6) -------
+    # ---- 2b. A2A escrow settlement: cash iff custody-verified (RV6/PG17) --
+    custody_funded = {}
+    custody_sessions = set()
+    if custody is not None:
+        try:
+            custody_funded = dict(
+                getattr(getattr(custody, "state", None), "funded", {}) or {})
+            custody_sessions = {v.get("session_id")
+                                for v in custody_funded.values()}
+        except Exception:      # RV4 posture: reporting never crashes
+            custody_funded, custody_sessions = {}, set()
     a2a_escrow: dict = {"by_agent": {}, "total_escrow_settled_minor": 0,
+                        "cash_minor": 0, "internal_ledger_minor": 0,
                         "escrows_consumed": 0,
-                        "is_cash": False,
                         "meaning": "escrows consumed for call credits via "
-                                   "the gate's a2a rail (PG13-PG16). The "
-                                   "escrow core custodies no funds — this is "
-                                   "a closed-loop internal ledger quantity, "
-                                   "never cash (PG17 deferred)."}
+                                   "the gate's a2a rail (PG13-PG16). "
+                                   "cash_minor = consumed escrows funded "
+                                   "through a pull-verified paid Checkout "
+                                   "session (PG17/EC3; a SUBSET of "
+                                   "stripe.settled_minor, never added to "
+                                   "it). internal_ledger_minor = everything "
+                                   "else — NOT cash."}
     for name, core in getattr(gate, "_cores", {}).items():
         state = getattr(core, "_payment_gate_state", None) or {}
         consumed = state.get("consumed_escrows", {}) or {}
         agent_minor = sum(int(v.get("amount_minor") or 0)
                           for v in consumed.values())
+        agent_cash = sum(int(v.get("amount_minor") or 0)
+                         for eid, v in consumed.items()
+                         if eid in custody_funded)
         if consumed:
             a2a_escrow["by_agent"][name] = {
                 "escrows_consumed": len(consumed),
                 "escrow_settled_minor": agent_minor,
+                "cash_minor": agent_cash,
+                "internal_ledger_minor": agent_minor - agent_cash,
                 "credits_granted": sum(int(v.get("credits") or 0)
                                        for v in consumed.values()),
             }
         a2a_escrow["total_escrow_settled_minor"] += agent_minor
+        a2a_escrow["cash_minor"] += agent_cash
+        a2a_escrow["internal_ledger_minor"] += agent_minor - agent_cash
         a2a_escrow["escrows_consumed"] += len(consumed)
+    if custody is not None:
+        try:
+            a2a_escrow["custody"] = custody.status()
+        except Exception:
+            a2a_escrow["custody"] = {"error": "custody status unavailable"}
 
     # ---- 3. Stripe side: settled cash in the window (RV4) ----------------
     if list_sessions is None:
@@ -171,6 +201,8 @@ async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
     discrepancies = []
     for s in paid_sessions:
         sid = s.get("session_id")
+        if sid in custody_sessions:      # RV6: bought an escrow, not credits
+            continue
         if sid and sid not in redeemed_ids:
             discrepancies.append({
                 "type": "paid_not_redeemed", "session_id": sid,
