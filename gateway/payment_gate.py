@@ -78,6 +78,18 @@ PG17 Real-cash settlement over this rail exists ONLY through the custody
      way remain a closed-loop internal ledger and are reported as such
      (RV6 split). Cash out (third-party payouts, refunds) is never
      executed by software — only certified for the account owner (EC5).
+PG18 Free-tier accounting is PER CALLER IDENTITY (PG12 transport-derived:
+     "internal:<name>", or the "ext:<hash>" ip+ua fingerprint; never from
+     payloads): each identity gets its own N free calls per UTC day, so one
+     caller exhausting its allowance never starves a different evaluator.
+     Identity-less requests share the single "unknown" pool of N (exactly
+     the pre-PG18 behavior — all existing PG1/PG2 semantics preserved for
+     context-less calls). Anti-rotation bound: the AGGREGATE free grant
+     across all ext:*/unknown identities is capped at
+     FREE_ANON_POOL_MULTIPLIER x N per agent-day (default 5N), and the
+     per-caller table is size-bounded — rotating fingerprints cannot mint
+     unlimited free calls. Credits, subscriptions, and the a2a rail are
+     unaffected; rollover resets all counters (PG7).
 """
 from __future__ import annotations
 
@@ -125,6 +137,14 @@ PRICE_MINOR = {          # per-call list price once the free tier is exhausted
 }
 DEFAULT_PRICE_MINOR = 100
 GATE_ATTR = "_payment_gate_state"   # lives on the core -> StateStore persists
+# PG18: anonymous/fingerprint identities share a bounded aggregate free pool
+# (multiplier x free_calls per agent-day) and a bounded identity table.
+ANON_POOL_MULTIPLIER = int(os.environ.get("FREE_ANON_POOL_MULTIPLIER", "5"))
+CALLER_TABLE_MAX = 500
+
+
+def _is_anon_key(key: str) -> bool:
+    return key == "unknown" or key.startswith("ext:")
 
 
 def _utc_day() -> str:
@@ -328,6 +348,29 @@ class PaymentGate:
         if name not in self._billing_locks:
             self._billing_locks[name] = threading.RLock()
         return self._billing_locks[name]
+
+    # ---------------- PG18: per-caller free tier ----------------------- #
+    def _try_grant_free_call(self, gate: dict) -> bool:
+        """Grant one free call to the current transport-derived caller
+        identity (PG12/PG18). True = counted and allowed; False = this
+        caller's allowance (or the bounded anonymous pool) is exhausted and
+        the call falls through to credits / payment_required. Context-less
+        calls land in the shared "unknown" pool — pre-PG18 behavior."""
+        ctx = self._caller_context()
+        key = ctx.get("caller") or "unknown"
+        by_caller = gate.setdefault("used_by_caller", {})
+        used = by_caller.get(key, 0)
+        if used >= self.free_calls:                       # own allowance spent
+            return False
+        if _is_anon_key(key):
+            anon_total = sum(v for k, v in by_caller.items()
+                             if _is_anon_key(k))
+            if anon_total >= self.free_calls * ANON_POOL_MULTIPLIER:
+                return False                              # rotation bound
+            if key not in by_caller and len(by_caller) >= CALLER_TABLE_MAX:
+                return False                              # table bound
+        by_caller[key] = used + 1
+        return True
 
     # ---------------- PG13-PG16: a2a escrow settlement ----------------- #
     def _try_consume_escrow(self, name: str, core: Any, gate: dict,
@@ -630,6 +673,7 @@ class PaymentGate:
                 self._errors[name] = f"rollover: {type(e).__name__}: {e}"
         gate["day"] = today
         gate["used"] = 0
+        gate["used_by_caller"] = {}                    # PG18
         gate["refused"] = 0
         gate["meter_id"] = None
         gate["subscription_meter_id"] = None
@@ -677,7 +721,8 @@ class PaymentGate:
                                       "subscription_overage": 0,
                                       "invoices": [], "credits": 0,
                                       "redeemed_sessions": {},
-                                      "consumed_escrows": {}})
+                                      "consumed_escrows": {},
+                                      "used_by_caller": {}})
         else:
             # Backward-compatible restore of snapshots written before seats.
             persisted = getattr(core, GATE_ATTR)
@@ -685,6 +730,7 @@ class PaymentGate:
             persisted.setdefault("subscription_waived", 0)
             persisted.setdefault("subscription_overage", 0)
             persisted.setdefault("consumed_escrows", {})   # pre-PG13 snapshots
+            persisted.setdefault("used_by_caller", {})     # pre-PG18 snapshots
         self._cores[name] = core
         inner = core.process
 
@@ -754,7 +800,7 @@ class PaymentGate:
                         # interpreted pessimistically as ordinary freemium.
                         self._rollback_subscription(
                             name, subscription, "entitlement: invalid_decision")
-                if gate["used"] >= self.free_calls:             # PG1/PG2
+                if not self._try_grant_free_call(gate):         # PG1/PG2/PG18
                     a2a_refusal = None
                     if payment_ref is not None:                 # PG13-PG16
                         a2a_refusal = self._try_consume_escrow(
@@ -823,7 +869,7 @@ class PaymentGate:
                     elif subscription.get("reservation_token"):
                         self._rollback_subscription(
                             name, subscription, "entitlement: invalid_decision")
-                if gate["used"] >= self.free_calls:             # PG1/PG2
+                if not self._try_grant_free_call(gate):         # PG1/PG2/PG18
                     a2a_refusal = None
                     if payment_ref is not None:                 # PG13-PG16
                         a2a_refusal = self._try_consume_escrow(
@@ -909,6 +955,13 @@ class PaymentGate:
     def status(self) -> Dict[str, Any]:
         return {"gated_agents": list(self.attached),
                 "free_calls_per_day": self.free_calls,
+                "free_tier_policy": {                          # PG18
+                    "per_caller": True,
+                    "anon_pool_multiplier": ANON_POOL_MULTIPLIER,
+                    "callers_seen_today": {
+                        n: len(getattr(c, GATE_ATTR).get("used_by_caller", {}))
+                        for n, c in self._cores.items()},
+                },
                 "prices_minor": {
                     name: PRICE_MINOR.get(name, DEFAULT_PRICE_MINOR)
                     for name in self.attached
