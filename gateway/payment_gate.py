@@ -46,6 +46,37 @@ PG12 Every metered event carries server-derived caller classification
      metering core). Classification is transport-derived only — never read
      from tool payloads — and its absence degrades to "unknown", never to
      an error (metering stays PG8-graceful).
+PG13 A2A rail: a state-changing call past the free tier that carries
+     payment_ref=<escrow_id> naming an escrow that is FUNDED, payable to
+     "viridis:<name>", in USD, and amount_minor >= the per-call price, has
+     that escrow consumed (released through the escrow core's OWN
+     exactly-once state machine, E6 — never bypassed) for
+     credits = floor(amount_minor / price) >= 1, exactly once per escrow.
+     The call is then served through the ordinary prepaid-credit path (PG9)
+     and metered "ok". Consumption never reads classification from the
+     payload (PG12 stays inviolate); the billing origin is visible in
+     status()["a2a_escrow"] and in reconciliation, not in channel.
+PG14 A payment_ref that is unknown, unfunded, underfunded, refunded,
+     payable to a different agent, in a non-USD currency, or already
+     consumed/released is refused with the standard payment_required
+     envelope carrying an explicit a2a.refusal_reason — never a free pass,
+     never a crash, never a partial grant.
+PG15 Escrow-verification failures (escrow rail not wired, escrow core
+     raising, malformed reference, persistence failure mid-consume) degrade
+     to refusal — fail-closed. The mirror image of PG8: a metering failure
+     never blocks a legitimate call, and an escrow failure never grants one.
+     Errors are surfaced via status()["a2a_escrow"]["errors"].
+PG16 Escrow consumption is idempotent on escrow id (persisted
+     consumed_escrows, mirroring PG10's redeemed_sessions): a replayed
+     payment_ref never grants a second batch of credits; the original grant
+     record is retained and reported. payment_ref is always stripped from
+     the payload before it reaches the wrapped core.
+(PG17 — real-cash settlement over this rail — is intentionally NOT claimed:
+     the escrow core custodies no funds today (its fund action is a pure
+     state transition), so escrow-settled value is a closed-loop internal
+     ledger quantity. Reporting keeps it in its own bucket, never summed
+     into Stripe settled cash. Wiring real custody requires explicit
+     sign-off and a new invariant before any claim of revenue.)
 """
 from __future__ import annotations
 
@@ -105,7 +136,8 @@ class PaymentGate:
     def __init__(self, store, metering_core, free_calls_per_day: Optional[int] = None,
                  subscription_core=None,
                  account_key_getter: Optional[Callable[[], Optional[str]]] = None,
-                 request_id_factory: Optional[Callable[[], str]] = None):
+                 request_id_factory: Optional[Callable[[], str]] = None,
+                 escrow_core=None, escrow_persist_key: str = "escrow"):
         self.store = store
         self.metering = metering_core
         self.subscriptions = subscription_core
@@ -117,10 +149,16 @@ class PaymentGate:
         self._subscription_errors: Dict[str, str] = {}
         self.attached = []
         self._cores: Dict[str, Any] = {}   # PG9/PG10: redeem needs the gated core
+        # PG13-PG16: the a2a settlement rail. Optional — absent, every
+        # payment_ref is refused fail-closed (PG15), never crashes.
+        self.escrow = escrow_core
+        self.escrow_persist_key = escrow_persist_key
+        self._a2a_errors: Dict[str, str] = {}
 
     # ------------------------------------------------------------------ #
     def _payment_required(self, name: str, day: str, used: int,
-                          subscription_overage: bool = False) -> dict:
+                          subscription_overage: bool = False,
+                          a2a_refusal: Optional[dict] = None) -> dict:
         price = PRICE_MINOR.get(name, DEFAULT_PRICE_MINOR)
         if subscription_overage:
             message = (f"The active subscription's included monthly quota for "
@@ -159,6 +197,7 @@ class PaymentGate:
                 },
             },
             "free_tier_resets": "00:00 UTC",
+            **({"a2a": a2a_refusal} if a2a_refusal else {}),   # PG14
         }
 
     def _subscription_decision(self, name: str) -> Optional[dict]:
@@ -288,6 +327,117 @@ class PaymentGate:
         if name not in self._billing_locks:
             self._billing_locks[name] = threading.RLock()
         return self._billing_locks[name]
+
+    # ---------------- PG13-PG16: a2a escrow settlement ----------------- #
+    def _try_consume_escrow(self, name: str, core: Any, gate: dict,
+                            payment_ref: Any) -> Optional[dict]:
+        """Verify and consume a funded escrow for prepaid credits.
+
+        Returns None on success or replay-of-known-grant (the ordinary PG9
+        credit path then serves the call), or a PG14 refusal-detail dict
+        {"payment_ref", "refusal_reason"} — the caller folds it into the
+        payment_required envelope. Fail-closed everywhere (PG15): any
+        ambiguity, exception, or persistence failure refuses; nothing here
+        can crash the service call or grant a free pass.
+
+        Consumption releases the escrow through the escrow core's own state
+        machine (E4/E6 — never bypassed). Two windows are accepted and
+        documented: (a) an external release of the same escrow between our
+        FUNDED check and our release lands funds with the same payee
+        (viridis:<name>) either way, so a grant remains economically
+        correct; (b) an external refund in that window makes our release
+        return an error envelope -> refusal. Both are safe outcomes.
+        """
+        with self._billing_lock(name):
+            try:
+                if not isinstance(payment_ref, str) or not payment_ref.strip():
+                    return {"payment_ref": str(payment_ref)[:64],
+                            "refusal_reason": "bad_payment_ref"}          # PG14
+                ref = payment_ref.strip()
+                consumed = gate.setdefault("consumed_escrows", {})
+                prior = consumed.get(ref)
+                if prior is not None:                                      # PG16
+                    logger.info("payment_gate[%s]: escrow %s replayed — "
+                                "original grant of %s credits stands, no "
+                                "double-credit", name, ref, prior["credits"])
+                    return None
+                if self.escrow is None:                                    # PG15
+                    self._a2a_errors[name] = "a2a_rail_unavailable"
+                    return {"payment_ref": ref,
+                            "refusal_reason": "a2a_rail_unavailable"}
+                status = self.escrow.process_sync(
+                    {"action": "status", "escrow_id": ref})
+                if status.get("status") != "ok":                          # PG14
+                    return {"payment_ref": ref,
+                            "refusal_reason": "unknown_escrow"}
+                esc = status.get("data") or {}
+                price = PRICE_MINOR.get(name, DEFAULT_PRICE_MINOR)
+                if esc.get("payee") != f"viridis:{name}":                 # PG14
+                    return {"payment_ref": ref,
+                            "refusal_reason": "wrong_payee"}
+                if esc.get("currency") != "USD":                          # PG14
+                    return {"payment_ref": ref,
+                            "refusal_reason": "currency_mismatch"}
+                state = esc.get("state")
+                if state != "FUNDED":                                     # PG14
+                    reason = {"OPEN": "unfunded",
+                              "REFUNDED": "refunded",
+                              "RELEASED": "already_consumed_or_released",
+                              "DISPUTED": "disputed"}.get(
+                                  state, "not_consumable")
+                    return {"payment_ref": ref, "refusal_reason": reason}
+                amount = esc.get("amount_minor")
+                if not isinstance(amount, int) or amount < price:         # PG14
+                    return {"payment_ref": ref,
+                            "refusal_reason": "underfunded",
+                            "amount_minor_required": price}
+                released = self.escrow.process_sync({
+                    "action": "release", "escrow_id": ref,
+                    "delivery_proof": {
+                        "consumed_by": "payment_gate",
+                        "agent": name, "day": gate.get("day"),
+                        "credits": amount // price}})
+                if (released.get("status") != "ok"
+                        or (released.get("data") or {}).get("state")
+                        != "RELEASED"):                                    # PG15
+                    self._a2a_errors[name] = (
+                        f"release_refused: {released.get('error_type')}")
+                    return {"payment_ref": ref,
+                            "refusal_reason": "escrow_release_failed"}
+                credits = amount // price                                  # PG13
+                gate["credits"] = gate.get("credits", 0) + credits
+                consumed[ref] = {
+                    "credits": credits, "amount_minor": amount,
+                    "consumed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                                                 time.gmtime())}
+                if len(consumed) > 1000:                       # bounded (PG16)
+                    oldest = sorted(consumed.items(),
+                                    key=lambda kv: kv[1].get(
+                                        "consumed_at", ""))[0][0]
+                    consumed.pop(oldest, None)
+                saved = self.store.save_many({
+                    name: core, self.escrow_persist_key: self.escrow})
+                if not saved:                                              # PG15
+                    # Fail-closed: revert the grant. The in-memory escrow
+                    # stays RELEASED but un-persisted; a restart restores
+                    # FUNDED and the retry succeeds cleanly.
+                    gate["credits"] -= credits
+                    consumed.pop(ref, None)
+                    self._a2a_errors[name] = "durability: group_save_failed"
+                    return {"payment_ref": ref,
+                            "refusal_reason": "settlement_not_durable"}
+                self._a2a_errors.pop(name, None)
+                logger.info("payment_gate[%s]: escrow %s consumed for %s "
+                            "credits (%s minor, internal ledger — not cash)",
+                            name, ref, credits, amount)
+                return None                                                # PG13
+            except Exception as exc:                                       # PG15
+                self._a2a_errors[name] = (
+                    f"consume: {type(exc).__name__}: {exc}")
+                logger.warning("payment_gate[%s]: escrow consume failed "
+                               "(%s) — refused, never granted", name, exc)
+                return {"payment_ref": str(payment_ref)[:64],
+                        "refusal_reason": "escrow_verify_failed"}
 
     def _commit_credit_overage(self, name: str, core: Any, gate: dict,
                                decision: dict) -> bool:
@@ -525,13 +675,15 @@ class PaymentGate:
                                       "subscription_waived": 0,
                                       "subscription_overage": 0,
                                       "invoices": [], "credits": 0,
-                                      "redeemed_sessions": {}})
+                                      "redeemed_sessions": {},
+                                      "consumed_escrows": {}})
         else:
             # Backward-compatible restore of snapshots written before seats.
             persisted = getattr(core, GATE_ATTR)
             persisted.setdefault("subscription_meter_id", None)
             persisted.setdefault("subscription_waived", 0)
             persisted.setdefault("subscription_overage", 0)
+            persisted.setdefault("consumed_escrows", {})   # pre-PG13 snapshots
         self._cores[name] = core
         inner = core.process
 
@@ -554,6 +706,10 @@ class PaymentGate:
                 if _is_read(input_data):
                     return await inner(input_data)
                 gate = getattr(core, GATE_ATTR)
+                # PG16: payment_ref is billing metadata for THIS gate — it
+                # never reaches the wrapped core, whatever path serves the call.
+                payment_ref = (input_data.pop("payment_ref", None)
+                               if isinstance(input_data, dict) else None)
                 today = _utc_day()
                 if gate["day"] != today:
                     await self._rollover(name, gate, today)     # PG7 (credits survive: PG11)
@@ -598,12 +754,18 @@ class PaymentGate:
                         self._rollback_subscription(
                             name, subscription, "entitlement: invalid_decision")
                 if gate["used"] >= self.free_calls:             # PG1/PG2
+                    a2a_refusal = None
+                    if payment_ref is not None:                 # PG13-PG16
+                        a2a_refusal = self._try_consume_escrow(
+                            name, core, gate, payment_ref)
                     if not _try_spend_credit(gate):             # PG9
                         gate["refused"] += 1
                         await self._meter(name, gate,
                                           f"refused-{gate['refused']}", "error")
                         self.store.save(name, core)             # PG5
-                        return self._payment_required(name, today, gate["used"])
+                        return self._payment_required(
+                            name, today, gate["used"],
+                            a2a_refusal=a2a_refusal)
                 gate["used"] += 1
                 await self._meter(name, gate, f"ok-{gate['used']}", "ok")  # PG4
                 result = await inner(input_data)
@@ -615,6 +777,9 @@ class PaymentGate:
                 if _is_read(input_data):
                     return inner(input_data)
                 gate = getattr(core, GATE_ATTR)
+                # PG16: payment_ref never reaches the wrapped core.
+                payment_ref = (input_data.pop("payment_ref", None)
+                               if isinstance(input_data, dict) else None)
                 today = _utc_day()
                 if gate["day"] != today:
                     self._run_coro_from_sync(
@@ -658,6 +823,10 @@ class PaymentGate:
                         self._rollback_subscription(
                             name, subscription, "entitlement: invalid_decision")
                 if gate["used"] >= self.free_calls:             # PG1/PG2
+                    a2a_refusal = None
+                    if payment_ref is not None:                 # PG13-PG16
+                        a2a_refusal = self._try_consume_escrow(
+                            name, core, gate, payment_ref)
                     if not _try_spend_credit(gate):             # PG9
                         gate["refused"] += 1
                         self._run_coro_from_sync(
@@ -665,7 +834,9 @@ class PaymentGate:
                                               f"refused-{gate['refused']}", "error",
                                               core=core))
                         self.store.save(name, core)             # PG5
-                        return self._payment_required(name, today, gate["used"])
+                        return self._payment_required(
+                            name, today, gate["used"],
+                            a2a_refusal=a2a_refusal)
                 gate["used"] += 1
                 self._run_coro_from_sync(
                     name, self._meter(name, gate, f"ok-{gate['used']}", "ok",
@@ -746,5 +917,23 @@ class PaymentGate:
                 "subscription_entitlements": {
                     "enabled": self.subscriptions is not None,
                     "errors": dict(self._subscription_errors),
+                },
+                "a2a_escrow": {                                # PG13-PG16
+                    "enabled": self.escrow is not None,
+                    "note": "internal-ledger settlement — not cash (PG17 "
+                            "deferred; see reconcile_revenue)",
+                    "consumed": {
+                        n: {"escrows": len(g.get("consumed_escrows", {})),
+                            "credits_granted": sum(
+                                v["credits"]
+                                for v in g.get("consumed_escrows",
+                                               {}).values()),
+                            "amount_minor": sum(
+                                v["amount_minor"]
+                                for v in g.get("consumed_escrows",
+                                               {}).values())}
+                        for n, c in self._cores.items()
+                        for g in [getattr(c, GATE_ATTR)]},
+                    "errors": dict(self._a2a_errors),
                 },
                 "errors": dict(self._errors)}

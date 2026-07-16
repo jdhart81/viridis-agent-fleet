@@ -19,6 +19,9 @@
           },
           "options": {
             "type": "object"
+          },
+          "payment_ref": {
+            "type": "string"
           }
         },
         "required": [

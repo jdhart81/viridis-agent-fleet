@@ -36,6 +36,9 @@
           },
           "credit_card_pixel_height": {
             "type": "number"
+          },
+          "payment_ref": {
+            "type": "string"
           }
         },
         "required": [

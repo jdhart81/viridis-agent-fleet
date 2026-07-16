@@ -4,63 +4,39 @@
   "tools": [
     {
       "name": "record_work",
-      "description": "Record a unit of agent compute work. energy_j = power_w * duration_s;\n    carbon_g follows from grid intensity. If bit_ops is declared, the entry is\n    validated against the Landauer floor (bit_ops * kB * T * ln2) \u2014 physically\n    impossible claims are rejected. Idempotent on entry_id.",
+      "description": "Record a unit of agent compute work. energy_j = power_w * duration_s;\ncarbon_g follows from grid intensity. If bit_ops is declared, the entry is\nvalidated against the Landauer floor (bit_ops * kB * T * ln2) \u2014 physically\nimpossible claims are rejected. Idempotent on entry_id.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "agent_id": {
-            "title": "Agent Id",
             "type": "string"
           },
           "entry_id": {
-            "title": "Entry Id",
             "type": "string"
           },
           "power_w": {
-            "title": "Power W",
             "type": "number"
           },
           "duration_s": {
-            "title": "Duration S",
             "type": "number"
           },
           "task": {
-            "default": "",
-            "title": "Task",
-            "type": "string"
+            "type": "string",
+            "default": ""
           },
           "bit_ops": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Bit Ops"
+            "type": "number"
           },
           "temperature_k": {
-            "default": 300.0,
-            "title": "Temperature K",
-            "type": "number"
+            "type": "number",
+            "default": 300.0
           },
           "grid_intensity_g_per_kwh": {
-            "default": 400.0,
-            "title": "Grid Intensity G Per Kwh",
-            "type": "number"
+            "type": "number",
+            "default": 400.0
           },
           "price_minor_per_kwh": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Price Minor Per Kwh"
+            "type": "number"
           }
         },
         "required": [
@@ -68,162 +44,129 @@
           "entry_id",
           "power_w",
           "duration_s"
-        ],
-        "title": "record_workArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "footprint",
-      "description": "Aggregate footprint for an agent: total J, kWh, gCO2e, cost, and mean\n    Landauer efficiency. Totals are exact sums of the ledger entries.",
+      "description": "Aggregate footprint for an agent: total J, kWh, gCO2e, cost, and mean\nLandauer efficiency. Totals are exact sums of the ledger entries.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "agent_id": {
-            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ],
-        "title": "footprintArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "attest",
-      "description": "Issue a content-addressed attestation for a ledger entry (verifiable\n    green-compute / energy claim).",
+      "description": "Issue a content-addressed attestation for a ledger entry (verifiable\ngreen-compute / energy claim).",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "entry_id": {
-            "title": "Entry Id",
             "type": "string"
           }
         },
         "required": [
           "entry_id"
-        ],
-        "title": "attestArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "verify_attestation",
       "description": "Verify an attestation by recomputing the entry hash.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "attestation": {
-            "additionalProperties": true,
-            "title": "Attestation",
             "type": "object"
           }
         },
         "required": [
           "attestation"
-        ],
-        "title": "verify_attestationArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "verify_chain",
       "description": "Verify the tamper-evident hash chain of an agent's ledger.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "agent_id": {
-            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ],
-        "title": "verify_chainArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "list_entries",
       "description": "List all ledger entries for an agent.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "agent_id": {
-            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ],
-        "title": "list_entriesArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "carbon_receipt",
-      "description": "Emit an x402-C carbon receipt for a recorded work entry \u2014 the\n    physically-grounded {version, g_co2e, energy_j, method, landauer_*, ...}\n    object an x402 machine-payment receipt can carry. method is\n    'landauer-floor' when the workload declared bit_ops (thermodynamically\n    validated), else 'measured'. Pass offset_ref (a retirement id from the\n    offset clearinghouse) to assert carbon-neutrality. Read-only; the returned\n    attestation_hash binds the receipt to the ledger's hash chain.",
+      "description": "Emit an x402-C carbon receipt for a recorded work entry \u2014 the\nphysically-grounded {version, g_co2e, energy_j, method, landauer_*, ...}\nobject an x402 machine-payment receipt can carry. method is\n'landauer-floor' when the workload declared bit_ops (thermodynamically\nvalidated), else 'measured'. Pass offset_ref (a retirement id from the\noffset clearinghouse) to assert carbon-neutrality. Read-only; the returned\nattestation_hash binds the receipt to the ledger's hash chain.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "entry_id": {
-            "title": "Entry Id",
             "type": "string"
           },
           "offset_ref": {
-            "default": "",
-            "title": "Offset Ref",
-            "type": "string"
+            "type": "string",
+            "default": ""
           }
         },
         "required": [
           "entry_id"
-        ],
-        "title": "carbon_receiptArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "record_inventory",
-      "description": "Record an audited GHG inventory in a separate append-only chain.\n    mass_g is exact integer grams; content and factor-pack digests are bare\n    lowercase SHA-256 hex. Idempotent on inventory_id.",
+      "description": "Record an audited GHG inventory in a separate append-only chain.\nmass_g is exact integer grams; content and factor-pack digests are bare\nlowercase SHA-256 hex. Idempotent on inventory_id.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "agent_id": {
-            "title": "Agent Id",
             "type": "string"
           },
           "inventory_id": {
-            "title": "Inventory Id",
             "type": "string"
           },
           "mass_g": {
-            "title": "Mass G",
             "type": "integer"
           },
           "content_digest": {
-            "title": "Content Digest",
             "type": "string"
           },
           "factor_pack_version": {
-            "title": "Factor Pack Version",
             "type": "string"
           },
           "factor_pack_digest": {
-            "title": "Factor Pack Digest",
             "type": "string"
           },
           "source_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Source Ids"
+            "type": "array"
           }
         },
         "required": [
@@ -233,69 +176,61 @@
           "content_digest",
           "factor_pack_version",
           "factor_pack_digest"
-        ],
-        "title": "record_inventoryArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "get_inventory",
       "description": "Fetch one immutable inventory record by inventory_id.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "inventory_id": {
-            "title": "Inventory Id",
             "type": "string"
           }
         },
         "required": [
           "inventory_id"
-        ],
-        "title": "get_inventoryArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "list_inventories",
       "description": "List the separate GHG inventory chain for an agent.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "agent_id": {
-            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ],
-        "title": "list_inventoriesArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "verify_inventory_chain",
       "description": "Verify an agent's inventory hash chain independently of compute work.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "agent_id": {
-            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ],
-        "title": "verify_inventory_chainArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
+        "type": "object",
         "properties": {},
-        "title": "describe_agentArguments",
-        "type": "object"
+        "required": []
       }
     }
   ]

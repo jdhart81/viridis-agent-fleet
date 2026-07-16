@@ -19,6 +19,9 @@
           },
           "constraints": {
             "type": "object"
+          },
+          "payment_ref": {
+            "type": "string"
           }
         },
         "required": [
@@ -56,6 +59,9 @@
           },
           "output_formats": {
             "type": "array"
+          },
+          "payment_ref": {
+            "type": "string"
           }
         },
         "required": [
@@ -77,6 +83,9 @@
           "export_format": {
             "type": "string",
             "default": "openscad"
+          },
+          "payment_ref": {
+            "type": "string"
           }
         },
         "required": [
@@ -92,6 +101,9 @@
         "properties": {
           "product_spec": {
             "type": "object"
+          },
+          "payment_ref": {
+            "type": "string"
           }
         },
         "required": [

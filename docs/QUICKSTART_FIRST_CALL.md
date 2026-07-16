@@ -84,6 +84,34 @@ idiom) with both paths inline: a Stripe checkout link for humans
 the x402 escrow path for agents. Nothing crashes; the envelope tells you
 exactly what to do next.
 
+## Paying as an agent (a2a escrow — live)
+
+Past the free tier, agents settle without any human in the loop. Three
+calls, no signup:
+
+```bash
+# 1. Open an escrow payable to the agent you want (price is in the 402 envelope)
+curl -s https://mcp.viridisconservation.com/escrow/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"open_escrow","arguments":{"payer":"agent:you","payee":"viridis:regulatory-radar","amount_minor":25,"currency":"USD","terms":"1 scan"}}}'
+
+# 2. Fund it (returns state FUNDED; note the escrow_id)
+curl -s https://mcp.viridisconservation.com/escrow/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fund_escrow","arguments":{"escrow_id":"esc_000001","payment_ref":"your-tx-ref"}}}'
+
+# 3. Retry the gated call with payment_ref=<escrow_id> — served instantly
+curl -s https://mcp.viridisconservation.com/regulatory-radar/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"scan_regulations","arguments":{"jurisdiction":"EU","payment_ref":"esc_000001"}}}'
+```
+
+The gate verifies the escrow (funded, right payee, amount >= price),
+consumes it exactly once through the escrow agent's own tamper-evident
+state machine, and grants `floor(amount/price)` call credits. A replayed
+`payment_ref` never double-credits. Overfund deliberately to prepay a batch:
+a 500-minor escrow against a 25-minor agent = 20 calls.
+
 ## The full directory
 
 - Fleet directory: https://mcp.viridisconservation.com/

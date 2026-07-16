@@ -4,148 +4,128 @@
   "tools": [
     {
       "name": "register_service",
-      "description": "Register a third-party MCP server (https, public FQDN only) under\n    Viridis Verified. Returns a content-addressed service_id; idempotent on\n    (url, provider). fee_minor is the per-verified-call fee in cents.",
+      "description": "Register a third-party MCP server (https, public FQDN only) under\nViridis Verified. Returns a content-addressed service_id; idempotent on\n(url, provider). fee_minor is the per-verified-call fee in cents.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "url": {
-            "title": "Url",
             "type": "string"
           },
           "provider": {
-            "title": "Provider",
             "type": "string"
           },
           "description": {
-            "default": "",
-            "title": "Description",
-            "type": "string"
+            "type": "string",
+            "default": ""
           },
           "fee_minor": {
-            "default": 2,
-            "title": "Fee Minor",
-            "type": "integer"
+            "type": "integer",
+            "default": 2
+          },
+          "payment_ref": {
+            "type": "string"
           }
         },
         "required": [
           "url",
           "provider"
-        ],
-        "title": "register_serviceArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "call_verified",
-      "description": "Relay a tools/call to a registered MCP service and notarize the\n    exchange: request hash + response hash + outcome land in a tamper-evident\n    receipt chain. Idempotent on call_id (a replay returns the original\n    receipt and cached result \u2014 the downstream is never double-called).\n    Failures are receipted evidence, not silence.",
+      "description": "Relay a tools/call to a registered MCP service and notarize the\nexchange: request hash + response hash + outcome land in a tamper-evident\nreceipt chain. Idempotent on call_id (a replay returns the original\nreceipt and cached result \u2014 the downstream is never double-called).\nFailures are receipted evidence, not silence.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "service_id": {
-            "title": "Service Id",
             "type": "string"
           },
           "tool": {
-            "title": "Tool",
             "type": "string"
           },
           "call_id": {
-            "title": "Call Id",
             "type": "string"
           },
           "arguments": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Arguments"
+            "type": "object"
           },
           "timeout_s": {
-            "default": 20,
-            "title": "Timeout S",
-            "type": "integer"
+            "type": "integer",
+            "default": 20
+          },
+          "payment_ref": {
+            "type": "string"
           }
         },
         "required": [
           "service_id",
           "tool",
           "call_id"
-        ],
-        "title": "call_verifiedArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "get_receipt",
       "description": "Fetch a single delivery receipt by id.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "receipt_id": {
-            "title": "Receipt Id",
             "type": "string"
           }
         },
         "required": [
           "receipt_id"
-        ],
-        "title": "get_receiptArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "verify_receipts",
-      "description": "Recompute a service's full receipt hash chain and fee ledger.\n    Any party can audit Viridis Verified from receipts alone.",
+      "description": "Recompute a service's full receipt hash chain and fee ledger.\nAny party can audit Viridis Verified from receipts alone.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "service_id": {
-            "title": "Service Id",
             "type": "string"
           }
         },
         "required": [
           "service_id"
-        ],
-        "title": "verify_receiptsArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "list_services",
       "description": "List registered services with call/fee counters.",
       "inputSchema": {
+        "type": "object",
         "properties": {},
-        "title": "list_servicesArguments",
-        "type": "object"
+        "required": []
       }
     },
     {
       "name": "service_stats",
       "description": "Call counts, error counts, and accrued fees for one service.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "service_id": {
-            "title": "Service Id",
             "type": "string"
           }
         },
         "required": [
           "service_id"
-        ],
-        "title": "service_statsArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
+        "type": "object",
         "properties": {},
-        "title": "describe_agentArguments",
-        "type": "object"
+        "required": []
       }
     }
   ]

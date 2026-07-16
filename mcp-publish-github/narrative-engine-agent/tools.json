@@ -19,6 +19,9 @@
           },
           "key_message": {
             "type": "string"
+          },
+          "payment_ref": {
+            "type": "string"
           }
         },
         "required": [

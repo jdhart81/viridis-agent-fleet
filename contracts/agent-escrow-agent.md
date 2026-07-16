@@ -6,6 +6,7 @@ to the payer.
 
 ## Fleet contract
 - `process(input: dict) -> dict` — async; dispatches on `input["action"]`; never raises (returns an error envelope).
+- `process_sync(input: dict) -> dict` — sync; envelope-identical to `await process(input)` (E9). For in-process composers needing a blocking settlement decision (gateway PaymentGate, PG13–PG16). Not covered by persistence wrappers on `process()` — sync callers own their own durability.
 - `health() -> dict` — async; `{status, agent, version, timestamp, checks}`.
 - `describe() -> dict` — sync; `{name, version, capabilities, inputs, outputs, a2a_role}`.
 
@@ -21,11 +22,12 @@ to the payer.
 | `list` | [state] | all escrows, optionally filtered |
 | `verify_audit` | escrow_id | validate the tamper-evident audit chain |
 
-## Invariants (E1–E8)
+## Invariants (E1–E9)
 Forward-only state machine; positive integer minor-unit amounts; fee frozen at
 open (ceil bps); release requires FUNDED/DISPUTED; exactly-once settlement (no
 double payout); tamper-evident audit hash chain; unknown escrow → error, never a
-crash. See `src/core.py` docstring for the authoritative list.
+crash; sync dispatch surface semantically identical to async `process` (E9).
+See `src/core.py` docstring for the authoritative list.
 
 ## Money-custody note
 This core owns the **coordination + invariants**. Actual fund custody is delegated

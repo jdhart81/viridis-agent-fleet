@@ -921,7 +921,12 @@ def build_app():
     from payment_gate import PaymentGate
     gate = PaymentGate(
         store, cores["metering"], subscription_core=subscription_core,
-        account_key_getter=current_account_key)
+        account_key_getter=current_account_key,
+        # PG13-PG16: the a2a rail — payment_ref=<escrow_id> on a gated call
+        # verifies + consumes a FUNDED escrow (payee viridis:<name>) for
+        # prepaid credits through escrow's own E6 exactly-once machinery.
+        # Internal-ledger settlement only (PG17 deferred): not cash.
+        escrow_core=cores["escrow"], escrow_persist_key="escrow")
     for path in ("smartscale", "protogen", "taxcredit-engine", "ghg-ledger",
                  "quantity-takeoff", "disclosure-compiler",
                  "narrative-engine", "regulatory-radar", "verified"):

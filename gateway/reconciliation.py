@@ -30,6 +30,11 @@ RV4  Degrades structurally: a Stripe failure (no key, API error) yields a
 RV5  Test traffic is visible but separate: gateway meters flagged is_test
      and internal/self-test events never inflate the headline numbers
      (they ride on the metering core's G7 exclusion).
+RV6  A2A escrow settlement (PG13-PG16) is a CLOSED-LOOP INTERNAL LEDGER
+     quantity — the escrow core custodies no funds (PG17 deferred). It is
+     reported in its own a2a_escrow bucket with an explicit non-cash label
+     and is never summed into settled_minor, redeemed_minor, or any number
+     presented as cash.
 """
 from __future__ import annotations
 
@@ -110,6 +115,30 @@ async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
         for sid in sessions:
             redeemed_ids[sid] = name
 
+    # ---- 2b. A2A escrow settlement: internal ledger, NOT cash (RV6) -------
+    a2a_escrow: dict = {"by_agent": {}, "total_escrow_settled_minor": 0,
+                        "escrows_consumed": 0,
+                        "is_cash": False,
+                        "meaning": "escrows consumed for call credits via "
+                                   "the gate's a2a rail (PG13-PG16). The "
+                                   "escrow core custodies no funds — this is "
+                                   "a closed-loop internal ledger quantity, "
+                                   "never cash (PG17 deferred)."}
+    for name, core in getattr(gate, "_cores", {}).items():
+        state = getattr(core, "_payment_gate_state", None) or {}
+        consumed = state.get("consumed_escrows", {}) or {}
+        agent_minor = sum(int(v.get("amount_minor") or 0)
+                          for v in consumed.values())
+        if consumed:
+            a2a_escrow["by_agent"][name] = {
+                "escrows_consumed": len(consumed),
+                "escrow_settled_minor": agent_minor,
+                "credits_granted": sum(int(v.get("credits") or 0)
+                                       for v in consumed.values()),
+            }
+        a2a_escrow["total_escrow_settled_minor"] += agent_minor
+        a2a_escrow["escrows_consumed"] += len(consumed)
+
     # ---- 3. Stripe side: settled cash in the window (RV4) ----------------
     if list_sessions is None:
         import stripe_payments
@@ -163,6 +192,7 @@ async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
         "window": {"days": days, "since_epoch": since_epoch},
         "ledger": {"providers": ledger_providers, "totals": ledger_totals},
         "redemptions": redemptions,
+        "a2a_escrow": a2a_escrow,
         "stripe": stripe_side,
         "discrepancies": discrepancies,
         "definitions": {
@@ -174,5 +204,8 @@ async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
             "settled_minor": "Stripe live-mode paid Checkout Sessions in the "
                              "window — the only number that is actual cash",
             "redeemed_minor": "settled sessions converted into call credits",
+            "escrow_settled_minor": "escrows consumed for credits over the "
+                                    "a2a rail — internal ledger only, NOT "
+                                    "cash (RV6); excluded from settled_minor",
         },
     }

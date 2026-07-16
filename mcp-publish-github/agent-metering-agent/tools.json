@@ -4,34 +4,29 @@
   "tools": [
     {
       "name": "create_meter",
-      "description": "Create a usage meter between a provider and a consumer agent.\n\n    unit: what is being counted (call, token, kwh, ...). Price is in minor\n    currency units (cents) per unit. Returns the meter_id.",
+      "description": "Create a usage meter between a provider and a consumer agent.\n\nunit: what is being counted (call, token, kwh, ...). Price is in minor\ncurrency units (cents) per unit. Returns the meter_id.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "provider": {
-            "title": "Provider",
             "type": "string"
           },
           "consumer": {
-            "title": "Consumer",
             "type": "string"
           },
           "unit": {
-            "title": "Unit",
             "type": "string"
           },
           "price_minor_per_unit": {
-            "title": "Price Minor Per Unit",
             "type": "number"
           },
           "currency": {
-            "default": "USD",
-            "title": "Currency",
-            "type": "string"
+            "type": "string",
+            "default": "USD"
           },
           "sla_target": {
-            "default": 0.99,
-            "title": "Sla Target",
-            "type": "number"
+            "type": "number",
+            "default": 0.99
           }
         },
         "required": [
@@ -39,380 +34,220 @@
           "consumer",
           "unit",
           "price_minor_per_unit"
-        ],
-        "title": "create_meterArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "record_usage",
-      "description": "Record a usage event. Idempotent on event_id (safe to retry \u2014 never\n    double-billed). outcome is 'ok' or 'error' and feeds the SLA report.",
+      "description": "Record a usage event. Idempotent on event_id (safe to retry \u2014 never\ndouble-billed). outcome is 'ok' or 'error' and feeds the SLA report.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "meter_id": {
-            "title": "Meter Id",
             "type": "string"
           },
           "event_id": {
-            "title": "Event Id",
             "type": "string"
           },
           "quantity": {
-            "title": "Quantity",
             "type": "number"
           },
           "outcome": {
-            "default": "ok",
-            "title": "Outcome",
-            "type": "string"
+            "type": "string",
+            "default": "ok"
           },
           "metadata": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Metadata"
+            "type": "object"
           }
         },
         "required": [
           "meter_id",
           "event_id",
           "quantity"
-        ],
-        "title": "record_usageArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "usage_summary",
       "description": "Totals for a meter: event count, total quantity, accrued minor units.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "meter_id": {
-            "title": "Meter Id",
             "type": "string"
           }
         },
         "required": [
           "meter_id"
-        ],
-        "title": "usage_summaryArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "sla_report",
       "description": "Pure SLA report: success_rate vs sla_target, breach flag. No mutation.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "meter_id": {
-            "title": "Meter Id",
             "type": "string"
           }
         },
         "required": [
           "meter_id"
-        ],
-        "title": "sla_reportArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "close_period",
-      "description": "Freeze all open events into an immutable invoice (exactly-once).\n    The invoice amount is what agent-escrow-agent should settle.",
+      "description": "Freeze all open events into an immutable invoice (exactly-once).\nThe invoice amount is what agent-escrow-agent should settle.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "meter_id": {
-            "title": "Meter Id",
             "type": "string"
           }
         },
         "required": [
           "meter_id"
-        ],
-        "title": "close_periodArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "verify_chain",
       "description": "Verify the tamper-evident event hash chain for a meter.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "meter_id": {
-            "title": "Meter Id",
             "type": "string"
           }
         },
         "required": [
           "meter_id"
-        ],
-        "title": "verify_chainArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "list_meters",
       "description": "List all meters with event/invoice counts.",
       "inputSchema": {
+        "type": "object",
         "properties": {},
-        "title": "list_metersArguments",
-        "type": "object"
+        "required": []
       }
     },
     {
       "name": "list_events",
-      "description": "Read usage events (paginated, read-only). Filter by meter, provider,\n    consumer_class (internal|external|unknown), channel, outcome (ok|error),\n    and ISO date range [since, until). Test-flagged events are excluded\n    unless include_test=true. Returns events + next_cursor.",
+      "description": "Read usage events (paginated, read-only). Filter by meter, provider,\nconsumer_class (internal|external|unknown), channel, outcome (ok|error),\nand ISO date range [since, until). Test-flagged events are excluded\nunless include_test=true. Returns events + next_cursor.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "meter_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Meter Id"
+            "type": "string"
           },
           "provider": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Provider"
+            "type": "string"
           },
           "consumer_class": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Consumer Class"
+            "type": "string"
           },
           "channel": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Channel"
+            "type": "string"
           },
           "outcome": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Outcome"
+            "type": "string"
           },
           "since": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Since"
+            "type": "string"
           },
           "until": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Until"
+            "type": "string"
           },
           "include_test": {
-            "default": false,
-            "title": "Include Test",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           },
           "limit": {
-            "default": 100,
-            "title": "Limit",
-            "type": "integer"
+            "type": "integer",
+            "default": 100
           },
           "cursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Cursor"
+            "type": "string"
           }
         },
-        "title": "list_eventsArguments",
-        "type": "object"
+        "required": []
       }
     },
     {
       "name": "usage_timeseries",
-      "description": "Usage time series bucketed on each event's recorded_at (UTC;\n    bucket=day|hour), grouped across meters by provider \u2014 a real time-series\n    primitive, independent of meter creation times. Includes per-bucket\n    breakdowns by consumer_class / channel / provider. est_accrued_minor is\n    an estimate; authoritative billing stays with usage_summary.",
+      "description": "Usage time series bucketed on each event's recorded_at (UTC;\nbucket=day|hour), grouped across meters by provider \u2014 a real time-series\nprimitive, independent of meter creation times. Includes per-bucket\nbreakdowns by consumer_class / channel / provider. est_accrued_minor is\nan estimate; authoritative billing stays with usage_summary.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "bucket": {
-            "default": "day",
-            "title": "Bucket",
-            "type": "string"
+            "type": "string",
+            "default": "day"
           },
           "provider": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Provider"
+            "type": "string"
           },
           "meter_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Meter Id"
+            "type": "string"
           },
           "consumer_class": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Consumer Class"
+            "type": "string"
           },
           "channel": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Channel"
+            "type": "string"
           },
           "since": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Since"
+            "type": "string"
           },
           "until": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Until"
+            "type": "string"
           },
           "include_test": {
-            "default": false,
-            "title": "Include Test",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           }
         },
-        "title": "usage_timeseriesArguments",
-        "type": "object"
+        "required": []
       }
     },
     {
       "name": "flag_meter",
-      "description": "Admin: flag/unflag a meter as test/synthetic so its events are\n    excluded from usage statistics by default. Touches meter metadata only \u2014\n    never events, never the hash chain, never billing accruals. Requires the\n    server's VIRIDIS_ADMIN_TOKEN.",
+      "description": "Admin: flag/unflag a meter as test/synthetic so its events are\nexcluded from usage statistics by default. Touches meter metadata only \u2014\nnever events, never the hash chain, never billing accruals. Requires the\nserver's VIRIDIS_ADMIN_TOKEN.",
       "inputSchema": {
+        "type": "object",
         "properties": {
           "meter_id": {
-            "title": "Meter Id",
             "type": "string"
           },
           "is_test": {
-            "title": "Is Test",
             "type": "boolean"
           },
           "admin_token": {
-            "title": "Admin Token",
             "type": "string"
           },
           "note": {
-            "default": "",
-            "title": "Note",
-            "type": "string"
+            "type": "string",
+            "default": ""
           }
         },
         "required": [
           "meter_id",
           "is_test",
           "admin_token"
-        ],
-        "title": "flag_meterArguments",
-        "type": "object"
+        ]
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
+        "type": "object",
         "properties": {},
-        "title": "describe_agentArguments",
-        "type": "object"
+        "required": []
       }
     }
   ]
