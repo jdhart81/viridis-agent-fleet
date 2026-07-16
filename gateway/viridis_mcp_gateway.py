@@ -939,6 +939,12 @@ def build_app():
     from escrow_custody import EscrowCustody
     custody = EscrowCustody(store, cores["escrow"])
 
+    # The Weave (WV1-WV6, see weave.py): EnergyAI restoration share, rate
+    # schedule weave-B-v1 (ratified 2026-07-16), settled through the fleet's
+    # own offset-clearinghouse; cash transfers certified for Justin only.
+    from weave import Weave
+    weave_bridge = Weave(store, cores["offsets"])
+
     # stateless_http: no session persistence needed for these tools; makes the
     # endpoints trivially load-balancer-friendly.
     # Round-1 posture: endpoints are open. The MCP streamable-http default
@@ -1036,6 +1042,50 @@ def build_app():
             revenue-recognition record for viridis:* payees. NEVER moves
             money; software cannot execute cash out on this fleet."""
             return custody.settlement_instruction(escrow_id)
+
+        @pay.tool()
+        async def weave_restoration_share(admin_token: str, event_id: str,
+                                          revenue_type: str,
+                                          amount_minor: int,
+                                          source: str = "",
+                                          dry_run: bool = False) -> dict:
+            """The Weave (WV1-WV6): route an EnergyAI revenue event's
+            restoration share (weave-B-v1: 10% subscription / 5% lead,
+            ratified 2026-07-16) through the fleet's own clearinghouse —
+            deterministic share, offsets retired cheapest-first with an O4
+            certificate, and a CERTIFIED cash instruction (never executed
+            by software). Idempotent on event_id. Admin-gated: weaving
+            creates a conservation obligation."""
+            import hmac as _hmac
+            expected = os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
+            if not expected or not isinstance(admin_token, str) \
+                    or not _hmac.compare_digest(admin_token, expected):
+                return {"status": "error", "error_type": "unauthorized",
+                        "message": "valid admin_token required "
+                                   "(VIRIDIS_ADMIN_TOKEN)"}
+            return await weave_bridge.weave_event(
+                event_id, revenue_type, amount_minor, source, dry_run)
+
+        @pay.tool()
+        async def weave_status() -> dict:
+            """Read-only Weave ledger (WV6): rate schedule, events woven,
+            restoration share totals, retired grams, pending cash transfers.
+            A conservation-obligation ledger — never fleet service revenue."""
+            return {"status": "ok", **weave_bridge.status()}
+
+        @pay.tool()
+        async def mark_weave_transfer_executed(admin_token: str,
+                                               event_id: str) -> dict:
+            """Admin: record that a woven event's restoration-share transfer
+            was manually executed in Stripe (WV4). Idempotent."""
+            import hmac as _hmac
+            expected = os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
+            if not expected or not isinstance(admin_token, str) \
+                    or not _hmac.compare_digest(admin_token, expected):
+                return {"status": "error", "error_type": "unauthorized",
+                        "message": "valid admin_token required "
+                                   "(VIRIDIS_ADMIN_TOKEN)"}
+            return weave_bridge.mark_transfer_executed(event_id)
 
         @pay.tool()
         async def mark_escrow_payout_executed(admin_token: str,
@@ -1169,6 +1219,7 @@ def build_app():
                              "persistence": persistence,
                              "payment_gate": gate.status(),
                              "escrow_custody": custody.status(),
+                             "weave": weave_bridge.status(),
                              "subscriptions": subscription_health,
                              "agents": checks,
                              "federated": federated}, status_code=200 if ok else 503)

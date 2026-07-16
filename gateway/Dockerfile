@@ -37,6 +37,7 @@ COPY deploy/gateway/account_auth.py deploy/gateway/
 COPY deploy/gateway/request_context.py deploy/gateway/
 COPY deploy/gateway/reconciliation.py deploy/gateway/
 COPY deploy/gateway/escrow_custody.py deploy/gateway/
+COPY deploy/gateway/weave.py deploy/gateway/
 COPY deploy/gateway/underwriting_bridge.py deploy/gateway/
 COPY deploy/gateway/insured_job_bridge.py deploy/gateway/
 COPY deploy/gateway/persistence_probe.py deploy/gateway/

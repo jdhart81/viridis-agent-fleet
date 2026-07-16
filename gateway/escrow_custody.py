@@ -56,6 +56,12 @@ EC7  All custody state is persisted through the StateStore before success
      instruction (mirrors PG5/PG16 durability posture).
 EC8  The Stripe key is never accepted as an argument, echoed, or stored
      (rides on stripe_payments P6).
+EC9  Third-party settlement is never cash-funded at a loss: for a
+     non-viridis payee, the escrow's frozen fee (E3) must be at least
+     FEE_FLOOR_MINOR (Stripe's processing cut exceeds a 1% fee on small
+     amounts). The refusal is actionable — reopen with a higher fee_bps or
+     a larger amount. viridis:* payees are exempt (the whole amount is
+     revenue; processing cost is COGS, not a loss).
 """
 from __future__ import annotations
 
@@ -71,6 +77,10 @@ VIRIDIS_PAYEE_PREFIX = "viridis:"
 # escrow buys floor(amount/price) credits, PG13). Encoded so the refusal is
 # ours and actionable, not an opaque Stripe 400 (EC1/EC6).
 STRIPE_MIN_CHECKOUT_MINOR = 50
+# EC9: Viridis's take on a third-party settlement must at least cover the
+# card-processing cost (~2.9% + 30c). Below this floor the 1% fee loses
+# money on every transaction — refuse at funding time, before cash enters.
+FEE_FLOOR_MINOR = 50
 
 
 def _now() -> str:
@@ -156,6 +166,16 @@ class EscrowCustody:
                         "one larger escrow instead — it prepays "
                         "floor(amount/price) calls (PG13)",
                         minimum_minor=STRIPE_MIN_CHECKOUT_MINOR)
+        if (not str(esc["payee"]).startswith(VIRIDIS_PAYEE_PREFIX)
+                and int(esc["fee_minor"]) < FEE_FLOOR_MINOR):      # EC9
+            return _err("fee_below_floor",
+                        f"third-party settlement fee {esc['fee_minor']} minor "
+                        f"is below the {FEE_FLOOR_MINOR}-minor floor (card "
+                        "processing would exceed Viridis's take). Reopen the "
+                        "escrow with a higher fee_bps or a larger amount so "
+                        f"that fee_minor >= {FEE_FLOOR_MINOR}",
+                        fee_floor_minor=FEE_FLOOR_MINOR,
+                        frozen_fee_minor=int(esc["fee_minor"]))
         create = self._create_checkout
         if create is None:
             import stripe_payments
