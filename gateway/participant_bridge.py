@@ -85,6 +85,15 @@ PB11 AUTONOMOUS DEFAULT JUDGMENT (policy DJ-14, ratified 2026-07-17 by
      nightly sweep would). Unripe cases are untouched; evidenced cases
      are surfaced as needs_merits_ruling, never auto-ruled; every
      outcome is a structured record, failures degrade to refusals (PB5).
+PB12 SELF-TEACHING FUNDING (added 2026-07-17; live evidence: ~9 escrows
+     stranded OPEN-unfunded — the open->funded step is the funnel's
+     biggest leak): every ok single-escrow response in state OPEN carries
+     funding_next_steps (a2a fund_escrow, cash escrow_checkout ->
+     confirm_escrow_funding, the E10 open_ref retry tip), and every
+     FUNDED response carries usage_next_steps (viridis:* payee -> retry
+     the gated call with payment_ref, PG13 floor-division credits; other
+     payees -> deliver/release/dispute). Same additive/idempotent
+     contract as PB9/PB10.
 """
 from __future__ import annotations
 
@@ -516,6 +525,37 @@ def _teach(result: Any) -> Any:
                 "balance_tool": "payee_balance",
                 "spend_tool": "spend_payee_earnings",
             }
+        if state == "OPEN" and "funding_next_steps" not in result:      # PB12
+            eid = data.get("escrow_id")
+            result["funding_next_steps"] = {
+                "a2a": (f"call fund_escrow('{eid}', payment_ref=<your tx "
+                        "ref>) on /escrow/mcp to mark it funded on the "
+                        "internal ledger"),
+                "cash": (f"call escrow_checkout('{eid}') on {PAYMENTS_MCP} "
+                         "— pay the returned Stripe link, then "
+                         f"confirm_escrow_funding('{eid}'); the escrow "
+                         "becomes REAL-cash funded"),
+                "retry_tip": ("opening again? pass open_ref=<your job id> "
+                              "on open — retries then return THIS escrow "
+                              "instead of minting duplicates (E10)"),
+            }
+        if state == "FUNDED" and "usage_next_steps" not in result:      # PB12
+            eid = data.get("escrow_id")
+            if isinstance(payee, str) and payee.startswith("viridis:"):
+                agent = payee.split(":", 1)[1]
+                result["usage_next_steps"] = {
+                    "spend": (f"retry the gated {agent} call with "
+                              f"payment_ref='{eid}' — the gate consumes "
+                              "this escrow exactly once and grants "
+                              "floor(amount/price) prepaid calls (PG13)"),
+                }
+            else:
+                result["usage_next_steps"] = {
+                    "settle": ("payee delivers; the payer then calls "
+                               f"release_escrow('{eid}') (or "
+                               f"dispute_escrow('{eid}') if delivery "
+                               "failed) on /escrow/mcp"),
+                }
         if state == "DISPUTED" and "dispute_next_steps" not in result:  # PB10
             result["dispute_next_steps"] = {
                 "file": (f"call file_escrow_dispute("
@@ -537,14 +577,23 @@ def _teach(result: Any) -> Any:
 
 
 def attach_self_teaching(escrow_core) -> None:
-    """PB9/PB10: wrap the escrow core's dispatch at the GATEWAY so the
+    """PB9/PB10/PB12: wrap the escrow core's dispatch at the GATEWAY so the
     response a participant sees at the moment of an event teaches the next
     step. The stdlib escrow core stays pure; enrichment is idempotent, so
     a path that traverses both wrappers (async process delegating to
-    process_sync) appends exactly once. Safe to call twice (no-op)."""
-    if getattr(escrow_core, "_self_teaching_attached", False):
+    process_sync) appends exactly once. Safe to call twice (no-op).
+
+    GUARD LIVES ON THE WRAPPED FUNCTION, NEVER ON THE CORE: StateStore
+    snapshots vars(core), so a core-attribute flag persists into the next
+    boot's snapshot and revives on a FRESH, unwrapped core — silently
+    disabling teaching after the first restart (observed live
+    2026-07-17). Function attributes are never persisted; each boot
+    re-wraps exactly once."""
+    if getattr(escrow_core.process, "_viridis_self_teaching", False):
         return
-    escrow_core._self_teaching_attached = True
+    # Scrub the pre-fix persisted guard so old snapshots stop poisoning
+    # future ones (harmless if absent).
+    escrow_core.__dict__.pop("_self_teaching_attached", None)
 
     inner_sync = escrow_core.process_sync
 
@@ -552,6 +601,7 @@ def attach_self_teaching(escrow_core) -> None:
     def process_sync(input_data):
         return _teach(inner_sync(input_data))
 
+    process_sync._viridis_self_teaching = True
     escrow_core.process_sync = process_sync
 
     inner = escrow_core.process
@@ -564,4 +614,5 @@ def attach_self_teaching(escrow_core) -> None:
         def process(input_data):
             return _teach(inner(input_data))
 
+    process._viridis_self_teaching = True
     escrow_core.process = process

@@ -105,6 +105,12 @@ PG20 CONVERSION TELEMETRY: every 402 refusal is countable at the gate —
      denominators that already exist (escrows consumed, sessions redeemed).
      Counters live in the same persisted gate dict (PG5) and reset at
      rollover (PG7). Additive only — no existing status() key changes.
+PG21 SEAT UPSELL: a freemium payment_required envelope for a caller who
+     has been refused SEAT_HINT_REFUSALS (3) or more times today gains
+     payment.subscription_hint pointing at the /seats B2B plans — repeat
+     paywall hits are the subscription funnel's warmest leads. Never on
+     the subscription_overage path (they already have a seat). Additive
+     only; below the threshold the envelope is byte-identical to PG19.
 """
 from __future__ import annotations
 
@@ -156,6 +162,9 @@ GATE_ATTR = "_payment_gate_state"   # lives on the core -> StateStore persists
 # (multiplier x free_calls per agent-day) and a bounded identity table.
 ANON_POOL_MULTIPLIER = int(os.environ.get("FREE_ANON_POOL_MULTIPLIER", "5"))
 CALLER_TABLE_MAX = 500
+# PG21: a caller refused this many times in one day gets the seat upsell.
+SEAT_HINT_REFUSALS = 3
+SEATS_URL = "https://mcp.viridisconservation.com/seats"
 
 
 def _is_anon_key(key: str) -> bool:
@@ -194,7 +203,8 @@ class PaymentGate:
     # ------------------------------------------------------------------ #
     def _payment_required(self, name: str, day: str, used: int,
                           subscription_overage: bool = False,
-                          a2a_refusal: Optional[dict] = None) -> dict:
+                          a2a_refusal: Optional[dict] = None,
+                          caller_refusals: int = 0) -> dict:
         price = PRICE_MINOR.get(name, DEFAULT_PRICE_MINOR)
         if subscription_overage:
             message = (f"The active subscription's included monthly quota for "
@@ -204,7 +214,7 @@ class PaymentGate:
             message = (f"Free tier exhausted for {name} today "
                        f"({used}/{self.free_calls} free calls used, UTC day {day}). "
                        "Pay per call to continue.")
-        return {
+        envelope = {
             "status": "error",
             "error_type": "payment_required",           # PG2
             "http_equivalent": 402,
@@ -253,6 +263,18 @@ class PaymentGate:
             "free_tier_resets": "00:00 UTC",
             **({"a2a": a2a_refusal} if a2a_refusal else {}),   # PG14
         }
+        if (not subscription_overage
+                and caller_refusals >= SEAT_HINT_REFUSALS):     # PG21
+            envelope["payment"]["subscription_hint"] = {
+                "note": (f"you have hit this paywall {caller_refusals} "
+                         f"times today — a B2B seat includes a monthly "
+                         f"{name} quota at a lower effective per-call "
+                         "price than pay-as-you-go"),
+                "seats_url": SEATS_URL,
+                "plans": "5 checkout-ready plans; subscribe once, every "
+                         "caller on your account key is covered",
+            }
+        return envelope
 
     def _subscription_decision(self, name: str) -> Optional[dict]:
         """Resolve and durably finalize one seat decision, if authenticated.
@@ -406,21 +428,25 @@ class PaymentGate:
         return True
 
     # ---------------- PG20: conversion telemetry ----------------------- #
-    def _record_refused_caller(self, gate: dict) -> None:
+    def _record_refused_caller(self, gate: dict) -> int:
         """PG20: remember WHICH caller identity was refused today, so
         status() can report distinct refused callers (the funnel top).
         Bounded like PG18's table: once the map is full, new identities
         aggregate into an explicit overflow bucket — rotation cannot grow
-        state. Never raises; telemetry must not break a refusal."""
+        state. Returns THIS caller's refusal count today (PG21 reads it);
+        0 on any failure. Never raises; telemetry must not break a
+        refusal."""
         try:
             key = self._caller_context().get("caller") or "unknown"
             refused_by = gate.setdefault("refused_by_caller", {})
             if key not in refused_by and len(refused_by) >= CALLER_TABLE_MAX:
                 key = "overflow:anon-rotation"
             refused_by[key] = refused_by.get(key, 0) + 1
+            return refused_by[key]
         except Exception:                                   # PG8 family
             logger.warning("payment_gate: refused-caller telemetry failed",
                            exc_info=True)
+            return 0
 
     # ---------------- PG13-PG16: a2a escrow settlement ----------------- #
     def _try_consume_escrow(self, name: str, core: Any, gate: dict,
@@ -861,13 +887,14 @@ class PaymentGate:
                             name, core, gate, payment_ref)
                     if not _try_spend_credit(gate):             # PG9
                         gate["refused"] += 1
-                        self._record_refused_caller(gate)       # PG20
+                        n_ref = self._record_refused_caller(gate)  # PG20
                         await self._meter(name, gate,
                                           f"refused-{gate['refused']}", "error")
                         self.store.save(name, core)             # PG5
                         return self._payment_required(
                             name, today, gate["used"],
-                            a2a_refusal=a2a_refusal)
+                            a2a_refusal=a2a_refusal,
+                            caller_refusals=n_ref)              # PG21
                 gate["used"] += 1
                 await self._meter(name, gate, f"ok-{gate['used']}", "ok")  # PG4
                 result = await inner(input_data)
@@ -932,7 +959,7 @@ class PaymentGate:
                             name, core, gate, payment_ref)
                     if not _try_spend_credit(gate):             # PG9
                         gate["refused"] += 1
-                        self._record_refused_caller(gate)       # PG20
+                        n_ref = self._record_refused_caller(gate)  # PG20
                         self._run_coro_from_sync(
                             name, self._meter(name, gate,
                                               f"refused-{gate['refused']}", "error",
@@ -940,7 +967,8 @@ class PaymentGate:
                         self.store.save(name, core)             # PG5
                         return self._payment_required(
                             name, today, gate["used"],
-                            a2a_refusal=a2a_refusal)
+                            a2a_refusal=a2a_refusal,
+                            caller_refusals=n_ref)              # PG21
                 gate["used"] += 1
                 self._run_coro_from_sync(
                     name, self._meter(name, gate, f"ok-{gate['used']}", "ok",
