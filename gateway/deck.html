@@ -448,6 +448,28 @@ function render(d, mode){
         <div class="funnel-step"><b>$${(subs.mrrMinor/100).toFixed(2)}</b><span>MRR</span></div>
       </div>
     </div>
+    <div class="card"><b>Participant economy</b>
+      <div style="margin-top:6px"><span class="pill ${Object.keys((d.participants||{}).errors||{}).length?"warn":"ok"}">${
+        Object.keys((d.participants||{}).claims||{}).length} payees claimed · ${
+        num((d.participants||{}).spends)} spends</span></div>
+      <div class="sub" style="margin-top:6px">Payees claim RELEASED earnings (claim_payee), spend them as fleet credits
+        (spend_payee_earnings) — earnings are a service-backed currency. Cash out stays certified-only (EC5).</div>
+      <div class="mono" style="margin-top:4px">internal spent: ${num((d.participants||{}).internal_spent_minor)}¢ ·
+        disputes filed: ${num((d.participants||{}).disputes_filed)} ·
+        rulings executed: ${num((d.participants||{}).rulings_executed)} ·
+        fee ${(((d.participants||{}).dispute_fee_schedule||{}).bps||0)/100}% min ${((d.participants||{}).dispute_fee_schedule||{}).min_minor||0}¢</div>
+      ${Object.keys((d.participants||{}).errors||{}).length?`<div class="mono" style="color:var(--red)">${JSON.stringify(d.participants.errors)}</div>`:""}
+    </div>
+    <div class="card"><b>Collateralized bonds</b>
+      <div style="margin-top:6px"><span class="pill ${Object.keys((d.collateralized_bonds||{}).errors||{}).length?"warn":"ok"}">${
+        num((d.collateralized_bonds||{}).collateralized_bonds)} bonds · $${(num((d.collateralized_bonds||{}).coverage_total_minor)/100).toFixed(2)} coverage</span></div>
+      <div class="sub" style="margin-top:6px">Provider-collateralized surety (CB1-CB6): the provider's own cash escrow is the reserve,
+        uw-v1 premium is Viridis revenue, slashing is ruling-gated, settlement certified-only.</div>
+      <div class="mono" style="margin-top:4px">premiums earned: ${num((d.collateralized_bonds||{}).premiums_earned_minor)}¢ ·
+        Viridis capital at risk: ${num((d.collateralized_bonds||{}).viridis_capital_at_risk_minor)}¢ (structural 0) ·
+        settlements certified: ${num((d.collateralized_bonds||{}).settlements_certified)}</div>
+      ${Object.keys((d.collateralized_bonds||{}).errors||{}).length?`<div class="mono" style="color:var(--red)">${JSON.stringify(d.collateralized_bonds.errors)}</div>`:""}
+    </div>
     <div class="card"><b>Distribution</b>
       <div class="sub" style="margin-top:6px">Official MCP registry · Smithery · PulseMCP · Glama · mcp.so<br>
       <b>New surfaces publish only after their live health and version gates pass.</b></div>

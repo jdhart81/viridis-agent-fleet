@@ -58,9 +58,25 @@ PB7  execute_ruling maps a RULED case's escrow_instruction
 PB8  Everything auditable: claims, spends, filings, executions carry
      timestamps and are persisted in one StateStore aggregate
      ("participants") that survives restarts.
+PB9  SELF-TEACHING RELEASE: every ok escrow response whose data shows a
+     single escrow in state RELEASED with a non-viridis payee carries
+     payee_next_steps (claim_payee call on /payments/mcp + the
+     payee_balance / spend_payee_earnings tool names). Gateway-side
+     enrichment (attach_self_teaching) — the stdlib escrow core stays
+     pure. ADDITIVE ONLY: no existing response key is ever modified or
+     removed; enrichment is idempotent (wrapping twice appends once);
+     viridis:* payees (fleet revenue, bond collateral) are never taught.
+PB10 SELF-TEACHING DISPUTE: every ok escrow response whose data shows a
+     single escrow in state DISPUTED carries dispute_next_steps
+     (file_escrow_dispute on /payments/mcp, the arbitration
+     submit_evidence -> rule -> execute_arbitration_ruling flow, and the
+     pre-committed PB6 fee schedule). Same additive/idempotent contract
+     as PB9.
 """
 from __future__ import annotations
 
+import functools
+import inspect
 import logging
 import secrets
 import time
@@ -374,3 +390,81 @@ class ParticipantBridge:
                     "bps": DISPUTE_FEE_BPS, "min_minor": DISPUTE_FEE_MIN_MINOR,
                     "collected_on": "custody-cash escrows only (PB6)"},
                 "errors": dict(self._errors)}
+
+
+# ---------------- self-teaching envelopes (PB9-PB10) ---------------------- #
+PAYMENTS_MCP = "https://mcp.viridisconservation.com/payments/mcp"
+
+
+def _teach(result: Any) -> Any:
+    """PB9/PB10 enrichment. ADDITIVE ONLY — existing keys are never touched;
+    anything that is not an ok single-escrow response passes through
+    byte-identical. Never raises (PB5 family): teaching must not be able
+    to break settlement."""
+    try:
+        if not isinstance(result, dict) or result.get("status") != "ok":
+            return result
+        data = result.get("data")
+        if not isinstance(data, dict) or "state" not in data:
+            return result                      # list/verify shapes: untouched
+        state = data.get("state")
+        payee = data.get("payee")
+        if (state == "RELEASED" and isinstance(payee, str) and payee
+                and not payee.startswith("viridis:")
+                and "payee_next_steps" not in result):              # PB9
+            result["payee_next_steps"] = {
+                "claim": (f"call claim_payee('{payee}') on {PAYMENTS_MCP} "
+                          "— earnings are spendable as fleet credits or "
+                          "certified cash"),
+                "balance_tool": "payee_balance",
+                "spend_tool": "spend_payee_earnings",
+            }
+        if state == "DISPUTED" and "dispute_next_steps" not in result:  # PB10
+            result["dispute_next_steps"] = {
+                "file": (f"call file_escrow_dispute("
+                         f"'{data.get('escrow_id')}') on {PAYMENTS_MCP} "
+                         "to open an evidence-cited arbitration case"),
+                "evidence_flow": ("parties submit_evidence on "
+                                  "/arbitration/mcp; after `rule`, call "
+                                  "execute_arbitration_ruling to apply the "
+                                  "outcome to the escrow exactly once"),
+                "fee_schedule": {
+                    "bps": DISPUTE_FEE_BPS,
+                    "min_minor": DISPUTE_FEE_MIN_MINOR,
+                    "collected_on": "custody-cash escrows only (PB6)"},
+            }
+    except Exception:                                               # PB5
+        logger.exception("self-teaching enrichment failed (response "
+                         "returned unenriched)")
+    return result
+
+
+def attach_self_teaching(escrow_core) -> None:
+    """PB9/PB10: wrap the escrow core's dispatch at the GATEWAY so the
+    response a participant sees at the moment of an event teaches the next
+    step. The stdlib escrow core stays pure; enrichment is idempotent, so
+    a path that traverses both wrappers (async process delegating to
+    process_sync) appends exactly once. Safe to call twice (no-op)."""
+    if getattr(escrow_core, "_self_teaching_attached", False):
+        return
+    escrow_core._self_teaching_attached = True
+
+    inner_sync = escrow_core.process_sync
+
+    @functools.wraps(inner_sync)
+    def process_sync(input_data):
+        return _teach(inner_sync(input_data))
+
+    escrow_core.process_sync = process_sync
+
+    inner = escrow_core.process
+    if inspect.iscoroutinefunction(inner):
+        @functools.wraps(inner)
+        async def process(input_data):
+            return _teach(await inner(input_data))
+    else:
+        @functools.wraps(inner)
+        def process(input_data):
+            return _teach(inner(input_data))
+
+    escrow_core.process = process

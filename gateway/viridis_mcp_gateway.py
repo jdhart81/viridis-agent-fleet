@@ -949,10 +949,16 @@ def build_app():
     # become participants — payees claim identities and make earnings liquid
     # (internal-ledger -> fleet credits; cash via EC5 only), and DISPUTED
     # escrows flow through arbitration to an executed ruling.
-    from participant_bridge import ParticipantBridge
+    from participant_bridge import ParticipantBridge, attach_self_teaching
     participants = ParticipantBridge(
         store, cores["escrow"], cores["identity"], cores["arbitration"],
         gate, custody)
+    # PB9/PB10: self-teaching envelopes — the moment an escrow RELEASES to
+    # a non-viridis payee (payee_next_steps: claim/balance/spend) or enters
+    # DISPUTED (dispute_next_steps: file/evidence/fee schedule), the
+    # response itself teaches the participant's next step. Additive only;
+    # the stdlib escrow core stays pure.
+    attach_self_teaching(cores["escrow"])
 
     # Collateralized bonds (CB1-CB6, see bond_bridge.py): bond-writing with
     # zero Viridis capital — the provider's own cash-funded escrow is the

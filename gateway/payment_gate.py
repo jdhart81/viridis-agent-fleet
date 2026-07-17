@@ -90,6 +90,13 @@ PG18 Free-tier accounting is PER CALLER IDENTITY (PG12 transport-derived:
      per-caller table is size-bounded — rotating fingerprints cannot mint
      unlimited free calls. Credits, subscriptions, and the a2a rail are
      unaffected; rollover resets all counters (PG7).
+PG19 SELF-TEACHING 402: every payment_required envelope's payment.a2a
+     carries a batch_hint teaching escrow batching — one larger FUNDED
+     escrow prepays floor(amount_minor / price_minor) calls (exactly the
+     PG13 credit grant), stating the agent's price, the 50-minor Stripe
+     Checkout cash-funding minimum (EC1) and the 50-minor EC9 fee floor
+     for third-party settlement. Additive only: no pre-PG19 envelope key
+     changes shape or meaning.
 """
 from __future__ import annotations
 
@@ -215,6 +222,24 @@ class PaymentGate:
                              "https://mcp.viridisconservation.com/escrow/mcp "
                              "payable to viridis:" + name +
                              ", then retry with payment_ref=<escrow_id>."),
+                    "batch_hint": {                                # PG19
+                        "how": (f"one LARGER funded escrow prepays "
+                                f"floor(amount_minor / {price}) {name} "
+                                "calls in a single settlement — open it "
+                                "once, then reuse the same "
+                                "payment_ref=<escrow_id> until the "
+                                "credits are spent"),
+                        "price_minor": price,
+                        "example": {"escrow_amount_minor": price * 10,
+                                    "calls_prepaid": 10},
+                        "cash_note": ("cash funding via escrow_checkout "
+                                      "has a 50-minor ($0.50) Stripe "
+                                      "Checkout minimum (EC1), and "
+                                      "third-party settlement carries the "
+                                      "50-minor EC9 fee floor — one batch "
+                                      "escrow pays each once instead of "
+                                      "per call"),
+                    },
                 },
             },
             "free_tier_resets": "00:00 UTC",
