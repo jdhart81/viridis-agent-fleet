@@ -72,6 +72,19 @@ PB10 SELF-TEACHING DISPUTE: every ok escrow response whose data shows a
      submit_evidence -> rule -> execute_arbitration_ruling flow, and the
      pre-committed PB6 fee schedule). Same additive/idempotent contract
      as PB9.
+PB11 AUTONOMOUS DEFAULT JUDGMENT (policy DJ-14, ratified 2026-07-17 by
+     Justin Hart): sweep_stale_disputes walks this bridge's own filings
+     (PB6 records) and, for any case still unruled
+     DEFAULT_JUDGMENT_DAYS (14) after filing, requests an A9 default
+     judgment from the arbitration core (which refuses if the claimant
+     has submitted evidence — the merits path is never short-circuited)
+     and then executes the ruling through the ordinary PB7 machinery
+     (escrow E4-E6, exactly-once). The sweep is deterministic,
+     pre-committed policy: it is SAFE FOR ANYONE TO CALL (a respondent
+     enforcing their own default judgment reaches the same outcome the
+     nightly sweep would). Unripe cases are untouched; evidenced cases
+     are surfaced as needs_merits_ruling, never auto-ruled; every
+     outcome is a structured record, failures degrade to refusals (PB5).
 """
 from __future__ import annotations
 
@@ -86,6 +99,12 @@ logger = logging.getLogger("viridis.participant_bridge")
 
 DISPUTE_FEE_BPS = 250          # 2.5% of disputed amount ...
 DISPUTE_FEE_MIN_MINOR = 50     # ... never less than 50 minor (PB6)
+
+# PB11: pre-committed default-judgment policy (DJ-14). The claimant bears
+# the burden of proof; total claimant silence for this many days after
+# filing forfeits the claim to the respondent. Ratified 2026-07-17.
+DEFAULT_JUDGMENT_DAYS = 14
+DEFAULT_JUDGMENT_POLICY = "DJ-14"
 
 
 def _now() -> str:
@@ -376,6 +395,84 @@ class ParticipantBridge:
             return _err("persist_failed", "execution not durable; retry — "
                         "the escrow transition is exactly-once (E6)")
         return {"status": "ok", "duplicate": False, **record}
+
+    # ---------------- autonomous default judgment (PB11) --------------- #
+    @staticmethod
+    def _ripe(filed_at: str) -> bool:
+        """True iff the DJ-14 evidence window has fully elapsed."""
+        try:
+            filed = time.mktime(time.strptime(filed_at, "%Y-%m-%dT%H:%M:%SZ"))
+        except Exception:
+            return False                               # unparseable: never ripe
+        return (time.time() - filed) >= DEFAULT_JUDGMENT_DAYS * 86400
+
+    async def sweep_stale_disputes(self) -> dict:
+        """PB11: enforce the pre-committed DJ-14 policy over this bridge's
+        own filings. Deterministic and idempotent end-to-end (A7 + PB7):
+        anyone may call it; repeated calls converge on the same state."""
+        results = []
+        for escrow_id, rec in list(self.state.disputes.items()):
+            case_id = rec.get("case_id")
+            if not case_id:
+                continue
+            entry = {"escrow_id": escrow_id, "case_id": case_id,
+                     "filed_at": rec.get("filed_at")}
+            if case_id in self.state.executions:
+                entry["outcome"] = "already_executed"       # PB7 exactly-once
+                results.append(entry)
+                continue
+            try:
+                case = await self.arbitration.process(
+                    {"action": "get_case", "case_id": case_id})
+            except Exception as exc:                        # PB5
+                entry["outcome"] = f"arbitration_error: {type(exc).__name__}"
+                results.append(entry)
+                continue
+            if case.get("status") != "ok":
+                entry["outcome"] = "unknown_case"
+                results.append(entry)
+                continue
+            cdata = case["data"]
+            if cdata.get("ruling"):
+                executed = await self.execute_ruling(case_id)   # PB7 path
+                entry["outcome"] = ("executed_existing_ruling"
+                                    if executed.get("status") == "ok"
+                                    else f"execution_refused: "
+                                         f"{executed.get('error_type')}")
+                results.append(entry)
+                continue
+            if not self._ripe(rec.get("filed_at", "")):
+                entry["outcome"] = "not_ripe"
+                entry["ripe_at"] = f"{DEFAULT_JUDGMENT_DAYS}d after filing"
+                results.append(entry)
+                continue
+            try:                                            # A9: core enforces
+                ruled = await self.arbitration.process({    # the burden rule
+                    "action": "rule", "case_id": case_id,
+                    "default_judgment": True,
+                    "policy": DEFAULT_JUDGMENT_POLICY})
+            except Exception as exc:                        # PB5
+                entry["outcome"] = f"rule_error: {type(exc).__name__}"
+                results.append(entry)
+                continue
+            if ruled.get("status") != "ok":
+                # Claimant evidence exists — the ONLY judgment left for a
+                # human: rule on the merits. Never auto-ruled here.
+                entry["outcome"] = "needs_merits_ruling"
+                entry["detail"] = ruled.get("message")
+                results.append(entry)
+                continue
+            executed = await self.execute_ruling(case_id)   # PB7: E4-E6
+            entry["outcome"] = ("default_judgment_executed"
+                                if executed.get("status") == "ok"
+                                else f"ruled_but_execution_refused: "
+                                     f"{executed.get('error_type')}")
+            entry["policy"] = DEFAULT_JUDGMENT_POLICY
+            entry["escrow_instruction"] = "release"
+            results.append(entry)
+        return {"status": "ok", "policy": DEFAULT_JUDGMENT_POLICY,
+                "window_days": DEFAULT_JUDGMENT_DAYS,
+                "swept": len(results), "results": results}
 
     # ------------------------------------------------------------------ #
     def status(self) -> dict:

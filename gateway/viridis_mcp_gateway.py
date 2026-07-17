@@ -1156,6 +1156,17 @@ def build_app():
             return await participants.execute_ruling(case_id)
 
         @pay.tool()
+        async def sweep_stale_disputes() -> dict:
+            """PB11/A9: enforce the pre-committed DJ-14 default-judgment
+            policy — any dispute whose CLAIMANT submitted zero evidence
+            within 14 days of filing is ruled for the respondent and the
+            escrow releases, exactly once. Deterministic and idempotent:
+            safe for anyone to call (respondents may enforce their own
+            default judgment). Evidenced claims are never auto-ruled —
+            they surface as needs_merits_ruling."""
+            return await participants.sweep_stale_disputes()
+
+        @pay.tool()
         async def weave_status() -> dict:
             """Read-only Weave ledger (WV6): rate schedule, events woven,
             restoration share totals, retired grams, pending cash transfers.
