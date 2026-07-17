@@ -428,6 +428,10 @@ function render(d, mode){
       <div style="margin-top:6px"><span class="pill ${gOk?"ok":"warn"}">${(gate.gated_agents||[]).join(", ")||"none"}</span></div>
       <div class="sub" style="margin-top:6px">${gate.free_calls_per_day??"?"} free calls/day \u2192 credits \u2192 402 (Stripe packs + x402)</div>
       <div class="mono" style="margin-top:4px">credits: ${Object.entries(gate.credits||{}).map(([k,v])=>k+":"+v).join("  ")||"\u2014"} \u00b7 smartscale 50\u00a2 \u00b7 protogen $1 \u00b7 taxcredit-engine $2 \u00b7 ghg-ledger $1 \u00b7 quantity-takeoff 50\u00a2 \u00b7 disclosure-compiler $2</div>
+      <div class="mono" style="margin-top:4px">402 funnel today (PG20): ${Object.entries(((gate.conversion||{}).per_agent)||{})
+        .filter(([k,v])=>num(v.refusals_today)>0)
+        .map(([k,v])=>`${k}: ${v.refusals_today} refusals / ${v.refused_callers_today} callers \u2192 ${v.escrows_consumed_total} escrows`)
+        .join("  \u00b7  ")||"no refusals yet today"}</div>
       ${Object.keys(gate.errors||{}).length?`<div class="mono" style="color:var(--red)">${JSON.stringify(gate.errors)}</div>`:""}
     </div>
     <div class="card"><b>Subscription capital engine</b>

@@ -97,6 +97,14 @@ PG19 SELF-TEACHING 402: every payment_required envelope's payment.a2a
      Checkout cash-funding minimum (EC1) and the 50-minor EC9 fee floor
      for third-party settlement. Additive only: no pre-PG19 envelope key
      changes shape or meaning.
+PG20 CONVERSION TELEMETRY: every 402 refusal is countable at the gate —
+     per agent per UTC day, status() reports refusals_today and the number
+     of DISTINCT refused caller identities (PG12 transport-derived; bounded
+     by the PG18 table bound with an explicit overflow bucket, so rotating
+     fingerprints cannot grow state), alongside the cumulative conversion
+     denominators that already exist (escrows consumed, sessions redeemed).
+     Counters live in the same persisted gate dict (PG5) and reset at
+     rollover (PG7). Additive only — no existing status() key changes.
 """
 from __future__ import annotations
 
@@ -396,6 +404,23 @@ class PaymentGate:
                 return False                              # table bound
         by_caller[key] = used + 1
         return True
+
+    # ---------------- PG20: conversion telemetry ----------------------- #
+    def _record_refused_caller(self, gate: dict) -> None:
+        """PG20: remember WHICH caller identity was refused today, so
+        status() can report distinct refused callers (the funnel top).
+        Bounded like PG18's table: once the map is full, new identities
+        aggregate into an explicit overflow bucket — rotation cannot grow
+        state. Never raises; telemetry must not break a refusal."""
+        try:
+            key = self._caller_context().get("caller") or "unknown"
+            refused_by = gate.setdefault("refused_by_caller", {})
+            if key not in refused_by and len(refused_by) >= CALLER_TABLE_MAX:
+                key = "overflow:anon-rotation"
+            refused_by[key] = refused_by.get(key, 0) + 1
+        except Exception:                                   # PG8 family
+            logger.warning("payment_gate: refused-caller telemetry failed",
+                           exc_info=True)
 
     # ---------------- PG13-PG16: a2a escrow settlement ----------------- #
     def _try_consume_escrow(self, name: str, core: Any, gate: dict,
@@ -700,6 +725,7 @@ class PaymentGate:
         gate["used"] = 0
         gate["used_by_caller"] = {}                    # PG18
         gate["refused"] = 0
+        gate["refused_by_caller"] = {}                 # PG20
         gate["meter_id"] = None
         gate["subscription_meter_id"] = None
         gate["subscription_waived"] = 0
@@ -747,7 +773,8 @@ class PaymentGate:
                                       "invoices": [], "credits": 0,
                                       "redeemed_sessions": {},
                                       "consumed_escrows": {},
-                                      "used_by_caller": {}})
+                                      "used_by_caller": {},
+                                      "refused_by_caller": {}})
         else:
             # Backward-compatible restore of snapshots written before seats.
             persisted = getattr(core, GATE_ATTR)
@@ -756,6 +783,7 @@ class PaymentGate:
             persisted.setdefault("subscription_overage", 0)
             persisted.setdefault("consumed_escrows", {})   # pre-PG13 snapshots
             persisted.setdefault("used_by_caller", {})     # pre-PG18 snapshots
+            persisted.setdefault("refused_by_caller", {})  # pre-PG20 snapshots
         self._cores[name] = core
         inner = core.process
 
@@ -802,6 +830,7 @@ class PaymentGate:
                     if not self._commit_credit_overage(
                             name, core, gate, subscription):
                         gate["refused"] += 1
+                        self._record_refused_caller(gate)       # PG20
                         await self._meter(
                             name, gate,
                             f"overage-refused-{gate['refused']}",
@@ -832,6 +861,7 @@ class PaymentGate:
                             name, core, gate, payment_ref)
                     if not _try_spend_credit(gate):             # PG9
                         gate["refused"] += 1
+                        self._record_refused_caller(gate)       # PG20
                         await self._meter(name, gate,
                                           f"refused-{gate['refused']}", "error")
                         self.store.save(name, core)             # PG5
@@ -872,6 +902,7 @@ class PaymentGate:
                     if not self._commit_credit_overage(
                             name, core, gate, subscription):
                         gate["refused"] += 1
+                        self._record_refused_caller(gate)       # PG20
                         self._run_coro_from_sync(
                             name, self._meter(
                                 name, gate,
@@ -901,6 +932,7 @@ class PaymentGate:
                             name, core, gate, payment_ref)
                     if not _try_spend_credit(gate):             # PG9
                         gate["refused"] += 1
+                        self._record_refused_caller(gate)       # PG20
                         self._run_coro_from_sync(
                             name, self._meter(name, gate,
                                               f"refused-{gate['refused']}", "error",
@@ -1015,5 +1047,23 @@ class PaymentGate:
                         for n, c in self._cores.items()
                         for g in [getattr(c, GATE_ATTR)]},
                     "errors": dict(self._a2a_errors),
+                },
+                "conversion": {                                # PG20
+                    "note": ("the 402 funnel, honestly split: refusals_today "
+                             "and distinct refused callers reset at 00:00 UTC "
+                             "(PG7) and persist across restarts (PG5); "
+                             "escrows_consumed / sessions_redeemed are "
+                             "cumulative. conversion = strangers who came "
+                             "back with money after a 402."),
+                    "per_agent": {
+                        n: {"refusals_today": g.get("refused", 0),
+                            "refused_callers_today":
+                                len(g.get("refused_by_caller", {})),
+                            "escrows_consumed_total":
+                                len(g.get("consumed_escrows", {})),
+                            "sessions_redeemed_total":
+                                len(g.get("redeemed_sessions", {}))}
+                        for n, c in self._cores.items()
+                        for g in [getattr(c, GATE_ATTR)]},
                 },
                 "errors": dict(self._errors)}
