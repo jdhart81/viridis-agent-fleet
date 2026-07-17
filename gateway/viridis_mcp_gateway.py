@@ -945,6 +945,15 @@ def build_app():
     from weave import Weave
     weave_bridge = Weave(store, cores["offsets"])
 
+    # Participant bridge (PB1-PB8, see participant_bridge.py): counterparties
+    # become participants — payees claim identities and make earnings liquid
+    # (internal-ledger -> fleet credits; cash via EC5 only), and DISPUTED
+    # escrows flow through arbitration to an executed ruling.
+    from participant_bridge import ParticipantBridge
+    participants = ParticipantBridge(
+        store, cores["escrow"], cores["identity"], cores["arbitration"],
+        gate, custody)
+
     # stateless_http: no session persistence needed for these tools; makes the
     # endpoints trivially load-balancer-friendly.
     # Round-1 posture: endpoints are open. The MCP streamable-http default
@@ -1065,6 +1074,50 @@ def build_app():
                                    "(VIRIDIS_ADMIN_TOKEN)"}
             return await weave_bridge.weave_event(
                 event_id, revenue_type, amount_minor, source, dry_run)
+
+        @pay.tool()
+        async def claim_payee(payee: str, contact: str = "") -> dict:
+            """PB1: if any RELEASED escrow names you as payee, claim the name —
+            registers your identity in the fleet registry and returns a
+            claim_secret (shown once) that unlocks spend_payee_earnings.
+            Claims are human-reviewed before any CASH pays out; internal
+            earnings become spendable fleet credits immediately."""
+            return await participants.claim_payee(payee, contact)
+
+        @pay.tool()
+        async def payee_balance(payee: str) -> dict:
+            """PB2: a payee's earned balance across all RELEASED escrows —
+            split into spendable internal-ledger earnings and cash-backed
+            earnings (paid out only via the certified EC5 rail)."""
+            return participants.payee_balance(payee)
+
+        @pay.tool()
+        async def spend_payee_earnings(payee: str, claim_secret: str,
+                                       agent: str, amount_minor: int,
+                                       spend_id: str) -> dict:
+            """PB3: convert internal-ledger earnings into prepaid call
+            credits on any gated fleet agent at list price (credits =
+            amount // price). Idempotent on spend_id. Earnings become a
+            service-backed currency — earn on the rails, spend on the
+            fleet."""
+            return participants.spend_earnings(payee, claim_secret, agent,
+                                               amount_minor, spend_id)
+
+        @pay.tool()
+        async def file_escrow_dispute(escrow_id: str) -> dict:
+            """PB6: file a DISPUTED escrow into arbitration (evidence-cited,
+            hash-committed rulings). Fee schedule 2.5%/min-50-minor is
+            recorded; collected only on custody-cash escrows. Parties then
+            submit_evidence on /arbitration/mcp; after `rule`, call
+            execute_arbitration_ruling."""
+            return await participants.file_dispute(escrow_id)
+
+        @pay.tool()
+        async def execute_arbitration_ruling(case_id: str) -> dict:
+            """PB7: apply a RULED case's escrow_instruction
+            (release|refund) to its escrow through the escrow's own
+            exactly-once state machine. Idempotent per case."""
+            return await participants.execute_ruling(case_id)
 
         @pay.tool()
         async def weave_status() -> dict:
@@ -1220,6 +1273,7 @@ def build_app():
                              "payment_gate": gate.status(),
                              "escrow_custody": custody.status(),
                              "weave": weave_bridge.status(),
+                             "participants": participants.status(),
                              "subscriptions": subscription_health,
                              "agents": checks,
                              "federated": federated}, status_code=200 if ok else 503)
