@@ -954,6 +954,13 @@ def build_app():
         store, cores["escrow"], cores["identity"], cores["arbitration"],
         gate, custody)
 
+    # Collateralized bonds (CB1-CB6, see bond_bridge.py): bond-writing with
+    # zero Viridis capital — the provider's own cash-funded escrow is the
+    # reserve; premiums priced by uw-v1; slashing stays ruling-gated (SB).
+    from bond_bridge import BondBridge
+    bonds = BondBridge(store, cores["escrow"], cores["surety"],
+                       cores["verified"], custody)
+
     # stateless_http: no session persistence needed for these tools; makes the
     # endpoints trivially load-balancer-friendly.
     # Round-1 posture: endpoints are open. The MCP streamable-http default
@@ -1074,6 +1081,29 @@ def build_app():
                                    "(VIRIDIS_ADMIN_TOKEN)"}
             return await weave_bridge.weave_event(
                 event_id, revenue_type, amount_minor, source, dry_run)
+
+        @pay.tool()
+        async def bind_collateralized_bond(service_id: str,
+                                           collateral_escrow_id: str,
+                                           expires_at: str,
+                                           duration_days: int = 30) -> dict:
+            """CB1-CB3: write a REAL surety bond with zero Viridis capital.
+            Cash-fund an escrow payable to viridis:surety-collateral
+            (escrow_checkout + confirm_escrow_funding), then bind: your
+            collateral backs the bond, the uw-v1 premium (from your Viridis
+            Verified delivery record) is deducted, coverage = collateral -
+            premium. Slashing is arbitration-ruling-gated; settlement is
+            certified-only. Better track record = lower premium."""
+            return await bonds.bind(service_id, collateral_escrow_id,
+                                    expires_at, duration_days)
+
+        @pay.tool()
+        async def bond_settlement_instruction(bond_id: str) -> dict:
+            """CB4: certified settlement paperwork for a terminal
+            (RELEASED/EXHAUSTED) collateralized bond — slashed amounts to
+            claimants, premium retained, remainder back to the provider.
+            Never moves money."""
+            return await bonds.certify_settlement(bond_id)
 
         @pay.tool()
         async def claim_payee(payee: str, contact: str = "") -> dict:
@@ -1274,6 +1304,7 @@ def build_app():
                              "escrow_custody": custody.status(),
                              "weave": weave_bridge.status(),
                              "participants": participants.status(),
+                             "collateralized_bonds": bonds.status(),
                              "subscriptions": subscription_health,
                              "agents": checks,
                              "federated": federated}, status_code=200 if ok else 503)
