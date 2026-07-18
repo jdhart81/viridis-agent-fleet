@@ -1341,6 +1341,118 @@
       }
     }
   ],
+  "green-router": [
+    {
+      "name": "quote_footprint",
+      "description": "FREE: honest energy/carbon footprint for an agent workload \u2014\n    {backend_id? (frontier_cloud | efficient_cloud | local_small),\n    total_tokens, output_tokens, calls?, success_score?,\n    grid_gco2e_per_kwh?, pue?, custom_backend? {id, wh_per_1k_tokens}}.\n    Returns joules, gCO2e, useful bits, the retirement mass a certificate\n    would carry, every model assumption with its source, and the Landauer\n    context (GR1/GR2).",
+      "inputSchema": {
+        "properties": {
+          "workload": {
+            "additionalProperties": true,
+            "title": "Workload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "workload"
+        ],
+        "title": "quote_footprintArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "green_route",
+      "description": "FREE: rank compute backends by carbon for this workload \u2014 the\n    greenest eligible path and the gCO2e saved per call. Carbon only\n    (GR6); pair with /neurogenesis/mcp route_task for quality-floor\n    routing.",
+      "inputSchema": {
+        "properties": {
+          "workload": {
+            "additionalProperties": true,
+            "title": "Workload",
+            "type": "object"
+          },
+          "allowed_backends": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Allowed Backends"
+          }
+        },
+        "required": [
+          "workload"
+        ],
+        "title": "green_routeArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "certify",
+      "description": "PAID ($0.50 after free tier): compute the workload footprint, then\n    RETIRE the required verified offset mass through the fleet's own\n    clearinghouse \u2014 Verra provenance rides into the certificate; no\n    retirement, no certificate (GR3, fail-closed). Returns a\n    machine-verifiable certificate anyone can check for free (GR4).",
+      "inputSchema": {
+        "properties": {
+          "workload": {
+            "additionalProperties": true,
+            "title": "Workload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "workload"
+        ],
+        "title": "certifyArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_green_certificate",
+      "description": "FREE forever (GR5): recompute a certificate's footprint from its\n    stored workload, compare against the certified numbers, and surface\n    the clearinghouse purchase_id for the independent x402-C\n    verify_retirement check on /offsets/mcp.",
+      "inputSchema": {
+        "properties": {
+          "certificate_id": {
+            "title": "Certificate Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "certificate_id"
+        ],
+        "title": "verify_green_certificateArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_green_certificates",
+      "description": "FREE: the certificate ledger \u2014 counts, total grams retired, total\n    clearinghouse cost (honest books, GR8).",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "default": 50,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "list_green_certificatesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
   "identity": [
     {
       "name": "register_agent",

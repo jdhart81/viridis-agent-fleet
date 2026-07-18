@@ -87,6 +87,7 @@ MOUNTS = {
     "verified":         "agent-verified-relay-agent",
     "verdigraph":       "verdigraph-brain-agent",
     "neurogenesis":     "neurogenesis-agent",
+    "green-router":     "green-router-agent",
 }
 
 # Agent-discovery ("agent SEO") metadata for the ARD /.well-known/ai-catalog.json.
@@ -226,6 +227,17 @@ AGENT_SEO = {
                     "Audit what an agent file actually compiles to",
                     "Prove two agent configurations are identical",
                     "Certify an AI agent's cognitive architecture"]},
+    "green-router": {
+        "desc": "Pay your agent's entropy bill: free honest energy/carbon "
+                "footprints for any AI workload (assumptions + Landauer "
+                "context stated), free carbon-ranked backend routing, and "
+                "$0.50 certificates backed by REAL verified offset "
+                "retirement (Verra provenance, x402-C verifiable).",
+        "queries": ["How much carbon does my AI agent's compute emit?",
+                    "Make my agent's API calls carbon neutral with proof",
+                    "Route my LLM workload to the lowest-carbon backend",
+                    "Get a verifiable carbon retirement certificate for "
+                    "AI compute"]},
     "neurogenesis": {
         "desc": "Developmental agents + Wu Wei compute routing: evolve agents "
                 "from evaluation outcomes (safety axioms, audit ledger) and "
@@ -531,6 +543,73 @@ class _StripeSubscriptionProvider:
         return dict(self._require_ok(
             stripe_payments.verify_subscription(reference),
             "subscription verification"))
+
+
+def _attach_green_certification(green_core, offsets_core, store) -> None:
+    """GR3: a green-router certificate is REAL retirement or nothing.
+
+    Wraps green-router's process AFTER persistence and BEFORE the paid
+    gate. When certify returns a pending certificate, the offsets
+    clearinghouse retires the required mass (buy_offset — O2 idempotent on
+    the certificate id, Verra provenance in the fills). Success finalizes
+    the certificate and durably persists BOTH cores; any failure voids the
+    pending certificate and returns a structured error. Fail-closed:
+    no retirement, no certificate, ever.
+    """
+    inner = green_core.process
+
+    @functools.wraps(inner)
+    async def process(input_data):
+        result = await inner(input_data)
+        if not (isinstance(input_data, dict)
+                and input_data.get("action") == "certify"
+                and isinstance(result, dict)
+                and result.get("status") == "ok"
+                and (result.get("data") or {}).get("status")
+                == "pending_retirement"):
+            return result
+        cert = result["data"]
+        cert_id = cert["certificate_id"]
+        required_g = cert["retirement"]["required_g"]
+        try:
+            purchase = await offsets_core.process({
+                "action": "buy_offset", "buyer": "green-router",
+                "purchase_id": cert_id, "mass_g": int(required_g)})
+        except Exception as exc:  # noqa: BLE001 — fail-closed (GR3)
+            green_core.void_certificate(cert_id)
+            return {"status": "error", "error_type": "retirement_failed",
+                    "message": ("clearinghouse retirement errored "
+                                f"({type(exc).__name__}); no certificate "
+                                "was issued and nothing is owed"),
+                    "certificate_id": cert_id}
+        if purchase.get("status") != "ok":                     # GR3
+            green_core.void_certificate(cert_id)
+            return {"status": "error", "error_type": "retirement_refused",
+                    "message": ("clearinghouse refused the retirement: "
+                                f"{purchase.get('message')} — no "
+                                "certificate was issued"),
+                    "detail": {k: purchase.get(k) for k in
+                               ("field", "value", "constraint")},
+                    "certificate_id": cert_id}
+        finalized = green_core.finalize_certificate(
+            cert_id, purchase.get("data") or {})
+        try:
+            saved = bool(store.save_many({"green-router": green_core,
+                                          "offsets": offsets_core}))
+        except Exception:
+            saved = False
+        if not saved:
+            # Retirement is idempotent on cert_id (O2): a retry replays
+            # safely. Refuse the ack rather than lie about durability.
+            green_core.void_certificate(cert_id)
+            return {"status": "error", "error_type": "persist_failed",
+                    "message": ("certificate not durable; retry — the "
+                                "clearinghouse retirement is exactly-once "
+                                "on this certificate id"),
+                    "certificate_id": cert_id}
+        return {**result, "data": finalized}
+
+    green_core.process = process
 
 
 def _attach_subscription_bearer(subscription_core, account_key_getter) -> None:
@@ -897,7 +976,7 @@ def build_app():
 
     # Subscriptions is fleet revenue infrastructure, not a twenty-second leaf
     # agent. It is mounted and persisted separately so /healthz agents remains
-    # the production-coherent count of 24 (verdigraph + neurogenesis mounted 2026-07-17, growth gate waived by Justin).
+    # the production-coherent count of 25 (green-router mounted 2026-07-18: the restoration function of the Intelligence Bound as a product).
     subscription_adapter = _load_adapter("subscriptions", "subscriptions-agent")
     subscription_src_modules = {
         module: sys.modules[module] for module in list(sys.modules)
@@ -936,6 +1015,12 @@ def build_app():
     _attach_ghg_rail_composition(
         cores["ghg-ledger"], cores["compute-ledger"], cores["provenance"])
 
+    # GR3: green-router certificates become REAL clearinghouse retirements
+    # (fail-closed) before the paid gate wraps certify.
+    if "green-router" in cores and "offsets" in cores:
+        _attach_green_certification(cores["green-router"], cores["offsets"],
+                                    store)
+
     # Freemium x402 gate (PG1-PG11, see payment_gate.py): sellable
     # services stay "free to call today" (FREE_CALLS_PER_DAY, default 10),
     # then return a payment_required envelope with Stripe + x402 paths.
@@ -953,7 +1038,7 @@ def build_app():
     for path in ("smartscale", "protogen", "taxcredit-engine", "ghg-ledger",
                  "quantity-takeoff", "disclosure-compiler",
                  "narrative-engine", "regulatory-radar", "verified",
-                 "verdigraph", "neurogenesis"):
+                 "verdigraph", "neurogenesis", "green-router"):
         if path in cores:
             gate.attach(path, cores[path])
 

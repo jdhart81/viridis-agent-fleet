@@ -31,6 +31,7 @@ COPY subscriptions-agent/ subscriptions-agent/
 COPY agent-verified-relay-agent/ agent-verified-relay-agent/
 COPY verdigraph-brain-agent/ verdigraph-brain-agent/
 COPY neurogenesis-agent/ neurogenesis-agent/
+COPY green-router-agent/ green-router-agent/
 COPY deploy/gateway/viridis_mcp_gateway.py deploy/gateway/
 COPY deploy/gateway/stripe_payments.py deploy/gateway/
 COPY deploy/gateway/state_store.py deploy/gateway/

@@ -64,6 +64,18 @@ curl -s https://mcp.viridisconservation.com/neurogenesis/mcp \
 # failure weakens them; get_ledger shows every developmental event, auditable.
 ```
 
+**Pay your agent's entropy bill** — green-router, free quotes; $0.50/certificate = REAL offset retirement:
+```bash
+# Free: honest energy/carbon footprint for any AI workload (assumptions stated)
+curl -s https://mcp.viridisconservation.com/green-router/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"quote_footprint",
+       "arguments":{"workload":{"backend_id":"frontier_cloud","total_tokens":3000,"output_tokens":800,"calls":100}}}}'
+# Paid: certify — the fleet clearinghouse retires Verra-provenance offsets for the
+# footprint (no retirement, no certificate) and anyone can verify it free:
+#   verify_green_certificate(certificate_id) here, verify_retirement(purchase_id) on /offsets/mcp
+```
+
 **Underwrite a counterparty** — surety, free quote, deterministic + recomputable:
 ```bash
 curl -s https://mcp.viridisconservation.com/surety/mcp \
@@ -205,7 +217,8 @@ that is what closes stranger deals.
 smartscale 50¢/measurement · protogen $1/CAD job · taxcredit-engine $2/scenario ·
 ghg-ledger $1/inventory · quantity-takeoff 50¢/takeoff · disclosure-compiler
 $2/draft · narrative-engine 50¢/draft · regulatory-radar 25¢/scan · verified
-2¢/relayed call · verdigraph 25¢/brain build · neurogenesis 25¢/evolution step.
+2¢/relayed call · verdigraph 25¢/brain build · neurogenesis 25¢/evolution step ·
+green-router 50¢/carbon certificate (real verified retirement).
 The settlement rails (identity, trust, escrow, metering, arbitration, notary,
 surety quotes, provenance, offsets lookup, covenant, compute-ledger,
 erc8004, wavefunction) are free forever — we tax transactions, never rails.

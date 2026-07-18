@@ -142,6 +142,8 @@ READ_ACTIONS = frozenset({
     "detect_format", "verify",                                 # verdigraph reads
     "list_agents", "get_agent", "get_ledger", "best_next_steps",
     "export_state", "compute_efficiency_report",               # neurogenesis reads
+    "quote_footprint", "green_route", "verify_certificate",
+    "list_certificates",                                       # green-router (GR5)
 })
 
 # Network-effect pricing 2026-07-12 (Energy AI /PRICING-NETWORK-EFFECT-2026-07-12.md):
@@ -160,6 +162,8 @@ PRICE_MINOR = {          # per-call list price once the free tier is exhausted
     "verified": 2,            # $0.02 / verified relay call (bps-style volume play)
     "verdigraph": 25,         # $0.25 / brain build (certification micro-fee)
     "neurogenesis": 25,       # $0.25 / developmental evolution call
+    "green-router": 50,       # $0.50 / carbon certificate (covers capped
+                              # clearinghouse retirement + margin, GR9)
 }
 DEFAULT_PRICE_MINOR = 100
 GATE_ATTR = "_payment_gate_state"   # lives on the core -> StateStore persists

@@ -65,6 +65,7 @@ ROLE = {
     "verified": "tamper-evident delivery receipts for any MCP server's tool calls",
     "verdigraph": "verifiable cognition: deterministic content-addressed brain_id for any agent file",
     "neurogenesis": "developmental agents: genome -> evaluation-driven growth with safety axioms + audit ledger",
+    "green-router": "carbon-accounted agent compute: free footprint quotes + carbon routing; certificates = real verified offset retirement",
 }
 
 

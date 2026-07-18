@@ -1,0 +1,27 @@
+name: "green-router-agent"
+version: "0.1.0"
+description: "Carbon-accounted agent compute: free honest footprint quotes and carbon-ranked routing; paid certificates backed by REAL verified offset retirement through the fleet's own clearinghouse (Verra provenance, x402-C verifiable)."
+pillar: "conservation"
+status: "mvp"
+owner: "justin@viridisconservation.com"
+a2a_role: "entropy-settlement"
+thesis_connection: |
+  THE restoration function of the Intelligence Bound, as a product:
+  dI/dt <= P*D/(kB*T*ln2) means every bit an agent produces dissipates
+  energy — green-router turns that dissipation into funded restoration.
+  Free quotes spread the standard (Landauer-grounded, assumptions stated);
+  paid certificates retire real Verra-provenance offsets through the
+  fleet's own clearinghouse, fail-closed. Composes with neurogenesis
+  (quality routing), offsets (retirement + x402-C verify), notary/verified
+  (receipt hardening). No competitor can copy it without the whole stack.
+revenue_model: |
+  Certificates $0.50 each via the fleet gate (10 free/day per caller),
+  covering the capped clearinghouse retirement cost (GR9, 50 kg max) with
+  margin; quotes/routing/verification free forever (GR5 — the standard
+  spreads because checking it costs nothing). Enterprise batch retirement
+  above the cap; B2B seats for always-on carbon-neutral mode.
+engine: |
+  Vendored verdigraph-neurogenesis thermo.py (IEA grid model, Uptime PUE,
+  disclosed per-query energy estimates, Landauer floor;
+  DOI 10.5281/zenodo.20400274). Retirement via agent-offset-clearinghouse
+  (O-invariants, Verra provenance), composed at the gateway.
