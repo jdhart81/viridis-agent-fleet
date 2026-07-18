@@ -139,6 +139,9 @@ READ_ACTIONS = frozenset({
     "list_frameworks", "get_framework",                        # disclosure reads
     "get_receipt", "verify_receipts", "list_services",
     "service_stats",                                           # verified-relay reads
+    "detect_format", "verify",                                 # verdigraph reads
+    "list_agents", "get_agent", "get_ledger", "best_next_steps",
+    "export_state",                                            # neurogenesis reads
 })
 
 # Network-effect pricing 2026-07-12 (Energy AI /PRICING-NETWORK-EFFECT-2026-07-12.md):
@@ -155,6 +158,8 @@ PRICE_MINOR = {          # per-call list price once the free tier is exhausted
     "narrative-engine": 50,   # $0.50 / narrative draft (agent-market micro)
     "regulatory-radar": 25,   # $0.25 / applicability check (cheap high-volume)
     "verified": 2,            # $0.02 / verified relay call (bps-style volume play)
+    "verdigraph": 25,         # $0.25 / brain build (certification micro-fee)
+    "neurogenesis": 25,       # $0.25 / developmental evolution call
 }
 DEFAULT_PRICE_MINOR = 100
 GATE_ATTR = "_payment_gate_state"   # lives on the core -> StateStore persists

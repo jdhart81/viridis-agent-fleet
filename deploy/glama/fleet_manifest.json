@@ -1,666 +1,24 @@
 {
-  "identity": [
-    {
-      "name": "register_agent",
-      "description": "Register (or idempotently update) an agent identity. Returns a\ndeterministic content-addressed DID. capabilities is a non-empty list of\nlowercase capability tags other agents can discover you by.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string"
-          },
-          "capabilities": {
-            "type": "array"
-          },
-          "name": {
-            "type": "string",
-            "default": ""
-          },
-          "endpoint": {
-            "type": "string",
-            "default": ""
-          },
-          "pubkey": {
-            "type": "string",
-            "default": ""
-          },
-          "pricing": {
-            "type": "object"
-          },
-          "reputation_hint": {
-            "type": "number",
-            "default": 0.5
-          }
-        },
-        "required": [
-          "agent_id",
-          "capabilities"
-        ]
-      }
-    },
-    {
-      "name": "resolve_agent",
-      "description": "Resolve an identity by agent_id or DID to its full public registration.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string",
-            "default": ""
-          },
-          "did": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "discover_agents",
-      "description": "Find ACTIVE agents matching ALL requested capabilities (AND semantics),\ndeterministically ordered by match count then reputation.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "capabilities": {
-            "type": "array"
-          },
-          "limit": {
-            "type": "integer",
-            "default": 25
-          }
-        },
-        "required": [
-          "capabilities"
-        ]
-      }
-    },
-    {
-      "name": "revoke_agent",
-      "description": "Revoke an identity: it disappears from discovery (terminal) but its\nrecord is retained for auditability.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string",
-            "default": ""
-          },
-          "did": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "list_registrations",
-      "description": "List registrations, optionally filtered by status (ACTIVE|REVOKED).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Fleet-standard self-description.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "trust": [
-    {
-      "name": "record_outcome",
-      "description": "Record an interaction outcome for an agent. kind: success | delivered |\ndispute_won | failure | undelivered | dispute_lost | timeout |\nsecurity_incident (security incidents carry a 3x penalty).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "weight": {
-            "type": "number",
-            "default": 1.0
-          },
-          "counterparty": {
-            "type": "string",
-            "default": ""
-          },
-          "note": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": [
-          "agent_id",
-          "kind"
-        ]
-      }
-    },
-    {
-      "name": "score_agent",
-      "description": "Get an agent's decay-weighted trust score in [0,1] and tier. Unknown\nagents get a neutral 0.5 prior \u2014 no blind trust, no unfair zero.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "agent_id"
-        ]
-      }
-    },
-    {
-      "name": "attest",
-      "description": "Issue a tamper-evident (hash-chained) trust attestation for an agent.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string"
-          },
-          "claim": {
-            "type": "string",
-            "default": "reputation-snapshot"
-          }
-        },
-        "required": [
-          "agent_id"
-        ]
-      }
-    },
-    {
-      "name": "verify_attestation",
-      "description": "Verify a previously issued attestation by recomputing its hash.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string"
-          },
-          "attestation_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "agent_id",
-          "attestation_id"
-        ]
-      }
-    },
-    {
-      "name": "history",
-      "description": "Full outcome history + attestation count + current score for an agent.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "agent_id"
-        ]
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Fleet-standard self-description.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "escrow": [
-    {
-      "name": "open_escrow",
-      "description": "Open an escrow between payer and payee. amount_minor is a positive\ninteger in minor units (cents). The platform fee is computed and FROZEN at\nopen (ceil bps). Returns the escrow_id (state OPEN).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "payer": {
-            "type": "string"
-          },
-          "payee": {
-            "type": "string"
-          },
-          "amount_minor": {
-            "type": "integer"
-          },
-          "currency": {
-            "type": "string",
-            "default": "USD"
-          },
-          "terms": {
-            "type": "string",
-            "default": ""
-          },
-          "deadline": {
-            "type": "string",
-            "default": ""
-          },
-          "fee_bps": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "payer",
-          "payee",
-          "amount_minor"
-        ]
-      }
-    },
-    {
-      "name": "fund_escrow",
-      "description": "Mark an OPEN escrow as FUNDED (idempotent). payment_ref links the\npayment-rail transaction.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "escrow_id": {
-            "type": "string"
-          },
-          "payment_ref": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": [
-          "escrow_id"
-        ]
-      }
-    },
-    {
-      "name": "release_escrow",
-      "description": "Release a FUNDED/DISPUTED escrow to the payee (exactly-once \u2014 a repeat\nrelease returns the existing terminal record, never a double payout).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "escrow_id": {
-            "type": "string"
-          },
-          "delivery_proof": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": [
-          "escrow_id"
-        ]
-      }
-    },
-    {
-      "name": "refund_escrow",
-      "description": "Refund an OPEN/FUNDED/DISPUTED escrow to the payer (exactly-once).\nRefunding an OPEN escrow is a cancel.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "escrow_id": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": [
-          "escrow_id"
-        ]
-      }
-    },
-    {
-      "name": "dispute_escrow",
-      "description": "Move a FUNDED escrow to DISPUTED. An arbiter (agent-arbitration-agent)\nthen resolves it to release or refund.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "escrow_id": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": [
-          "escrow_id"
-        ]
-      }
-    },
-    {
-      "name": "escrow_status",
-      "description": "Current record for an escrow.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "escrow_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "escrow_id"
-        ]
-      }
-    },
-    {
-      "name": "list_escrows",
-      "description": "List escrows, optionally filtered by state\n(OPEN|FUNDED|RELEASED|REFUNDED|DISPUTED).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "type": "string"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "verify_audit",
-      "description": "Validate the tamper-evident audit hash chain for an escrow.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "escrow_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "escrow_id"
-        ]
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Fleet-standard self-description.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "metering": [
-    {
-      "name": "create_meter",
-      "description": "Create a usage meter between a provider and a consumer agent.\n\nunit: what is being counted (call, token, kwh, ...). Price is in minor\ncurrency units (cents) per unit. Returns the meter_id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "provider": {
-            "type": "string"
-          },
-          "consumer": {
-            "type": "string"
-          },
-          "unit": {
-            "type": "string"
-          },
-          "price_minor_per_unit": {
-            "type": "number"
-          },
-          "currency": {
-            "type": "string",
-            "default": "USD"
-          },
-          "sla_target": {
-            "type": "number",
-            "default": 0.99
-          }
-        },
-        "required": [
-          "provider",
-          "consumer",
-          "unit",
-          "price_minor_per_unit"
-        ]
-      }
-    },
-    {
-      "name": "record_usage",
-      "description": "Record a usage event. Idempotent on event_id (safe to retry \u2014 never\ndouble-billed). outcome is 'ok' or 'error' and feeds the SLA report.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "meter_id": {
-            "type": "string"
-          },
-          "event_id": {
-            "type": "string"
-          },
-          "quantity": {
-            "type": "number"
-          },
-          "outcome": {
-            "type": "string",
-            "default": "ok"
-          },
-          "metadata": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "meter_id",
-          "event_id",
-          "quantity"
-        ]
-      }
-    },
-    {
-      "name": "usage_summary",
-      "description": "Totals for a meter: event count, total quantity, accrued minor units.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "meter_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "meter_id"
-        ]
-      }
-    },
-    {
-      "name": "sla_report",
-      "description": "Pure SLA report: success_rate vs sla_target, breach flag. No mutation.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "meter_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "meter_id"
-        ]
-      }
-    },
-    {
-      "name": "close_period",
-      "description": "Freeze all open events into an immutable invoice (exactly-once).\nThe invoice amount is what agent-escrow-agent should settle.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "meter_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "meter_id"
-        ]
-      }
-    },
-    {
-      "name": "verify_chain",
-      "description": "Verify the tamper-evident event hash chain for a meter.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "meter_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "meter_id"
-        ]
-      }
-    },
-    {
-      "name": "list_meters",
-      "description": "List all meters with event/invoice counts.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "list_events",
-      "description": "Read usage events (paginated, read-only). Filter by meter, provider,\nconsumer_class (internal|external|unknown), channel, outcome (ok|error),\nand ISO date range [since, until). Test-flagged events are excluded\nunless include_test=true. Returns events + next_cursor.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "meter_id": {
-            "type": "string"
-          },
-          "provider": {
-            "type": "string"
-          },
-          "consumer_class": {
-            "type": "string"
-          },
-          "channel": {
-            "type": "string"
-          },
-          "outcome": {
-            "type": "string"
-          },
-          "since": {
-            "type": "string"
-          },
-          "until": {
-            "type": "string"
-          },
-          "include_test": {
-            "type": "boolean",
-            "default": false
-          },
-          "limit": {
-            "type": "integer",
-            "default": 100
-          },
-          "cursor": {
-            "type": "string"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "usage_timeseries",
-      "description": "Usage time series bucketed on each event's recorded_at (UTC;\nbucket=day|hour), grouped across meters by provider \u2014 a real time-series\nprimitive, independent of meter creation times. Includes per-bucket\nbreakdowns by consumer_class / channel / provider. est_accrued_minor is\nan estimate; authoritative billing stays with usage_summary.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "bucket": {
-            "type": "string",
-            "default": "day"
-          },
-          "provider": {
-            "type": "string"
-          },
-          "meter_id": {
-            "type": "string"
-          },
-          "consumer_class": {
-            "type": "string"
-          },
-          "channel": {
-            "type": "string"
-          },
-          "since": {
-            "type": "string"
-          },
-          "until": {
-            "type": "string"
-          },
-          "include_test": {
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "flag_meter",
-      "description": "Admin: flag/unflag a meter as test/synthetic so its events are\nexcluded from usage statistics by default. Touches meter metadata only \u2014\nnever events, never the hash chain, never billing accruals. Requires the\nserver's VIRIDIS_ADMIN_TOKEN.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "meter_id": {
-            "type": "string"
-          },
-          "is_test": {
-            "type": "boolean"
-          },
-          "admin_token": {
-            "type": "string"
-          },
-          "note": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": [
-          "meter_id",
-          "is_test",
-          "admin_token"
-        ]
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Fleet-standard self-description.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
   "arbitration": [
     {
       "name": "file_case",
-      "description": "File a dispute over an escrow. Opens the evidence window. Parties must\nbe distinct; amount is in minor currency units (cents).",
+      "description": "File a dispute over an escrow. Opens the evidence window. Parties must\n    be distinct; amount is in minor currency units (cents).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "escrow_id": {
+            "title": "Escrow Id",
             "type": "string"
           },
           "claimant": {
+            "title": "Claimant",
             "type": "string"
           },
           "respondent": {
+            "title": "Respondent",
             "type": "string"
           },
           "amount_minor": {
+            "title": "Amount Minor",
             "type": "integer"
           }
         },
@@ -669,159 +27,211 @@
           "claimant",
           "respondent",
           "amount_minor"
-        ]
+        ],
+        "title": "file_caseArguments",
+        "type": "object"
       }
     },
     {
       "name": "submit_evidence",
-      "description": "Submit evidence while the case is open. kind: delivery_proof (weight 3),\nlog (2), or statement (1). Only the named parties may submit.",
+      "description": "Submit evidence while the case is open. kind: delivery_proof (weight 3),\n    log (2), or statement (1). Only the named parties may submit.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "case_id": {
+            "title": "Case Id",
             "type": "string"
           },
           "party": {
+            "title": "Party",
             "type": "string"
           },
           "kind": {
+            "title": "Kind",
             "type": "string"
           },
           "content": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Content",
+            "type": "string"
           }
         },
         "required": [
           "case_id",
           "party",
           "kind"
-        ]
+        ],
+        "title": "submit_evidenceArguments",
+        "type": "object"
       }
     },
     {
       "name": "set_trust_scores",
       "description": "Attach trust-oracle reputation scores (party -> [0,1]) as ruling inputs.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "case_id": {
+            "title": "Case Id",
             "type": "string"
           },
           "scores": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Scores",
             "type": "object"
           }
         },
         "required": [
           "case_id",
           "scores"
-        ]
+        ],
+        "title": "set_trust_scoresArguments",
+        "type": "object"
       }
     },
     {
       "name": "rule",
-      "description": "Issue the deterministic ruling: allocates 100% of the disputed amount\nfrom evidence weights + trust scores, and emits an escrow instruction\n(release/refund). Exactly-once \u2014 re-ruling returns the existing ruling.",
+      "description": "Issue the deterministic ruling: allocates 100% of the disputed amount\n    from evidence weights + trust scores, and emits an escrow instruction\n    (release/refund). Exactly-once \u2014 re-ruling returns the existing ruling.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "case_id": {
+            "title": "Case Id",
             "type": "string"
           }
         },
         "required": [
           "case_id"
-        ]
+        ],
+        "title": "ruleArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_ruling",
-      "description": "Recompute the ruling from its cited evidence + trust inputs and check\nit matches the stored allocation (machine-checkable justice).",
+      "description": "Recompute the ruling from its cited evidence + trust inputs and check\n    it matches the stored allocation (machine-checkable justice).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "case_id": {
+            "title": "Case Id",
             "type": "string"
           }
         },
         "required": [
           "case_id"
-        ]
+        ],
+        "title": "verify_rulingArguments",
+        "type": "object"
       }
     },
     {
       "name": "get_case",
       "description": "Fetch the full case record, including any ruling.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "case_id": {
+            "title": "Case Id",
             "type": "string"
           }
         },
         "required": [
           "case_id"
-        ]
+        ],
+        "title": "get_caseArguments",
+        "type": "object"
       }
     },
     {
       "name": "list_cases",
       "description": "List cases, optionally filtered by state (FILED|EVIDENCE_OPEN|RULED).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "state": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "State"
           }
         },
-        "required": []
+        "title": "list_casesArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ],
   "compute-ledger": [
     {
       "name": "record_work",
-      "description": "Record a unit of agent compute work. energy_j = power_w * duration_s;\ncarbon_g follows from grid intensity. If bit_ops is declared, the entry is\nvalidated against the Landauer floor (bit_ops * kB * T * ln2) \u2014 physically\nimpossible claims are rejected. Idempotent on entry_id.",
+      "description": "Record a unit of agent compute work. energy_j = power_w * duration_s;\n    carbon_g follows from grid intensity. If bit_ops is declared, the entry is\n    validated against the Landauer floor (bit_ops * kB * T * ln2) \u2014 physically\n    impossible claims are rejected. Idempotent on entry_id.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           },
           "entry_id": {
+            "title": "Entry Id",
             "type": "string"
           },
           "power_w": {
+            "title": "Power W",
             "type": "number"
           },
           "duration_s": {
+            "title": "Duration S",
             "type": "number"
           },
           "task": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Task",
+            "type": "string"
           },
           "bit_ops": {
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bit Ops"
           },
           "temperature_k": {
-            "type": "number",
-            "default": 300.0
+            "default": 300.0,
+            "title": "Temperature K",
+            "type": "number"
           },
           "grid_intensity_g_per_kwh": {
-            "type": "number",
-            "default": 400.0
+            "default": 400.0,
+            "title": "Grid Intensity G Per Kwh",
+            "type": "number"
           },
           "price_minor_per_kwh": {
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Price Minor Per Kwh"
           }
         },
         "required": [
@@ -829,129 +239,162 @@
           "entry_id",
           "power_w",
           "duration_s"
-        ]
+        ],
+        "title": "record_workArguments",
+        "type": "object"
       }
     },
     {
       "name": "footprint",
-      "description": "Aggregate footprint for an agent: total J, kWh, gCO2e, cost, and mean\nLandauer efficiency. Totals are exact sums of the ledger entries.",
+      "description": "Aggregate footprint for an agent: total J, kWh, gCO2e, cost, and mean\n    Landauer efficiency. Totals are exact sums of the ledger entries.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ]
+        ],
+        "title": "footprintArguments",
+        "type": "object"
       }
     },
     {
       "name": "attest",
-      "description": "Issue a content-addressed attestation for a ledger entry (verifiable\ngreen-compute / energy claim).",
+      "description": "Issue a content-addressed attestation for a ledger entry (verifiable\n    green-compute / energy claim).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "entry_id": {
+            "title": "Entry Id",
             "type": "string"
           }
         },
         "required": [
           "entry_id"
-        ]
+        ],
+        "title": "attestArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_attestation",
       "description": "Verify an attestation by recomputing the entry hash.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "attestation": {
+            "additionalProperties": true,
+            "title": "Attestation",
             "type": "object"
           }
         },
         "required": [
           "attestation"
-        ]
+        ],
+        "title": "verify_attestationArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_chain",
       "description": "Verify the tamper-evident hash chain of an agent's ledger.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ]
+        ],
+        "title": "verify_chainArguments",
+        "type": "object"
       }
     },
     {
       "name": "list_entries",
       "description": "List all ledger entries for an agent.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ]
+        ],
+        "title": "list_entriesArguments",
+        "type": "object"
       }
     },
     {
       "name": "carbon_receipt",
-      "description": "Emit an x402-C carbon receipt for a recorded work entry \u2014 the\nphysically-grounded {version, g_co2e, energy_j, method, landauer_*, ...}\nobject an x402 machine-payment receipt can carry. method is\n'landauer-floor' when the workload declared bit_ops (thermodynamically\nvalidated), else 'measured'. Pass offset_ref (a retirement id from the\noffset clearinghouse) to assert carbon-neutrality. Read-only; the returned\nattestation_hash binds the receipt to the ledger's hash chain.",
+      "description": "Emit an x402-C carbon receipt for a recorded work entry \u2014 the\n    physically-grounded {version, g_co2e, energy_j, method, landauer_*, ...}\n    object an x402 machine-payment receipt can carry. method is\n    'landauer-floor' when the workload declared bit_ops (thermodynamically\n    validated), else 'measured'. Pass offset_ref (a retirement id from the\n    offset clearinghouse) to assert carbon-neutrality. Read-only; the returned\n    attestation_hash binds the receipt to the ledger's hash chain.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "entry_id": {
+            "title": "Entry Id",
             "type": "string"
           },
           "offset_ref": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Offset Ref",
+            "type": "string"
           }
         },
         "required": [
           "entry_id"
-        ]
+        ],
+        "title": "carbon_receiptArguments",
+        "type": "object"
       }
     },
     {
       "name": "record_inventory",
-      "description": "Record an audited GHG inventory in a separate append-only chain.\nmass_g is exact integer grams; content and factor-pack digests are bare\nlowercase SHA-256 hex. Idempotent on inventory_id.",
+      "description": "Record an audited GHG inventory in a separate append-only chain.\n    mass_g is exact integer grams; content and factor-pack digests are bare\n    lowercase SHA-256 hex. Idempotent on inventory_id.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           },
           "inventory_id": {
+            "title": "Inventory Id",
             "type": "string"
           },
           "mass_g": {
+            "title": "Mass G",
             "type": "integer"
           },
           "content_digest": {
+            "title": "Content Digest",
             "type": "string"
           },
           "factor_pack_version": {
+            "title": "Factor Pack Version",
             "type": "string"
           },
           "factor_pack_digest": {
+            "title": "Factor Pack Digest",
             "type": "string"
           },
           "source_ids": {
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Ids"
           }
         },
         "required": [
@@ -961,402 +404,99 @@
           "content_digest",
           "factor_pack_version",
           "factor_pack_digest"
-        ]
+        ],
+        "title": "record_inventoryArguments",
+        "type": "object"
       }
     },
     {
       "name": "get_inventory",
       "description": "Fetch one immutable inventory record by inventory_id.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "inventory_id": {
+            "title": "Inventory Id",
             "type": "string"
           }
         },
         "required": [
           "inventory_id"
-        ]
+        ],
+        "title": "get_inventoryArguments",
+        "type": "object"
       }
     },
     {
       "name": "list_inventories",
       "description": "List the separate GHG inventory chain for an agent.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ]
+        ],
+        "title": "list_inventoriesArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_inventory_chain",
       "description": "Verify an agent's inventory hash chain independently of compute work.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
           "agent_id"
-        ]
+        ],
+        "title": "verify_inventory_chainArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "smartscale": [
-    {
-      "name": "credit_card_photo_instructions",
-      "description": "Return user-facing capture instructions for credit-card calibrated measurement.\n\nUse this before asking for a photo. The user should place a standard\ncredit/debit card flat in the same plane as the target objects.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "measurement_goal": {
-            "type": "string",
-            "default": ""
-          },
-          "objects_to_measure": {
-            "type": "array"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "scale_objects_from_credit_card",
-      "description": "Scale object pixel dimensions using a standard CR80 credit card reference.\n\nArgs:\n    image_id: Unique photo identifier.\n    credit_card_pixel_width: Pixel width of the visible credit/debit card.\n    objects: Objects to scale. Each object needs pixel_width and pixel_height;\n        label, pixel_area, pixel_perimeter, and confidence are optional.\n    credit_card_pixel_height: Optional card pixel height for distortion check.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "image_id": {
-            "type": "string"
-          },
-          "credit_card_pixel_width": {
-            "type": "number"
-          },
-          "objects": {
-            "type": "array"
-          },
-          "credit_card_pixel_height": {
-            "type": "number"
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "image_id",
-          "credit_card_pixel_width",
-          "objects"
-        ]
-      }
-    },
-    {
-      "name": "describe",
-      "description": "Return SmartScale capabilities and input contract.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "health",
-      "description": "Return SmartScale health status.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "protogen": [
-    {
-      "name": "create_cad_workspace",
-      "description": "Create a ProtoGen CAD workspace for another agent or workflow.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "project_name": {
-            "type": "string"
-          },
-          "owner_agent": {
-            "type": "string"
-          },
-          "design_goal": {
-            "type": "string"
-          },
-          "constraints": {
-            "type": "object"
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "project_name",
-          "owner_agent",
-          "design_goal"
-        ]
-      }
-    },
-    {
-      "name": "generate_cad_design",
-      "description": "Generate a parametric CAD design contract in a ProtoGen workspace.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "workspace_id": {
-            "type": "string"
-          },
-          "part_name": {
-            "type": "string"
-          },
-          "dimensions_mm": {
-            "type": "object"
-          },
-          "material": {
-            "type": "string",
-            "default": "aluminum"
-          },
-          "design_intent": {
-            "type": "string",
-            "default": ""
-          },
-          "features": {
-            "type": "array"
-          },
-          "output_formats": {
-            "type": "array"
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "workspace_id",
-          "part_name",
-          "dimensions_mm"
-        ]
-      }
-    },
-    {
-      "name": "export_cad_design",
-      "description": "Export a CAD design as OpenSCAD, STEP contract metadata, or manufacturing brief.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "design_id": {
-            "type": "string"
-          },
-          "export_format": {
-            "type": "string",
-            "default": "openscad"
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "design_id"
-        ]
-      }
-    },
-    {
-      "name": "manufacturing_plan_from_spec",
-      "description": "Generate a manufacturing plan, BOM, DFM notes, and cost estimate from a product spec.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "product_spec": {
-            "type": "object"
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "product_spec"
-        ]
-      }
-    },
-    {
-      "name": "describe",
-      "description": "Return ProtoGen capabilities and current CAD environment status.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "health",
-      "description": "Return ProtoGen health and workspace counts.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "regulatory-radar": [
-    {
-      "name": "scan_regulations",
-      "description": "Scan the regulatory landscape for a jurisdiction (e.g. EU, US), optionally filtered by sector.\n\nReturns regulations with urgency flags and effective dates.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "jurisdiction": {
-            "type": "string"
-          },
-          "sector": {
-            "type": "string"
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "jurisdiction"
-        ]
-      }
-    },
-    {
-      "name": "assess_compliance",
-      "description": "Assess a company's compliance posture against applicable regulations.\n\nReturns compliance level, percentage, gaps, and remediation priorities.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "company_name": {
-            "type": "string"
-          },
-          "sector": {
-            "type": "string"
-          },
-          "jurisdiction": {
-            "type": "string"
-          },
-          "disclosures": {
-            "type": "array"
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "company_name",
-          "sector",
-          "jurisdiction"
-        ]
-      }
-    },
-    {
-      "name": "monitor_changes",
-      "description": "Monitor recent regulatory changes in a jurisdiction over a trailing window.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "jurisdiction": {
-            "type": "string"
-          },
-          "since_days": {
-            "type": "integer",
-            "default": 90
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "jurisdiction"
-        ]
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Fleet-standard self-description: capabilities, inputs, outputs.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "narrative-engine": [
-    {
-      "name": "translate_narrative",
-      "description": "Translate raw ecological/agent data into a decision-maker-ready narrative.\n\naudience_type: board_member | general_public | grant_funder |\n    institutional_investor | journalist | policymaker | regulator |\n    retail_investor | scientist\nformat_type: academic_paper | executive_summary | grant_proposal |\n    investor_deck | newsletter | policy_brief | press_release",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_output": {
-            "type": "object"
-          },
-          "audience_type": {
-            "type": "string"
-          },
-          "format_type": {
-            "type": "string"
-          },
-          "key_message": {
-            "type": "string"
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "agent_output",
-          "audience_type",
-          "format_type"
-        ]
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Fleet-standard self-description: capabilities, inputs, outputs.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ],
   "covenant": [
     {
       "name": "grant_covenant",
-      "description": "Grant an agent a covenant: an explicit lease of authority. scopes support\nwildcards ('payments.*', '*'); budget_minor is the total spend ceiling in\nminor units; expires_at is ISO-8601. Returns the covenant_id.",
+      "description": "Grant an agent a covenant: an explicit lease of authority. scopes support\n    wildcards ('payments.*', '*'); budget_minor is the total spend ceiling in\n    minor units; expires_at is ISO-8601. Returns the covenant_id.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "principal": {
+            "title": "Principal",
             "type": "string"
           },
           "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           },
           "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scopes",
             "type": "array"
           },
           "budget_minor": {
+            "title": "Budget Minor",
             "type": "integer"
           },
           "expires_at": {
+            "title": "Expires At",
             "type": "string"
           }
         },
@@ -1366,339 +506,1847 @@
           "scopes",
           "budget_minor",
           "expires_at"
-        ]
+        ],
+        "title": "grant_covenantArguments",
+        "type": "object"
       }
     },
     {
       "name": "check_act",
-      "description": "Check (and if allowed, record) a proposed act against a covenant.\nDeny-by-default. Idempotent on act_id \u2014 retries never double-consume\nbudget. Every check lands on the audit chain.",
+      "description": "Check (and if allowed, record) a proposed act against a covenant.\n    Deny-by-default. Idempotent on act_id \u2014 retries never double-consume\n    budget. Every check lands on the audit chain.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "covenant_id": {
+            "title": "Covenant Id",
             "type": "string"
           },
           "act_id": {
+            "title": "Act Id",
             "type": "string"
           },
           "scope": {
+            "title": "Scope",
             "type": "string"
           },
           "amount_minor": {
-            "type": "integer",
-            "default": 0
+            "default": 0,
+            "title": "Amount Minor",
+            "type": "integer"
           }
         },
         "required": [
           "covenant_id",
           "act_id",
           "scope"
-        ]
+        ],
+        "title": "check_actArguments",
+        "type": "object"
       }
     },
     {
       "name": "revoke_covenant",
       "description": "Revoke a covenant immediately and terminally. All subsequent checks deny.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "covenant_id": {
+            "title": "Covenant Id",
             "type": "string"
           },
           "reason": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Reason",
+            "type": "string"
           }
         },
         "required": [
           "covenant_id"
-        ]
+        ],
+        "title": "revoke_covenantArguments",
+        "type": "object"
       }
     },
     {
       "name": "covenant_status",
       "description": "Current state, consumed/remaining budget, and check count.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "covenant_id": {
+            "title": "Covenant Id",
             "type": "string"
           }
         },
         "required": [
           "covenant_id"
-        ]
+        ],
+        "title": "covenant_statusArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_audit",
       "description": "Verify the tamper-evident audit chain of allowed/denied acts.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "covenant_id": {
+            "title": "Covenant Id",
             "type": "string"
           }
         },
         "required": [
           "covenant_id"
-        ]
+        ],
+        "title": "verify_auditArguments",
+        "type": "object"
       }
     },
     {
       "name": "list_covenants",
-      "description": "List covenants, optionally filtered by state (ACTIVE|REVOKED|EXPIRED)\nand/or the bound agent.",
+      "description": "List covenants, optionally filtered by state (ACTIVE|REVOKED|EXPIRED)\n    and/or the bound agent.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "state": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "State"
           },
           "agent_id": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent Id"
           }
         },
-        "required": []
+        "title": "list_covenantsArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ],
-  "provenance": [
+  "disclosure-compiler": [
     {
-      "name": "register_genesis",
-      "description": "Register an agent's birth. Issues a content-addressed genesis\ncertificate with a strictly monotone index (epoch 0 = the founding\ncohort). parent_id records lineage; children of recalled/quarantined\nparents are quarantined at birth. Idempotent \u2014 an agent is born once.",
+      "name": "compile_disclosure",
+      "description": "Compile a deterministic, cited disclosure draft from supplied company\n    facts and an optional verified GHG-ledger result. Missing required\n    datapoints remain explicit gaps; no prose or values are fabricated.",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "agent_id": {
+          "framework": {
+            "title": "Framework",
             "type": "string"
           },
-          "parent_id": {
-            "type": "string"
-          },
-          "artifact_hash": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": [
-          "agent_id"
-        ]
-      }
-    },
-    {
-      "name": "get_certificate",
-      "description": "Fetch an agent's genesis certificate + recall/quarantine status.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "agent_id"
-        ]
-      }
-    },
-    {
-      "name": "verify_certificate",
-      "description": "Verify a certificate: recompute its content hash and check the ledger.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "certificate": {
+          "company_facts": {
+            "additionalProperties": true,
+            "title": "Company Facts",
             "type": "object"
+          },
+          "ghg_result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Ghg Result"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
-          "certificate"
-        ]
+          "framework",
+          "company_facts"
+        ],
+        "title": "compile_disclosureArguments",
+        "type": "object"
       }
     },
     {
-      "name": "lineage",
-      "description": "Full ancestry and descendants of an agent, plus its generation number.",
+      "name": "list_frameworks",
+      "description": "List bundled framework IDs, coverage, source lineage, version, and the\n    framework-pack digest.",
       "inputSchema": {
-        "type": "object",
+        "properties": {},
+        "title": "list_frameworksArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_framework",
+      "description": "Return one bundled framework's required datapoints, mappings, sources,\n    and framework-pack lineage.",
+      "inputSchema": {
         "properties": {
-          "agent_id": {
+          "framework": {
+            "title": "Framework",
             "type": "string"
           }
         },
         "required": [
-          "agent_id"
-        ]
+          "framework"
+        ],
+        "title": "get_frameworkArguments",
+        "type": "object"
       }
     },
     {
-      "name": "recall",
-      "description": "Recall an agent: flags it and quarantines every transitive descendant.\nReports exactly which agents were quarantined.",
+      "name": "verify_result",
+      "description": "Recompute a disclosure draft audit hash, notary payload, structural\n    invariants, and framework-pack currency. Pass the prior result as JSON.",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "agent_id": {
+          "result_json": {
+            "title": "Result Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_json"
+        ],
+        "title": "verify_resultArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return deterministic capabilities, version, pack digest, pricing,\n    composition, and the professional-review disclaimer.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "erc8004": [
+    {
+      "name": "import_registration",
+      "description": "Import an ERC-8004 Identity Registry record (chain_id + ERC-721\n    token_id + agentURI + owner). Idempotent: re-import updates in place.\n    Returns the canonical record with its deterministic bridge DID\n    (did:viridis:erc8004:<chain>:<token>).",
+      "inputSchema": {
+        "properties": {
+          "chain_id": {
+            "title": "Chain Id",
+            "type": "integer"
+          },
+          "token_id": {
+            "title": "Token Id",
+            "type": "integer"
+          },
+          "agent_uri": {
+            "title": "Agent Uri",
             "type": "string"
           },
-          "reason": {
-            "type": "string",
-            "default": ""
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Metadata"
           }
         },
         "required": [
-          "agent_id"
-        ]
+          "chain_id",
+          "token_id",
+          "agent_uri",
+          "owner"
+        ],
+        "title": "import_registrationArguments",
+        "type": "object"
       }
     },
     {
-      "name": "list_records",
-      "description": "List genesis records, optionally by epoch (0 = founding cohort).",
+      "name": "resolve_agent",
+      "description": "Resolve an imported ERC-8004 registration by bridge DID or by\n    (chain_id, token_id).",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "epoch": {
+          "bridge_did": {
+            "default": "",
+            "title": "Bridge Did",
+            "type": "string"
+          },
+          "chain_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Chain Id"
+          },
+          "token_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Token Id"
+          }
+        },
+        "title": "resolve_agentArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "import_feedback",
+      "description": "Import ERC-8004 Reputation Registry feedback records for an agent.\n    Each item: {value: bool|0..1, at: ISO-8601, source?, weight?, feedback_id?}.\n    Idempotent per feedback_id.",
+      "inputSchema": {
+        "properties": {
+          "chain_id": {
+            "title": "Chain Id",
+            "type": "integer"
+          },
+          "token_id": {
+            "title": "Token Id",
+            "type": "integer"
+          },
+          "feedback": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Feedback",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chain_id",
+          "token_id",
+          "feedback"
+        ],
+        "title": "import_feedbackArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "score_agent",
+      "description": "Decay-weighted trust score in [0,1] + tier over the agent's imported\n    ERC-8004 feedback \u2014 recent behavior outweighs old; no feedback scores a\n    neutral 0.5 prior (no blind trust, no unfair zero).",
+      "inputSchema": {
+        "properties": {
+          "bridge_did": {
+            "default": "",
+            "title": "Bridge Did",
+            "type": "string"
+          },
+          "chain_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Chain Id"
+          },
+          "token_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Token Id"
+          }
+        },
+        "title": "score_agentArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "bind_identity",
+      "description": "Bind a fleet DID to an ERC-8004 identity. Produces an order-independent,\n    content-addressed (unsigned) binding attestation.",
+      "inputSchema": {
+        "properties": {
+          "fleet_did": {
+            "title": "Fleet Did",
+            "type": "string"
+          },
+          "chain_id": {
+            "title": "Chain Id",
+            "type": "integer"
+          },
+          "token_id": {
+            "title": "Token Id",
+            "type": "integer"
+          },
+          "proof_note": {
+            "default": "",
+            "title": "Proof Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fleet_did",
+          "chain_id",
+          "token_id"
+        ],
+        "title": "bind_identityArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "export_attestation",
+      "description": "Export the agent's current trust score as an UNSIGNED\n    ERC-8004 Validation Registry-shaped payload, content-addressed and ready\n    for YOUR OWN signer to anchor on-chain.",
+      "inputSchema": {
+        "properties": {
+          "chain_id": {
+            "title": "Chain Id",
+            "type": "integer"
+          },
+          "token_id": {
+            "title": "Token Id",
             "type": "integer"
           }
         },
-        "required": []
-      }
-    },
-    {
-      "name": "register_artifact",
-      "description": "Register a content-addressed artifact in a separate provenance DAG.\nParent hashes may be registered artifacts or external content roots.\nIdempotent on artifact_id; does not consume a genesis index.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "artifact_id": {
-            "type": "string"
-          },
-          "artifact_hash": {
-            "type": "string"
-          },
-          "producer_agent_id": {
-            "type": "string"
-          },
-          "parent_hashes": {
-            "type": "array"
-          },
-          "relation": {
-            "type": "string",
-            "default": "derived_from"
-          },
-          "metadata_digest": {
-            "type": "string",
-            "default": ""
-          }
-        },
         "required": [
-          "artifact_id",
-          "artifact_hash",
-          "producer_agent_id"
-        ]
+          "chain_id",
+          "token_id"
+        ],
+        "title": "export_attestationArguments",
+        "type": "object"
       }
     },
     {
-      "name": "get_artifact",
-      "description": "Fetch one registered artifact by artifact_id.",
+      "name": "verify_attestation",
+      "description": "Recompute a payload's content hash and report whether it is intact.",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "artifact_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "artifact_id"
-        ]
-      }
-    },
-    {
-      "name": "verify_artifact",
-      "description": "Recompute an artifact record hash and verify it against the DAG ledger.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "artifact": {
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
             "type": "object"
           }
         },
         "required": [
-          "artifact"
-        ]
+          "payload"
+        ],
+        "title": "verify_attestationArguments",
+        "type": "object"
       }
     },
     {
-      "name": "list_artifacts",
-      "description": "List artifacts, optionally filtered by producer agent.",
+      "name": "list_registrations",
+      "description": "List all imported ERC-8004 registrations.",
       "inputSchema": {
-        "type": "object",
+        "properties": {},
+        "title": "list_registrationsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return the bridge's capabilities and input contract.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "escrow": [
+    {
+      "name": "open_escrow",
+      "description": "Open an escrow between payer and payee. amount_minor is a positive\n    integer in minor units (cents). The platform fee is computed and FROZEN at\n    open (ceil bps). Returns the escrow_id (state OPEN). RETRY-SAFE: pass\n    open_ref=<your job id> and a replayed open returns the ORIGINAL escrow\n    (duplicate=true) instead of minting another one (E10).",
+      "inputSchema": {
         "properties": {
-          "producer_agent_id": {
+          "payer": {
+            "title": "Payer",
+            "type": "string"
+          },
+          "payee": {
+            "title": "Payee",
+            "type": "string"
+          },
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "default": "USD",
+            "title": "Currency",
+            "type": "string"
+          },
+          "terms": {
+            "default": "",
+            "title": "Terms",
+            "type": "string"
+          },
+          "deadline": {
+            "default": "",
+            "title": "Deadline",
+            "type": "string"
+          },
+          "fee_bps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fee Bps"
+          },
+          "open_ref": {
+            "default": "",
+            "title": "Open Ref",
             "type": "string"
           }
         },
-        "required": []
+        "required": [
+          "payer",
+          "payee",
+          "amount_minor"
+        ],
+        "title": "open_escrowArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "fund_escrow",
+      "description": "Mark an OPEN escrow as FUNDED (idempotent). payment_ref links the\n    payment-rail transaction.",
+      "inputSchema": {
+        "properties": {
+          "escrow_id": {
+            "title": "Escrow Id",
+            "type": "string"
+          },
+          "payment_ref": {
+            "default": "",
+            "title": "Payment Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "escrow_id"
+        ],
+        "title": "fund_escrowArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "release_escrow",
+      "description": "Release a FUNDED/DISPUTED escrow to the payee (exactly-once \u2014 a repeat\n    release returns the existing terminal record, never a double payout).",
+      "inputSchema": {
+        "properties": {
+          "escrow_id": {
+            "title": "Escrow Id",
+            "type": "string"
+          },
+          "delivery_proof": {
+            "default": "",
+            "title": "Delivery Proof",
+            "type": "string"
+          }
+        },
+        "required": [
+          "escrow_id"
+        ],
+        "title": "release_escrowArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "refund_escrow",
+      "description": "Refund an OPEN/FUNDED/DISPUTED escrow to the payer (exactly-once).\n    Refunding an OPEN escrow is a cancel.",
+      "inputSchema": {
+        "properties": {
+          "escrow_id": {
+            "title": "Escrow Id",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "escrow_id"
+        ],
+        "title": "refund_escrowArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "dispute_escrow",
+      "description": "Move a FUNDED escrow to DISPUTED. An arbiter (agent-arbitration-agent)\n    then resolves it to release or refund.",
+      "inputSchema": {
+        "properties": {
+          "escrow_id": {
+            "title": "Escrow Id",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "escrow_id"
+        ],
+        "title": "dispute_escrowArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "escrow_status",
+      "description": "Current record for an escrow.",
+      "inputSchema": {
+        "properties": {
+          "escrow_id": {
+            "title": "Escrow Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "escrow_id"
+        ],
+        "title": "escrow_statusArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_escrows",
+      "description": "List escrows, optionally filtered by state\n    (OPEN|FUNDED|RELEASED|REFUNDED|DISPUTED).",
+      "inputSchema": {
+        "properties": {
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "State"
+          }
+        },
+        "title": "list_escrowsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_audit",
+      "description": "Validate the tamper-evident audit hash chain for an escrow.",
+      "inputSchema": {
+        "properties": {
+          "escrow_id": {
+            "title": "Escrow Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "escrow_id"
+        ],
+        "title": "verify_auditArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "ghg-ledger": [
+    {
+      "name": "calculate_inventory",
+      "description": "Calculate an auditable GHG inventory from explicit activity records.\n    Returns per-line gas/CO2e results, Scope 1/2/3 and category rollups, dual\n    Scope 2 reporting, indeterminate lines, factor lineage, notary payload, and\n    an offset-clearinghouse dry-run weave. This is calculation, not advice.",
+      "inputSchema": {
+        "properties": {
+          "activities": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Activities",
+            "type": "array"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "activities"
+        ],
+        "title": "calculate_inventoryArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "classify_activity",
+      "description": "Suggest scope and Scope 3 category from the bundled deterministic map.\n    No inference is used; unknown activity types return no suggestion.",
+      "inputSchema": {
+        "properties": {
+          "activity": {
+            "additionalProperties": true,
+            "title": "Activity",
+            "type": "object"
+          }
+        },
+        "required": [
+          "activity"
+        ],
+        "title": "classify_activityArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_factor_packs",
+      "description": "List the bundled pack version/digest, supported regions and years,\n    activity types, GWP set, and explicit MVP coverage.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_factor_packsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_factor_pack",
+      "description": "Return factors, GWP values, conversions, sources, and pack SHA for one\n    exact bundled region/year. No nearest-region or nearest-year substitution.",
+      "inputSchema": {
+        "properties": {
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "region",
+          "year"
+        ],
+        "title": "get_factor_packArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_result",
+      "description": "Recompute a prior inventory's audit hash and conservation checks. Pass\n    the prior result object as JSON; tampering or stale factor lineage is flagged.",
+      "inputSchema": {
+        "properties": {
+          "result_json": {
+            "title": "Result Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_json"
+        ],
+        "title": "verify_resultArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return fleet-standard capabilities, version, pack digest, and pricing.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "identity": [
+    {
+      "name": "register_agent",
+      "description": "Register (or idempotently update) an agent identity. Returns a\n    deterministic content-addressed DID. capabilities is a non-empty list of\n    lowercase capability tags other agents can discover you by.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "endpoint": {
+            "default": "",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "pubkey": {
+            "default": "",
+            "title": "Pubkey",
+            "type": "string"
+          },
+          "pricing": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pricing"
+          },
+          "reputation_hint": {
+            "default": 0.5,
+            "title": "Reputation Hint",
+            "type": "number"
+          }
+        },
+        "required": [
+          "agent_id",
+          "capabilities"
+        ],
+        "title": "register_agentArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "resolve_agent",
+      "description": "Resolve an identity by agent_id or DID to its full public registration.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "default": "",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "did": {
+            "default": "",
+            "title": "Did",
+            "type": "string"
+          }
+        },
+        "title": "resolve_agentArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "discover_agents",
+      "description": "Find ACTIVE agents matching ALL requested capabilities (AND semantics),\n    deterministically ordered by match count then reputation.",
+      "inputSchema": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "limit": {
+            "default": 25,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "capabilities"
+        ],
+        "title": "discover_agentsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "revoke_agent",
+      "description": "Revoke an identity: it disappears from discovery (terminal) but its\n    record is retained for auditability.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "default": "",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "did": {
+            "default": "",
+            "title": "Did",
+            "type": "string"
+          }
+        },
+        "title": "revoke_agentArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_registrations",
+      "description": "List registrations, optionally filtered by status (ACTIVE|REVOKED).",
+      "inputSchema": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Status"
+          }
+        },
+        "title": "list_registrationsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "metering": [
+    {
+      "name": "create_meter",
+      "description": "Create a usage meter between a provider and a consumer agent.\n\n    unit: what is being counted (call, token, kwh, ...). Price is in minor\n    currency units (cents) per unit. Returns the meter_id.",
+      "inputSchema": {
+        "properties": {
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "consumer": {
+            "title": "Consumer",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "price_minor_per_unit": {
+            "title": "Price Minor Per Unit",
+            "type": "number"
+          },
+          "currency": {
+            "default": "USD",
+            "title": "Currency",
+            "type": "string"
+          },
+          "sla_target": {
+            "default": 0.99,
+            "title": "Sla Target",
+            "type": "number"
+          }
+        },
+        "required": [
+          "provider",
+          "consumer",
+          "unit",
+          "price_minor_per_unit"
+        ],
+        "title": "create_meterArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "record_usage",
+      "description": "Record a usage event. Idempotent on event_id (safe to retry \u2014 never\n    double-billed). outcome is 'ok' or 'error' and feeds the SLA report.",
+      "inputSchema": {
+        "properties": {
+          "meter_id": {
+            "title": "Meter Id",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "number"
+          },
+          "outcome": {
+            "default": "ok",
+            "title": "Outcome",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Metadata"
+          }
+        },
+        "required": [
+          "meter_id",
+          "event_id",
+          "quantity"
+        ],
+        "title": "record_usageArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "usage_summary",
+      "description": "Totals for a meter: event count, total quantity, accrued minor units.",
+      "inputSchema": {
+        "properties": {
+          "meter_id": {
+            "title": "Meter Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "meter_id"
+        ],
+        "title": "usage_summaryArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "sla_report",
+      "description": "Pure SLA report: success_rate vs sla_target, breach flag. No mutation.",
+      "inputSchema": {
+        "properties": {
+          "meter_id": {
+            "title": "Meter Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "meter_id"
+        ],
+        "title": "sla_reportArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "close_period",
+      "description": "Freeze all open events into an immutable invoice (exactly-once).\n    The invoice amount is what agent-escrow-agent should settle.",
+      "inputSchema": {
+        "properties": {
+          "meter_id": {
+            "title": "Meter Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "meter_id"
+        ],
+        "title": "close_periodArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_chain",
+      "description": "Verify the tamper-evident event hash chain for a meter.",
+      "inputSchema": {
+        "properties": {
+          "meter_id": {
+            "title": "Meter Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "meter_id"
+        ],
+        "title": "verify_chainArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_meters",
+      "description": "List all meters with event/invoice counts.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_metersArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_events",
+      "description": "Read usage events (paginated, read-only). Filter by meter, provider,\n    consumer_class (internal|external|unknown), channel, outcome (ok|error),\n    and ISO date range [since, until). Test-flagged events are excluded\n    unless include_test=true. Returns events + next_cursor.",
+      "inputSchema": {
+        "properties": {
+          "meter_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Meter Id"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Provider"
+          },
+          "consumer_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Consumer Class"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Channel"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Outcome"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Since"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Until"
+          },
+          "include_test": {
+            "default": false,
+            "title": "Include Test",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          }
+        },
+        "title": "list_eventsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "usage_timeseries",
+      "description": "Usage time series bucketed on each event's recorded_at (UTC;\n    bucket=day|hour), grouped across meters by provider \u2014 a real time-series\n    primitive, independent of meter creation times. Includes per-bucket\n    breakdowns by consumer_class / channel / provider. est_accrued_minor is\n    an estimate; authoritative billing stays with usage_summary.",
+      "inputSchema": {
+        "properties": {
+          "bucket": {
+            "default": "day",
+            "title": "Bucket",
+            "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Provider"
+          },
+          "meter_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Meter Id"
+          },
+          "consumer_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Consumer Class"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Channel"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Since"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Until"
+          },
+          "include_test": {
+            "default": false,
+            "title": "Include Test",
+            "type": "boolean"
+          }
+        },
+        "title": "usage_timeseriesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "flag_meter",
+      "description": "Admin: flag/unflag a meter as test/synthetic so its events are\n    excluded from usage statistics by default. Touches meter metadata only \u2014\n    never events, never the hash chain, never billing accruals. Requires the\n    server's VIRIDIS_ADMIN_TOKEN.",
+      "inputSchema": {
+        "properties": {
+          "meter_id": {
+            "title": "Meter Id",
+            "type": "string"
+          },
+          "is_test": {
+            "title": "Is Test",
+            "type": "boolean"
+          },
+          "admin_token": {
+            "title": "Admin Token",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "meter_id",
+          "is_test",
+          "admin_token"
+        ],
+        "title": "flag_meterArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "narrative-engine": [
+    {
+      "name": "translate_narrative",
+      "description": "Translate raw ecological/agent data into a decision-maker-ready narrative.\n\n    audience_type: board_member | general_public | grant_funder |\n        institutional_investor | journalist | policymaker | regulator |\n        retail_investor | scientist\n    format_type: academic_paper | executive_summary | grant_proposal |\n        investor_deck | newsletter | policy_brief | press_release\n    ",
+      "inputSchema": {
+        "properties": {
+          "agent_output": {
+            "additionalProperties": true,
+            "title": "Agent Output",
+            "type": "object"
+          },
+          "audience_type": {
+            "title": "Audience Type",
+            "type": "string"
+          },
+          "format_type": {
+            "title": "Format Type",
+            "type": "string"
+          },
+          "key_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Key Message"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "agent_output",
+          "audience_type",
+          "format_type"
+        ],
+        "title": "translate_narrativeArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description: capabilities, inputs, outputs.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "neurogenesis": [
+    {
+      "name": "create_agent",
+      "description": "Create a developmental agent from a digital genome:\n    {agent_name, purpose, initial_nodes (unique, >=1), fitness_metrics\n    (>=1), optional growth_rules / safety_axioms}. Returns agent_id +\n    initial graph summary.",
+      "inputSchema": {
+        "properties": {
+          "genome": {
+            "additionalProperties": true,
+            "title": "Genome",
+            "type": "object"
+          }
+        },
+        "required": [
+          "genome"
+        ],
+        "title": "create_agentArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "submit_evaluation",
+      "description": "Evolve an agent with one task outcome: {task_id, task_type,\n    success_score in [0,1], optional accuracy/user_satisfaction/\n    cost_efficiency/safety_score/notes/used_nodes/used_edges}. Success\n    strengthens the used edges, failure weakens them; growth and pruning\n    follow the genome's rules under its safety axioms (NG1). Returns the\n    new developmental-ledger events.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "evaluation": {
+            "additionalProperties": true,
+            "title": "Evaluation",
+            "type": "object"
+          }
+        },
+        "required": [
+          "agent_id",
+          "evaluation"
+        ],
+        "title": "submit_evaluationArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_agent",
+      "description": "Full current state: genome, cognitive graph (nodes/edges with\n    weights and trust), and summary counts.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "get_agentArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_agents",
+      "description": "All developmental agents on this mount, with summary counts.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_agentsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "best_next_steps",
+      "description": "Routing recommendation: the strongest next cognitive steps from a\n    given node, by learned edge weight and trust.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "from_node": {
+            "title": "From Node",
+            "type": "string"
+          },
+          "limit": {
+            "default": 3,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id",
+          "from_node"
+        ],
+        "title": "best_next_stepsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_ledger",
+      "description": "The append-only developmental ledger: every growth, pruning, and\n    evaluation event with reasons (NG3 \u2014 returned verbatim).",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "get_ledgerArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "export_state",
+      "description": "Portable state document for an agent (import_state recreates it\n    anywhere \u2014 including a self-hosted verdigraph-neurogenesis).",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "export_stateArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "import_state",
+      "description": "Recreate an agent from an export_state document.",
+      "inputSchema": {
+        "properties": {
+          "state": {
+            "additionalProperties": true,
+            "title": "State",
+            "type": "object"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "import_stateArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "delete_agent",
+      "description": "Remove a developmental agent from this mount.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "delete_agentArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "notary": [
+    {
+      "name": "commit",
+      "description": "Commit to a deliverable BEFORE handover. commit_hash =\n    sha256(salt || sha256(content)) as 64 hex chars; deadline is ISO-8601;\n    context links the escrow/job. Idempotent per (committer, nonce).",
+      "inputSchema": {
+        "properties": {
+          "committer": {
+            "title": "Committer",
+            "type": "string"
+          },
+          "nonce": {
+            "title": "Nonce",
+            "type": "string"
+          },
+          "commit_hash": {
+            "title": "Commit Hash",
+            "type": "string"
+          },
+          "deadline": {
+            "title": "Deadline",
+            "type": "string"
+          },
+          "context": {
+            "default": "",
+            "title": "Context",
+            "type": "string"
+          }
+        },
+        "required": [
+          "committer",
+          "nonce",
+          "commit_hash",
+          "deadline"
+        ],
+        "title": "commitArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "reveal",
+      "description": "Reveal the committed content's digest + salt after handover. Verifies\n    against the commitment (one bit of drift fails); returns a delivery_proof\n    string for escrow release. Late reveals expire the commitment.",
+      "inputSchema": {
+        "properties": {
+          "commitment_id": {
+            "title": "Commitment Id",
+            "type": "string"
+          },
+          "salt": {
+            "title": "Salt",
+            "type": "string"
+          },
+          "content_digest": {
+            "title": "Content Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commitment_id",
+          "salt",
+          "content_digest"
+        ],
+        "title": "revealArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify",
+      "description": "Independently verify a revealed commitment; optionally check it against\n    the digest of content you received.",
+      "inputSchema": {
+        "properties": {
+          "commitment_id": {
+            "title": "Commitment Id",
+            "type": "string"
+          },
+          "content_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Content Digest"
+          }
+        },
+        "required": [
+          "commitment_id"
+        ],
+        "title": "verifyArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "commitment_status",
+      "description": "Current record for a commitment (pre-reveal, salt/digest stay hidden).",
+      "inputSchema": {
+        "properties": {
+          "commitment_id": {
+            "title": "Commitment Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commitment_id"
+        ],
+        "title": "commitment_statusArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_commitments",
+      "description": "List commitments, optionally filtered by state\n    (PENDING|REVEALED|EXPIRED).",
+      "inputSchema": {
+        "properties": {
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "State"
+          }
+        },
+        "title": "list_commitmentsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ],
   "offsets": [
     {
       "name": "list_credit",
-      "description": "List a conservation credit on the book. verification_ref (a D-Score /\nland-verification attestation) is REQUIRED \u2014 unverified credits cannot\nenter the book. To trade on the Verra network, pass registry=\"verra\" with\nthe VCS provenance (vcs_project_id, serial_number, vintage, methodology) so\nretirements are cross-referenceable on registry.verra.org.",
+      "description": "List a conservation credit on the book. verification_ref (a D-Score /\n    land-verification attestation) is REQUIRED \u2014 unverified credits cannot\n    enter the book. To trade on the Verra network, pass registry=\"verra\" with\n    the VCS provenance (vcs_project_id, serial_number, vintage, methodology) so\n    retirements are cross-referenceable on registry.verra.org.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "issuer": {
+            "title": "Issuer",
             "type": "string"
           },
           "project_id": {
+            "title": "Project Id",
             "type": "string"
           },
           "mass_g": {
+            "title": "Mass G",
             "type": "integer"
           },
           "price_minor_per_kg": {
+            "title": "Price Minor Per Kg",
             "type": "integer"
           },
           "verification_ref": {
+            "title": "Verification Ref",
             "type": "string"
           },
           "registry": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Registry",
+            "type": "string"
           },
           "vcs_project_id": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Vcs Project Id",
+            "type": "string"
           },
           "vintage": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Vintage",
+            "type": "string"
           },
           "serial_number": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Serial Number",
+            "type": "string"
           },
           "methodology": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Methodology",
+            "type": "string"
           }
         },
         "required": [
@@ -1707,570 +2355,1440 @@
           "mass_g",
           "price_minor_per_kg",
           "verification_ref"
-        ]
+        ],
+        "title": "list_creditArguments",
+        "type": "object"
       }
     },
     {
       "name": "verra_supply",
-      "description": "The tradeable Verra VCS book: verified credits carrying genuine Verra\nprovenance (project id + serial + vintage), cross-referenceable on\nregistry.verra.org. Read-only. Every retirement nets the project 85% and\nViridis the 15% marketplace take.",
+      "description": "The tradeable Verra VCS book: verified credits carrying genuine Verra\n    provenance (project id + serial + vintage), cross-referenceable on\n    registry.verra.org. Read-only. Every retirement nets the project 85% and\n    Viridis the 15% marketplace take.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "verra_supplyArguments",
+        "type": "object"
       }
     },
     {
       "name": "verra_retirement_record",
-      "description": "Generate the Verra-portal-ready retirement record(s) for a retirement\nmade against Verra supply \u2014 VCS project id, serial, vintage, methodology,\nquantity (tCO2e), beneficiary, and the registry.verra.org cross-reference.\nRead-only. Submit these under the Viridis Verra account to finalize the\non-registry retirement (portal today; auto-posts when Verra's transaction\nAPI is live).",
+      "description": "Generate the Verra-portal-ready retirement record(s) for a retirement\n    made against Verra supply \u2014 VCS project id, serial, vintage, methodology,\n    quantity (tCO2e), beneficiary, and the registry.verra.org cross-reference.\n    Read-only. Submit these under the Viridis Verra account to finalize the\n    on-registry retirement (portal today; auto-posts when Verra's transaction\n    API is live).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "purchase_id": {
+            "title": "Purchase Id",
             "type": "string"
           },
           "retirement_reason": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Retirement Reason",
+            "type": "string"
           }
         },
         "required": [
           "purchase_id"
-        ]
+        ],
+        "title": "verra_retirement_recordArguments",
+        "type": "object"
       }
     },
     {
       "name": "buy_offset",
-      "description": "Retire mass_g of verified credits for a buyer: cheapest-first matching,\nexactly-once (idempotent on purchase_id), returns a content-addressed\noffset certificate with per-fill costs. Payment settles via escrow.\ndry_run=true previews the exact fills/cost without mutating the book.",
+      "description": "Retire mass_g of verified credits for a buyer: cheapest-first matching,\n    exactly-once (idempotent on purchase_id), returns a content-addressed\n    offset certificate with per-fill costs. Payment settles via escrow.\n    dry_run=true previews the exact fills/cost without mutating the book.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "buyer": {
+            "title": "Buyer",
             "type": "string"
           },
           "purchase_id": {
+            "title": "Purchase Id",
             "type": "string"
           },
           "mass_g": {
+            "title": "Mass G",
             "type": "integer"
           },
           "dry_run": {
-            "type": "boolean",
-            "default": false
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
           }
         },
         "required": [
           "buyer",
           "purchase_id",
           "mass_g"
-        ]
+        ],
+        "title": "buy_offsetArguments",
+        "type": "object"
       }
     },
     {
       "name": "buy_offset_budget",
-      "description": "Money-denominated offset purchase: retire the maximum cheapest-first\nverified mass whose exact cost fits inside budget_minor (never overspends).\nBuilt for callers whose restoration obligation is a currency amount \u2014\ne.g. a revenue share accrued in a ledger. Idempotent on purchase_id;\ndry_run=true previews without mutating.",
+      "description": "Money-denominated offset purchase: retire the maximum cheapest-first\n    verified mass whose exact cost fits inside budget_minor (never overspends).\n    Built for callers whose restoration obligation is a currency amount \u2014\n    e.g. a revenue share accrued in a ledger. Idempotent on purchase_id;\n    dry_run=true previews without mutating.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "buyer": {
+            "title": "Buyer",
             "type": "string"
           },
           "purchase_id": {
+            "title": "Purchase Id",
             "type": "string"
           },
           "budget_minor": {
+            "title": "Budget Minor",
             "type": "integer"
           },
           "dry_run": {
-            "type": "boolean",
-            "default": false
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
           }
         },
         "required": [
           "buyer",
           "purchase_id",
           "budget_minor"
-        ]
+        ],
+        "title": "buy_offset_budgetArguments",
+        "type": "object"
       }
     },
     {
       "name": "settlement_batch",
-      "description": "Read-only cash-settlement summary for a buyer: the list + exact sums\n(purchases, mass_g, cost_minor) of their retirements, optionally since an\nISO-8601 timestamp \u2014 the statement a human settles in one transfer.",
+      "description": "Read-only cash-settlement summary for a buyer: the list + exact sums\n    (purchases, mass_g, cost_minor) of their retirements, optionally since an\n    ISO-8601 timestamp \u2014 the statement a human settles in one transfer.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "buyer": {
+            "title": "Buyer",
             "type": "string"
           },
           "since": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Since",
+            "type": "string"
           }
         },
         "required": [
           "buyer"
-        ]
+        ],
+        "title": "settlement_batchArguments",
+        "type": "object"
       }
     },
     {
       "name": "net_position",
-      "description": "Buyer's carbon position: emitted (from agent-compute-ledger) minus\nretired. carbon_accountable == true when fully offset.",
+      "description": "Buyer's carbon position: emitted (from agent-compute-ledger) minus\n    retired. carbon_accountable == true when fully offset.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "buyer": {
+            "title": "Buyer",
             "type": "string"
           },
           "emitted_g": {
+            "title": "Emitted G",
             "type": "number"
           }
         },
         "required": [
           "buyer",
           "emitted_g"
-        ]
+        ],
+        "title": "net_positionArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_certificate",
       "description": "Verify an offset certificate: recompute its hash and check the ledger.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "certificate": {
+            "additionalProperties": true,
+            "title": "Certificate",
             "type": "object"
           }
         },
         "required": [
           "certificate"
-        ]
+        ],
+        "title": "verify_certificateArguments",
+        "type": "object"
       }
     },
     {
       "name": "book",
       "description": "The full credit book with per-credit and book-wide mass conservation totals.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "bookArguments",
+        "type": "object"
       }
     },
     {
       "name": "get_purchase",
       "description": "Fetch a past purchase / offset certificate by id.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "purchase_id": {
+            "title": "Purchase Id",
             "type": "string"
           }
         },
         "required": [
           "purchase_id"
-        ]
+        ],
+        "title": "get_purchaseArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_retirement",
-      "description": "x402-C C4 check: confirm a retirement (offset_ref = purchase_id)\nactually retires at least required_g grams of verified conservation\ncredit \u2014 the check that lets a carbon receipt's neutrality claim be\nhonored. Returns covered / retired_g / shortfall_g and the backing\ncredits. Read-only.",
+      "description": "x402-C C4 check: confirm a retirement (offset_ref = purchase_id)\n    actually retires at least required_g grams of verified conservation\n    credit \u2014 the check that lets a carbon receipt's neutrality claim be\n    honored. Returns covered / retired_g / shortfall_g and the backing\n    credits. Read-only.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "purchase_id": {
+            "title": "Purchase Id",
             "type": "string"
           },
           "required_g": {
-            "type": "integer",
-            "default": 0
+            "default": 0,
+            "title": "Required G",
+            "type": "integer"
           }
         },
         "required": [
           "purchase_id"
-        ]
+        ],
+        "title": "verify_retirementArguments",
+        "type": "object"
       }
     },
     {
       "name": "register_project",
-      "description": "Register a VERIFIED restoration project so retirements against its\ncredits can be funded. verification_ref (D-Score / land-verification /\nregistry id) is required \u2014 only verified conservation is funded.\nproject_id is immutable once registered.",
+      "description": "Register a VERIFIED restoration project so retirements against its\n    credits can be funded. verification_ref (D-Score / land-verification /\n    registry id) is required \u2014 only verified conservation is funded.\n    project_id is immutable once registered.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "project_id": {
+            "title": "Project Id",
             "type": "string"
           },
           "verification_ref": {
+            "title": "Verification Ref",
             "type": "string"
           },
           "name": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Name",
+            "type": "string"
           },
           "location": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Location",
+            "type": "string"
           },
           "methodology": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Methodology",
+            "type": "string"
           },
           "beneficiary": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Beneficiary",
+            "type": "string"
           },
           "registry_ref": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Registry Ref",
+            "type": "string"
           }
         },
         "required": [
           "project_id",
           "verification_ref"
-        ]
+        ],
+        "title": "register_projectArguments",
+        "type": "object"
       }
     },
     {
       "name": "project_funding",
-      "description": "Supply-side disbursement ledger: how much each restoration project has\nearned from retirements and is owed (gross_proceeds_minor + retired_g).\nPass a project_id for one project, else all. Read-only \u2014 the CEO settles\nthe actual payout. This is what makes the clearinghouse fund restoration.",
+      "description": "Supply-side disbursement ledger: how much each restoration project has\n    earned from retirements and is owed (gross_proceeds_minor + retired_g).\n    Pass a project_id for one project, else all. Read-only \u2014 the CEO settles\n    the actual payout. This is what makes the clearinghouse fund restoration.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "project_id": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
           }
         },
-        "required": []
+        "title": "project_fundingArguments",
+        "type": "object"
       }
     },
     {
       "name": "list_projects",
       "description": "List all registered restoration projects with their metadata.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "list_projectsArguments",
+        "type": "object"
       }
     },
     {
       "name": "disbursement_schedule",
-      "description": "Automated disbursement preview: for each verified restoration project,\nsplits its newly-accrued proceeds into the Viridis Conservation withhold\n(default 15%, seeds the software/business) and the project payout (85%).\nRead-only. Funded-but-unregistered projects are surfaced separately as\npending_registration (can't pay an unverified project).",
+      "description": "Automated disbursement preview: for each verified restoration project,\n    splits its newly-accrued proceeds into the Viridis Conservation withhold\n    (default 15%, seeds the software/business) and the project payout (85%).\n    Read-only. Funded-but-unregistered projects are surfaced separately as\n    pending_registration (can't pay an unverified project).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "project_id": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
           }
         },
-        "required": []
+        "title": "disbursement_scheduleArguments",
+        "type": "object"
       }
     },
     {
       "name": "certify_disbursement",
-      "description": "Freeze the current disbursement schedule into a certified, tamper-evident\nbatch (content-addressed, hash-chained). Idempotent on batch_id; only\nnewly-accrued proceeds for verified projects are certified (never disbursed\ntwice). This is the certified investment record the CEO executes the actual\nStripe transfers against.",
+      "description": "Freeze the current disbursement schedule into a certified, tamper-evident\n    batch (content-addressed, hash-chained). Idempotent on batch_id; only\n    newly-accrued proceeds for verified projects are certified (never disbursed\n    twice). This is the certified investment record the CEO executes the actual\n    Stripe transfers against.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "batch_id": {
+            "title": "Batch Id",
             "type": "string"
           }
         },
         "required": [
           "batch_id"
-        ]
+        ],
+        "title": "certify_disbursementArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_disbursement",
-      "description": "Recompute the disbursement certificate hash chain and confirm whole-book\nconservation of disbursed proceeds. Any party can audit disbursements.",
+      "description": "Recompute the disbursement certificate hash chain and confirm whole-book\n    conservation of disbursed proceeds. Any party can audit disbursements.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "verify_disbursementArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ],
-  "erc8004": [
+  "protogen": [
     {
-      "name": "import_registration",
-      "description": "Import an ERC-8004 Identity Registry record (chain_id + ERC-721\ntoken_id + agentURI + owner). Idempotent: re-import updates in place.\nReturns the canonical record with its deterministic bridge DID\n(did:viridis:erc8004:<chain>:<token>).",
+      "name": "create_cad_workspace",
+      "description": "Create a ProtoGen CAD workspace for another agent or workflow.",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "chain_id": {
-            "type": "integer"
-          },
-          "token_id": {
-            "type": "integer"
-          },
-          "agent_uri": {
+          "project_name": {
+            "title": "Project Name",
             "type": "string"
           },
-          "owner": {
+          "owner_agent": {
+            "title": "Owner Agent",
             "type": "string"
           },
-          "metadata": {
+          "design_goal": {
+            "title": "Design Goal",
+            "type": "string"
+          },
+          "constraints": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Constraints"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "project_name",
+          "owner_agent",
+          "design_goal"
+        ],
+        "title": "create_cad_workspaceArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "generate_cad_design",
+      "description": "Generate a parametric CAD design contract in a ProtoGen workspace.",
+      "inputSchema": {
+        "properties": {
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          },
+          "part_name": {
+            "title": "Part Name",
+            "type": "string"
+          },
+          "dimensions_mm": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Dimensions Mm",
             "type": "object"
-          }
-        },
-        "required": [
-          "chain_id",
-          "token_id",
-          "agent_uri",
-          "owner"
-        ]
-      }
-    },
-    {
-      "name": "resolve_agent",
-      "description": "Resolve an imported ERC-8004 registration by bridge DID or by\n(chain_id, token_id).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "bridge_did": {
-            "type": "string",
-            "default": ""
           },
-          "chain_id": {
-            "type": "integer"
-          },
-          "token_id": {
-            "type": "integer"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "import_feedback",
-      "description": "Import ERC-8004 Reputation Registry feedback records for an agent.\nEach item: {value: bool|0..1, at: ISO-8601, source?, weight?, feedback_id?}.\nIdempotent per feedback_id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "chain_id": {
-            "type": "integer"
-          },
-          "token_id": {
-            "type": "integer"
-          },
-          "feedback": {
-            "type": "array"
-          }
-        },
-        "required": [
-          "chain_id",
-          "token_id",
-          "feedback"
-        ]
-      }
-    },
-    {
-      "name": "score_agent",
-      "description": "Decay-weighted trust score in [0,1] + tier over the agent's imported\nERC-8004 feedback \u2014 recent behavior outweighs old; no feedback scores a\nneutral 0.5 prior (no blind trust, no unfair zero).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "bridge_did": {
-            "type": "string",
-            "default": ""
-          },
-          "chain_id": {
-            "type": "integer"
-          },
-          "token_id": {
-            "type": "integer"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "bind_identity",
-      "description": "Bind a fleet DID to an ERC-8004 identity. Produces an order-independent,\ncontent-addressed (unsigned) binding attestation.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "fleet_did": {
+          "material": {
+            "default": "aluminum",
+            "title": "Material",
             "type": "string"
           },
-          "chain_id": {
-            "type": "integer"
+          "design_intent": {
+            "default": "",
+            "title": "Design Intent",
+            "type": "string"
           },
-          "token_id": {
-            "type": "integer"
+          "features": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Features"
           },
-          "proof_note": {
-            "type": "string",
-            "default": ""
+          "output_formats": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Output Formats"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
-          "fleet_did",
-          "chain_id",
-          "token_id"
-        ]
+          "workspace_id",
+          "part_name",
+          "dimensions_mm"
+        ],
+        "title": "generate_cad_designArguments",
+        "type": "object"
       }
     },
     {
-      "name": "export_attestation",
-      "description": "Export the agent's current trust score as an UNSIGNED\nERC-8004 Validation Registry-shaped payload, content-addressed and ready\nfor YOUR OWN signer to anchor on-chain.",
+      "name": "export_cad_design",
+      "description": "Export a CAD design as OpenSCAD, STEP contract metadata, or manufacturing brief.",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "chain_id": {
-            "type": "integer"
+          "design_id": {
+            "title": "Design Id",
+            "type": "string"
           },
-          "token_id": {
-            "type": "integer"
+          "export_format": {
+            "default": "openscad",
+            "title": "Export Format",
+            "type": "string"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
-          "chain_id",
-          "token_id"
-        ]
+          "design_id"
+        ],
+        "title": "export_cad_designArguments",
+        "type": "object"
       }
     },
     {
-      "name": "verify_attestation",
-      "description": "Recompute a payload's content hash and report whether it is intact.",
+      "name": "manufacturing_plan_from_spec",
+      "description": "Generate a manufacturing plan, BOM, DFM notes, and cost estimate from a product spec.",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "payload": {
+          "product_spec": {
+            "additionalProperties": true,
+            "title": "Product Spec",
             "type": "object"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
-          "payload"
-        ]
+          "product_spec"
+        ],
+        "title": "manufacturing_plan_from_specArguments",
+        "type": "object"
       }
     },
     {
-      "name": "list_registrations",
-      "description": "List all imported ERC-8004 registrations.",
+      "name": "describe",
+      "description": "Return ProtoGen capabilities and current CAD environment status.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describeArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "health",
+      "description": "Return ProtoGen health and workspace counts.",
+      "inputSchema": {
+        "properties": {},
+        "title": "healthArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "provenance": [
+    {
+      "name": "register_genesis",
+      "description": "Register an agent's birth. Issues a content-addressed genesis\n    certificate with a strictly monotone index (epoch 0 = the founding\n    cohort). parent_id records lineage; children of recalled/quarantined\n    parents are quarantined at birth. Idempotent \u2014 an agent is born once.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Id"
+          },
+          "artifact_hash": {
+            "default": "",
+            "title": "Artifact Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "register_genesisArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_certificate",
+      "description": "Fetch an agent's genesis certificate + recall/quarantine status.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "get_certificateArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_certificate",
+      "description": "Verify a certificate: recompute its content hash and check the ledger.",
+      "inputSchema": {
+        "properties": {
+          "certificate": {
+            "additionalProperties": true,
+            "title": "Certificate",
+            "type": "object"
+          }
+        },
+        "required": [
+          "certificate"
+        ],
+        "title": "verify_certificateArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "lineage",
+      "description": "Full ancestry and descendants of an agent, plus its generation number.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "lineageArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "recall",
+      "description": "Recall an agent: flags it and quarantines every transitive descendant.\n    Reports exactly which agents were quarantined.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "recallArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_records",
+      "description": "List genesis records, optionally by epoch (0 = founding cohort).",
+      "inputSchema": {
+        "properties": {
+          "epoch": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Epoch"
+          }
+        },
+        "title": "list_recordsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "register_artifact",
+      "description": "Register a content-addressed artifact in a separate provenance DAG.\n    Parent hashes may be registered artifacts or external content roots.\n    Idempotent on artifact_id; does not consume a genesis index.",
+      "inputSchema": {
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "artifact_hash": {
+            "title": "Artifact Hash",
+            "type": "string"
+          },
+          "producer_agent_id": {
+            "title": "Producer Agent Id",
+            "type": "string"
+          },
+          "parent_hashes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Hashes"
+          },
+          "relation": {
+            "default": "derived_from",
+            "title": "Relation",
+            "type": "string"
+          },
+          "metadata_digest": {
+            "default": "",
+            "title": "Metadata Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "artifact_hash",
+          "producer_agent_id"
+        ],
+        "title": "register_artifactArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_artifact",
+      "description": "Fetch one registered artifact by artifact_id.",
+      "inputSchema": {
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_id"
+        ],
+        "title": "get_artifactArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_artifact",
+      "description": "Recompute an artifact record hash and verify it against the DAG ledger.",
+      "inputSchema": {
+        "properties": {
+          "artifact": {
+            "additionalProperties": true,
+            "title": "Artifact",
+            "type": "object"
+          }
+        },
+        "required": [
+          "artifact"
+        ],
+        "title": "verify_artifactArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_artifacts",
+      "description": "List artifacts, optionally filtered by producer agent.",
+      "inputSchema": {
+        "properties": {
+          "producer_agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Producer Agent Id"
+          }
+        },
+        "title": "list_artifactsArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
-      "description": "Return the bridge's capabilities and input contract.",
+      "description": "Fleet-standard self-description.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "quantity-takeoff": [
+    {
+      "name": "calculate_takeoff",
+      "description": "Calculate an auditable material takeoff from explicit geometry or a\n    supported SmartScale/ProtoGen measurement payload. Returns net, explicit\n    waste-adjusted, and conservative purchase quantities. This is a planning\n    estimate, not a guaranteed material order or professional certification.",
+      "inputSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "calculate_takeoffArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_assemblies",
+      "description": "List supported assemblies, required dimensions, formulas, waste\n    defaults, and the current material-pack digest.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_assembliesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_assembly",
+      "description": "Return one assembly's formula, required dimensions, material factors,\n    purchase increment, sources, and material-pack lineage.",
+      "inputSchema": {
+        "properties": {
+          "assembly_type": {
+            "title": "Assembly Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assembly_type"
+        ],
+        "title": "get_assemblyArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_material_pack",
+      "description": "List the bundled material pack version, digest, coverage, shapes,\n    rebar sizes, roof pitches, and explicit unsupported policy.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_material_packArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_material_pack",
+      "description": "Return the bundled factors, densities, coverages, waste defaults,\n    purchase increments, unit conversions, sources, and raw-pack SHA.",
+      "inputSchema": {
+        "properties": {},
+        "title": "get_material_packArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_result",
+      "description": "Recompute a takeoff audit hash, notary payload, pack currency, and QT9\n    unit-resolved conservation. Pass the prior result object as JSON.",
+      "inputSchema": {
+        "properties": {
+          "result_json": {
+            "title": "Result Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_json"
+        ],
+        "title": "verify_resultArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return fleet-standard capabilities, version, pack digest, disclaimer,\n    composition role, and pricing.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "regulatory-radar": [
+    {
+      "name": "scan_regulations",
+      "description": "Scan the regulatory landscape for a jurisdiction (e.g. EU, US), optionally filtered by sector.\n\n    Returns regulations with urgency flags and effective dates.",
+      "inputSchema": {
+        "properties": {
+          "jurisdiction": {
+            "title": "Jurisdiction",
+            "type": "string"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sector"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "jurisdiction"
+        ],
+        "title": "scan_regulationsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "assess_compliance",
+      "description": "Assess a company's compliance posture against applicable regulations.\n\n    Returns compliance level, percentage, gaps, and remediation priorities.",
+      "inputSchema": {
+        "properties": {
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "jurisdiction": {
+            "title": "Jurisdiction",
+            "type": "string"
+          },
+          "disclosures": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Disclosures"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "company_name",
+          "sector",
+          "jurisdiction"
+        ],
+        "title": "assess_complianceArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "monitor_changes",
+      "description": "Monitor recent regulatory changes in a jurisdiction over a trailing window.",
+      "inputSchema": {
+        "properties": {
+          "jurisdiction": {
+            "title": "Jurisdiction",
+            "type": "string"
+          },
+          "since_days": {
+            "default": 90,
+            "title": "Since Days",
+            "type": "integer"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "jurisdiction"
+        ],
+        "title": "monitor_changesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description: capabilities, inputs, outputs.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "smartscale": [
+    {
+      "name": "credit_card_photo_instructions",
+      "description": "Return user-facing capture instructions for credit-card calibrated measurement.\n\n    Use this before asking for a photo. The user should place a standard\n    credit/debit card flat in the same plane as the target objects.\n    ",
+      "inputSchema": {
+        "properties": {
+          "measurement_goal": {
+            "default": "",
+            "title": "Measurement Goal",
+            "type": "string"
+          },
+          "objects_to_measure": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Objects To Measure"
+          }
+        },
+        "title": "credit_card_photo_instructionsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "scale_objects_from_credit_card",
+      "description": "Scale object pixel dimensions using a standard CR80 credit card reference.\n\n    Args:\n        image_id: Unique photo identifier.\n        credit_card_pixel_width: Pixel width of the visible credit/debit card.\n        objects: Objects to scale. Each object needs pixel_width and pixel_height;\n            label, pixel_area, pixel_perimeter, and confidence are optional.\n        credit_card_pixel_height: Optional card pixel height for distortion check.\n    ",
+      "inputSchema": {
+        "properties": {
+          "image_id": {
+            "title": "Image Id",
+            "type": "string"
+          },
+          "credit_card_pixel_width": {
+            "title": "Credit Card Pixel Width",
+            "type": "number"
+          },
+          "objects": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Objects",
+            "type": "array"
+          },
+          "credit_card_pixel_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Credit Card Pixel Height"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "image_id",
+          "credit_card_pixel_width",
+          "objects"
+        ],
+        "title": "scale_objects_from_credit_cardArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe",
+      "description": "Return SmartScale capabilities and input contract.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describeArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "health",
+      "description": "Return SmartScale health status.",
+      "inputSchema": {
+        "properties": {},
+        "title": "healthArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "subscriptions": [
+    {
+      "name": "list_plans",
+      "description": "List the versioned monthly-seat catalog, exact prices/coverage, catalog\n    SHA-256, readiness flags, and pending owner-confirmation notice.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_plansArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_plan",
+      "description": "Get one exact monthly plan and its versioned catalog lineage.",
+      "inputSchema": {
+        "properties": {
+          "plan_id": {
+            "title": "Plan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id"
+        ],
+        "title": "get_planArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "create_account",
+      "description": "Create a free account for bearer attribution. The full account key is\n    returned once; only its SHA-256 and last four characters are retained.",
+      "inputSchema": {
+        "properties": {
+          "account_ref": {
+            "title": "Account Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_ref"
+        ],
+        "title": "create_accountArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "create_checkout_link",
+      "description": "Prepare a Stripe-hosted subscription Checkout URL. It never charges a\n    card. Draft plans, missing owner approval, unavailable covered agents, or\n    missing recurring Price IDs fail closed without creating a session.",
+      "inputSchema": {
+        "properties": {
+          "plan_id": {
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "account_ref": {
+            "title": "Account Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "account_ref"
+        ],
+        "title": "create_checkout_linkArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "record_subscription",
+      "description": "Pull-verify a Stripe session/subscription and idempotently activate its\n    exact subscription period. A newly created account receives its key once.",
+      "inputSchema": {
+        "properties": {
+          "stripe_session_or_sub_id": {
+            "title": "Stripe Session Or Sub Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stripe_session_or_sub_id"
+        ],
+        "title": "record_subscriptionArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "subscription_status",
+      "description": "Return bearer-owned subscription lifecycle and current-period quota.\n    The account key is always masked in output.",
+      "inputSchema": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "subscription_statusArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "customer_portal_link",
+      "description": "Return a bearer-owned Stripe-hosted billing-portal URL. The human\n    manages or cancels there; this tool never moves money.",
+      "inputSchema": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "customer_portal_linkArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "usage_summary",
+      "description": "Return bearer-owned, period-resolved included and overage usage with\n    exact catalog lineage and conservation totals.",
+      "inputSchema": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "usage_summaryArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "mrr_summary",
+      "description": "Return aggregate active live-mode subscription count, MRR minor units,\n    and plan mix. No account or Stripe identifiers are exposed.",
+      "inputSchema": {
+        "properties": {},
+        "title": "mrr_summaryArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return the fleet-standard version, catalog digest, security posture,\n    lifecycle policy, and capabilities.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ],
   "surety": [
     {
       "name": "post_bond",
-      "description": "Post a surety bond behind an agent's promises. principal is a positive\ninteger in minor units; expires_at is the ISO-8601 coverage window end.\nThe bond fee (2% default) is computed and frozen at post.",
+      "description": "Post a surety bond behind an agent's promises. principal is a positive\n    integer in minor units; expires_at is the ISO-8601 coverage window end.\n    The bond fee (2% default) is computed and frozen at post.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "principal_agent": {
+            "title": "Principal Agent",
             "type": "string"
           },
           "principal": {
+            "title": "Principal",
             "type": "integer"
           },
           "expires_at": {
+            "title": "Expires At",
             "type": "string"
           },
           "coverage": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Coverage",
+            "type": "string"
           },
           "currency": {
-            "type": "string",
-            "default": "USD"
+            "default": "USD",
+            "title": "Currency",
+            "type": "string"
           }
         },
         "required": [
           "principal_agent",
           "principal",
           "expires_at"
-        ]
+        ],
+        "title": "post_bondArguments",
+        "type": "object"
       }
     },
     {
       "name": "activate_bond",
-      "description": "Mark a POSTED bond ACTIVE (idempotent). funding_ref links the payment\nrail transaction that funded the stake.",
+      "description": "Mark a POSTED bond ACTIVE (idempotent). funding_ref links the payment\n    rail transaction that funded the stake.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "bond_id": {
+            "title": "Bond Id",
             "type": "string"
           },
           "funding_ref": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Funding Ref",
+            "type": "string"
           }
         },
         "required": [
           "bond_id"
-        ]
+        ],
+        "title": "activate_bondArguments",
+        "type": "object"
       }
     },
     {
       "name": "file_claim",
-      "description": "File a claim against an ACTIVE bond. Claims pay out ONLY when an\narbitration ruling upholds them (see slash_bond).",
+      "description": "File a claim against an ACTIVE bond. Claims pay out ONLY when an\n    arbitration ruling upholds them (see slash_bond).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "bond_id": {
+            "title": "Bond Id",
             "type": "string"
           },
           "claimant": {
+            "title": "Claimant",
             "type": "string"
           },
           "amount_minor": {
+            "title": "Amount Minor",
             "type": "integer"
           },
           "reason": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Reason",
+            "type": "string"
           }
         },
         "required": [
           "bond_id",
           "claimant",
           "amount_minor"
-        ]
+        ],
+        "title": "file_claimArguments",
+        "type": "object"
       }
     },
     {
       "name": "slash_bond",
-      "description": "Execute an arbitration ruling against a claim. Requires the ruling's\ncase id + content hash from agent-arbitration \u2014 no ruling, no slash; a\ngiven ruling pays at most once. Payout caps at the bond's available\nbalance (over-claims exhaust the bond).",
+      "description": "Execute an arbitration ruling against a claim. Requires the ruling's\n    case id + content hash from agent-arbitration \u2014 no ruling, no slash; a\n    given ruling pays at most once. Payout caps at the bond's available\n    balance (over-claims exhaust the bond).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "bond_id": {
+            "title": "Bond Id",
             "type": "string"
           },
           "claim_id": {
+            "title": "Claim Id",
             "type": "string"
           },
           "ruling_case_id": {
+            "title": "Ruling Case Id",
             "type": "string"
           },
           "ruling_hash": {
+            "title": "Ruling Hash",
             "type": "string"
           },
           "upheld": {
-            "type": "boolean",
-            "default": true
+            "default": true,
+            "title": "Upheld",
+            "type": "boolean"
           }
         },
         "required": [
@@ -2278,916 +3796,752 @@
           "claim_id",
           "ruling_case_id",
           "ruling_hash"
-        ]
+        ],
+        "title": "slash_bondArguments",
+        "type": "object"
       }
     },
     {
       "name": "release_bond",
-      "description": "Release the remaining stake to the principal after the coverage window\nelapses \u2014 refused while any claim is still open.",
+      "description": "Release the remaining stake to the principal after the coverage window\n    elapses \u2014 refused while any claim is still open.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "bond_id": {
+            "title": "Bond Id",
             "type": "string"
           }
         },
         "required": [
           "bond_id"
-        ]
+        ],
+        "title": "release_bondArguments",
+        "type": "object"
       }
     },
     {
       "name": "bond_status",
       "description": "Current record for a bond (state, balances, claims, audit head).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "bond_id": {
+            "title": "Bond Id",
             "type": "string"
           }
         },
         "required": [
           "bond_id"
-        ]
+        ],
+        "title": "bond_statusArguments",
+        "type": "object"
       }
     },
     {
       "name": "list_bonds",
-      "description": "List bonds, optionally filtered by state\n(POSTED|ACTIVE|RELEASED|EXHAUSTED).",
+      "description": "List bonds, optionally filtered by state\n    (POSTED|ACTIVE|RELEASED|EXHAUSTED).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "state": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "State"
           }
         },
-        "required": []
+        "title": "list_bondsArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_audit",
       "description": "Validate the tamper-evident audit hash chain for a bond.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "bond_id": {
+            "title": "Bond Id",
             "type": "string"
           }
         },
         "required": [
           "bond_id"
-        ]
+        ],
+        "title": "verify_auditArguments",
+        "type": "object"
       }
     },
     {
       "name": "price_bond",
-      "description": "Underwrite a surety bond: deterministic actuarial premium quote from a\ncounterparty's track record (attestations, notarized deliveries, completed\nbonds lower the rate; slashes raise it or decline outright). Integer-only\nmodel uw-v1; the returned quote_hash lets any party recompute and verify\nthe quote. Pure \u2014 never mutates bond state.",
+      "description": "Underwrite a surety bond: deterministic actuarial premium quote from a\n    counterparty's track record (attestations, notarized deliveries, completed\n    bonds lower the rate; slashes raise it or decline outright). Integer-only\n    model uw-v1; the returned quote_hash lets any party recompute and verify\n    the quote. Pure \u2014 never mutates bond state.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "coverage_minor": {
+            "title": "Coverage Minor",
             "type": "integer"
           },
           "duration_days": {
+            "title": "Duration Days",
             "type": "integer"
           },
           "attestations": {
-            "type": "integer",
-            "default": 0
+            "default": 0,
+            "title": "Attestations",
+            "type": "integer"
           },
           "successful_deliveries": {
-            "type": "integer",
-            "default": 0
+            "default": 0,
+            "title": "Successful Deliveries",
+            "type": "integer"
           },
           "bonds_completed": {
-            "type": "integer",
-            "default": 0
+            "default": 0,
+            "title": "Bonds Completed",
+            "type": "integer"
           },
           "slashes": {
-            "type": "integer",
-            "default": 0
+            "default": 0,
+            "title": "Slashes",
+            "type": "integer"
           },
           "slashed_minor": {
-            "type": "integer",
-            "default": 0
+            "default": 0,
+            "title": "Slashed Minor",
+            "type": "integer"
           }
         },
         "required": [
           "coverage_minor",
           "duration_days"
-        ]
+        ],
+        "title": "price_bondArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Return capabilities and input contract.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "notary": [
-    {
-      "name": "commit",
-      "description": "Commit to a deliverable BEFORE handover. commit_hash =\nsha256(salt || sha256(content)) as 64 hex chars; deadline is ISO-8601;\ncontext links the escrow/job. Idempotent per (committer, nonce).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "committer": {
-            "type": "string"
-          },
-          "nonce": {
-            "type": "string"
-          },
-          "commit_hash": {
-            "type": "string"
-          },
-          "deadline": {
-            "type": "string"
-          },
-          "context": {
-            "type": "string",
-            "default": ""
-          }
-        },
-        "required": [
-          "committer",
-          "nonce",
-          "commit_hash",
-          "deadline"
-        ]
-      }
-    },
-    {
-      "name": "reveal",
-      "description": "Reveal the committed content's digest + salt after handover. Verifies\nagainst the commitment (one bit of drift fails); returns a delivery_proof\nstring for escrow release. Late reveals expire the commitment.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "commitment_id": {
-            "type": "string"
-          },
-          "salt": {
-            "type": "string"
-          },
-          "content_digest": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "commitment_id",
-          "salt",
-          "content_digest"
-        ]
-      }
-    },
-    {
-      "name": "verify",
-      "description": "Independently verify a revealed commitment; optionally check it against\nthe digest of content you received.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "commitment_id": {
-            "type": "string"
-          },
-          "content_digest": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "commitment_id"
-        ]
-      }
-    },
-    {
-      "name": "commitment_status",
-      "description": "Current record for a commitment (pre-reveal, salt/digest stay hidden).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "commitment_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "commitment_id"
-        ]
-      }
-    },
-    {
-      "name": "list_commitments",
-      "description": "List commitments, optionally filtered by state\n(PENDING|REVEALED|EXPIRED).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "type": "string"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Return capabilities and input contract.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "wavefunction": [
-    {
-      "name": "intake",
-      "description": "Distill a user's dialogue into an intention wavefunction (explicit\nintentions + confidence). dialogue: [{role, content}, ...].",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "user_id": {
-            "type": "string"
-          },
-          "dialogue": {
-            "type": "array"
-          }
-        },
-        "required": [
-          "user_id",
-          "dialogue"
-        ]
-      }
-    },
-    {
-      "name": "collapse",
-      "description": "Collapse the user's wavefunction into an actionable commitment,\nweighted by stake.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "user_id": {
-            "type": "string"
-          },
-          "stake_amount": {
-            "type": "number",
-            "default": 100.0
-          }
-        },
-        "required": [
-          "user_id"
-        ]
-      }
-    },
-    {
-      "name": "find_matches",
-      "description": "Match the user's collapsed intention to constitutionally-aligned\nagents/collectives, ranked by alignment score.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "user_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "user_id"
-        ]
-      }
-    },
-    {
-      "name": "register_collective",
-      "description": "Register an agent/collective into the match index (mission +\ndomain profile + constitutional alignment scores + capacity).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "collective_id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "mission": {
-            "type": "string"
-          },
-          "domain_profile": {
-            "type": "object"
-          },
-          "constitutional_scores": {
-            "type": "object"
-          },
-          "capacity": {
-            "type": "integer",
-            "default": 10
-          }
-        },
-        "required": [
-          "collective_id",
-          "name",
-          "mission"
-        ]
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Return capabilities and input contract.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ],
   "taxcredit-engine": [
     {
       "name": "calculate_tax_credit",
-      "description": "Calculate an auditable tax-credit scenario. credit is 45Q, 45V, 45Y,\n48E, or 45X. facts must contain the explicit credit-specific eligibility\nfacts; missing facts return indeterminate. This is not tax or filing advice.",
+      "description": "Calculate an auditable tax-credit scenario. credit is 45Q, 45V, 45Y,\n    48E, or 45X. facts must contain the explicit credit-specific eligibility\n    facts; missing facts return indeterminate. This is not tax or filing advice.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "credit": {
+            "title": "Credit",
             "type": "string"
           },
           "facts": {
+            "additionalProperties": true,
+            "title": "Facts",
             "type": "object"
           },
           "payment_ref": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
           "credit",
           "facts"
-        ]
+        ],
+        "title": "calculate_tax_creditArguments",
+        "type": "object"
       }
     },
     {
       "name": "list_rule_packs",
       "description": "List supported credits and the current bundled rule-pack digest.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "list_rule_packsArguments",
+        "type": "object"
       }
     },
     {
       "name": "get_rule_pack",
       "description": "Return the bundled rules and official source metadata for one credit.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "credit": {
+            "title": "Credit",
             "type": "string"
           }
         },
         "required": [
           "credit"
-        ]
+        ],
+        "title": "get_rule_packArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_tax_credit_result",
-      "description": "Verify an engine result's audit_sha256. Pass the prior result object as\nJSON; any changed amount, fact, rule step, or source digest fails.",
+      "description": "Verify an engine result's audit_sha256. Pass the prior result object as\n    JSON; any changed amount, fact, rule step, or source digest fails.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "result_json": {
+            "title": "Result Json",
             "type": "string"
           }
         },
         "required": [
           "result_json"
-        ]
+        ],
+        "title": "verify_tax_credit_resultArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Return fleet-standard capabilities, version, and pricing.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ],
-  "ghg-ledger": [
+  "trust": [
     {
-      "name": "calculate_inventory",
-      "description": "Calculate an auditable GHG inventory from explicit activity records.\nReturns per-line gas/CO2e results, Scope 1/2/3 and category rollups, dual\nScope 2 reporting, indeterminate lines, factor lineage, notary payload, and\nan offset-clearinghouse dry-run weave. This is calculation, not advice.",
+      "name": "record_outcome",
+      "description": "Record an interaction outcome for an agent. kind: success | delivered |\n    dispute_won | failure | undelivered | dispute_lost | timeout |\n    security_incident (security incidents carry a 3x penalty).",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "activities": {
-            "type": "array"
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
           },
-          "options": {
-            "type": "object"
+          "kind": {
+            "title": "Kind",
+            "type": "string"
           },
-          "payment_ref": {
+          "weight": {
+            "default": 1.0,
+            "title": "Weight",
+            "type": "number"
+          },
+          "counterparty": {
+            "default": "",
+            "title": "Counterparty",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
             "type": "string"
           }
         },
         "required": [
-          "activities"
-        ]
+          "agent_id",
+          "kind"
+        ],
+        "title": "record_outcomeArguments",
+        "type": "object"
       }
     },
     {
-      "name": "classify_activity",
-      "description": "Suggest scope and Scope 3 category from the bundled deterministic map.\nNo inference is used; unknown activity types return no suggestion.",
+      "name": "score_agent",
+      "description": "Get an agent's decay-weighted trust score in [0,1] and tier. Unknown\n    agents get a neutral 0.5 prior \u2014 no blind trust, no unfair zero.",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "activity": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "activity"
-        ]
-      }
-    },
-    {
-      "name": "list_factor_packs",
-      "description": "List the bundled pack version/digest, supported regions and years,\nactivity types, GWP set, and explicit MVP coverage.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "get_factor_pack",
-      "description": "Return factors, GWP values, conversions, sources, and pack SHA for one\nexact bundled region/year. No nearest-region or nearest-year substitution.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "region": {
-            "type": "string"
-          },
-          "year": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "region",
-          "year"
-        ]
-      }
-    },
-    {
-      "name": "verify_result",
-      "description": "Recompute a prior inventory's audit hash and conservation checks. Pass\nthe prior result object as JSON; tampering or stale factor lineage is flagged.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "result_json": {
+          "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
-          "result_json"
-        ]
+          "agent_id"
+        ],
+        "title": "score_agentArguments",
+        "type": "object"
       }
     },
     {
-      "name": "describe_agent",
-      "description": "Return fleet-standard capabilities, version, pack digest, and pricing.",
+      "name": "attest",
+      "description": "Issue a tamper-evident (hash-chained) trust attestation for an agent.",
       "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "quantity-takeoff": [
-    {
-      "name": "calculate_takeoff",
-      "description": "Calculate an auditable material takeoff from explicit geometry or a\nsupported SmartScale/ProtoGen measurement payload. Returns net, explicit\nwaste-adjusted, and conservative purchase quantities. This is a planning\nestimate, not a guaranteed material order or professional certification.",
-      "inputSchema": {
-        "type": "object",
         "properties": {
-          "items": {
-            "type": "array"
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
           },
-          "options": {
-            "type": "object"
-          },
-          "payment_ref": {
+          "claim": {
+            "default": "reputation-snapshot",
+            "title": "Claim",
             "type": "string"
           }
         },
         "required": [
-          "items"
-        ]
+          "agent_id"
+        ],
+        "title": "attestArguments",
+        "type": "object"
       }
     },
     {
-      "name": "list_assemblies",
-      "description": "List supported assemblies, required dimensions, formulas, waste\ndefaults, and the current material-pack digest.",
+      "name": "verify_attestation",
+      "description": "Verify a previously issued attestation by recomputing its hash.",
       "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "get_assembly",
-      "description": "Return one assembly's formula, required dimensions, material factors,\npurchase increment, sources, and material-pack lineage.",
-      "inputSchema": {
-        "type": "object",
         "properties": {
-          "assembly_type": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "attestation_id": {
+            "title": "Attestation Id",
             "type": "string"
           }
         },
         "required": [
-          "assembly_type"
-        ]
+          "agent_id",
+          "attestation_id"
+        ],
+        "title": "verify_attestationArguments",
+        "type": "object"
       }
     },
     {
-      "name": "list_material_pack",
-      "description": "List the bundled material pack version, digest, coverage, shapes,\nrebar sizes, roof pitches, and explicit unsupported policy.",
+      "name": "history",
+      "description": "Full outcome history + attestation count + current score for an agent.",
       "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "get_material_pack",
-      "description": "Return the bundled factors, densities, coverages, waste defaults,\npurchase increments, unit conversions, sources, and raw-pack SHA.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "verify_result",
-      "description": "Recompute a takeoff audit hash, notary payload, pack currency, and QT9\nunit-resolved conservation. Pass the prior result object as JSON.",
-      "inputSchema": {
-        "type": "object",
         "properties": {
-          "result_json": {
+          "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           }
         },
         "required": [
-          "result_json"
-        ]
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Return fleet-standard capabilities, version, pack digest, disclaimer,\ncomposition role, and pricing.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "disclosure-compiler": [
-    {
-      "name": "compile_disclosure",
-      "description": "Compile a deterministic, cited disclosure draft from supplied company\nfacts and an optional verified GHG-ledger result. Missing required\ndatapoints remain explicit gaps; no prose or values are fabricated.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "framework": {
-            "type": "string"
-          },
-          "company_facts": {
-            "type": "object"
-          },
-          "ghg_result": {
-            "type": "object"
-          },
-          "options": {
-            "type": "object"
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "framework",
-          "company_facts"
-        ]
-      }
-    },
-    {
-      "name": "list_frameworks",
-      "description": "List bundled framework IDs, coverage, source lineage, version, and the\nframework-pack digest.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "get_framework",
-      "description": "Return one bundled framework's required datapoints, mappings, sources,\nand framework-pack lineage.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "framework": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "framework"
-        ]
-      }
-    },
-    {
-      "name": "verify_result",
-      "description": "Recompute a disclosure draft audit hash, notary payload, structural\ninvariants, and framework-pack currency. Pass the prior result as JSON.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "result_json": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "result_json"
-        ]
-      }
-    },
-    {
-      "name": "describe_agent",
-      "description": "Return deterministic capabilities, version, pack digest, pricing,\ncomposition, and the professional-review disclaimer.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    }
-  ],
-  "verified": [
-    {
-      "name": "register_service",
-      "description": "Register a third-party MCP server (https, public FQDN only) under\nViridis Verified. Returns a content-addressed service_id; idempotent on\n(url, provider). fee_minor is the per-verified-call fee in cents.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string"
-          },
-          "provider": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string",
-            "default": ""
-          },
-          "fee_minor": {
-            "type": "integer",
-            "default": 2
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "url",
-          "provider"
-        ]
-      }
-    },
-    {
-      "name": "call_verified",
-      "description": "Relay a tools/call to a registered MCP service and notarize the\nexchange: request hash + response hash + outcome land in a tamper-evident\nreceipt chain. Idempotent on call_id (a replay returns the original\nreceipt and cached result \u2014 the downstream is never double-called).\nFailures are receipted evidence, not silence.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "service_id": {
-            "type": "string"
-          },
-          "tool": {
-            "type": "string"
-          },
-          "call_id": {
-            "type": "string"
-          },
-          "arguments": {
-            "type": "object"
-          },
-          "timeout_s": {
-            "type": "integer",
-            "default": 20
-          },
-          "payment_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "service_id",
-          "tool",
-          "call_id"
-        ]
-      }
-    },
-    {
-      "name": "get_receipt",
-      "description": "Fetch a single delivery receipt by id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "receipt_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "receipt_id"
-        ]
-      }
-    },
-    {
-      "name": "verify_receipts",
-      "description": "Recompute a service's full receipt hash chain and fee ledger.\nAny party can audit Viridis Verified from receipts alone.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "service_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "service_id"
-        ]
-      }
-    },
-    {
-      "name": "list_services",
-      "description": "List registered services with call/fee counters.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "service_stats",
-      "description": "Call counts, error counts, and accrued fees for one service.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "service_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "service_id"
-        ]
+          "agent_id"
+        ],
+        "title": "historyArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ],
-  "subscriptions": [
+  "verdigraph": [
     {
-      "name": "list_plans",
-      "description": "List the versioned monthly-seat catalog, exact prices/coverage, catalog\nSHA-256, readiness flags, and pending owner-confirmation notice.",
+      "name": "build_brain",
+      "description": "Compile an agent file into a deterministic, content-addressed brain.\n    content = the file as a string; format = verdigraph_genome |\n    claude_project_export | openai_assistant | prompt_list | auto.\n    Returns brain_id, content_hash, node/edge counts, the 9-invariant\n    firing report, and provenance. Identical bytes always produce the\n    identical brain_id (VB1). include_document=true returns the full\n    graph.",
       "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      }
-    },
-    {
-      "name": "get_plan",
-      "description": "Get one exact monthly plan and its versioned catalog lineage.",
-      "inputSchema": {
-        "type": "object",
         "properties": {
-          "plan_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "plan_id"
-        ]
-      }
-    },
-    {
-      "name": "create_account",
-      "description": "Create a free account for bearer attribution. The full account key is\nreturned once; only its SHA-256 and last four characters are retained.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "account_ref": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "account_ref"
-        ]
-      }
-    },
-    {
-      "name": "create_checkout_link",
-      "description": "Prepare a Stripe-hosted subscription Checkout URL. It never charges a\ncard. Draft plans, missing owner approval, unavailable covered agents, or\nmissing recurring Price IDs fail closed without creating a session.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "plan_id": {
+          "content": {
+            "title": "Content",
             "type": "string"
           },
-          "account_ref": {
+          "format": {
+            "default": "auto",
+            "title": "Format",
             "type": "string"
+          },
+          "include_document": {
+            "default": false,
+            "title": "Include Document",
+            "type": "boolean"
           }
         },
         "required": [
-          "plan_id",
-          "account_ref"
-        ]
+          "content"
+        ],
+        "title": "build_brainArguments",
+        "type": "object"
       }
     },
     {
-      "name": "record_subscription",
-      "description": "Pull-verify a Stripe session/subscription and idempotently activate its\nexact subscription period. A newly created account receives its key once.",
+      "name": "verify_brain",
+      "description": "Machine-check a cognition claim: recompute the brain from the\n    submitted content and compare against the claimed brain_id and/or\n    content_hash. valid=true iff every claimed identifier matches the\n    deterministic recomputation (VB3).",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "stripe_session_or_sub_id": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "brain_id": {
+            "default": "",
+            "title": "Brain Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "default": "",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "format": {
+            "default": "auto",
+            "title": "Format",
             "type": "string"
           }
         },
         "required": [
-          "stripe_session_or_sub_id"
-        ]
+          "content"
+        ],
+        "title": "verify_brainArguments",
+        "type": "object"
       }
     },
     {
-      "name": "subscription_status",
-      "description": "Return bearer-owned subscription lifecycle and current-period quota.\nThe account key is always masked in output.",
+      "name": "detect_format",
+      "description": "Detect which supported agent-file format the content is\n    (verdigraph_genome, claude_project_export, openai_assistant,\n    prompt_list) before building.",
       "inputSchema": {
-        "type": "object",
         "properties": {
-          "account_id": {
+          "content": {
+            "title": "Content",
             "type": "string"
           }
         },
         "required": [
-          "account_id"
-        ]
-      }
-    },
-    {
-      "name": "customer_portal_link",
-      "description": "Return a bearer-owned Stripe-hosted billing-portal URL. The human\nmanages or cancels there; this tool never moves money.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "account_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "account_id"
-        ]
-      }
-    },
-    {
-      "name": "usage_summary",
-      "description": "Return bearer-owned, period-resolved included and overage usage with\nexact catalog lineage and conservation totals.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "account_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "account_id"
-        ]
-      }
-    },
-    {
-      "name": "mrr_summary",
-      "description": "Return aggregate active live-mode subscription count, MRR minor units,\nand plan mix. No account or Stripe identifiers are exposed.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "required": []
+          "content"
+        ],
+        "title": "detect_formatArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
-      "description": "Return the fleet-standard version, catalog digest, security posture,\nlifecycle policy, and capabilities.",
+      "description": "Return capabilities and input contract.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "verified": [
+    {
+      "name": "register_service",
+      "description": "Register a third-party MCP server (https, public FQDN only) under\n    Viridis Verified. Returns a content-addressed service_id; idempotent on\n    (url, provider). fee_minor is the per-verified-call fee in cents.",
+      "inputSchema": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "fee_minor": {
+            "default": 2,
+            "title": "Fee Minor",
+            "type": "integer"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "url",
+          "provider"
+        ],
+        "title": "register_serviceArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "call_verified",
+      "description": "Relay a tools/call to a registered MCP service and notarize the\n    exchange: request hash + response hash + outcome land in a tamper-evident\n    receipt chain. Idempotent on call_id (a replay returns the original\n    receipt and cached result \u2014 the downstream is never double-called).\n    Failures are receipted evidence, not silence.",
+      "inputSchema": {
+        "properties": {
+          "service_id": {
+            "title": "Service Id",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          },
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "arguments": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Arguments"
+          },
+          "timeout_s": {
+            "default": 20,
+            "title": "Timeout S",
+            "type": "integer"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          }
+        },
+        "required": [
+          "service_id",
+          "tool",
+          "call_id"
+        ],
+        "title": "call_verifiedArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_receipt",
+      "description": "Fetch a single delivery receipt by id.",
+      "inputSchema": {
+        "properties": {
+          "receipt_id": {
+            "title": "Receipt Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "receipt_id"
+        ],
+        "title": "get_receiptArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_receipts",
+      "description": "Recompute a service's full receipt hash chain and fee ledger.\n    Any party can audit Viridis Verified from receipts alone.",
+      "inputSchema": {
+        "properties": {
+          "service_id": {
+            "title": "Service Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service_id"
+        ],
+        "title": "verify_receiptsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_services",
+      "description": "List registered services with call/fee counters.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_servicesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "service_stats",
+      "description": "Call counts, error counts, and accrued fees for one service.",
+      "inputSchema": {
+        "properties": {
+          "service_id": {
+            "title": "Service Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service_id"
+        ],
+        "title": "service_statsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ],
+  "wavefunction": [
+    {
+      "name": "intake",
+      "description": "Distill a user's dialogue into an intention wavefunction (explicit\n    intentions + confidence). dialogue: [{role, content}, ...].",
+      "inputSchema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "dialogue": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Dialogue",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_id",
+          "dialogue"
+        ],
+        "title": "intakeArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "collapse",
+      "description": "Collapse the user's wavefunction into an actionable commitment,\n    weighted by stake.",
+      "inputSchema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "stake_amount": {
+            "default": 100.0,
+            "title": "Stake Amount",
+            "type": "number"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "collapseArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "find_matches",
+      "description": "Match the user's collapsed intention to constitutionally-aligned\n    agents/collectives, ranked by alignment score.",
+      "inputSchema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "find_matchesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "register_collective",
+      "description": "Register an agent/collective into the match index (mission +\n    domain profile + constitutional alignment scores + capacity).",
+      "inputSchema": {
+        "properties": {
+          "collective_id": {
+            "title": "Collective Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "mission": {
+            "title": "Mission",
+            "type": "string"
+          },
+          "domain_profile": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Domain Profile"
+          },
+          "constitutional_scores": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Constitutional Scores"
+          },
+          "capacity": {
+            "default": 10,
+            "title": "Capacity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "collective_id",
+          "name",
+          "mission"
+        ],
+        "title": "register_collectiveArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ]

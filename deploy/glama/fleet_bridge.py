@@ -62,6 +62,8 @@ ROLE = {
     "quantity-takeoff": "auditable construction material takeoffs (locked waste + purchase rounding)",
     "disclosure-compiler": "deterministic cited compliance disclosure drafts (ESRS E1/SEC/IFRS S2/TNFD)",
     "subscriptions": "B2B monthly seats, entitlement quota, overage, and MRR",
+    "verdigraph": "verifiable cognition: deterministic content-addressed brain_id for any agent file",
+    "neurogenesis": "developmental agents: genome -> evaluation-driven growth with safety axioms + audit ledger",
 }
 
 

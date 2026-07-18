@@ -85,6 +85,8 @@ MOUNTS = {
     "quantity-takeoff": "quantity-takeoff-agent",
     "disclosure-compiler": "disclosure-compiler-agent",
     "verified":         "agent-verified-relay-agent",
+    "verdigraph":       "verdigraph-brain-agent",
+    "neurogenesis":     "neurogenesis-agent",
 }
 
 # Agent-discovery ("agent SEO") metadata for the ARD /.well-known/ai-catalog.json.
@@ -214,6 +216,26 @@ AGENT_SEO = {
                     "Get a tamper-evident receipt for an MCP tool call",
                     "Wrap a third-party MCP server with delivery verification",
                     "Audit evidence for a disputed agent-to-agent transaction"]},
+    "verdigraph": {
+        "desc": "Verifiable cognition: compile any agent file (Claude project "
+                "export, OpenAI Assistant config, genome, prompt list) into a "
+                "deterministic content-addressed brain_id with a "
+                "machine-checkable invariant report. Same bytes, same brain. "
+                "10 free builds/day then $0.25.",
+        "queries": ["Get a verifiable content-addressed ID for my AI agent",
+                    "Audit what an agent file actually compiles to",
+                    "Prove two agent configurations are identical",
+                    "Certify an AI agent's cognitive architecture"]},
+    "neurogenesis": {
+        "desc": "Developmental agents from digital genomes: evaluation-driven "
+                "growth and pruning over a cognitive graph, under safety "
+                "axioms, with an append-only developmental ledger. Agents "
+                "that evolve from outcomes instead of rewrites. "
+                "10 free calls/day then $0.25.",
+        "queries": ["Make my AI agent learn and evolve from task outcomes",
+                    "Grow an agent's capabilities safely over time",
+                    "Track how an AI agent developed with an audit ledger",
+                    "Self-improving agent with safety constraints"]},
 }
 
 
@@ -874,7 +896,7 @@ def build_app():
 
     # Subscriptions is fleet revenue infrastructure, not a twenty-second leaf
     # agent. It is mounted and persisted separately so /healthz agents remains
-    # the production-coherent count of 22.
+    # the production-coherent count of 24 (verdigraph + neurogenesis mounted 2026-07-17, growth gate waived by Justin).
     subscription_adapter = _load_adapter("subscriptions", "subscriptions-agent")
     subscription_src_modules = {
         module: sys.modules[module] for module in list(sys.modules)
@@ -929,7 +951,8 @@ def build_app():
         escrow_core=cores["escrow"], escrow_persist_key="escrow")
     for path in ("smartscale", "protogen", "taxcredit-engine", "ghg-ledger",
                  "quantity-takeoff", "disclosure-compiler",
-                 "narrative-engine", "regulatory-radar", "verified"):
+                 "narrative-engine", "regulatory-radar", "verified",
+                 "verdigraph", "neurogenesis"):
         if path in cores:
             gate.attach(path, cores[path])
 

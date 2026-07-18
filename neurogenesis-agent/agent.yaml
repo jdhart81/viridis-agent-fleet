@@ -1,0 +1,21 @@
+name: "neurogenesis-agent"
+version: "0.1.0"
+description: "Developmental agents from digital genomes: evaluation-driven growth and pruning over a cognitive graph, under safety axioms, with an append-only developmental ledger. The brain mount certifies what an agent IS; this grows what it BECOMES."
+pillar: "rails"
+status: "mvp"
+owner: "justin@viridisconservation.com"
+a2a_role: "developmental-engine"
+thesis_connection: |
+  The evolutionary-flexibility doctrine as a service: agents that grow from
+  outcome signals instead of being rewritten. Evaluations are selective
+  pressure; the developmental ledger is the auditable record; safety axioms
+  (protected nodes, no hidden nodes, logged mutations) are enforced by the
+  engine, never the wrapper. Composes with verdigraph-brain (certify each
+  developmental stage) and the trust oracle (evaluations as attestations).
+revenue_model: |
+  Per-evaluation micro-fee via the fleet gate ($0.25, 10 free/day per
+  caller); B2B seats for teams running evolving agent populations.
+engine: |
+  Vendored verdigraph-neurogenesis modules (stdlib-only,
+  DOI 10.5281/zenodo.20400274). Canonical repo: viridis-security/
+  verdigraph-neurogenesis.

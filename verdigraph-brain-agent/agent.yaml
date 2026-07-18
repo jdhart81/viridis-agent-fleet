@@ -1,0 +1,21 @@
+name: "verdigraph-brain-agent"
+version: "0.1.0"
+description: "Verifiable cognition: compile any agent file into a deterministic, content-addressed brain_id with a machine-checkable 9-invariant report. Same bytes -> same brain. Pin it, cite it, notarize it."
+pillar: "rails"
+status: "mvp"
+owner: "justin@viridisconservation.com"
+a2a_role: "cognition-certifier"
+thesis_connection: |
+  Completes the fleet's proof-backed trust stack: identity says WHO an agent
+  is, receipts say WHAT it did, bonds say what happens IF it fails — this
+  certifies WHAT IT IS MADE OF. brain_id composes with DIDs (constitutional
+  identity), notary commitments (tamper-evident cognition receipts), and
+  uw-v1 underwriting (premiums priced on cognitive provenance).
+revenue_model: |
+  Per-build micro-fee via the fleet gate ($0.25, 10 free/day per caller);
+  free preview funnel to the hosted verdigraph.dev product (25% of net to
+  verified Viridis conservation programs).
+engine: |
+  Vendored verdigraph-neurogenesis brain.py (stdlib-only, deterministic,
+  DOI 10.5281/zenodo.20400274). Canonical repo: viridis-security/
+  verdigraph-neurogenesis.
