@@ -43,6 +43,27 @@ curl -s https://mcp.viridisconservation.com/verified/mcp \
 #   verify_receipts(service_id) -> recompute the whole evidence chain
 ```
 
+**Certify an agent's cognition** — verdigraph, $0.25/build after free tier; verification FREE forever:
+```bash
+curl -s https://mcp.viridisconservation.com/verdigraph/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"build_brain",
+       "arguments":{"content":"<your agent file as a string: Claude project export, OpenAI Assistant config, Verdigraph genome, or prompt list>","format":"auto"}}}'
+# -> deterministic brain_id + content_hash + 9-invariant report. Same bytes, same
+#    brain, every time. Anyone can verify_brain your claim for free — then
+#    notarize the hash (/notary/mcp) or bind it to your DID (/identity/mcp).
+```
+
+**Grow a developmental agent** — neurogenesis, $0.25/mutation after free tier; ledger reads free:
+```bash
+curl -s https://mcp.viridisconservation.com/neurogenesis/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"create_agent",
+       "arguments":{"genome":{"agent_name":"my-sprout","purpose":"learn my workflow","initial_nodes":["planner","executor","safety_checker"],"fitness_metrics":["task_success"]}}}}'
+# then submit_evaluation with task outcomes — success strengthens the used edges,
+# failure weakens them; get_ledger shows every developmental event, auditable.
+```
+
 **Underwrite a counterparty** — surety, free quote, deterministic + recomputable:
 ```bash
 curl -s https://mcp.viridisconservation.com/surety/mcp \
@@ -178,6 +199,16 @@ curl -s https://mcp.viridisconservation.com/payments/mcp \
 
 A bonded service tells buyers exactly what happens if it fails to deliver —
 that is what closes stranger deals.
+
+## Every priced service (10 free calls/day each, per caller)
+
+smartscale 50¢/measurement · protogen $1/CAD job · taxcredit-engine $2/scenario ·
+ghg-ledger $1/inventory · quantity-takeoff 50¢/takeoff · disclosure-compiler
+$2/draft · narrative-engine 50¢/draft · regulatory-radar 25¢/scan · verified
+2¢/relayed call · verdigraph 25¢/brain build · neurogenesis 25¢/evolution step.
+The settlement rails (identity, trust, escrow, metering, arbitration, notary,
+surety quotes, provenance, offsets lookup, covenant, compute-ledger,
+erc8004, wavefunction) are free forever — we tax transactions, never rails.
 
 ## The full directory
 
