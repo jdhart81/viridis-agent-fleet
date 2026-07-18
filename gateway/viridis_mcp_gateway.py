@@ -227,13 +227,14 @@ AGENT_SEO = {
                     "Prove two agent configurations are identical",
                     "Certify an AI agent's cognitive architecture"]},
     "neurogenesis": {
-        "desc": "Developmental agents from digital genomes: evaluation-driven "
-                "growth and pruning over a cognitive graph, under safety "
-                "axioms, with an append-only developmental ledger. Agents "
-                "that evolve from outcomes instead of rewrites. "
-                "10 free calls/day then $0.25.",
+        "desc": "Developmental agents + Wu Wei compute routing: evolve agents "
+                "from evaluation outcomes (safety axioms, audit ledger) and "
+                "route tasks to the cheapest RELIABLE compute profile — "
+                "quality floor is a hard contract. 10 free calls/day then "
+                "$0.25.",
         "queries": ["Make my AI agent learn and evolve from task outcomes",
-                    "Grow an agent's capabilities safely over time",
+                    "Route my task to the cheapest model that meets quality",
+                    "Cut LLM compute cost without regressing quality",
                     "Track how an AI agent developed with an audit ledger",
                     "Self-improving agent with safety constraints"]},
 }

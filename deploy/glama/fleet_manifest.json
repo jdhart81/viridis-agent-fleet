@@ -2145,6 +2145,57 @@
       }
     },
     {
+      "name": "register_compute_profile",
+      "description": "Wu Wei compute routing (NG7): register an execution profile \u2014\n    {id, kind?, quality_score [0,1], cost_per_1k_input_tokens?,\n    cost_per_1k_output_tokens?, latency_ms?, gpu_memory_gb?,\n    max_context_tokens?, local?}. A profile can be a local model, cloud\n    API, rules engine, or cached workflow. Profiles are yours \u2014 routing\n    never invents capacity.",
+      "inputSchema": {
+        "properties": {
+          "profile": {
+            "additionalProperties": true,
+            "title": "Profile",
+            "type": "object"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "title": "register_compute_profileArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "route_task",
+      "description": "Choose the cheapest RELIABLE compute path for a task:\n    {id, task_type, expected_input_tokens, expected_output_tokens,\n    min_quality [0,1], risk?, difficulty?, requires_local?}. Hard\n    contract (NG7): profiles below your min_quality are ineligible\n    regardless of cost \u2014 compute savings never silently regress quality.\n    Deterministic; every decision is logged with its reason.",
+      "inputSchema": {
+        "properties": {
+          "task": {
+            "additionalProperties": true,
+            "title": "Task",
+            "type": "object"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "title": "route_taskArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "compute_efficiency_report",
+      "description": "Free read: the routing decision log (per-profile counts, estimated\n    costs, reasons) with the Landauer-floor physics context \u2014 honest\n    compute-efficiency accounting in the Intelligence Bound frame.",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "default": 50,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "compute_efficiency_reportArguments",
+        "type": "object"
+      }
+    },
+    {
       "name": "describe_agent",
       "description": "Return capabilities and input contract.",
       "inputSchema": {

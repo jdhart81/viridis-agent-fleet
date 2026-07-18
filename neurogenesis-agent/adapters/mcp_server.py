@@ -122,6 +122,38 @@ async def delete_agent(agent_id: str) -> str:
 
 
 @mcp.tool()
+async def register_compute_profile(profile: Dict[str, Any]) -> str:
+    """Wu Wei compute routing (NG7): register an execution profile —
+    {id, kind?, quality_score [0,1], cost_per_1k_input_tokens?,
+    cost_per_1k_output_tokens?, latency_ms?, gpu_memory_gb?,
+    max_context_tokens?, local?}. A profile can be a local model, cloud
+    API, rules engine, or cached workflow. Profiles are yours — routing
+    never invents capacity."""
+    return await _run({"action": "register_compute_profile",
+                       "profile": profile})
+
+
+@mcp.tool()
+async def route_task(task: Dict[str, Any]) -> str:
+    """Choose the cheapest RELIABLE compute path for a task:
+    {id, task_type, expected_input_tokens, expected_output_tokens,
+    min_quality [0,1], risk?, difficulty?, requires_local?}. Hard
+    contract (NG7): profiles below your min_quality are ineligible
+    regardless of cost — compute savings never silently regress quality.
+    Deterministic; every decision is logged with its reason."""
+    return await _run({"action": "route_task", "task": task})
+
+
+@mcp.tool()
+async def compute_efficiency_report(limit: int = 50) -> str:
+    """Free read: the routing decision log (per-profile counts, estimated
+    costs, reasons) with the Landauer-floor physics context — honest
+    compute-efficiency accounting in the Intelligence Bound frame."""
+    return await _run({"action": "compute_efficiency_report",
+                       "limit": limit})
+
+
+@mcp.tool()
 async def describe_agent() -> str:
     """Return capabilities and input contract."""
     return json.dumps(agent.describe(), indent=2)

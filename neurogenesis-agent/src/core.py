@@ -33,6 +33,16 @@ NG5 process() never raises on bad input — structured error envelopes
 NG6 Evaluations are bounded and deterministic: the same agent state +
     the same evaluation sequence always produce the same graph and
     ledger (no randomness in the serving path).
+NG7 WU WEI COMPUTE ROUTING (added 2026-07-18): route_task chooses the
+    cheapest RELIABLE execution profile for a task — and the quality
+    floor is a HARD contract inherited from the engine: a profile below
+    the task's min_quality is ineligible regardless of cost; compute
+    savings never silently regress quality. Routing is deterministic
+    given the registered profiles + task; profiles are caller-registered
+    (never invented); every decision is logged with its reason and
+    surfaced by compute_efficiency_report together with the
+    Landauer-grounded energy context (thermo.py) — honest physics, the
+    dI/dt <= P*D/(kB*T*ln2) thesis as a routable service.
 """
 from __future__ import annotations
 
@@ -41,9 +51,13 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+from dataclasses import fields as dataclass_fields
+
 from src.vg.agent import DevelopmentalAgent
+from src.vg.compute import ComputeOptimizer, ComputeProfile, TaskProfile
 from src.vg.evaluation import EvaluationResult
 from src.vg.genome import AgentGenome
+from src.vg.thermo import landauer_energy_per_bit
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +117,10 @@ class NeurogenesisCore(AgentCore):
         self._states: Dict[str, dict] = {}
         self._seq = 0
         self._evaluations = 0
+        # NG7: caller-registered compute profiles (plain dicts — StateStore/
+        # PS8-safe) + append-only routing decision log.
+        self._profiles: Dict[str, dict] = {}
+        self._route_decisions: list = []
 
     # -- live-object cache (never persisted; NG4 truth is _states) --------- #
     def _live(self, agent_id: str) -> DevelopmentalAgent:
@@ -135,6 +153,9 @@ class NeurogenesisCore(AgentCore):
                        "export_state": self._export,
                        "import_state": self._import,
                        "delete_agent": self._delete,
+                       "register_compute_profile": self._register_profile,
+                       "route_task": self._route_task,
+                       "compute_efficiency_report": self._efficiency_report,
                        "describe": lambda _d: self._ok(self.describe()),
                        }.get(action)
             if handler is None:
@@ -144,7 +165,9 @@ class NeurogenesisCore(AgentCore):
                     constraint="one of: create_agent, list_agents, get_agent, "
                                "submit_evaluation, best_next_steps, "
                                "get_ledger, export_state, import_state, "
-                               "delete_agent, describe")
+                               "delete_agent, register_compute_profile, "
+                               "route_task, compute_efficiency_report, "
+                               "describe")
             return handler(input_data)
         except ValidationError as e:
             return self._err(str(e), error_type="ValidationError",
@@ -295,11 +318,104 @@ class NeurogenesisCore(AgentCore):
         self._states.pop(agent_id)
         return self._ok({"agent_id": agent_id, "deleted": True})
 
+    # ---------------- Wu Wei compute routing (NG7) --------------------- #
+    @staticmethod
+    def _filter_fields(cls, doc: dict) -> dict:
+        allowed = {f.name for f in dataclass_fields(cls)}
+        return {k: v for k, v in doc.items() if k in allowed}
+
+    def _register_profile(self, data: dict) -> dict:
+        doc = data.get("profile")
+        if not isinstance(doc, dict) or not str(doc.get("id") or "").strip():
+            raise ValidationError(
+                "profile is required: {id, kind?, quality_score [0,1], "
+                "cost_per_1k_input_tokens?, cost_per_1k_output_tokens?, "
+                "latency_ms?, gpu_memory_gb?, max_context_tokens?, local?}",
+                field="profile", constraint="object with non-empty id")
+        profile = ComputeProfile(**self._filter_fields(ComputeProfile, doc))
+        if len(self._profiles) >= 200 and profile.id not in self._profiles:
+            return self._err("profile table is full", error_type="capacity",
+                             field="profiles", value=len(self._profiles),
+                             constraint="max 200")
+        self._profiles[profile.id] = doc                     # caller-supplied
+        return self._ok({"profile_id": profile.id,
+                         "registered_profiles": len(self._profiles),
+                         "next_steps": {"route": (
+                             "call route_task with {task: {id, task_type, "
+                             "expected_input_tokens, expected_output_tokens, "
+                             "min_quality, risk?, difficulty?, "
+                             "requires_local?}} — the cheapest profile "
+                             "meeting your quality floor wins (NG7)")}})
+
+    def _route_task(self, data: dict) -> dict:
+        doc = data.get("task")
+        if not isinstance(doc, dict) or not str(doc.get("id") or "").strip():
+            raise ValidationError(
+                "task is required: {id, task_type, expected_input_tokens, "
+                "expected_output_tokens, min_quality [0,1], risk?, "
+                "difficulty?, requires_local?}",
+                field="task", constraint="object with non-empty id")
+        if not self._profiles:
+            raise ValidationError(
+                "no compute profiles registered — call "
+                "register_compute_profile first (profiles are yours, "
+                "never invented: NG7)",
+                field="profiles", constraint=">= 1 registered")
+        task = TaskProfile(**self._filter_fields(TaskProfile, doc))
+        optimizer = ComputeOptimizer(
+            ComputeProfile(**self._filter_fields(ComputeProfile, p))
+            for p in self._profiles.values())
+        try:
+            decision = optimizer.choose_profile(task)        # NG7 hard floor
+        except ValueError as exc:
+            return self._err(str(exc), error_type="no_eligible_profile",
+                             field="task", value=task.id,
+                             constraint="register a profile meeting the "
+                                        "task's min_quality/context/local "
+                                        "constraints, or relax them")
+        record = {"task_id": task.id, "task_type": task.task_type,
+                  "profile_id": decision.profile_id,
+                  "score": decision.score,
+                  "estimated_cost": decision.estimated_cost,
+                  "estimated_latency_ms": decision.estimated_latency_ms,
+                  "reason": decision.reason, "at": _utcnow()}
+        self._route_decisions.append(record)                 # NG7 log
+        if len(self._route_decisions) > 1000:
+            self._route_decisions = self._route_decisions[-1000:]
+        return self._ok({**record,
+                         "quality_floor_honored": True,
+                         "note": ("cheapest RELIABLE path: profiles below "
+                                  "min_quality were ineligible regardless "
+                                  "of cost (NG7)")})
+
+    def _efficiency_report(self, data: dict) -> dict:
+        limit = max(1, min(200, int(data.get("limit") or 50)))
+        decisions = self._route_decisions[-limit:]
+        total_cost = sum(d["estimated_cost"] for d in decisions)
+        return self._ok({
+            "decisions_total": len(self._route_decisions),
+            "window": len(decisions),
+            "total_estimated_cost": round(total_cost, 6),
+            "by_profile": {
+                pid: sum(1 for d in decisions if d["profile_id"] == pid)
+                for pid in {d["profile_id"] for d in decisions}},
+            "decisions": decisions,
+            "physics": {
+                "landauer_energy_per_bit_joules_at_300K":
+                    landauer_energy_per_bit(300.0),
+                "note": ("Landauer's floor is the physical yardstick for "
+                         "compute efficiency (dI/dt <= P*D/(kB*T*ln2)); "
+                         "all practical routing sits far above it — the "
+                         "point is choosing the path that wastes least")},
+        })
+
     # ---------------------------------------------------------------------- #
     async def health(self) -> dict:
         h = await super().health()
         h["checks"] = {"agents": len(self._states),
-                       "evaluations": self._evaluations}
+                       "evaluations": self._evaluations,
+                       "compute_profiles": len(self._profiles),
+                       "route_decisions": len(self._route_decisions)}
         return h
 
     def describe(self) -> dict:
@@ -313,7 +429,9 @@ class NeurogenesisCore(AgentCore):
             "capabilities": ["create_agent", "list_agents", "get_agent",
                              "submit_evaluation", "best_next_steps",
                              "get_ledger", "export_state", "import_state",
-                             "delete_agent", "describe"],
+                             "delete_agent", "register_compute_profile",
+                             "route_task", "compute_efficiency_report",
+                             "describe"],
             "inputs": {"action": "str", "genome": "dict?", "agent_id": "str?",
                        "evaluation": "dict?", "from_node": "str?",
                        "state": "dict?", "limit": "int?"},

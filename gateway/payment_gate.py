@@ -141,7 +141,7 @@ READ_ACTIONS = frozenset({
     "service_stats",                                           # verified-relay reads
     "detect_format", "verify",                                 # verdigraph reads
     "list_agents", "get_agent", "get_ledger", "best_next_steps",
-    "export_state",                                            # neurogenesis reads
+    "export_state", "compute_efficiency_report",               # neurogenesis reads
 })
 
 # Network-effect pricing 2026-07-12 (Energy AI /PRICING-NETWORK-EFFECT-2026-07-12.md):
