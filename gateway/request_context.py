@@ -26,6 +26,10 @@ RC3  The raw secret is never logged, never echoed, never stored in events
      (only the derived caller name is).
 RC4  Fingerprints contain no raw IP or UA — sha256 truncation only.
 RC5  Absent context yields the safe default (unknown), never a crash.
+RC6  The x402 X-PAYMENT header (base64 payment payload) is captured into
+     the request context so the gate can settle an autonomous payment;
+     it is opaque transport data here (parsed + verified only in the gate,
+     PRX). Absent => x402_payment=None. Never blocks a request (RC1).
 """
 from __future__ import annotations
 
@@ -41,6 +45,7 @@ _DEFAULT = {
     "channel": "unknown",
     "caller": None,
     "is_test": False,
+    "x402_payment": None,          # RC6: raw X-PAYMENT header, gate-parsed
 }
 
 _REQUEST_CONTEXT: contextvars.ContextVar[Optional[dict]] = contextvars.ContextVar(
@@ -73,6 +78,7 @@ CHANNEL_PATTERNS = (
 
 INTERNAL_HEADER = b"x-viridis-internal"
 INTERNAL_SECRET_ENV = "VIRIDIS_INTERNAL_SECRET"
+X402_HEADER = b"x-payment"          # RC6: standards x402 payment header
 
 
 def classify_user_agent(user_agent: str) -> str:
@@ -104,15 +110,17 @@ def _parse_internal(header_value: str) -> Optional[str]:
 
 
 def build_context(user_agent: str, internal_header: Optional[str],
-                  client_ip: str) -> dict:
+                  client_ip: str, x402_payment: Optional[str] = None) -> dict:
     internal_name = _parse_internal(internal_header) if internal_header else None
     if internal_name is not None:
         return {"consumer_class": "internal", "channel": "internal",
-                "caller": f"internal:{internal_name}", "is_test": True}
+                "caller": f"internal:{internal_name}", "is_test": True,
+                "x402_payment": x402_payment}
     return {"consumer_class": "external",
             "channel": classify_user_agent(user_agent),
             "caller": _fingerprint(client_ip, user_agent),
-            "is_test": False}
+            "is_test": False,
+            "x402_payment": x402_payment}
 
 
 def current_request_context() -> dict:
@@ -140,12 +148,14 @@ class RequestContextMiddleware:
     async def __call__(self, scope, receive, send):
         context = None
         if scope.get("type") == "http":
-            ua, internal = "", None
+            ua, internal, x402 = "", None, None
             for raw_name, raw_value in scope.get("headers", []):
                 if raw_name == b"user-agent":
                     ua = raw_value.decode("latin-1", "replace")
                 elif raw_name == INTERNAL_HEADER:
                     internal = raw_value.decode("latin-1", "replace")
+                elif raw_name == X402_HEADER:                  # RC6
+                    x402 = raw_value.decode("latin-1", "replace")
             client = scope.get("client")
             # Honor the proxy chain's first hop when present (droplet sits
             # behind no proxy today; Smithery's proxy sets X-Forwarded-For).
@@ -155,7 +165,7 @@ class RequestContextMiddleware:
             ip = (xff.split(",")[0].strip() if xff
                   else (client[0] if client else "unknown"))
             try:
-                context = build_context(ua, internal, ip)
+                context = build_context(ua, internal, ip, x402_payment=x402)
             except Exception:   # RC1/RC5: classification never breaks a call
                 context = None
         marker = _REQUEST_CONTEXT.set(context)

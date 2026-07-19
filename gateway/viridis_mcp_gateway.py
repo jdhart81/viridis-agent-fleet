@@ -261,18 +261,24 @@ EXTERNAL_MEMBERS = [
         "identifier": "urn:air:viridis:energyai",
         "displayName": "EnergyAI",
         "url": "https://api.energyaisolution.com/mcp",
-        "description": ("Energy intelligence for AI agents — solar production estimates, "
-                        "US clean-energy incentives by ZIP, home Energy Node Scores, and "
-                        "consented installer routing. Free tools + paid $19 roadmap (Stripe)."),
-        "capabilities": ["check_incentives", "estimate_production", "get_energy_node_score",
-                         "create_energy_assessment", "generate_energy_recommendation_preview",
-                         "create_energy_node_roadmap_checkout", "match_installers",
-                         "review_installer_quote", "generate_intelligence_bound_report"],
+        "description": ("Energy intelligence for AI agents — worldwide clean-energy incentive "
+                        "guidance, honest-range solar production estimates, home Energy Node "
+                        "Scores, a source-cited US incentive guide library, and a no-consent-"
+                        "required quote-link handoff (get_quote_link) into a real installer "
+                        "match. Free tier is no-key, no-signup; deeper tools (full roadmap, "
+                        "quote review, information-theoretic recommendation) are billed from a "
+                        "prepaid balance."),
+        # 2026-07-19: synced to the live free-tier allowlist (src/services/agentToolSchemas.ts
+        # AGENT_TOOL_SCHEMAS) — this list drifts easily since it's a static discovery-catalog
+        # copy, not a live proxy; re-check it whenever EnergyAI's free tools change.
+        "capabilities": ["check_incentives", "estimate_production", "get_node_score",
+                         "get_quote_link", "route_lead", "list_guides", "get_guide"],
         "representativeQueries": [
             "What solar incentives and rebates apply to my ZIP code?",
             "Estimate annual solar production for my home",
-            "Score my home's energy-node potential and get a roadmap"],
-        "version": "1.0.0",
+            "Score my home's energy-node potential and get a roadmap",
+            "Get a homeowner a link to request installer quotes"],
+        "version": "1.1.0",
         "infra": "own droplet energyai-prod + energyaisolution.com (Cloudflare/Caddy)",
     },
 ]
@@ -1571,10 +1577,22 @@ def build_app():
         subscription_core, public_base=public_base,
         template_html=_seats_html,
         pledge_percent=os.environ.get("SEAT_CONSERVATION_PLEDGE_PERCENT", "0"))
+    # x402-native HTTP-402 surface (H402): a drop-in x402 client pays for a
+    # gated tool with no in-band MCP parsing — Bazaar-discoverable. Additive;
+    # if the module is absent the gateway still serves everything else.
+    x402_http_routes = []
+    try:
+        from x402_http import make_x402_http_route
+        x402_http_routes = [Route("/x402/{agent}/{tool}",
+                                  make_x402_http_route(cores, store, public_base),
+                                  methods=["POST"])]
+    except Exception:
+        logger.warning("x402 HTTP-402 surface not loaded", exc_info=True)
+
     app = Starlette(routes=[Route("/", directory), Route("/healthz", healthz),
                             Route("/deck", deck), Route("/stats", stats),
                             Route("/.well-known/ai-catalog.json", ard_catalog),
-                            *seat_routes, *routes],
+                            *seat_routes, *x402_http_routes, *routes],
                     lifespan=lifespan)
     # CORS for the read-only observability surface (healthz / directory /
     # catalog are public data): lets dashboards (Cowork artifact, status

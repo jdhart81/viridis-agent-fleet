@@ -39,6 +39,8 @@ COPY deploy/gateway/payment_gate.py deploy/gateway/
 COPY deploy/gateway/account_auth.py deploy/gateway/
 COPY deploy/gateway/request_context.py deploy/gateway/
 COPY deploy/gateway/reconciliation.py deploy/gateway/
+COPY deploy/gateway/x402_rail.py deploy/gateway/
+COPY deploy/gateway/x402_http.py deploy/gateway/
 COPY deploy/gateway/escrow_custody.py deploy/gateway/
 COPY deploy/gateway/weave.py deploy/gateway/
 COPY deploy/gateway/participant_bridge.py deploy/gateway/

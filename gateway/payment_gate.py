@@ -116,6 +116,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import hashlib
 import inspect
 import logging
 import os
@@ -176,6 +177,15 @@ SEAT_HINT_REFUSALS = 3
 SEATS_URL = "https://mcp.viridisconservation.com/seats"
 
 
+def _x402_status_enabled() -> bool:
+    """PR8 status helper — never raises if the rail module is absent."""
+    try:
+        import x402_rail
+        return x402_rail.is_enabled()
+    except Exception:
+        return False
+
+
 def _is_anon_key(key: str) -> bool:
     return key == "unknown" or key.startswith("ext:")
 
@@ -208,6 +218,7 @@ class PaymentGate:
         self.escrow = escrow_core
         self.escrow_persist_key = escrow_persist_key
         self._a2a_errors: Dict[str, str] = {}
+        self._x402_errors: Dict[str, str] = {}      # PRX settlement errors
 
     # ------------------------------------------------------------------ #
     def _payment_required(self, name: str, day: str, used: int,
@@ -283,6 +294,34 @@ class PaymentGate:
                 "plans": "5 checkout-ready plans; subscribe once, every "
                          "caller on your account key is covered",
             }
+        # PRX1: standards-compliant x402 challenge — additive, and present
+        # ONLY when the rail is armed (X402_ENABLED + address + facilitator).
+        # A standard x402 client reads top-level `accepts`; disabled => this
+        # block is absent and the envelope is byte-identical to pre-x402.
+        try:
+            import x402_rail
+            accepts = x402_rail.build_accepts(
+                name, price,
+                f"https://mcp.viridisconservation.com/{name}/mcp")
+            if accepts is not None:
+                envelope["x402Version"] = x402_rail.X402_VERSION
+                envelope["accepts"] = [accepts]
+                envelope["payment"]["x402"] = {
+                    "method": "x402-usdc",
+                    "how": ("pay per call in Base USDC with no account — send "
+                            "the signed X-PAYMENT header and retry; the "
+                            "facilitator settles directly to Viridis "
+                            "non-custodially and your call is served"),
+                    "network": accepts["network"],
+                    "amount_atomic_usdc": accepts["maxAmountRequired"],
+                    "pay_to": accepts["payTo"],
+                    "batch_hint": ("overpay to prepay a batch: a larger USDC "
+                                   f"payment grants floor(amount / {price}) "
+                                   "call credits (PRX/PG13 credit path)"),
+                }
+        except Exception:  # PRX5: x402 advertising never breaks the envelope
+            logger.warning("x402 accepts-block build failed; envelope served "
+                           "without it", exc_info=True)
         return envelope
 
     def _subscription_decision(self, name: str) -> Optional[dict]:
@@ -456,6 +495,75 @@ class PaymentGate:
             logger.warning("payment_gate: refused-caller telemetry failed",
                            exc_info=True)
             return 0
+
+    # ---------------- PRX: x402 autonomous settlement ------------------ #
+    def _try_settle_x402(self, name: str, core: Any, gate: dict) -> Optional[dict]:
+        """PRX2-PRX5: if the request carries an X-PAYMENT header and the x402
+        rail is armed, verify+settle it and grant prepaid credits through
+        the SAME path a funded escrow uses (PR4). Returns None (nothing to
+        do, or already-granted replay), or leaves credits granted on
+        success. Fail-closed: any error grants nothing and never raises.
+
+        Idempotency (PRX4): the payment header hashes to a stable key
+        checked BEFORE settling — a replayed header re-grants nothing and
+        never re-settles. The on-chain authorization nonce (EIP-3009) is
+        single-use, so the chain independently blocks a double-spend."""
+        try:
+            import x402_rail
+            if not x402_rail.is_enabled():
+                return None
+            ctx = self._caller_context()
+            header = ctx.get("x402_payment")
+            if not header:
+                return None
+            price = PRICE_MINOR.get(name, DEFAULT_PRICE_MINOR)
+            requirements = x402_rail.build_accepts(
+                name, price,
+                f"https://mcp.viridisconservation.com/{name}/mcp")
+            if requirements is None:
+                return None
+            key = hashlib.sha256(str(header).encode()).hexdigest()
+            with self._billing_lock(name):
+                consumed = gate.setdefault("consumed_x402", {})
+                if key in consumed:                       # PRX4 replay: no-op
+                    return None
+                payload = x402_rail.parse_payment_header(header)
+                if payload is None:
+                    self._x402_errors[name] = "malformed_x402_header"
+                    return None
+                result = x402_rail.verify_and_settle(payload, requirements)
+                if not result.get("settled"):             # PRX5 fail-closed
+                    self._x402_errors[name] = f"x402:{result.get('reason')}"
+                    return None
+                credits = max(1, int(requirements["maxAmountRequired"])
+                              // (price * x402_rail.USDC_ATOMIC_PER_CENT))
+                gate_state = getattr(core, GATE_ATTR)
+                gate_state["credits"] = gate_state.get("credits", 0) + credits
+                consumed[key] = {
+                    "tx_hash": result["tx_hash"],
+                    "network": result["network"],
+                    "amount_atomic": result["amount_atomic"],
+                    "credits": credits, "at": _utc_day(),
+                    "request_caller": ctx.get("caller")}
+                try:                                      # durably record grant
+                    self.store.save(name, core)
+                except Exception:
+                    logger.critical(
+                        "payment_gate[%s]: x402 SETTLED tx=%s but grant "
+                        "persist failed — credit held in memory, tx hash is "
+                        "the receipt", name, result["tx_hash"])
+                self._x402_errors.pop(name, None)
+                logger.info("payment_gate[%s]: x402 settled %s atomic -> %s "
+                            "credits (tx %s)", name,
+                            result["amount_atomic"], credits,
+                            result["tx_hash"])
+                return None
+        except Exception as exc:                          # PRX5
+            self._x402_errors[name] = f"x402_exception:{type(exc).__name__}"
+            logger.warning("payment_gate[%s]: x402 settle failed (%s) — "
+                           "no grant, service unaffected", name,
+                           type(exc).__name__)
+            return None
 
     # ---------------- PG13-PG16: a2a escrow settlement ----------------- #
     def _try_consume_escrow(self, name: str, core: Any, gate: dict,
@@ -808,6 +916,7 @@ class PaymentGate:
                                       "invoices": [], "credits": 0,
                                       "redeemed_sessions": {},
                                       "consumed_escrows": {},
+                                      "consumed_x402": {},       # PRX4
                                       "used_by_caller": {},
                                       "refused_by_caller": {}})
         else:
@@ -817,10 +926,16 @@ class PaymentGate:
             persisted.setdefault("subscription_waived", 0)
             persisted.setdefault("subscription_overage", 0)
             persisted.setdefault("consumed_escrows", {})   # pre-PG13 snapshots
+            persisted.setdefault("consumed_x402", {})      # pre-PRX snapshots
             persisted.setdefault("used_by_caller", {})     # pre-PG18 snapshots
             persisted.setdefault("refused_by_caller", {})  # pre-PG20 snapshots
         self._cores[name] = core
         inner = core.process
+        # PRX/HTTP-402 surface: the ungated inner process (StateStore-wrapped,
+        # so it still persists) — the x402-native HTTP endpoint calls this to
+        # execute a tool AFTER settling payment, without re-running the gate's
+        # free-tier/billing logic (payment already made).
+        core._gate_inner = inner
 
         def _is_read(input_data) -> bool:
             action = (input_data or {}).get("action") \
@@ -894,6 +1009,7 @@ class PaymentGate:
                     if payment_ref is not None:                 # PG13-PG16
                         a2a_refusal = self._try_consume_escrow(
                             name, core, gate, payment_ref)
+                    self._try_settle_x402(name, core, gate)     # PRX
                     if not _try_spend_credit(gate):             # PG9
                         gate["refused"] += 1
                         n_ref = self._record_refused_caller(gate)  # PG20
@@ -966,6 +1082,7 @@ class PaymentGate:
                     if payment_ref is not None:                 # PG13-PG16
                         a2a_refusal = self._try_consume_escrow(
                             name, core, gate, payment_ref)
+                    self._try_settle_x402(name, core, gate)     # PRX
                     if not _try_spend_credit(gate):             # PG9
                         gate["refused"] += 1
                         n_ref = self._record_refused_caller(gate)  # PG20
@@ -1084,6 +1201,24 @@ class PaymentGate:
                         for n, c in self._cores.items()
                         for g in [getattr(c, GATE_ATTR)]},
                     "errors": dict(self._a2a_errors),
+                },
+                "x402": {                                      # PRX / PR8
+                    "enabled": _x402_status_enabled(),
+                    "note": ("autonomous Base-USDC settlement — real cash "
+                             "direct to the Viridis wallet, non-custodial; "
+                             "a distinct rail from Stripe cash and the "
+                             "internal ledger (PR8)"),
+                    "settled": {
+                        n: {"payments": len(g.get("consumed_x402", {})),
+                            "credits_granted": sum(
+                                v.get("credits", 0)
+                                for v in g.get("consumed_x402", {}).values()),
+                            "tx_hashes": [v.get("tx_hash") for v in
+                                          g.get("consumed_x402", {}).values()]}
+                        for n, c in self._cores.items()
+                        for g in [getattr(c, GATE_ATTR)]
+                        if g.get("consumed_x402")},
+                    "errors": dict(self._x402_errors),
                 },
                 "conversion": {                                # PG20
                     "note": ("the 402 funnel, honestly split: refusals_today "

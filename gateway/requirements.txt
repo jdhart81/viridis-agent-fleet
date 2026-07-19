@@ -2,3 +2,4 @@
 mcp>=1.0
 uvicorn>=0.29
 starlette>=0.37
+cryptography>=42.0   # x402/CDP request-bound Ed25519 JWT auth (PRX)
