@@ -34,7 +34,15 @@ signs the advertised Base-USDC authorization and retries the same request.
 - [Captured free dry-run](scripts/demo_output_example.md)
 - [Agent-readable llms.txt](https://mcp.viridisconservation.com/llms.txt)
 - [Machine-readable x402 catalog](https://mcp.viridisconservation.com/x402/catalog)
+- [A2A 1.0 Agent Card](https://mcp.viridisconservation.com/.well-known/agent-card.json)
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
+
+The same five paid skills are available as durable A2A HTTP+JSON tasks using
+the official x402 extension. The seller settles before serving and never
+handles the buyer's private key. For agent buyers, the bounded
+[market-router SDK](scripts/viridis_market_router.py) ranks compatible sellers
+under an expiring network/payee/budget mandate and requires a caller-injected
+signer before any paid request.
 
 Viridis has already received its first external paid call: a $0.25 Regulatory
 Radar scan settled in USDC on Base. The public repository is the callable spec,

@@ -1,5 +1,51 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-20, agent-commerce flywheel — DEPLOYED/ACTIVE] A2A storefront,
+> bounded buyer/router SDK, and repository-scoped GitHub App authentication are
+> live.** Gateway image
+> `sha256:3cbb963224ff405841c609f0fcdce9a1f99714a4e9942214bd1f8dea0e6a278b`;
+> rollback `viridis-stable:prev-2026-07-20-commerce` points to
+> `sha256:bb6f10ea062a1968bb2eab674f67015d82165d9fdac817346752d3a11551b68e`.
+> Growth image
+> `sha256:bc4caf67f6a80bcb759e0ec28683f73724fb9ce1b527f9fd92d14173aa2f1fed`;
+> rollback `viridis-growth-agent:prev-2026-07-20-commerce` points to
+> `sha256:d983f5f4f547979228bbfb324cf63188bddd29a6d2f1149d8c113fbf4dcb5c15`.
+> Local and droplet gates are **1242 passed / 0 failed / 32/32**; gateway is
+> **376 passed**, growth is **23 passed**, and the buyer/router suite is
+> **6 passed**.
+>
+> `/.well-known/agent-card.json` now advertises five A2A 1.0 HTTP+JSON skills
+> with the official required A2A-x402 extension. `/a2a/message:send` creates a
+> durable payment-required task, reuses the existing x402-v2 verifier and
+> settle-before-serve ledger, and exposes persisted task polling at
+> `/a2a/tasks/{id}`. Production smoke created one unpaid, unexecuted input-
+> required task at the active **10000-atomic ($0.01)** new-wallet price; no
+> money moved. The new `scripts/viridis_market_router.py` ranks external seller
+> resources under an expiring, capped mandate and can spend only through a
+> caller-injected signer; it contains no wallet key.
+>
+> Growth authentication now uses GitHub App `4350532`, installation
+> `147900092`, installed on only `jdhart81/viridis-agent-fleet` with Contents
+> write and required Metadata read. Runtime mints short-lived installation
+> tokens; `GROWTH_GITHUB_TOKEN` is absent. The first cycle correctly made no
+> duplicate send because every cleared target was on cooldown. During a
+> deployment inspection the prior OpenAI key was rendered into command output;
+> the worker was immediately stopped, the key was removed, and it restarted
+> with `GROWTH_OPENAI_ENABLED=0` and deterministic copy. **The exposed OpenAI
+> key must be revoked and replaced before LLM phrasing is re-enabled.** The
+> local `env/` credential folder was also found in the encrypted droplet source
+> transport and candidate context; no Dockerfile copied it into an image, both
+> remote copies were deleted, image absence was verified, and the originals
+> were tightened to owner-only permissions.
+>
+> Health is green across 25 mounted agents. Existing x402 telemetry is unchanged
+> at **1 external settlement / 1 distinct external payer / 250000 atomic**.
+> Frozen MCP-v1 x402 SHA remains
+> `ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770`;
+> the production candidate contains no ViridisOS files. **Did NOT change:**
+> prices, payment rails, Connect, escrow, participant spend, bond logic,
+> FA-I3 manual fallback, or the frozen v1 lane.
+
 > **[2026-07-20, mission closure builds 1–4 — DEPLOYED/ACTIVE] Bond returns,
 > agent-native discovery, an owned GitHub acquisition channel, and
 > campaign-to-settlement attribution are live.** Gateway image

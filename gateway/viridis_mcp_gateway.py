@@ -1452,6 +1452,24 @@ def build_app():
     routes = [Mount(f"/{path}", app=s.streamable_http_app())
               for path, s in servers.items()]
 
+    # A2A 1.0 commerce facade (AC1-AC6): discovery + durable payment tasks
+    # over the SAME x402 v2 verifier and per-agent receipt ledger. It never
+    # signs payments, handles private keys, or creates another money rail.
+    a2a_routes = []
+    a2a_status = lambda: {"enabled": False, "reason": "module_unavailable"}
+    try:
+        from a2a_commerce import make_a2a_handlers, status as _a2a_status
+        a2a_card, a2a_send, a2a_get_task = make_a2a_handlers(
+            cores, store, public_base)
+        a2a_routes = [
+            Route("/.well-known/agent-card.json", a2a_card, methods=["GET"]),
+            Route("/a2a/message:send", a2a_send, methods=["POST"]),
+            Route("/a2a/tasks/{id}", a2a_get_task, methods=["GET"]),
+        ]
+        a2a_status = lambda: _a2a_status(cores, public_base)
+    except Exception:
+        logger.warning("A2A commerce facade not loaded", exc_info=True)
+
     async def _probe_federated(member: dict) -> dict:
         """Liveness-probe a federated member on its OWN infra via a short MCP
         tools/list. Isolated: a federated outage NEVER degrades the core
@@ -1524,6 +1542,8 @@ def build_app():
                                  "x402_catalog": public_base + "/x402/catalog",
                                  "seats": public_base + "/seats",
                                  "deck": public_base + "/deck",
+                                 "a2a_agent_card": (public_base +
+                                                    "/.well-known/agent-card.json"),
                              },
                              "persistence": persistence,
                              "payment_gate": gate.status(),
@@ -1532,6 +1552,7 @@ def build_app():
                              "weave": weave_bridge.status(),
                              "participants": participants.status(),
                              "collateralized_bonds": bonds.status(),
+                             "a2a_commerce": a2a_status(),
                              "subscriptions": subscription_health,
                              "agents": checks,
                              "federated": federated}, status_code=200 if ok else 503)
@@ -1835,7 +1856,8 @@ def build_app():
                             Route("/x402/catalog", x402_catalog),
                             Route("/deck", deck), Route("/stats", stats),
                             Route("/.well-known/ai-catalog.json", ard_catalog),
-                            *seat_routes, *x402_http_routes, *routes],
+                            *seat_routes, *a2a_routes, *x402_http_routes,
+                            *routes],
                     lifespan=lifespan)
     # CORS for the read-only observability surface (healthz / directory /
     # catalog are public data): lets dashboards (Cowork artifact, status

@@ -25,9 +25,12 @@ is required. The tools form one chain: measure -> account -> disclose -> claim
 
 ## Discovery and examples
 
+- A2A 1.0 Agent Card: https://mcp.viridisconservation.com/.well-known/agent-card.json
+- A2A HTTP+JSON task endpoint: https://mcp.viridisconservation.com/a2a/message:send — activate https://github.com/google-a2a/a2a-x402/v0.1 in A2A-Extensions. The server returns a durable input-required payment task, settles the caller-supplied x402 v2 payload, then returns the completed task artifact.
 - Human agent catalog: https://mcp.viridisconservation.com/agents
 - Copy-paste quickstart and free dry-run: https://mcp.viridisconservation.com/quickstart
 - Machine-readable x402 catalog: https://mcp.viridisconservation.com/x402/catalog
 - ARD catalog: https://mcp.viridisconservation.com/.well-known/ai-catalog.json
 - CDP Bazaar merchant: https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329
 - Source and runnable demo: https://github.com/jdhart81/viridis-agent-fleet
+- Bounded buyer/router SDK: https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/viridis_market_router.py — ranks outside sellers under an expiring spend mandate and requires a caller-injected signer; it never stores a wallet private key.

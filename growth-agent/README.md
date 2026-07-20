@@ -27,7 +27,9 @@ post, move money, change prices, or bypass policy.
 Policy-cleared live targets are owned Smithery listings and one factual
 discovery file in `jdhart81/viridis-agent-fleet`. Smithery uses its official
 metadata API with `GROWTH_SMITHERY_API_KEY`. GitHub uses the official Contents
-API with a repository-scoped `GROWTH_GITHUB_TOKEN` and can update only
+API with a repository-only GitHub App. The worker signs a short-lived JWT
+from a read-only private-key mount and automatically mints one-hour
+installation tokens; there is no recurring PAT rotation. It can update only
 `docs/LIVE_AGENT_SUITE.md` on `main`; it has no issue, PR, star, follow, or
 third-party write capability. Missing target credentials make that target
 ineligible instead of starving other channels.

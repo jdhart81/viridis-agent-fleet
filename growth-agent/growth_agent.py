@@ -20,6 +20,7 @@ import json
 import os
 import re
 import sqlite3
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -46,7 +47,9 @@ TRUTHY = frozenset({"1", "true", "yes", "on"})
 # isolated from adapters just as the entire process is isolated from money.
 POSTING_CREDENTIAL_ENV = frozenset({
     "GROWTH_DISCORD_BOT_TOKEN",
-    "GROWTH_GITHUB_TOKEN",
+    "GROWTH_GITHUB_APP_ID",
+    "GROWTH_GITHUB_INSTALLATION_ID",
+    "GROWTH_GITHUB_PRIVATE_KEY_PATH",
     "GROWTH_SMITHERY_API_KEY",
 })
 MODEL_CREDENTIAL_ENV = frozenset({"GROWTH_OPENAI_API_KEY"})
@@ -559,6 +562,97 @@ class DiscordBotAdapter:
                 "channel_id": channel_id}
 
 
+class GitHubAppTokenProvider:
+    """Mint short-lived installation tokens from one repository GitHub App.
+
+    The long-lived private key is read from a read-only mounted file. It is
+    never returned, logged, or passed to a posting adapter. Installation
+    tokens are cached only in memory and refreshed five minutes before their
+    one-hour expiry.
+    """
+
+    def __init__(self, opener: Callable[..., Any] = urllib.request.urlopen,
+                 now_fn: Callable[[], datetime] = _utcnow):
+        self.opener = opener
+        self.now_fn = now_fn
+        self._lock = threading.Lock()
+        self._token = ""
+        self._expires_at: Optional[datetime] = None
+
+    @staticmethod
+    def _b64url(value: bytes) -> str:
+        return base64.urlsafe_b64encode(value).rstrip(b"=").decode()
+
+    def _jwt(self, app_id: str, key_path: str) -> str:
+        try:
+            from cryptography.hazmat.primitives import hashes, serialization
+            from cryptography.hazmat.primitives.asymmetric import padding
+        except ImportError as exc:
+            raise GrowthError("GitHub App signing dependency is unavailable") \
+                from exc
+        path = Path(key_path)
+        try:
+            private_key = serialization.load_pem_private_key(
+                path.read_bytes(), password=None)
+        except Exception as exc:
+            raise GrowthError("GitHub App private key is unavailable") from exc
+        now = int(self.now_fn().timestamp())
+        header = self._b64url(json.dumps(
+            {"alg": "RS256", "typ": "JWT"}, separators=(",", ":"),
+            sort_keys=True).encode())
+        claims = self._b64url(json.dumps(
+            {"iat": now - 60, "exp": now + 540, "iss": app_id},
+            separators=(",", ":"), sort_keys=True).encode())
+        signing_input = f"{header}.{claims}".encode()
+        signature = private_key.sign(
+            signing_input, padding.PKCS1v15(), hashes.SHA256())
+        return f"{header}.{claims}.{self._b64url(signature)}"
+
+    def token(self, credentials: dict) -> str:
+        app_id = str(credentials.get("GROWTH_GITHUB_APP_ID") or "").strip()
+        installation_id = str(credentials.get(
+            "GROWTH_GITHUB_INSTALLATION_ID") or "").strip()
+        key_path = str(credentials.get(
+            "GROWTH_GITHUB_PRIVATE_KEY_PATH") or "").strip()
+        if not (app_id.isdigit() and installation_id.isdigit() and key_path):
+            raise GrowthError("GitHub App credentials are incomplete")
+        with self._lock:
+            now = self.now_fn()
+            if (self._token and self._expires_at
+                    and self._expires_at - now > timedelta(minutes=5)):
+                return self._token
+            jwt = self._jwt(app_id, key_path)
+            request = urllib.request.Request(
+                "https://api.github.com/app/installations/"
+                f"{installation_id}/access_tokens",
+                data=json.dumps({
+                    "repositories": ["viridis-agent-fleet"],
+                    "permissions": {"contents": "write"},
+                }).encode(), method="POST",
+                headers={
+                    "Authorization": f"Bearer {jwt}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2026-03-10",
+                    "Content-Type": "application/json",
+                    "User-Agent": "viridis-growth-agent/1",
+                })
+            try:
+                with self.opener(request, timeout=15) as response:
+                    status = int(getattr(response, "status", 0))
+                    body = json.loads(response.read(1_000_000) or b"{}")
+            except Exception as exc:
+                raise GrowthError(
+                    "GitHub App installation token request failed") from exc
+            token = str(body.get("token") or "")
+            expires_at = _parse_iso(str(body.get("expires_at") or ""))
+            if status != 201 or not token or expires_at is None:
+                raise GrowthError(
+                    f"GitHub App token endpoint returned HTTP {status}")
+            self._token = token
+            self._expires_at = expires_at
+            return token
+
+
 class GitHubOwnedContentAdapter:
     """Update one factual discovery file in the owned public repository.
 
@@ -572,8 +666,11 @@ class GitHubOwnedContentAdapter:
     REPO = "jdhart81/viridis-agent-fleet"
     PATH = "docs/LIVE_AGENT_SUITE.md"
 
-    def __init__(self, opener: Callable[..., Any] = urllib.request.urlopen):
+    def __init__(self, opener: Callable[..., Any] = urllib.request.urlopen,
+                 token_provider: Optional[GitHubAppTokenProvider] = None):
         self.opener = opener
+        self.token_provider = token_provider or GitHubAppTokenProvider(
+            opener=opener)
 
     @staticmethod
     def _headers(token: str) -> dict:
@@ -586,17 +683,15 @@ class GitHubOwnedContentAdapter:
         }
 
     def send(self, target: dict, content: str, credentials: dict) -> dict:
-        token = credentials.get("GROWTH_GITHUB_TOKEN", "")
         repo = str(target.get("repo", ""))
         path = str(target.get("path", ""))
         branch = str(target.get("branch") or "main")
-        if not token:
-            raise GrowthError("GitHub credential is missing")
         if repo != self.REPO or path != self.PATH:
             raise GrowthError(
                 "GitHub content adapter is restricted to the owned live-suite file")
         if branch != "main":
             raise GrowthError("GitHub content adapter is restricted to main")
+        token = self.token_provider.token(credentials)
         encoded_path = urllib.parse.quote(path, safe="/")
         endpoint = f"https://api.github.com/repos/{repo}/contents/{encoded_path}"
         sha = ""
@@ -822,6 +917,11 @@ class GrowthAgent:
             elif (target.get("credential_env")
                   and not str(self.environ.get(
                       str(target["credential_env"])) or "")):
+                reason = "credential_missing"
+                eligible = False
+            elif (target.get("credential_envs")
+                  and any(not str(self.environ.get(str(name)) or "")
+                          for name in target["credential_envs"])):
                 reason = "credential_missing"
                 eligible = False
             else:

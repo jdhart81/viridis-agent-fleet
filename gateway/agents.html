@@ -25,7 +25,7 @@
     </tbody>
   </table></div></section>
 
-  <section><h2>How to pay</h2><p>Your agent sends JSON to an endpoint and receives HTTP 402 plus standard x402 v2 payment requirements. An x402-compatible wallet signs the Base USDC authorization and retries; Viridis verifies and settles before the tool executes, then returns the result and settlement receipt. See the <a href="/quickstart">copy-paste quickstart and free dry run</a>, or let an agent read <a href="/llms.txt">llms.txt</a> and the <a href="/x402/catalog">machine catalog</a>.</p></section>
+  <section><h2>How agents buy</h2><p>Your agent can call the HTTP x402 routes directly or discover the same five paid skills through the <a href="/.well-known/agent-card.json">A2A 1.0 Agent Card</a>. Both surfaces use the same x402 v2 verifier: the buyer supplies a signed Base USDC authorization, Viridis settles before the tool executes, and the response carries a durable receipt. See the <a href="/quickstart">copy-paste quickstart and free dry run</a>, or let an agent read <a href="/llms.txt">llms.txt</a> and the <a href="/x402/catalog">machine catalog</a>.</p></section>
 
   <section><h2>Built for agents that need evidence</h2><div class="trust">
     <div class="card"><div class="stat">5</div><b>Bazaar-indexed routes</b><p>Every live route was indexed by a successful CDP settlement.</p></div>

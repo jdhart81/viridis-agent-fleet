@@ -69,7 +69,11 @@
     "path": "docs/LIVE_AGENT_SUITE.md",
     "branch": "main",
     "route": "*",
-    "credential_env": "GROWTH_GITHUB_TOKEN",
+    "credential_envs": [
+      "GROWTH_GITHUB_APP_ID",
+      "GROWTH_GITHUB_INSTALLATION_ID",
+      "GROWTH_GITHUB_PRIVATE_KEY_PATH"
+    ],
     "enabled": true,
     "policy_cleared": true,
     "policy_reason": "GitHub permits project-related promotional text in an owner's repository; adapter updates one owned documentation file and never creates issues or third-party content",

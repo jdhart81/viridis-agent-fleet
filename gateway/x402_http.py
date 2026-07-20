@@ -305,7 +305,8 @@ def _self_wallets() -> set:
 def _classified_settlement(payload: dict, agent: str, tool: str,
                            result: dict, identifier: str, *,
                            intro_applied: bool = False,
-                           list_price_minor: int | None = None) -> dict:
+                           list_price_minor: int | None = None,
+                           surface: str = "http-402-v2") -> dict:
     payer = _payer_wallet(payload)
     record = {
         "payment_identifier": identifier,
@@ -315,7 +316,7 @@ def _classified_settlement(payload: dict, agent: str, tool: str,
         "credits": 1,
         "at": time.strftime("%Y-%m-%d", time.gmtime()),
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "surface": "http-402-v2",
+        "surface": surface,
         "route": f"{agent}/{tool}",
         "payer_wallet": payer,
         "self_settle": payer.lower() in _self_wallets(),
@@ -355,7 +356,8 @@ def settlement_metrics(gate_states: Dict[str, dict]) -> dict:
             continue
         for record in gate.get("consumed_x402", {}).values():
             if (not isinstance(record, dict)
-                    or record.get("surface") != "http-402-v2"
+                    or record.get("surface") not in {
+                        "http-402-v2", "a2a-x402-v2"}
                     or record.get("classification_version")
                     != SETTLEMENT_CLASSIFICATION_VERSION):
                 continue

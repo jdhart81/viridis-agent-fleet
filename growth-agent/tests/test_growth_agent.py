@@ -12,6 +12,7 @@ from growth_agent import (
     ALLOWED_CREDENTIAL_ENV,
     FleetSnapshot,
     GeneratedCopy,
+    GitHubAppTokenProvider,
     GitHubOwnedContentAdapter,
     GrowthAgent,
     GrowthError,
@@ -135,6 +136,16 @@ class RecordingHarness:
                              output_tokens=50),
             model="gpt-5.6-terra",
         )
+
+
+class FakeGitHubTokenProvider:
+    def __init__(self, token="installation-token"):
+        self.value = token
+        self.calls = []
+
+    def token(self, credentials):
+        self.calls.append(dict(credentials))
+        return self.value
 
 
 def target(**updates):
@@ -316,7 +327,9 @@ def test_feedback_does_not_credit_an_unrelated_route(tmp_path):
 def test_credentials_are_growth_scoped_only(tmp_path):
     env = {
         "GROWTH_DISCORD_BOT_TOKEN": "discord",
-        "GROWTH_GITHUB_TOKEN": "github",
+        "GROWTH_GITHUB_APP_ID": "123",
+        "GROWTH_GITHUB_INSTALLATION_ID": "456",
+        "GROWTH_GITHUB_PRIVATE_KEY_PATH": "/run/secrets/key.pem",
         "GROWTH_SMITHERY_API_KEY": "smithery",
         "GROWTH_OPENAI_API_KEY": "model-only",
         "STRIPE_API_KEY": "must-never-be-read",
@@ -467,12 +480,18 @@ def test_owned_github_content_uses_contents_api_not_issues():
             "commit": {"sha": "commit-new"},
         })
 
-    adapter = GitHubOwnedContentAdapter(opener=opener)
+    provider = FakeGitHubTokenProvider()
+    adapter = GitHubOwnedContentAdapter(
+        opener=opener, token_provider=provider)
     receipt = adapter.send({
         "repo": "jdhart81/viridis-agent-fleet",
         "path": "docs/LIVE_AGENT_SUITE.md",
         "branch": "main",
-    }, "grounded live copy", {"GROWTH_GITHUB_TOKEN": "scoped-key"})
+    }, "grounded live copy", {
+        "GROWTH_GITHUB_APP_ID": "123",
+        "GROWTH_GITHUB_INSTALLATION_ID": "456",
+        "GROWTH_GITHUB_PRIVATE_KEY_PATH": "/run/secrets/key.pem",
+    })
     assert len(captured) == 2
     assert captured[0].get_method() == "GET"
     assert captured[1].get_method() == "PUT"
@@ -484,12 +503,20 @@ def test_owned_github_content_uses_contents_api_not_issues():
     assert "grounded live copy" in document
     assert receipt["commit_sha"] == "commit-new"
     assert receipt["updated"] is True
+    assert len(provider.calls) == 1
+    assert captured[0].headers["Authorization"] == \
+        "Bearer installation-token"
 
 
 def test_owned_github_content_rejects_other_repo_or_path_before_network():
     adapter = GitHubOwnedContentAdapter(
-        opener=lambda *args, **kwargs: pytest.fail("network must not run"))
-    credentials = {"GROWTH_GITHUB_TOKEN": "scoped-key"}
+        opener=lambda *args, **kwargs: pytest.fail("network must not run"),
+        token_provider=FakeGitHubTokenProvider())
+    credentials = {
+        "GROWTH_GITHUB_APP_ID": "123",
+        "GROWTH_GITHUB_INSTALLATION_ID": "456",
+        "GROWTH_GITHUB_PRIVATE_KEY_PATH": "/run/secrets/key.pem",
+    }
     with pytest.raises(GrowthError, match="restricted"):
         adapter.send({"repo": "someone/else",
                       "path": "docs/LIVE_AGENT_SUITE.md"},
@@ -501,7 +528,11 @@ def test_owned_github_content_rejects_other_repo_or_path_before_network():
 
 def test_target_missing_its_scoped_credential_is_not_selected(tmp_path):
     github = target(id="owned-doc", platform="github_owned_content",
-                    route="*", credential_env="GROWTH_GITHUB_TOKEN")
+                    route="*", credential_envs=[
+                        "GROWTH_GITHUB_APP_ID",
+                        "GROWTH_GITHUB_INSTALLATION_ID",
+                        "GROWTH_GITHUB_PRIVATE_KEY_PATH",
+                    ])
     worker, _, adapter = agent(
         tmp_path, targets=[github],
         environ={"GROWTH_AGENT_ENABLED": "1"})
@@ -509,6 +540,49 @@ def test_target_missing_its_scoped_credential_is_not_selected(tmp_path):
     assert result["status"] == "no_cleared_target"
     assert result["targets"][0]["reason"] == "credential_missing"
     assert adapter.calls == []
+
+
+def test_github_app_provider_mints_and_caches_one_hour_token(tmp_path):
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    key_path = tmp_path / "app.pem"
+    key_path.write_bytes(key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption()))
+    captured = []
+
+    class Response:
+        status = 201
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def read(self, limit):
+            return json.dumps({
+                "token": "short-lived-installation-token",
+                "expires_at": "2026-07-20T19:00:00Z",
+            }).encode()
+
+    def opener(request, timeout):
+        captured.append(request)
+        return Response()
+
+    provider = GitHubAppTokenProvider(opener=opener, now_fn=lambda: NOW)
+    credentials = {
+        "GROWTH_GITHUB_APP_ID": "123",
+        "GROWTH_GITHUB_INSTALLATION_ID": "456",
+        "GROWTH_GITHUB_PRIVATE_KEY_PATH": str(key_path),
+    }
+    assert provider.token(credentials) == "short-lived-installation-token"
+    assert provider.token(credentials) == "short-lived-installation-token"
+    assert len(captured) == 1
+    request = captured[0]
+    assert request.full_url.endswith("/app/installations/456/access_tokens")
+    assert request.headers["Authorization"].startswith("Bearer eyJ")
+    payload = json.loads(request.data)
+    assert payload["repositories"] == ["viridis-agent-fleet"]
+    assert payload["permissions"] == {"contents": "write"}
 
 
 def test_separate_deploy_unit_never_references_money_credentials():

@@ -42,6 +42,7 @@ COPY deploy/gateway/reconciliation.py deploy/gateway/
 COPY deploy/gateway/x402_rail.py deploy/gateway/
 COPY deploy/gateway/x402_http.py deploy/gateway/
 COPY deploy/gateway/x402_v2.py deploy/gateway/
+COPY deploy/gateway/a2a_commerce.py deploy/gateway/
 COPY deploy/gateway/escrow_custody.py deploy/gateway/
 COPY deploy/gateway/connect_rail.py deploy/gateway/
 COPY deploy/gateway/weave.py deploy/gateway/
@@ -57,6 +58,7 @@ COPY deploy/gateway/agents.html deploy/gateway/
 COPY deploy/gateway/quickstart.html deploy/gateway/
 COPY deploy/gateway/llms.txt deploy/gateway/
 COPY scripts/genesis_receipts.py scripts/
+COPY scripts/viridis_market_router.py scripts/
 # persistence volume mounts here (compose: gateway_state:/data, STATE_DB env)
 RUN mkdir -p /data docs/deployment
 EXPOSE 8402

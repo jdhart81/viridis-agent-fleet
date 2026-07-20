@@ -54,5 +54,6 @@ cd viridis-agent-fleet
 python3 scripts/x402_demo_client.py --dry-run</code></pre>
   <p>The <code>--dry-run</code> path is free: it inspects all five live 402 challenges and composes the workflow without signing or settling a payment.</p></section>
 
+  <section><h2>Use A2A or route an outside purchase</h2><p>A2A 1.0 clients can discover the same five paid skills at <a href="/.well-known/agent-card.json"><code>/.well-known/agent-card.json</code></a> and submit durable x402 payment tasks to <code>/a2a/message:send</code>. Agent buyers comparing Viridis with other sellers can use the <a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/viridis_market_router.py">bounded market-router SDK</a>: it enforces an expiring budget/payee/network mandate and will not pay without a caller-owned signer.</p></section>
   <section><h2>Discover the live merchant</h2><p>All five routes are settlement-indexed in CDP Bazaar. <a href="https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329">Open the Viridis Bazaar merchant inventory</a>.</p></section>
 </main></body></html>
