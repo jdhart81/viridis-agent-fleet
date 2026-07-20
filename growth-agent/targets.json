@@ -1,0 +1,79 @@
+[
+  {
+    "id": "cdp-discord-x402",
+    "platform": "discord",
+    "channel": "CDP Discord #x402",
+    "channel_id": "1369344440237424670",
+    "credential_env": "GROWTH_DISCORD_BOT_TOKEN",
+    "enabled": true,
+    "policy_cleared": false,
+    "policy_reason": "Discord bot must be installed and authorized by CDP server staff; user-account automation is forbidden",
+    "cooldown_days": 14,
+    "base_weight": 10.0
+  },
+  {
+    "id": "smithery-quantity-takeoff",
+    "platform": "smithery",
+    "channel": "Smithery hartjustin6/quantity-takeoff listing",
+    "qualified_name": "hartjustin6/quantity-takeoff",
+    "route": "quantity-takeoff/calculate_takeoff",
+    "credential_env": "GROWTH_SMITHERY_API_KEY",
+    "enabled": true,
+    "policy_cleared": true,
+    "policy_reason": "official owner-authenticated metadata API",
+    "cooldown_days": 30,
+    "base_weight": 4.0
+  },
+  {
+    "id": "smithery-disclosure-compiler",
+    "platform": "smithery",
+    "channel": "Smithery hartjustin6/disclosure-compiler listing",
+    "qualified_name": "hartjustin6/disclosure-compiler",
+    "route": "disclosure-compiler/compile_disclosure",
+    "credential_env": "GROWTH_SMITHERY_API_KEY",
+    "enabled": true,
+    "policy_cleared": true,
+    "policy_reason": "official owner-authenticated metadata API",
+    "cooldown_days": 30,
+    "base_weight": 4.0
+  },
+  {
+    "id": "smithery-ghg-ledger",
+    "platform": "smithery",
+    "channel": "Smithery hartjustin6/ghg-ledger listing",
+    "qualified_name": "hartjustin6/ghg-ledger",
+    "route": "ghg-ledger/calculate_inventory",
+    "credential_env": "GROWTH_SMITHERY_API_KEY",
+    "enabled": true,
+    "policy_cleared": true,
+    "policy_reason": "official owner-authenticated metadata API",
+    "cooldown_days": 30,
+    "base_weight": 4.0
+  },
+  {
+    "id": "x402-ecosystem-list",
+    "platform": "github_third_party",
+    "channel": "x402 ecosystem listing repository",
+    "repo": "xpaysh/awesome-x402",
+    "enabled": true,
+    "policy_cleared": false,
+    "policy_reason": "third-party promotion requires repository-specific maintainer invitation or contribution policy; never recurring issue spam",
+    "cooldown_days": 30,
+    "base_weight": 5.0
+  },
+  {
+    "id": "viridis-owned-github",
+    "platform": "github_owned_content",
+    "channel": "jdhart81/viridis-agent-fleet live agent suite",
+    "repo": "jdhart81/viridis-agent-fleet",
+    "path": "docs/LIVE_AGENT_SUITE.md",
+    "branch": "main",
+    "route": "*",
+    "credential_env": "GROWTH_GITHUB_TOKEN",
+    "enabled": true,
+    "policy_cleared": true,
+    "policy_reason": "GitHub permits project-related promotional text in an owner's repository; adapter updates one owned documentation file and never creates issues or third-party content",
+    "cooldown_days": 14,
+    "base_weight": 5.0
+  }
+]

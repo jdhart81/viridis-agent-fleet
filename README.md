@@ -1,32 +1,57 @@
-# Viridis Agent Fleet — MCP Surface
+# Viridis Agent Fleet — autonomous pay-per-call tools
 
-The public MCP-facing surface of the **Viridis agent stable**: a 22-agent
-agent-to-agent (A2A) economy plus a B2B subscriptions infrastructure surface,
-published on the [Model Context Protocol
-registry](https://registry.modelcontextprotocol.io) under the `io.github.jdhart81`
-namespace. This repository is the **callable spec + provenance** for those
-listings — the registry manifests, the JSON-Schema tool definitions, the
-public agent contracts, and the reference gateway. The agent cores are
-maintained privately; everything here is what a *calling* agent needs.
+**Autonomous carbon and compliance agents — x402/USDC on Base, no signup.**
+Five deterministic HTTP tools compose into one buyer workflow: **measure →
+account → disclose → claim → scan**. Every paid route verifies and settles
+before execution and returns structured JSON plus a payment receipt.
+
+The first paid call from a new wallet is currently **$0.01**. Subsequent calls
+use the unchanged list prices below.
+
+| Step | HTTP endpoint | Price | What it does | Chains with |
+|---|---|---:|---|---|
+| Measure | `/x402/quantity-takeoff/calculate_takeoff` | $0.50 | Embodied-carbon quantity takeoff from a bill of materials | GHG Ledger |
+| Account | `/x402/ghg-ledger/calculate_inventory` | $1.00 | Deterministic Scope 1, 2, and 3 inventory | Takeoff + Disclosure |
+| Disclose | `/x402/disclosure-compiler/compile_disclosure` | $2.00 | CSRD / IFRS S2 disclosure evidence and gaps | GHG + Tax Credit |
+| Claim | `/x402/taxcredit-engine/calculate_tax_credit` | $2.00 | Auditable 45Q/45V/45Y/48E/45X scenarios | Disclosure + Radar |
+| Scan | `/x402/regulatory-radar/scan_regulations` | $0.25 | Energy and climate requirements, urgency, and dates | Full chain |
+
+## Try it without spending anything
+
+```bash
+git clone https://github.com/jdhart81/viridis-agent-fleet.git
+cd viridis-agent-fleet
+python3 scripts/x402_demo_client.py --dry-run
+curl -i -X POST https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations \
+  -H 'content-type: application/json' -d '{"jurisdiction":"US","sector":"energy"}'
+```
+
+The curl request returns a standard x402 v2 HTTP 402 challenge; an x402 client
+signs the advertised Base-USDC authorization and retries the same request.
+
+- [Live agent suite](https://mcp.viridisconservation.com/agents)
+- [Copy-paste quickstart](https://mcp.viridisconservation.com/quickstart)
+- [Captured free dry-run](scripts/demo_output_example.md)
+- [Agent-readable llms.txt](https://mcp.viridisconservation.com/llms.txt)
+- [Machine-readable x402 catalog](https://mcp.viridisconservation.com/x402/catalog)
+- [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
+
+Viridis has already received its first external paid call: a $0.25 Regulatory
+Radar scan settled in USDC on Base. The public repository is the callable spec,
+schemas, contracts, and reference gateway for 25 hosted MCP agents plus the
+federated EnergyAI member. The deterministic cores remain private.
 
 By [Viridis LLC](https://viridisconservation.com) — conservation technology.
 
-## ⚡ First call in 30 seconds — no signup, no key
+## Free MCP trust and settlement rails
 
-```bash
-curl -s https://mcp.viridisconservation.com/regulatory-radar/mcp \
-  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"scan_regulations",
-       "arguments":{"jurisdiction":"EU","sector":"manufacturing"}}}'
-```
-
-Priced agents include 10 free calls/day; the settlement rails are free
-forever. More worked examples (Python client included):
-[docs/QUICKSTART_FIRST_CALL.md](docs/QUICKSTART_FIRST_CALL.md). New:
-**Viridis Verified** (`/verified/mcp`) wraps *your* MCP server with
-tamper-evident delivery receipts, and
-[x402-C](docs/standards/X402C_CARBON_RECEIPTS.md) is our draft standard for
-carbon receipts on machine-to-machine payments — comments welcome via issues.
+The payment and identity infrastructure remains free to call. Priced agents
+also retain their MCP free tier, with cash-backed escrow and monthly seats as
+alternatives to x402. Worked examples are in
+[docs/QUICKSTART_FIRST_CALL.md](docs/QUICKSTART_FIRST_CALL.md). **Viridis
+Verified** (`/verified/mcp`) wraps a caller's MCP server with tamper-evident
+delivery receipts, while [x402-C](docs/standards/X402C_CARBON_RECEIPTS.md) is
+the fleet's draft carbon-receipt standard.
 
 ## Pay per call with x402
 

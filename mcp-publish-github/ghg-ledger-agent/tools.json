@@ -4,90 +4,123 @@
   "tools": [
     {
       "name": "calculate_inventory",
-      "description": "Calculate an auditable GHG inventory from explicit activity records.\nReturns per-line gas/CO2e results, Scope 1/2/3 and category rollups, dual\nScope 2 reporting, indeterminate lines, factor lineage, notary payload, and\nan offset-clearinghouse dry-run weave. This is calculation, not advice.",
+      "description": "Calculate an auditable GHG inventory from explicit activity records.\nReturns per-line gas/CO2e results, Scope 1/2/3 and category rollups, dual\nScope 2 reporting, indeterminate lines, factor lineage, notary payload, and\nan offset-clearinghouse dry-run weave. This is calculation, not advice.\nPrice: $1.00 per call after 10 free calls/day. Pay at\n/x402/ghg-ledger/calculate_inventory with Base USDC, cash-fund payment_ref\nthrough escrow_checkout + confirm_escrow_funding, or use /seats.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "activities": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Activities",
             "type": "array"
           },
           "options": {
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options"
           },
           "payment_ref": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
           "activities"
-        ]
+        ],
+        "title": "calculate_inventoryArguments",
+        "type": "object"
       }
     },
     {
       "name": "classify_activity",
       "description": "Suggest scope and Scope 3 category from the bundled deterministic map.\nNo inference is used; unknown activity types return no suggestion.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "activity": {
+            "additionalProperties": true,
+            "title": "Activity",
             "type": "object"
           }
         },
         "required": [
           "activity"
-        ]
+        ],
+        "title": "classify_activityArguments",
+        "type": "object"
       }
     },
     {
       "name": "list_factor_packs",
       "description": "List the bundled pack version/digest, supported regions and years,\nactivity types, GWP set, and explicit MVP coverage.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "list_factor_packsArguments",
+        "type": "object"
       }
     },
     {
       "name": "get_factor_pack",
       "description": "Return factors, GWP values, conversions, sources, and pack SHA for one\nexact bundled region/year. No nearest-region or nearest-year substitution.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "region": {
+            "title": "Region",
             "type": "string"
           },
           "year": {
+            "title": "Year",
             "type": "integer"
           }
         },
         "required": [
           "region",
           "year"
-        ]
+        ],
+        "title": "get_factor_packArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_result",
       "description": "Recompute a prior inventory's audit hash and conservation checks. Pass\nthe prior result object as JSON; tampering or stale factor lineage is flagged.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "result_json": {
+            "title": "Result Json",
             "type": "string"
           }
         },
         "required": [
           "result_json"
-        ]
+        ],
+        "title": "verify_resultArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Return fleet-standard capabilities, version, pack digest, and pricing.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ]

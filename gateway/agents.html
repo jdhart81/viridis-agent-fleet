@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Viridis autonomous carbon & compliance agents</title>
+  <style>
+    :root{color-scheme:dark;--bg:#07140f;--panel:#10251c;--ink:#f3fff9;--muted:#a8c7b8;--green:#55e6a1;--line:#2a4d3d}*{box-sizing:border-box}body{margin:0;background:linear-gradient(140deg,#07140f 55%,#123b29);color:var(--ink);font:16px/1.5 system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:64px 22px}a{color:var(--green)}h1{font-size:clamp(2.7rem,7vw,5.7rem);line-height:.96;max-width:1000px;margin:.25em 0}.lede{font-size:1.28rem;color:var(--muted);max-width:790px}.eyebrow{text-transform:uppercase;letter-spacing:.15em;color:var(--green);font-weight:800}.actions{display:flex;gap:12px;flex-wrap:wrap;margin:30px 0}.button{padding:13px 20px;border:1px solid var(--green);border-radius:999px;text-decoration:none;font-weight:800}.primary{background:var(--green);color:#052016}section{margin-top:56px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px}table{border-collapse:collapse;width:100%;min-width:850px;background:rgba(16,37,28,.92)}th,td{text-align:left;padding:16px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--green)}code{color:#d4f8e7}.trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:15px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}.stat{font-size:2.3rem;font-weight:850;color:var(--green)}
+  </style>
+</head>
+<body><main>
+  <p class="eyebrow">Viridis Agent Fleet · 5 live paid routes</p>
+  <h1>Autonomous, pay-per-call carbon and compliance agents.</h1>
+  <p class="lede">No signup. Pay with x402 and USDC on Base. Chain deterministic JSON tools from embodied-carbon measurement through GHG accounting, sustainability disclosure, clean-energy incentives, and regulatory scanning.</p>
+  <p class="lede"><strong>{{INTRO_STATUS}}</strong></p>
+  <div class="actions"><a class="button primary" href="/quickstart">Start building</a><a class="button" href="https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329">View in CDP Bazaar</a><a class="button" href="https://github.com/jdhart81/viridis-agent-fleet">Source & docs</a></div>
+
+  <section><h2>One chain, five specialist agents</h2><div class="table-wrap"><table>
+    <thead><tr><th>Step</th><th>HTTP x402 endpoint</th><th>Price</th><th>What it does</th><th>Chainable with</th></tr></thead>
+    <tbody>
+      <tr><td>Measure</td><td><code>/x402/quantity-takeoff/calculate_takeoff</code></td><td>$0.50</td><td>Auditable material quantity takeoff for embodied-carbon inputs.</td><td>GHG Ledger</td></tr>
+      <tr><td>Account</td><td><code>/x402/ghg-ledger/calculate_inventory</code></td><td>$1.00</td><td>Deterministic Scope 1, 2, and 3 inventory from activity data.</td><td>Takeoff + Disclosure</td></tr>
+      <tr><td>Disclose</td><td><code>/x402/disclosure-compiler/compile_disclosure</code></td><td>$2.00</td><td>CSRD / IFRS S2 (TCFD-aligned) draft evidence and gap compilation.</td><td>GHG + Tax Credit</td></tr>
+      <tr><td>Claim</td><td><code>/x402/taxcredit-engine/calculate_tax_credit</code></td><td>$2.00</td><td>Auditable scenarios for 45Q, 45V, 45Y, 48E, and 45X.</td><td>Disclosure + Radar</td></tr>
+      <tr><td>Scan</td><td><code>/x402/regulatory-radar/scan_regulations</code></td><td>$0.25</td><td>Energy and climate requirements, urgency, and effective dates.</td><td>The full chain</td></tr>
+    </tbody>
+  </table></div></section>
+
+  <section><h2>How to pay</h2><p>Your agent sends JSON to an endpoint and receives HTTP 402 plus standard x402 v2 payment requirements. An x402-compatible wallet signs the Base USDC authorization and retries; Viridis verifies and settles before the tool executes, then returns the result and settlement receipt. See the <a href="/quickstart">copy-paste quickstart and free dry run</a>, or let an agent read <a href="/llms.txt">llms.txt</a> and the <a href="/x402/catalog">machine catalog</a>.</p></section>
+
+  <section><h2>Built for agents that need evidence</h2><div class="trust">
+    <div class="card"><div class="stat">5</div><b>Bazaar-indexed routes</b><p>Every live route was indexed by a successful CDP settlement.</p></div>
+    <div class="card"><b>Deterministic and auditable</b><p>Pinned factor/rule packs, explicit assumptions, content digests, and structured gaps.</p></div>
+    <div class="card"><b>Settle before serve</b><p>No free execution on verification, settlement, timeout, replay, or persistence errors.</p></div>
+    <div class="card"><b>Receipts that travel</b><p>Payment transaction hashes pair with fleet receipts and the verified-relay proof story.</p></div>
+  </div></section>
+</main></body></html>

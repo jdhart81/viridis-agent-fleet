@@ -1027,20 +1027,40 @@ def build_app():
         _attach_green_certification(cores["green-router"], cores["offsets"],
                                     store)
 
-    # Freemium x402 gate (PG1-PG11, see payment_gate.py): sellable
-    # services stay "free to call today" (FREE_CALLS_PER_DAY, default 10),
-    # then return a payment_required envelope with Stripe + x402 paths.
-    # Every call is metered on the fleet's OWN metering agent — daily
-    # invoices of real usage. Trust and settlement rails are never gated (PG6).
-    from payment_gate import PaymentGate
+    # Connect rail (CR1-CR7, see connect_rail.py): the structural gate that
+    # makes third-party payouts autonomous AND legal — payees onboard with
+    # Stripe (Express, Stripe runs KYC), payouts execute via Stripe's
+    # licensed Transfer rail, pull-verified payouts_enabled at transfer
+    # time, exactly-once per purpose. No onboarding -> certified manual
+    # fallback, never any other path.
+    from connect_rail import ConnectRail
+    connect = ConnectRail(store)
+
+    # PG17 custody bridge (EC1-EC9, see escrow_custody.py): escrows become
+    # CASH-funded through pull-verified Stripe Checkout; cash out
+    # (2026-07-19): refunds + Connect-onboarded payouts execute
+    # autonomously on Stripe's licensed rails; only non-onboarded payees'
+    # payouts remain CERTIFIED for Justin.
+    from escrow_custody import EscrowCustody, verified_stats_from_core
+    custody = EscrowCustody(
+        store, cores["escrow"], connect=connect,
+        # EC10 connect_verified tier: payee's certified delivery count
+        # read sync from the verified core (V7 pure surface); payee id
+        # must equal the registered provider string (uw-v1 keying).
+        verified_stats=verified_stats_from_core(cores["verified"]))
+
+    # Freemium x402 gate (PG1-PG22, see payment_gate.py): sellable services
+    # stay "free to call today" (FREE_CALLS_PER_DAY, default 10), then return
+    # a payment_required envelope with Stripe + x402 paths. PG22 requires an
+    # escrow payment_ref to appear in custody's pull-verified CASH registry;
+    # a pure escrow `fund` transition can no longer mint service credits.
+    # Participant internal-earnings spend remains a separate path.
+    from payment_gate import PaymentGate, PRICE_MINOR, DEFAULT_PRICE_MINOR
     gate = PaymentGate(
         store, cores["metering"], subscription_core=subscription_core,
         account_key_getter=current_account_key,
-        # PG13-PG16: the a2a rail — payment_ref=<escrow_id> on a gated call
-        # verifies + consumes a FUNDED escrow (payee viridis:<name>) for
-        # prepaid credits through escrow's own E6 exactly-once machinery.
-        # Internal-ledger settlement only (PG17 deferred): not cash.
-        escrow_core=cores["escrow"], escrow_persist_key="escrow")
+        escrow_core=cores["escrow"], escrow_persist_key="escrow",
+        custody=custody)
     for path in ("smartscale", "protogen", "taxcredit-engine", "ghg-ledger",
                  "quantity-takeoff", "disclosure-compiler",
                  "narrative-engine", "regulatory-radar", "verified",
@@ -1048,22 +1068,19 @@ def build_app():
         if path in cores:
             gate.attach(path, cores[path])
 
-    # PG17 custody bridge (EC1-EC8, see escrow_custody.py): escrows become
-    # CASH-funded through pull-verified Stripe Checkout; cash out is only
-    # ever CERTIFIED for Justin, never executed by software.
-    from escrow_custody import EscrowCustody
-    custody = EscrowCustody(store, cores["escrow"])
-
-    # The Weave (WV1-WV6, see weave.py): EnergyAI restoration share, rate
+    # The Weave (WV1-WV8, see weave.py): EnergyAI restoration share, rate
     # schedule weave-B-v1 (ratified 2026-07-16), settled through the fleet's
-    # own offset-clearinghouse; cash transfers certified for Justin only.
+    # own offset-clearinghouse. The default Viridis beneficiary is a
+    # same-account allocation; an optional external beneficiary uses the
+    # existing Connect rail with CR7 manual fallback when not onboarded.
     from weave import Weave
-    weave_bridge = Weave(store, cores["offsets"])
+    weave_bridge = Weave(store, cores["offsets"], connect=connect)
 
     # Participant bridge (PB1-PB8, see participant_bridge.py): counterparties
     # become participants — payees claim identities and make earnings liquid
     # (internal-ledger -> fleet credits; cash via EC5 only), and DISPUTED
-    # escrows flow through arbitration to an executed ruling.
+    # escrows flow through arbitration to an executed ruling plus immediate
+    # EC5 cash completion (refund/Connect/manual fallback as applicable).
     from participant_bridge import ParticipantBridge, attach_self_teaching
     participants = ParticipantBridge(
         store, cores["escrow"], cores["identity"], cores["arbitration"],
@@ -1075,12 +1092,12 @@ def build_app():
     # the stdlib escrow core stays pure.
     attach_self_teaching(cores["escrow"])
 
-    # Collateralized bonds (CB1-CB6, see bond_bridge.py): bond-writing with
+    # Collateralized bonds (CB1-CB7, see bond_bridge.py): bond-writing with
     # zero Viridis capital — the provider's own cash-funded escrow is the
     # reserve; premiums priced by uw-v1; slashing stays ruling-gated (SB).
     from bond_bridge import BondBridge
     bonds = BondBridge(store, cores["escrow"], cores["surety"],
-                       cores["verified"], custody)
+                       cores["verified"], custody, connect=connect)
 
     # stateless_http: no session persistence needed for these tools; makes the
     # endpoints trivially load-balancer-friendly.
@@ -1173,26 +1190,55 @@ def build_app():
 
         @pay.tool()
         async def escrow_settlement_instruction(escrow_id: str) -> dict:
-            """PG17/EC5: deterministic settlement paperwork for a terminal
-            cash-funded escrow — a certified payout (net of the escrow's
-            frozen 1% fee) or refund instruction for the account owner, or a
-            revenue-recognition record for viridis:* payees. NEVER moves
-            money; software cannot execute cash out on this fleet."""
+            """PG17/EC5: deterministic settlement for a terminal cash-funded
+            escrow. REFUNDED -> a real Stripe refund is issued to the
+            original session, autonomously (refund-to-originator).
+            RELEASED to a Connect-onboarded payee -> paid autonomously via
+            Stripe's licensed Transfer rail (net of the escrow's frozen 1%
+            fee). RELEASED to a non-onboarded payee -> certified manual
+            instruction for the account owner (the response includes the
+            onboarding hint that makes future payouts autonomous).
+            viridis:* payees -> revenue-recognition record. Idempotent per
+            escrow; transient rail failures refuse fail-closed + retryable."""
             return custody.settlement_instruction(escrow_id)
+
+        @pay.tool()
+        async def begin_payout_onboarding(payee_id: str) -> dict:
+            """Connect rail (CR1): create (once, idempotent) a Stripe
+            Express connected account for this payee and return the
+            Stripe-hosted onboarding link. Stripe runs KYC/AML. Once the
+            payee completes onboarding and payouts_enabled pull-verifies
+            true, escrow payouts to them execute autonomously on Stripe's
+            licensed rail — no human step, no Viridis money-transmitter
+            exposure."""
+            return connect.begin_onboarding(payee_id)
+
+        @pay.tool()
+        async def payout_onboarding_status(payee_id: str) -> dict:
+            """Connect rail (CR2): pull-verify a payee's connected-account
+            state live from Stripe — payouts_enabled, details_submitted,
+            and any requirements_currently_due blocking autonomous
+            payouts. Read-only."""
+            return connect.onboarding_status(payee_id)
 
         @pay.tool()
         async def weave_restoration_share(admin_token: str, event_id: str,
                                           revenue_type: str,
                                           amount_minor: int,
                                           source: str = "",
-                                          dry_run: bool = False) -> dict:
-            """The Weave (WV1-WV6): route an EnergyAI revenue event's
+                                          dry_run: bool = False,
+                                          payee_id: str =
+                                          "viridis:conservation") -> dict:
+            """The Weave (WV1-WV8): route an EnergyAI revenue event's
             restoration share (weave-B-v1: 10% subscription / 5% lead,
             ratified 2026-07-16) through the fleet's own clearinghouse —
             deterministic share, offsets retired cheapest-first with an O4
-            certificate, and a CERTIFIED cash instruction (never executed
-            by software). Idempotent on event_id. Admin-gated: weaving
-            creates a conservation obligation."""
+            certificate, and autonomous cash execution. The default
+            viridis:conservation beneficiary is a same-account allocation;
+            an external payee auto-executes through Stripe Connect when
+            payouts_enabled, otherwise receives the CR7 certified fallback
+            and onboarding hint. Idempotent on event_id. Admin-gated: weaving
+            creates a conservation obligation. dry_run never transfers."""
             import hmac as _hmac
             expected = os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
             if not expected or not isinstance(admin_token, str) \
@@ -1201,7 +1247,8 @@ def build_app():
                         "message": "valid admin_token required "
                                    "(VIRIDIS_ADMIN_TOKEN)"}
             return await weave_bridge.weave_event(
-                event_id, revenue_type, amount_minor, source, dry_run)
+                event_id, revenue_type, amount_minor, source, dry_run,
+                payee_id=payee_id)
 
         @pay.tool()
         async def bind_collateralized_bond(service_id: str,
@@ -1213,18 +1260,47 @@ def build_app():
             (escrow_checkout + confirm_escrow_funding), then bind: your
             collateral backs the bond, the uw-v1 premium (from your Viridis
             Verified delivery record) is deducted, coverage = collateral -
-            premium. Slashing is arbitration-ruling-gated; settlement is
-            certified-only. Better track record = lower premium."""
+            premium. Slashing is arbitration-ruling-gated; provider returns
+            and Connect payouts execute on Stripe with durable rail evidence.
+            Better track record = lower premium."""
             return await bonds.bind(service_id, collateral_escrow_id,
                                     expires_at, duration_days)
 
         @pay.tool()
         async def bond_settlement_instruction(bond_id: str) -> dict:
-            """CB4: certified settlement paperwork for a terminal
-            (RELEASED/EXHAUSTED) collateralized bond — slashed amounts to
-            claimants, premium retained, remainder back to the provider.
-            Never moves money."""
+            """CB4: certified per-leg settlement for a terminal
+            (RELEASED/EXHAUSTED) collateralized bond. provider_return
+            (remainder back to the provider) auto-executes as a partial
+            refund to the original collateral Checkout Session and records
+            refund_id. Each claimant_payout leg
+            auto-executes via Stripe Connect if that claimant is
+            onboarded, else certifies as a manual leg for
+            mark_bond_leg_executed. Premium stays Viridis revenue,
+            recognized at bind."""
             return await bonds.certify_settlement(bond_id)
+
+        @pay.tool()
+        async def mark_bond_leg_executed(admin_token: str, bond_id: str,
+                                         claim_id: str,
+                                         money_primitive_id: str) -> dict:
+            """Admin: record that a MANUAL claimant_payout leg's slashed
+            claim was paid (CB4/CB7). money_primitive_id is the external
+            transfer/refund/bank receipt identifier; a bare executed boolean
+            is never accepted as payment evidence. No-op/duplicate for legs
+            that already auto-executed (provider_return, or a
+            claimant_payout that went out via the Connect rail) — this is
+            the real gate only for the manual fallback, the one remaining
+            human-gated path on a bond settlement. Requires
+            VIRIDIS_ADMIN_TOKEN."""
+            import hmac as _hmac
+            expected = os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
+            if not expected or not isinstance(admin_token, str) \
+                    or not _hmac.compare_digest(admin_token, expected):
+                return {"status": "error", "error_type": "unauthorized",
+                        "message": "valid admin_token required "
+                                   "(VIRIDIS_ADMIN_TOKEN)"}
+            return bonds.mark_leg_executed(
+                bond_id, claim_id, money_primitive_id)
 
         @pay.tool()
         async def claim_payee(payee: str, contact: str = "") -> dict:
@@ -1267,7 +1343,10 @@ def build_app():
         async def execute_arbitration_ruling(case_id: str) -> dict:
             """PB7: apply a RULED case's escrow_instruction
             (release|refund) to its escrow through the escrow's own
-            exactly-once state machine. Idempotent per case."""
+            exactly-once state machine. For custody-cash escrows PB13 then
+            invokes the existing settlement path immediately: refund to the
+            originator, Connect transfer to an onboarded payee, or CR7 manual
+            fallback. Idempotent and retry-safe per case."""
             return await participants.execute_ruling(case_id)
 
         @pay.tool()
@@ -1291,8 +1370,12 @@ def build_app():
         @pay.tool()
         async def mark_weave_transfer_executed(admin_token: str,
                                                event_id: str) -> dict:
-            """Admin: record that a woven event's restoration-share transfer
-            was manually executed in Stripe (WV4). Idempotent."""
+            """Legacy/backward-compat: weave's restoration-share transfers
+            (EnergyAI -> Viridis Conservation, same Stripe account) now
+            auto-execute at weave time with no human step (WV4, revised
+            2026-07-19). This endpoint is retained only as an idempotent
+            confirmation — it returns duplicate=True against an
+            already-executed record."""
             import hmac as _hmac
             expected = os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
             if not expected or not isinstance(admin_token, str) \
@@ -1305,9 +1388,12 @@ def build_app():
         @pay.tool()
         async def mark_escrow_payout_executed(admin_token: str,
                                               escrow_id: str) -> dict:
-            """Admin: record that a certified payout/refund instruction was
-            manually executed in Stripe. Idempotent. Requires
-            VIRIDIS_ADMIN_TOKEN."""
+            """Admin: record that a certified MANUAL payout instruction was
+            executed in Stripe. Idempotent. Since 2026-07-19, refunds and
+            Connect-rail payouts auto-execute — for those records this is
+            a no-op confirmation (duplicate=True); it remains the real
+            gate only for manual payouts to non-onboarded payees.
+            Requires VIRIDIS_ADMIN_TOKEN."""
             import hmac as _hmac
             expected = os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
             if not expected or not isinstance(admin_token, str) \
@@ -1431,9 +1517,18 @@ def build_app():
               and persistence["available"] and not persistence["errors"])
         return JSONResponse({"status": "ok" if ok else "degraded",
                              "gateway": "viridis-agent-stable",
+                             "human_surfaces": {
+                                 "agents": public_base + "/agents",
+                                 "quickstart": public_base + "/quickstart",
+                                 "llms_txt": public_base + "/llms.txt",
+                                 "x402_catalog": public_base + "/x402/catalog",
+                                 "seats": public_base + "/seats",
+                                 "deck": public_base + "/deck",
+                             },
                              "persistence": persistence,
                              "payment_gate": gate.status(),
                              "escrow_custody": custody.status(),
+                             "connect_rail": connect.status(),
                              "weave": weave_bridge.status(),
                              "participants": participants.status(),
                              "collateralized_bonds": bonds.status(),
@@ -1456,6 +1551,26 @@ def build_app():
                 "payments": {"endpoint": "/payments/mcp"},
             },
             "human_surfaces": {
+                "agents": {
+                    "endpoint": "/agents",
+                    "description": ("Public autonomous carbon and compliance "
+                                    "agent suite"),
+                },
+                "quickstart": {
+                    "endpoint": "/quickstart",
+                    "description": ("x402 buyer quickstart and five-route "
+                                    "workflow demo"),
+                },
+                "llms_txt": {
+                    "endpoint": "/llms.txt",
+                    "description": ("Agent-readable product, pricing, "
+                                    "payment, and discovery instructions"),
+                },
+                "x402_catalog": {
+                    "endpoint": "/x402/catalog",
+                    "description": ("Machine-readable payable-route "
+                                    "inventory and live activation policy"),
+                },
                 "seats": {
                     "endpoint": "/seats",
                     "description": ("Public monthly-seat catalog and "
@@ -1476,22 +1591,53 @@ def build_app():
     async def ard_catalog(request):
         now = datetime.now(timezone.utc).isoformat()
         entries = []
+        try:
+            from x402_http import discovery_entries
+            x402_by_agent = {
+                item["agent"]: item
+                for item in discovery_entries(public_base)
+            }
+        except Exception:
+            x402_by_agent = {}
         for path in MOUNTS:
             d = cores[path].describe()
             seo = AGENT_SEO.get(path, {})
+            x402_item = x402_by_agent.get(path)
+            price_minor = PRICE_MINOR.get(path, DEFAULT_PRICE_MINOR)
+            description = seo.get("desc", f"Viridis {path} agent")
+            if x402_item is not None:
+                description += (
+                    f" Price: {price_minor} USD minor units/call after "
+                    f"{gate.free_calls} free calls/day. Pay via x402, "
+                    "cash-backed escrow_checkout, or /seats.")
+            metadata = {"a2aRole": str(d.get("a2a_role", "")),
+                        "gateway": "viridis-agent-stable"}
+            if x402_item is not None:
+                metadata["pricing"] = {
+                    "currency": "USD",
+                    "priceMinor": price_minor,
+                    "freeCallsPerDay": gate.free_calls,
+                    "paymentRoutes": {
+                        "x402": x402_item["endpoint"],
+                        "cashEscrow": public_base + "/payments/mcp",
+                        "cashEscrowTools": ["escrow_checkout",
+                                            "confirm_escrow_funding"],
+                        "seats": public_base + "/seats",
+                    },
+                }
+                metadata["x402"] = x402_item
             entries.append({
                 "identifier": f"urn:air:viridis:{path}",
                 "displayName": d.get("name", path),
                 "type": "application/mcp-server+json",
                 "url": f"{public_base}/{path}/mcp",
-                "description": seo.get("desc", f"Viridis {path} agent"),
+                "description": description,
                 "tags": ["a2a", "agent-economy", "viridis", "conservation", path],
                 "capabilities": [str(c) for c in d.get("capabilities", [])][:20],
                 "representativeQueries": seo.get("queries", [])[:5],
                 "version": str(d.get("version", "0.1.0")),
                 "updatedAt": now,
-                "metadata": {"a2aRole": str(d.get("a2a_role", "")),
-                             "gateway": "viridis-agent-stable"},
+                "metadata": metadata,
                 "trustManifest": {"identity": f"{public_base}/{path}/mcp",
                                   "identityType": "https"},
             })
@@ -1520,18 +1666,56 @@ def build_app():
                 "documentationUrl": "https://github.com/jdhart81/viridis-agent-fleet",
                 "description": ("Viridis deterministic agent services plus "
                                 "public monthly-seat subscriptions at /seats."),
-                "metadata": {"seatCheckoutUrl": public_base + "/seats"},
+                "metadata": {"seatCheckoutUrl": public_base + "/seats",
+                             "agentsUrl": public_base + "/agents",
+                             "x402QuickstartUrl": public_base + "/quickstart",
+                             "llmsTxtUrl": public_base + "/llms.txt",
+                             "x402CatalogUrl": public_base + "/x402/catalog"},
                 "trustManifest": {"identity": public_base, "identityType": "https"},
             },
             "entries": entries,
-            "humanSurfaces": [{
-                "identifier": "urn:air:viridis:seats",
-                "displayName": "Viridis monthly seats",
-                "type": "text/html",
-                "url": public_base + "/seats",
-                "description": ("Human pricing and Stripe-hosted checkout for "
-                                "live Viridis seat plans."),
-            }],
+            "humanSurfaces": [
+                {
+                    "identifier": "urn:air:viridis:agents",
+                    "displayName": "Viridis autonomous agent suite",
+                    "type": "text/html",
+                    "url": public_base + "/agents",
+                    "description": ("Five pay-per-call carbon and compliance "
+                                    "agents, payable with x402 Base USDC."),
+                },
+                {
+                    "identifier": "urn:air:viridis:x402-quickstart",
+                    "displayName": "Viridis x402 quickstart",
+                    "type": "text/html",
+                    "url": public_base + "/quickstart",
+                    "description": ("Copy-paste buyer setup and a chainable "
+                                    "five-route workflow demo."),
+                },
+                {
+                    "identifier": "urn:air:viridis:llms-txt",
+                    "displayName": "Viridis agent-readable catalog",
+                    "type": "text/plain",
+                    "url": public_base + "/llms.txt",
+                    "description": ("LLM-readable routes, exact prices, "
+                                    "x402 flow, and discovery links."),
+                },
+                {
+                    "identifier": "urn:air:viridis:x402-catalog",
+                    "displayName": "Viridis x402 route catalog",
+                    "type": "application/json",
+                    "url": public_base + "/x402/catalog",
+                    "description": ("Machine-readable five-route inventory "
+                                    "with live protocol and Bazaar status."),
+                },
+                {
+                    "identifier": "urn:air:viridis:seats",
+                    "displayName": "Viridis monthly seats",
+                    "type": "text/html",
+                    "url": public_base + "/seats",
+                    "description": ("Human pricing and Stripe-hosted checkout "
+                                    "for live Viridis seat plans."),
+                },
+            ],
         }, media_type="application/ai-catalog+json")
 
     # /deck — self-hosted command deck (same-origin fetch of /healthz, so it
@@ -1562,6 +1746,61 @@ def build_app():
         from starlette.responses import HTMLResponse
         return HTMLResponse(_stats_html)
 
+    # Public activation surfaces use the discoverable seat-page header set:
+    # indexable, no framing, no external scripts, and no sensitive state.
+    _agents_path = Path(__file__).resolve().parent / "agents.html"
+    _agents_html = (_agents_path.read_text() if _agents_path.exists() else
+                    "<h1>agents.html not deployed</h1>")
+    _quickstart_path = Path(__file__).resolve().parent / "quickstart.html"
+    _quickstart_html = (
+        _quickstart_path.read_text() if _quickstart_path.exists() else
+        "<h1>quickstart.html not deployed</h1>")
+    _llms_path = Path(__file__).resolve().parent / "llms.txt"
+    _llms_text = (_llms_path.read_text() if _llms_path.exists() else
+                  "# Viridis agents\n\nllms.txt not deployed\n")
+
+    def _intro_public_line() -> str:
+        try:
+            from x402_http import intro_enabled
+            active = intro_enabled()
+        except Exception:
+            active = False
+        if active:
+            return ("First paid call from every new wallet is $0.01 USDC; "
+                    "subsequent calls use the unchanged list price.")
+        return "Intro pricing is currently disabled; list prices apply."
+
+    async def agents_page(request):
+        from starlette.responses import HTMLResponse
+        return HTMLResponse(
+            _agents_html.replace("{{INTRO_STATUS}}", _intro_public_line()),
+            headers=dict(_SEAT_PUBLIC_HEADERS))
+
+    async def quickstart(request):
+        from starlette.responses import HTMLResponse
+        return HTMLResponse(
+                            _quickstart_html.replace(
+                                "{{INTRO_STATUS}}", _intro_public_line()),
+                            headers=dict(_SEAT_PUBLIC_HEADERS))
+
+    async def llms_txt(request):
+        from starlette.responses import PlainTextResponse
+        return PlainTextResponse(
+            _llms_text.replace("{{INTRO_STATUS}}", _intro_public_line()),
+            headers=dict(_SEAT_PUBLIC_HEADERS),
+            media_type="text/plain")
+
+    async def x402_catalog(request):
+        from x402_http import discovery_entries, intro_status
+        return JSONResponse({
+            "spec_version": "viridis-x402-catalog-v1",
+            "gateway": "viridis-agent-stable",
+            "intro_pricing": intro_status(cores),
+            "routes": discovery_entries(public_base),
+            "quickstart": public_base + "/quickstart",
+            "llms_txt": public_base + "/llms.txt",
+        })
+
     @contextlib.asynccontextmanager
     async def lifespan(app):
         async with contextlib.AsyncExitStack() as stack:
@@ -1585,11 +1824,15 @@ def build_app():
         from x402_http import make_x402_http_route
         x402_http_routes = [Route("/x402/{agent}/{tool}",
                                   make_x402_http_route(cores, store, public_base),
-                                  methods=["POST"])]
+                                  methods=["GET", "POST"])]
     except Exception:
         logger.warning("x402 HTTP-402 surface not loaded", exc_info=True)
 
     app = Starlette(routes=[Route("/", directory), Route("/healthz", healthz),
+                            Route("/agents", agents_page),
+                            Route("/quickstart", quickstart),
+                            Route("/llms.txt", llms_txt),
+                            Route("/x402/catalog", x402_catalog),
                             Route("/deck", deck), Route("/stats", stats),
                             Route("/.well-known/ai-catalog.json", ard_catalog),
                             *seat_routes, *x402_http_routes, *routes],

@@ -1221,7 +1221,7 @@
   "ghg-ledger": [
     {
       "name": "calculate_inventory",
-      "description": "Calculate an auditable GHG inventory from explicit activity records.\n    Returns per-line gas/CO2e results, Scope 1/2/3 and category rollups, dual\n    Scope 2 reporting, indeterminate lines, factor lineage, notary payload, and\n    an offset-clearinghouse dry-run weave. This is calculation, not advice.",
+      "description": "Calculate an auditable GHG inventory from explicit activity records.\nReturns per-line gas/CO2e results, Scope 1/2/3 and category rollups, dual\nScope 2 reporting, indeterminate lines, factor lineage, notary payload, and\nan offset-clearinghouse dry-run weave. This is calculation, not advice.\nPrice: $1.00 per call after 10 free calls/day. Pay at\n/x402/ghg-ledger/calculate_inventory with Base USDC, cash-fund payment_ref\nthrough escrow_checkout + confirm_escrow_funding, or use /seats.",
       "inputSchema": {
         "properties": {
           "activities": {
@@ -3440,7 +3440,7 @@
   "regulatory-radar": [
     {
       "name": "scan_regulations",
-      "description": "Scan the regulatory landscape for a jurisdiction (e.g. EU, US), optionally filtered by sector.\n\n    Returns regulations with urgency flags and effective dates.",
+      "description": "Scan the regulatory landscape for a jurisdiction (e.g. EU, US), optionally filtered by sector.\n\nReturns regulations with urgency flags and effective dates. Price: $0.25\nper call after 10 free calls/day. Pay at\n/x402/regulatory-radar/scan_regulations with Base USDC, cash-fund payment_ref through\nescrow_checkout + confirm_escrow_funding, or use /seats.",
       "inputSchema": {
         "properties": {
           "jurisdiction": {
@@ -4097,7 +4097,7 @@
   "taxcredit-engine": [
     {
       "name": "calculate_tax_credit",
-      "description": "Calculate an auditable tax-credit scenario. credit is 45Q, 45V, 45Y,\n    48E, or 45X. facts must contain the explicit credit-specific eligibility\n    facts; missing facts return indeterminate. This is not tax or filing advice.",
+      "description": "Calculate an auditable tax-credit scenario. credit is 45Q, 45V, 45Y,\n48E, or 45X. facts must contain the explicit credit-specific eligibility\nfacts; missing facts return indeterminate. This is not tax or filing advice.\nPrice: $2.00 per call after 10 free calls/day. Pay at\n/x402/taxcredit-engine/calculate_tax_credit with Base USDC, cash-fund\npayment_ref through escrow_checkout + confirm_escrow_funding, or use /seats.",
       "inputSchema": {
         "properties": {
           "credit": {

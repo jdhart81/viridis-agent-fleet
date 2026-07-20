@@ -1,0 +1,3 @@
+# Isolated growth container only; never install in the payment gateway.
+# Wheel SHA-256 recorded in the deployment handoff.
+openai-agents==0.18.3

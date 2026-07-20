@@ -54,10 +54,13 @@ MEASURE_ARGS = {"image_id": "img-1", "credit_card_pixel_width": 856.0,
 
 
 class FakeRequest:
-    def __init__(self, agent, tool, headers=None, body=None):
+    def __init__(self, agent, tool, headers=None, body=None, method="POST",
+                 query=None):
         self.path_params = {"agent": agent, "tool": tool}
         self.headers = headers or {}
         self._body = body if body is not None else {}
+        self.method = method
+        self.query_params = query or {}
 
     async def json(self):
         return self._body
@@ -126,6 +129,17 @@ def test_H402_1_unpaid_returns_402_with_accepts(rig):
     assert r.status_code == 402
     a = body_of(r)["accepts"][0]
     assert a["network"] == "base" and a["maxAmountRequired"] == "500000"  # 50c
+    assert a["scheme"] == "exact" and a["payTo"] == "0xViridis"
+    assert a["outputSchema"] == {"type": "object",
+                                  "additionalProperties": True}
+    assert "MCP pointer: https://mcp.test/smartscale/mcp" in a["description"]
+
+
+def test_H402_1_get_is_a_real_unpaid_discovery_challenge(rig):
+    handler, _, _ = rig
+    r = go(handler, FakeRequest("smartscale", "measure", method="GET"))
+    assert r.status_code == 402
+    assert body_of(r)["error"] == "X-PAYMENT required"
 
 
 # --- H402-2 settle-then-serve + H402-4 ungated exec -------------------------- #
@@ -155,6 +169,27 @@ def test_H402_5_settlement_shows_in_gate_status(rig):
     assert s["payments"] == 1 and "0xTEL" in s["tx_hashes"]
 
 
+def test_wave8_health_exposes_per_route_and_total_buyer_signal(rig):
+    _, scale, gate = rig
+    getattr(scale, GATE_ATTR)["consumed_x402"]["v2:one"] = {
+        "surface": "http-402-v2", "classification_version": 1,
+        "route": "quantity-takeoff/calculate_takeoff",
+        "payer_wallet": "0xExternal", "self_settle": False,
+        "amount_atomic": "500000", "tx_hash": "0xfirst-dollar",
+        "timestamp": "2026-07-20T01:02:03+00:00", "credits": 1,
+    }
+    telemetry = gate.status()["x402"]["http_settlement_telemetry"]
+    assert telemetry["total"]["external_settlements"] == 1
+    assert telemetry["total"]["distinct_external_payers"] == 1
+    assert telemetry["total"]["external_revenue_atomic"] == 500000
+    assert telemetry["total"]["first_external_settlement"] == {
+        "tx_hash": "0xfirst-dollar",
+        "timestamp": "2026-07-20T01:02:03+00:00"}
+    assert telemetry["per_route"][
+        "disclosure-compiler/compile_disclosure"][
+            "first_external_settlement"] is None
+
+
 # --- H402-6 allowlist / disabled --------------------------------------------- #
 def test_H402_6_unknown_tool_is_404(rig):
     handler, _, _ = rig
@@ -172,9 +207,12 @@ def test_H402_6_disabled_rail_is_503(tmp_path, monkeypatch):
 # --- H402-7 fail-closed ------------------------------------------------------ #
 def test_H402_7_failed_settlement_serves_nothing(rig):
     handler, scale, _ = rig
+    calls = []
+    scale._gate_inner = lambda payload: calls.append(payload) or {"status": "ok"}
     r = go(handler, req(headers={"x-payment": header()}), settle=False)
     assert r.status_code == 402 and "settlement failed" in body_of(r)["error"]
     assert not getattr(scale, GATE_ATTR).get("consumed_x402")
+    assert calls == []
 
 
 def test_H402_7_malformed_header_402(rig):
@@ -183,10 +221,30 @@ def test_H402_7_malformed_header_402(rig):
     assert r.status_code == 402 and "malformed" in body_of(r)["error"]
 
 
-def test_registered_production_allowlist_is_regulatory_radar():
-    # the shipped default registry stays as intended (no test leakage)
-    assert x402_http.X402_HTTP_TOOLS.get(
-        ("regulatory-radar", "scan_regulations")) == "scan"
+def test_registered_production_allowlist_has_five_priced_front_doors():
+    assert x402_http.X402_HTTP_TOOLS == {
+        ("regulatory-radar", "scan_regulations"): "scan",
+        ("taxcredit-engine", "calculate_tax_credit"): "calculate",
+        ("ghg-ledger", "calculate_inventory"): "calculate_inventory",
+        ("quantity-takeoff", "calculate_takeoff"): "calculate_takeoff",
+        ("disclosure-compiler", "compile_disclosure"): "compile_disclosure",
+    }
+
+
+def test_discovery_inventory_has_exact_prices_and_atomic_math():
+    entries = {e["agent"]: e for e in
+               x402_http.discovery_entries("https://mcp.test")}
+    assert entries["regulatory-radar"]["price_minor"] == 25
+    assert entries["regulatory-radar"]["amount_atomic_usdc"] == "250000"
+    assert entries["taxcredit-engine"]["price_minor"] == 200
+    assert entries["taxcredit-engine"]["amount_atomic_usdc"] == "2000000"
+    assert entries["ghg-ledger"]["price_minor"] == 100
+    assert entries["ghg-ledger"]["amount_atomic_usdc"] == "1000000"
+    assert entries["quantity-takeoff"]["price_minor"] == 50
+    assert entries["quantity-takeoff"]["amount_atomic_usdc"] == "500000"
+    assert entries["disclosure-compiler"]["price_minor"] == 200
+    assert entries["disclosure-compiler"]["amount_atomic_usdc"] == "2000000"
+    assert all(e["methods"] == ["GET", "POST"] for e in entries.values())
 
 
 if __name__ == "__main__":

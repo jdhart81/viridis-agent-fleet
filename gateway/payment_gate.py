@@ -111,6 +111,15 @@ PG21 SEAT UPSELL: a freemium payment_required envelope for a caller who
      paywall hits are the subscription funnel's warmest leads. Never on
      the subscription_overage path (they already have a seat). Additive
      only; below the threshold the envelope is byte-identical to PG19.
+PG22 REAL-BACKING GATE: when custody is wired, payment_ref credits are
+     granted only for escrows present in custody.state.funded — the
+     pull-verified CASH registry established by PG17/EC3. A pure escrow
+     `fund` state transition is refused as not_cash_funded and teaches the
+     caller both real payment routes (Stripe cash funding and x402 USDC).
+     custody=None preserves the legacy isolated-unit path; the production
+     gateway always wires custody. Already-consumed pre-PG22 grants remain
+     replay-safe and are never clawed back. Participant earnings spend is a
+     separate service-backed path and is intentionally unaffected.
 """
 from __future__ import annotations
 
@@ -175,6 +184,32 @@ CALLER_TABLE_MAX = 500
 # PG21: a caller refused this many times in one day gets the seat upsell.
 SEAT_HINT_REFUSALS = 3
 SEATS_URL = "https://mcp.viridisconservation.com/seats"
+# PG21b (seat upsell, agent-specific, 2026-07-19): cheapest seat plan that
+# covers each gated agent, sourced from
+# subscriptions-agent/data/plan_catalog.v0.3.0.json (schema_version 1.0,
+# effective_as_of 2026-07-15, currency usd). Hardcoded so the gate does NO
+# file I/O per request — if the catalog changes, update this dict and bump
+# the comment, never read the file at request time. Tie-break where two
+# plans cover an agent at the same price (disclosure-compiler: climate-seat
+# and compliance-seat both 14900): first match in catalog plan order.
+SEAT_PLANS: Dict[str, dict] = {
+    "regulatory-radar": {
+        "plan_id": "compliance-seat", "price_monthly_minor": 14900,
+        "included_calls_per_month": 1000,
+        "covered_agents": ["disclosure-compiler", "regulatory-radar"]},
+    "disclosure-compiler": {
+        "plan_id": "climate-seat", "price_monthly_minor": 14900,
+        "included_calls_per_month": 1000,
+        "covered_agents": ["disclosure-compiler", "ghg-ledger"]},
+    "ghg-ledger": {
+        "plan_id": "ghg-seat", "price_monthly_minor": 9900,
+        "included_calls_per_month": 1000,
+        "covered_agents": ["ghg-ledger"]},
+    "taxcredit-engine": {
+        "plan_id": "taxcredit-seat", "price_monthly_minor": 14900,
+        "included_calls_per_month": 1000,
+        "covered_agents": ["taxcredit-engine"]},
+}
 
 
 def _x402_status_enabled() -> bool:
@@ -184,6 +219,43 @@ def _x402_status_enabled() -> bool:
         return x402_rail.is_enabled()
     except Exception:
         return False
+
+
+def _x402_http_status() -> list:
+    """Wave 6 discovery summary; absent module degrades to an empty list."""
+    try:
+        from x402_http import discovery_entries
+        return discovery_entries("https://mcp.viridisconservation.com")
+    except Exception:
+        return []
+
+
+def _x402_http_settlement_metrics(cores: Dict[str, Any]) -> dict:
+    """Wave 8 buyer-signal telemetry; absent module fails read-only/empty."""
+    try:
+        from x402_http import settlement_metrics
+        return settlement_metrics({
+            name: getattr(core, GATE_ATTR, {}) for name, core in cores.items()
+        })
+    except Exception:
+        empty = {"settlements_total": 0, "self_settlements": 0,
+                 "external_settlements": 0,
+                 "distinct_external_payers": 0,
+                 "external_revenue_atomic": 0,
+                 "first_external_settlement": None}
+        return {"total": empty, "per_route": {}}
+
+
+def _x402_intro_status(cores: Dict[str, Any]) -> dict:
+    """Wave 9 default-off first-payer price status."""
+    try:
+        from x402_http import intro_status
+        return intro_status(cores)
+    except Exception:
+        return {"enabled": False, "schedule": {"version": "x402-intro-v1",
+                                                "price_minor": 1,
+                                                "amount_atomic": "10000"},
+                "seen_payers": 0}
 
 
 def _is_anon_key(key: str) -> bool:
@@ -201,7 +273,8 @@ class PaymentGate:
                  subscription_core=None,
                  account_key_getter: Optional[Callable[[], Optional[str]]] = None,
                  request_id_factory: Optional[Callable[[], str]] = None,
-                 escrow_core=None, escrow_persist_key: str = "escrow"):
+                 escrow_core=None, escrow_persist_key: str = "escrow",
+                 custody=None):
         self.store = store
         self.metering = metering_core
         self.subscriptions = subscription_core
@@ -217,6 +290,9 @@ class PaymentGate:
         # payment_ref is refused fail-closed (PG15), never crashes.
         self.escrow = escrow_core
         self.escrow_persist_key = escrow_persist_key
+        # PG22: optional only for backwards-compatible unit composition; the
+        # live gateway always supplies EscrowCustody.
+        self.custody = custody
         self._a2a_errors: Dict[str, str] = {}
         self._x402_errors: Dict[str, str] = {}      # PRX settlement errors
 
@@ -256,10 +332,14 @@ class PaymentGate:
                 },
                 "a2a": {
                     "method": "x402",
-                    "note": ("Open+fund an escrow via "
+                    "note": ("Open an escrow via "
                              "https://mcp.viridisconservation.com/escrow/mcp "
-                             "payable to viridis:" + name +
-                             ", then retry with payment_ref=<escrow_id>."),
+                             "payable to viridis:" + name + ". For real USD "
+                             "backing call escrow_checkout(escrow_id), pay the "
+                             "Stripe URL, call confirm_escrow_funding, then "
+                             "retry the same payment_ref. Wallet agents may "
+                             "instead pay the advertised x402 Base-USDC "
+                             "challenge."),
                     "batch_hint": {                                # PG19
                         "how": (f"one LARGER funded escrow prepays "
                                 f"floor(amount_minor / {price}) {name} "
@@ -294,6 +374,21 @@ class PaymentGate:
                 "plans": "5 checkout-ready plans; subscribe once, every "
                          "caller on your account key is covered",
             }
+        if not subscription_overage:                            # PG21b
+            plan = SEAT_PLANS.get(name)
+            if plan is not None:
+                covered = " + ".join(plan["covered_agents"])
+                dollars = plan["price_monthly_minor"] / 100
+                calls = f"{plan['included_calls_per_month']:,}"
+                envelope["payment"]["seat_option"] = {
+                    "plan_id": plan["plan_id"],
+                    "price_monthly_minor": plan["price_monthly_minor"],
+                    "included_calls_per_month":
+                        plan["included_calls_per_month"],
+                    "checkout_url": SEATS_URL,
+                    "note": (f"{plan['plan_id']}: ${dollars:.0f}/mo covers "
+                             f"{calls} calls across {covered}"),
+                }
         # PRX1: standards-compliant x402 challenge — additive, and present
         # ONLY when the rail is armed (X402_ENABLED + address + facilitator).
         # A standard x402 client reads top-level `accepts`; disabled => this
@@ -628,6 +723,43 @@ class PaymentGate:
                     return {"payment_ref": ref,
                             "refusal_reason": "underfunded",
                             "amount_minor_required": price}
+                # PG22: escrow `fund` alone is bookkeeping, not money. Once
+                # custody is wired, only EC3's pull-verified Stripe registry
+                # can back a payment_ref grant. The prior-consumed check above
+                # intentionally precedes this gate so historical grants stand.
+                cash_funded = False
+                if self.custody is not None:
+                    cash_registry = getattr(
+                        getattr(self.custody, "state", None), "funded", {})
+                    cash_funded = ref in cash_registry
+                    if not cash_funded:
+                        return {
+                            "payment_ref": ref,
+                            "refusal_reason": "not_cash_funded",
+                            "how_to_pay": {
+                                "stripe_cash_escrow": {
+                                    "endpoint": ("https://mcp.viridisconservation.com/"
+                                                 "payments/mcp"),
+                                    "steps": [
+                                        "call escrow_checkout(escrow_id)",
+                                        "pay the returned Stripe Checkout URL",
+                                        "call confirm_escrow_funding(escrow_id, session_id)",
+                                        "retry the same payment_ref",
+                                    ],
+                                },
+                                "x402_usdc": {
+                                    "network": "Base mainnet",
+                                    "asset": "USDC",
+                                    "http_endpoint": (
+                                        "https://mcp.viridisconservation.com/"
+                                        f"x402/{name}/<tool>"),
+                                    "mcp_fallback": (
+                                        "retry the MCP tool with a signed "
+                                        "X-PAYMENT for its advertised accepts "
+                                        "challenge"),
+                                },
+                            },
+                        }
                 released = self.escrow.process_sync({
                     "action": "release", "escrow_id": ref,
                     "delivery_proof": {
@@ -645,6 +777,9 @@ class PaymentGate:
                 gate["credits"] = gate.get("credits", 0) + credits
                 consumed[ref] = {
                     "credits": credits, "amount_minor": amount,
+                    # Legacy custody=None calls are never labeled as cash.
+                    # Production reaches here only after the EC3 check above.
+                    "cash_funded": cash_funded,
                     "consumed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ",
                                                  time.gmtime())}
                 if len(consumed) > 1000:                       # bounded (PG16)
@@ -665,8 +800,9 @@ class PaymentGate:
                             "refusal_reason": "settlement_not_durable"}
                 self._a2a_errors.pop(name, None)
                 logger.info("payment_gate[%s]: escrow %s consumed for %s "
-                            "credits (%s minor, internal ledger — not cash)",
-                            name, ref, credits, amount)
+                            "credits (%s minor, %s)", name, ref, credits,
+                            amount, ("custody-verified cash" if cash_funded
+                                     else "legacy path — not classified cash"))
                 return None                                                # PG13
             except Exception as exc:                                       # PG15
                 self._a2a_errors[name] = (
@@ -1185,11 +1321,19 @@ class PaymentGate:
                 },
                 "a2a_escrow": {                                # PG13-PG17
                     "enabled": self.escrow is not None,
-                    "note": "cash iff custody-verified (PG17/EC3 — see "
-                            "escrow_custody + reconcile_revenue); "
-                            "otherwise internal ledger, not cash",
+                    "cash_backing_enforced": self.custody is not None,
+                    "note": "payment_ref credits require custody-verified "
+                            "cash in production (PG22/PG17/EC3); historical "
+                            "or legacy custody=None grants remain internal "
+                            "ledger, not cash",
                     "consumed": {
                         n: {"escrows": len(g.get("consumed_escrows", {})),
+                            "cash_escrows": sum(
+                                1 for v in g.get("consumed_escrows", {}).values()
+                                if v.get("cash_funded") is True),
+                            "internal_escrows": sum(
+                                1 for v in g.get("consumed_escrows", {}).values()
+                                if v.get("cash_funded") is not True),
                             "credits_granted": sum(
                                 v["credits"]
                                 for v in g.get("consumed_escrows",
@@ -1218,21 +1362,33 @@ class PaymentGate:
                         for n, c in self._cores.items()
                         for g in [getattr(c, GATE_ATTR)]
                         if g.get("consumed_x402")},
+                    "http_front_door": _x402_http_status(),
+                    "http_settlement_telemetry":
+                        _x402_http_settlement_metrics(self._cores),
+                    "intro_pricing": _x402_intro_status(self._cores),
                     "errors": dict(self._x402_errors),
                 },
                 "conversion": {                                # PG20
                     "note": ("the 402 funnel, honestly split: refusals_today "
                              "and distinct refused callers reset at 00:00 UTC "
                              "(PG7) and persist across restarts (PG5); "
-                             "escrows_consumed / sessions_redeemed are "
-                             "cumulative. conversion = strangers who came "
-                             "back with money after a 402."),
+                             "escrows_consumed is split into cash-backed vs "
+                             "internal, while the old total remains their sum; "
+                             "sessions_redeemed is cumulative. conversion = "
+                             "strangers who came back with real backing after "
+                             "a 402."),
                     "per_agent": {
                         n: {"refusals_today": g.get("refused", 0),
                             "refused_callers_today":
                                 len(g.get("refused_by_caller", {})),
                             "escrows_consumed_total":
                                 len(g.get("consumed_escrows", {})),
+                            "escrows_consumed_cash_total": sum(
+                                1 for v in g.get("consumed_escrows", {}).values()
+                                if v.get("cash_funded") is True),
+                            "escrows_consumed_internal_total": sum(
+                                1 for v in g.get("consumed_escrows", {}).values()
+                                if v.get("cash_funded") is not True),
                             "sessions_redeemed_total":
                                 len(g.get("redeemed_sessions", {}))}
                         for n, c in self._cores.items()

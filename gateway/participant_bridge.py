@@ -11,8 +11,10 @@ them, or resolve conflicts. This bridge closes both loops:
   that balance LIQUID: internal-ledger earnings convert into prepaid call
   credits on any gated fleet service (earnings become a service-backed
   currency), while custody-cash earnings pay out through the existing
-  certified-only rail (EC5). Every paid counterparty becomes a recruited,
-  identified, trust-accruing fleet participant.
+  EC5 rail: Connect-onboarded payees are paid autonomously and only genuine
+  non-Connect recipients receive the certified fallback. Every paid
+  counterparty becomes a recruited, identified, trust-accruing fleet
+  participant.
 
   DISPUTE INTAKE — a DISPUTED escrow files into the arbitration core
   (evidence-cited, hash-committed rulings, A-invariants) and the ruling's
@@ -27,9 +29,9 @@ PB1  claim_payee registers the payee name in the identity registry
      claim per payee name, first-come (a rival claim is refused and
      directed to arbitration). V1 HONESTY: possession of the name string
      is not proven; therefore a claim unlocks ONLY internal-credit
-     spending (bounded value). CASH payouts remain certified-only (EC5) —
-     a human reviews the payee before money moves. Claims are visible in
-     status() for review.
+     spending (bounded value). CASH eligibility is independently established
+     by Stripe Connect onboarding and custody EC5; the claim review marker is
+     never a money-movement gate. Claims remain visible in status().
 PB2  payee_balance is derived, never stored: earned = sum of
      net_to_payee_minor over RELEASED escrows naming the payee, split
      cash-backed (custody registry, PG17/EC3) vs internal-ledger, minus
@@ -41,8 +43,9 @@ PB3  spend_earnings converts INTERNAL earned balance into prepaid credits
      idempotent per spend_id, persisted before acknowledgement; a failed
      persist reverts and never double-spends (PG16/EC7 family).
 PB4  Only internal-ledger balance is spendable via PB3. Cash-backed
-     balance is only referenced toward the certified payout instruction
-     path (escrow_custody EC5); this bridge never moves cash.
+     balance is only referenced toward escrow_custody EC5, which owns
+     autonomous origin refunds / Connect transfers and the non-Connect
+     certified fallback; this bridge never reimplements money movement.
 PB5  Failures degrade to structured refusals; nothing here crashes a tool
      call; partial state never persists (save-or-revert).
 PB6  file_escrow_dispute requires the escrow to be DISPUTED; files an
@@ -94,6 +97,13 @@ PB12 SELF-TEACHING FUNDING (added 2026-07-17; live evidence: ~9 escrows
      the gated call with payment_ref, PG13 floor-division credits; other
      payees -> deliver/release/dispute). Same additive/idempotent
      contract as PB9/PB10.
+PB13 AUTONOMOUS CASH COMPLETION (2026-07-20): after PB7 durably applies a
+     ruling to a custody-cash escrow, the bridge immediately invokes the
+     existing EC5 settlement path. Refund rulings issue the origin refund;
+     release rulings use Connect when the payee is onboarded and otherwise
+     produce CR7's manual fallback. A transient settlement error is retryable
+     on the same case_id; replay never repeats a money movement because EC5/CR
+     are independently idempotent. Internal-ledger rulings never call custody.
 """
 from __future__ import annotations
 
@@ -159,6 +169,47 @@ class ParticipantBridge:
         except Exception as exc:                                # PB5
             self._errors["persist"] = f"{type(exc).__name__}: {exc}"
             return False
+
+    def _is_cash_funded(self, escrow_id: str) -> bool:
+        funded = getattr(getattr(self.custody, "state", None), "funded", {}) or {}
+        return escrow_id in funded
+
+    def _complete_cash_settlement(self, record: dict) -> dict:
+        """PB13: compose an already-durable ruling execution into EC5.
+
+        The custody rail owns all money movement and its own exactly-once
+        persistence. This bridge only stores the returned receipt so replay
+        can distinguish complete orchestration from a retryable rail error.
+        """
+        escrow_id = str(record.get("escrow_id", ""))
+        if not self._is_cash_funded(escrow_id):
+            return {"status": "ok", "cash_settlement": {
+                "status": "n/a", "reason": "internal_ledger"}}
+        prior = record.get("cash_settlement")
+        if isinstance(prior, dict) and prior.get("status") == "ok":
+            return {"status": "ok", "cash_settlement": prior,
+                    "duplicate": True}
+        try:
+            settlement = self.custody.settlement_instruction(escrow_id)
+        except Exception as exc:
+            return _err("cash_settlement_error",
+                        f"custody settlement raised {type(exc).__name__}; "
+                        "retry the same case_id")
+        if not isinstance(settlement, dict) or settlement.get("status") != "ok":
+            detail = settlement if isinstance(settlement, dict) else {}
+            return _err("cash_settlement_failed",
+                        "ruling is durable but cash settlement did not "
+                        "complete; retry the same case_id",
+                        settlement_error={k: detail.get(k) for k in
+                                          ("error_type", "message")})
+        record["cash_settlement"] = dict(settlement)
+        if not self._persist():
+            record.pop("cash_settlement", None)
+            return _err("settlement_receipt_persist_failed",
+                        "custody settled idempotently but the participant "
+                        "receipt was not durable; retry the same case_id",
+                        settlement=settlement)
+        return {"status": "ok", "cash_settlement": settlement}
 
     # ---------------- payee economy (PB1-PB4) -------------------------- #
     def _released_escrows_for(self, payee: str) -> list:
@@ -361,7 +412,12 @@ class ParticipantBridge:
             return _err("bad_case_id", "case_id is required")
         case_id = case_id.strip()
         prior = self.state.executions.get(case_id)
-        if prior is not None:                                   # PB7 idempotent
+        if prior is not None:                                   # PB7/PB13 replay
+            completed = self._complete_cash_settlement(prior)
+            if completed.get("status") != "ok":
+                return completed
+            if "cash_settlement" not in prior:
+                prior["cash_settlement"] = completed["cash_settlement"]
             return {"status": "ok", "duplicate": True, **prior}
         try:
             case = await self.arbitration.process({"action": "get_case",
@@ -391,6 +447,9 @@ class ParticipantBridge:
                   "escrow_state": (outcome.get("data") or {}).get("state"),
                   "ruling_hash": ruling.get("ruling_hash"),
                   "executed_at": _now()}
+        if not self._is_cash_funded(record["escrow_id"]):
+            record["cash_settlement"] = {
+                "status": "n/a", "reason": "internal_ledger"}
         self.state.executions[case_id] = record
         try:                                                    # PB5/PB8 atomic
             saved = bool(self.store.save_many({
@@ -403,6 +462,11 @@ class ParticipantBridge:
             self.state.executions.pop(case_id, None)
             return _err("persist_failed", "execution not durable; retry — "
                         "the escrow transition is exactly-once (E6)")
+        completed = self._complete_cash_settlement(record)
+        if completed.get("status") != "ok":
+            return completed
+        if "cash_settlement" not in record:
+            record["cash_settlement"] = completed["cash_settlement"]
         return {"status": "ok", "duplicate": False, **record}
 
     # ---------------- autonomous default judgment (PB11) --------------- #

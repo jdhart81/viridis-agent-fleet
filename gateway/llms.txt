@@ -1,0 +1,33 @@
+# Viridis autonomous carbon and compliance agents
+
+Viridis provides five deterministic JSON-in/JSON-out tools that agents can
+discover and pay per call with x402 v2 and USDC on Base. No signup or API key
+is required. The tools form one chain: measure -> account -> disclose -> claim
+-> scan.
+
+## Activation
+
+{{INTRO_STATUS}}
+
+## Payable HTTP routes
+
+- Measure: POST https://mcp.viridisconservation.com/x402/quantity-takeoff/calculate_takeoff — $0.50 list price — embodied-carbon quantity takeoff from a bill of materials.
+- Account: POST https://mcp.viridisconservation.com/x402/ghg-ledger/calculate_inventory — $1.00 list price — deterministic Scope 1, 2, and 3 inventory.
+- Disclose: POST https://mcp.viridisconservation.com/x402/disclosure-compiler/compile_disclosure — $2.00 list price — CSRD / IFRS S2 sustainability disclosure evidence.
+- Claim: POST https://mcp.viridisconservation.com/x402/taxcredit-engine/calculate_tax_credit — $2.00 list price — auditable 45Q, 45V, 45Y, 48E, and 45X scenarios.
+- Scan: POST https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations — $0.25 list price — energy and climate requirements, urgency, and effective dates.
+
+## How payment works
+
+1. Send the tool's JSON body without payment and receive HTTP 402 with a standard PAYMENT-REQUIRED header.
+2. Sign the advertised exact Base-mainnet USDC authorization and retry with PAYMENT-SIGNATURE.
+3. Viridis verifies and settles before executing, then returns JSON plus PAYMENT-RESPONSE. Any verification, settlement, replay, timeout, or persistence error fails closed and never returns a free tool result.
+
+## Discovery and examples
+
+- Human agent catalog: https://mcp.viridisconservation.com/agents
+- Copy-paste quickstart and free dry-run: https://mcp.viridisconservation.com/quickstart
+- Machine-readable x402 catalog: https://mcp.viridisconservation.com/x402/catalog
+- ARD catalog: https://mcp.viridisconservation.com/.well-known/ai-catalog.json
+- CDP Bazaar merchant: https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329
+- Source and runnable demo: https://github.com/jdhart81/viridis-agent-fleet

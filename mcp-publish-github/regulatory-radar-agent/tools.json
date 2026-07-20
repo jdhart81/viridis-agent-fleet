@@ -4,83 +4,140 @@
   "tools": [
     {
       "name": "scan_regulations",
-      "description": "Scan the regulatory landscape for a jurisdiction (e.g. EU, US), optionally filtered by sector.\n\nReturns regulations with urgency flags and effective dates.",
+      "description": "Scan the regulatory landscape for a jurisdiction (e.g. EU, US), optionally filtered by sector.\n\nReturns regulations with urgency flags and effective dates. Price: $0.25\nper call after 10 free calls/day. Pay at\n/x402/regulatory-radar/scan_regulations with Base USDC, cash-fund payment_ref through\nescrow_checkout + confirm_escrow_funding, or use /seats.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "jurisdiction": {
+            "title": "Jurisdiction",
             "type": "string"
           },
           "sector": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sector"
           },
           "payment_ref": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
           "jurisdiction"
-        ]
+        ],
+        "title": "scan_regulationsArguments",
+        "type": "object"
       }
     },
     {
       "name": "assess_compliance",
       "description": "Assess a company's compliance posture against applicable regulations.\n\nReturns compliance level, percentage, gaps, and remediation priorities.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "company_name": {
+            "title": "Company Name",
             "type": "string"
           },
           "sector": {
+            "title": "Sector",
             "type": "string"
           },
           "jurisdiction": {
+            "title": "Jurisdiction",
             "type": "string"
           },
           "disclosures": {
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Disclosures"
           },
           "payment_ref": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
           "company_name",
           "sector",
           "jurisdiction"
-        ]
+        ],
+        "title": "assess_complianceArguments",
+        "type": "object"
       }
     },
     {
       "name": "monitor_changes",
       "description": "Monitor recent regulatory changes in a jurisdiction over a trailing window.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "jurisdiction": {
+            "title": "Jurisdiction",
             "type": "string"
           },
           "since_days": {
-            "type": "integer",
-            "default": 90
+            "default": 90,
+            "title": "Since Days",
+            "type": "integer"
           },
           "payment_ref": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
           "jurisdiction"
-        ]
+        ],
+        "title": "monitor_changesArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description: capabilities, inputs, outputs.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ]

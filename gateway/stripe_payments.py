@@ -20,8 +20,29 @@ INVARIANTS (one test each; never raises on bad input — returns an error envelo
       mode=payment and an inline price_data line item (mockable via `_transport`).
   P5  on success returns {status:"ok", url, session_id, amount_cents, currency}.
   P6  the returned/logged payload never contains the API key.
-  P7  test-mode vs live-mode is derived from the key prefix (sk_test_/sk_live_) and
+  P7  test-mode vs live-mode is derived from the key prefix
+      (sk_test_/rk_test_/sk_live_/rk_live_) and
       surfaced as `livemode`, so an agent can refuse real charges until intended.
+
+CONNECT / REFUND RAIL (added 2026-07-19 — the structural fix that makes
+third-party payouts autonomous AND legal: Stripe, the licensed money
+transmitter, executes the movement; the fleet only instructs it. See
+docs/legal/THIRD_PARTY_PAYOUT_LICENSING_QUESTION_2026-07-19.md and
+docs/deployment/SCOPE_STRIPE_CONNECT_MIGRATION.md):
+  P8  every money-moving POST (refund, transfer) REQUIRES a caller-supplied
+      Idempotency-Key; without one the function refuses — a network retry
+      must never double-move money.
+  P9  create_refund refunds a Checkout Session's own payment_intent back to
+      the original payer (refund-to-originator only — there is no parameter
+      for an alternate destination, by design).
+  P10 create_transfer moves platform balance ONLY to a Stripe connected
+      account (acct_...) — the payee Stripe has onboarded and KYC'd. No
+      other destination type exists in this module, by design.
+  P11 get_connect_account is the pull-verified source of payout
+      eligibility (payouts_enabled) — same posture as verify_session
+      (PG10): never trust a cached or self-attested state for money.
+  P12 all Connect/refund functions inherit P3 (no key -> structured
+      refusal) and P6 (key never echoed; errors scrubbed).
 """
 from __future__ import annotations
 
@@ -35,6 +56,10 @@ from datetime import datetime, timezone
 STRIPE_API = "https://api.stripe.com/v1/checkout/sessions"
 STRIPE_SUBSCRIPTIONS_API = "https://api.stripe.com/v1/subscriptions"
 STRIPE_PORTAL_API = "https://api.stripe.com/v1/billing_portal/sessions"
+STRIPE_REFUNDS_API = "https://api.stripe.com/v1/refunds"
+STRIPE_TRANSFERS_API = "https://api.stripe.com/v1/transfers"
+STRIPE_ACCOUNTS_API = "https://api.stripe.com/v1/accounts"
+STRIPE_ACCOUNT_LINKS_API = "https://api.stripe.com/v1/account_links"
 STRIPE_VERSION = "2026-02-25.clover"
 
 _CHECKOUT_ID_RE = re.compile(r"^cs_(?:test_|live_)?[A-Za-z0-9]+$")
@@ -42,6 +67,12 @@ _SUBSCRIPTION_ID_RE = re.compile(r"^sub_[A-Za-z0-9]+$")
 _CUSTOMER_ID_RE = re.compile(r"^cus_[A-Za-z0-9]+$")
 _PRICE_ID_RE = re.compile(r"^price_[A-Za-z0-9]+$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_REFUND_ID_RE = re.compile(r"^re_[A-Za-z0-9]+$")
+_TRANSFER_ID_RE = re.compile(r"^tr_[A-Za-z0-9]+$")
+_ACCOUNT_ID_RE = re.compile(r"^acct_[A-Za-z0-9]+$")
+_PAYMENT_INTENT_ID_RE = re.compile(r"^pi_[A-Za-z0-9]+$")
+_IDEMPOTENCY_KEY_RE = re.compile(r"^[A-Za-z0-9_.:-]{8,255}$")
+_LIVE_KEY_PREFIXES = ("sk_live_", "rk_live_")
 
 
 def _now() -> str:
@@ -56,6 +87,11 @@ def _err(error_type: str, message: str, **extra) -> dict:
 def _scrub(message: object, key: str) -> str:
     """Never let a configured Stripe credential escape an error envelope."""
     return str(message).replace(key, "***")[:500]
+
+
+def _key_is_live(key: str) -> bool:
+    """Return Stripe mode for both secret and restricted API keys."""
+    return isinstance(key, str) and key.startswith(_LIVE_KEY_PREFIXES)
 
 
 def _default_transport(url: str, data: bytes, headers: dict) -> dict:
@@ -210,7 +246,7 @@ def create_checkout(
         "session_id": resp.get("id"),
         "amount_cents": amount_cents,
         "currency": currency.lower(),
-        "livemode": bool(resp.get("livemode", key.startswith("sk_live_"))),
+        "livemode": bool(resp.get("livemode", _key_is_live(key))),
         "timestamp": _now(),
     }
 
@@ -286,7 +322,7 @@ def create_subscription_checkout(
             "plan_id": plan_id.strip(),
             "catalog_version": catalog_version.strip(),
             "catalog_sha256": catalog_sha256,
-            "livemode": bool(resp.get("livemode", key.startswith("sk_live_"))),
+            "livemode": bool(resp.get("livemode", _key_is_live(key))),
             "timestamp": _now()}
 
 
@@ -319,7 +355,7 @@ def create_customer_portal(
         return _err("stripe_error", "Stripe response missing hosted portal URL",
                     stripe_id=resp.get("id"))
     return {"status": "ok", "url": url, "portal_session_id": resp.get("id"),
-            "livemode": bool(resp.get("livemode", key.startswith("sk_live_"))),
+            "livemode": bool(resp.get("livemode", _key_is_live(key))),
             "timestamp": _now()}
 
 
@@ -487,6 +523,250 @@ def verify_subscription(
         "checkout_status": (session or {}).get("status") if session else None,
         "checkout_payment_status": (session or {}).get("payment_status") if session else None,
         "livemode": bool(subscription.get(
-            "livemode", (session or {}).get("livemode", key.startswith("sk_live_")))),
+            "livemode", (session or {}).get("livemode", _key_is_live(key)))),
         "timestamp": _now(),
     }
+
+
+# ===================================================================== #
+#  CONNECT / REFUND RAIL (P8-P12) — 2026-07-19                          #
+# ===================================================================== #
+
+def _money_post(url: str, form: dict, key: str, idempotency_key: str,
+                _transport) -> dict:
+    """P8: every money-moving POST carries the caller's Idempotency-Key."""
+    data = urllib.parse.urlencode(form).encode()
+    headers = {"Authorization": f"Bearer {key}",
+               "Stripe-Version": STRIPE_VERSION,
+               "Idempotency-Key": idempotency_key,
+               "Content-Type": "application/x-www-form-urlencoded"}
+    return _transport(url, data, headers)
+
+
+def create_refund(session_id: str, *, idempotency_key: str,
+                  amount_minor: int | None = None,
+                  api_key: str | None = None,
+                  _transport=_default_transport,
+                  _get_transport=_default_get_transport) -> dict:
+    """P9: refund a Checkout Session's payment back to the ORIGINAL payer.
+
+    Resolves the session's payment_intent (fixed-host GET), then POSTs
+    /v1/refunds against it. There is deliberately no destination parameter —
+    Stripe can only return the money to the instrument that paid, which is
+    what makes this leg refund-to-originator by construction (the legal
+    category cleared 2026-07-19). amount_minor=None refunds in full.
+    Returns {status:"ok", refund_id, payment_intent, amount_minor,
+    refund_status, livemode} or a structured error envelope.
+    """
+    if not isinstance(session_id, str) \
+            or not _CHECKOUT_ID_RE.fullmatch(session_id.strip()):
+        return _err("bad_session",
+                    "session_id must be a Stripe checkout session id (cs_...)",
+                    field="session_id")
+    if not isinstance(idempotency_key, str) \
+            or not _IDEMPOTENCY_KEY_RE.fullmatch(idempotency_key):     # P8
+        return _err("bad_idempotency_key",
+                    "idempotency_key is required (8-255 chars, [A-Za-z0-9_.:-]) "
+                    "— a retry must never double-refund", field="idempotency_key")
+    if amount_minor is not None and (not isinstance(amount_minor, int)
+                                     or isinstance(amount_minor, bool)
+                                     or amount_minor <= 0):
+        return _err("bad_amount", "amount_minor must be a positive integer or None",
+                    field="amount_minor", value=amount_minor)
+    key = api_key or os.environ.get("STRIPE_API_KEY")
+    if not key:                                                        # P3/P12
+        return _err("no_api_key",
+                    "STRIPE_API_KEY not configured on the host; set it to enable refunds")
+    try:
+        session = _get_transport(f"{STRIPE_API}/{session_id.strip()}",
+                                 {"Authorization": f"Bearer {key}",
+                                  "Stripe-Version": STRIPE_VERSION})
+    except Exception as e:
+        return _err("stripe_error", _scrub(e, key))
+    pi = _stripe_id(session.get("payment_intent"))
+    if not pi or not _PAYMENT_INTENT_ID_RE.fullmatch(pi):
+        return _err("no_payment_intent",
+                    "session has no payment_intent to refund (was it paid?)",
+                    session_id=session.get("id"))
+    form = {"payment_intent": pi,
+            "metadata[session_id]": session_id.strip(),
+            "metadata[rail]": "viridis-refund-to-originator"}
+    if amount_minor is not None:
+        form["amount"] = str(amount_minor)
+    try:
+        resp = _money_post(STRIPE_REFUNDS_API, form, key,
+                           idempotency_key, _transport)
+    except Exception as e:
+        return _err("stripe_error", _scrub(e, key))
+    rid = resp.get("id")
+    if not isinstance(rid, str) or not _REFUND_ID_RE.fullmatch(rid):
+        return _err("stripe_error", "Stripe response missing refund id",
+                    stripe_error=str(resp.get("error", {}).get("message", ""))[:200])
+    return {"status": "ok", "refund_id": rid, "payment_intent": pi,
+            "amount_minor": resp.get("amount"),
+            "refund_status": resp.get("status"),
+            "livemode": bool(resp.get("livemode", _key_is_live(key))),
+            "timestamp": _now()}
+
+
+def create_transfer(destination_account: str, amount_minor: int, *,
+                    idempotency_key: str, transfer_group: str = "",
+                    currency: str = "usd", metadata: dict | None = None,
+                    api_key: str | None = None,
+                    _transport=_default_transport) -> dict:
+    """P10: move platform balance to a Stripe CONNECTED account.
+
+    The destination must be an acct_... id — a payee Stripe has onboarded
+    and KYC'd. Stripe (the licensed transmitter) executes the payout to the
+    payee's bank; this function only instructs it. Idempotency-Key required
+    (P8). Returns {status:"ok", transfer_id, destination, amount_minor,
+    livemode} or a structured error envelope.
+    """
+    if not isinstance(destination_account, str) \
+            or not _ACCOUNT_ID_RE.fullmatch(destination_account.strip()):
+        return _err("bad_destination",
+                    "destination_account must be a Stripe connected account id "
+                    "(acct_...)", field="destination_account")
+    if not isinstance(amount_minor, int) or isinstance(amount_minor, bool) \
+            or amount_minor <= 0:
+        return _err("bad_amount", "amount_minor must be a positive integer",
+                    field="amount_minor", value=amount_minor)
+    if not isinstance(idempotency_key, str) \
+            or not _IDEMPOTENCY_KEY_RE.fullmatch(idempotency_key):     # P8
+        return _err("bad_idempotency_key",
+                    "idempotency_key is required (8-255 chars, [A-Za-z0-9_.:-]) "
+                    "— a retry must never double-pay", field="idempotency_key")
+    if not (isinstance(currency, str) and len(currency) == 3 and currency.isalpha()):
+        return _err("bad_currency", "currency must be a 3-letter ISO code",
+                    field="currency", value=currency)
+    key = api_key or os.environ.get("STRIPE_API_KEY")
+    if not key:                                                        # P3/P12
+        return _err("no_api_key",
+                    "STRIPE_API_KEY not configured on the host; set it to enable transfers")
+    form = {"destination": destination_account.strip(),
+            "amount": str(amount_minor), "currency": currency.lower()}
+    if transfer_group:
+        form["transfer_group"] = str(transfer_group)[:200]
+    for k, v in (metadata or {}).items():
+        form[f"metadata[{k}]"] = str(v)
+    try:
+        resp = _money_post(STRIPE_TRANSFERS_API, form, key,
+                           idempotency_key, _transport)
+    except Exception as e:
+        return _err("stripe_error", _scrub(e, key))
+    tid = resp.get("id")
+    if not isinstance(tid, str) or not _TRANSFER_ID_RE.fullmatch(tid):
+        return _err("stripe_error", "Stripe response missing transfer id",
+                    stripe_error=str(resp.get("error", {}).get("message", ""))[:200])
+    return {"status": "ok", "transfer_id": tid,
+            "destination": resp.get("destination"),
+            "amount_minor": resp.get("amount"),
+            "transfer_group": resp.get("transfer_group"),
+            "livemode": bool(resp.get("livemode", _key_is_live(key))),
+            "timestamp": _now()}
+
+
+def create_connect_account(payee_ref: str, *, idempotency_key: str,
+                           api_key: str | None = None,
+                           _transport=_default_transport) -> dict:
+    """Create an EXPRESS connected account for a payee (transfers capability).
+
+    Stripe hosts onboarding and runs KYC/AML — no Viridis-side identity
+    build. Idempotency-Key required (P8 posture): a retry after a
+    crash/persist failure returns the SAME account instead of orphaning
+    one. Returns {status:"ok", account_id, livemode} or an error envelope.
+    """
+    if not isinstance(payee_ref, str) or not payee_ref.strip():
+        return _err("bad_payee_ref", "payee_ref is required", field="payee_ref")
+    if not isinstance(idempotency_key, str) \
+            or not _IDEMPOTENCY_KEY_RE.fullmatch(idempotency_key):     # P8
+        return _err("bad_idempotency_key",
+                    "idempotency_key is required (8-255 chars, [A-Za-z0-9_.:-]) "
+                    "— a retry must never orphan a second account",
+                    field="idempotency_key")
+    key = api_key or os.environ.get("STRIPE_API_KEY")
+    if not key:                                                        # P3/P12
+        return _err("no_api_key",
+                    "STRIPE_API_KEY not configured on the host; set it to enable Connect")
+    form = {"type": "express",
+            "capabilities[transfers][requested]": "true",
+            "metadata[payee_ref]": payee_ref.strip()[:200],
+            "metadata[rail]": "viridis-connect-payout"}
+    try:
+        resp = _money_post(STRIPE_ACCOUNTS_API, form, key,
+                           idempotency_key, _transport)
+    except Exception as e:
+        return _err("stripe_error", _scrub(e, key))
+    aid = resp.get("id")
+    if not isinstance(aid, str) or not _ACCOUNT_ID_RE.fullmatch(aid):
+        return _err("stripe_error", "Stripe response missing account id",
+                    stripe_error=str(resp.get("error", {}).get("message", ""))[:200])
+    return {"status": "ok", "account_id": aid,
+            "livemode": bool(resp.get("livemode", _key_is_live(key))),
+            "timestamp": _now()}
+
+
+def create_account_link(account_id: str, *,
+                        refresh_url: str = "https://mcp.viridisconservation.com/payouts/onboard/refresh",
+                        return_url: str = "https://mcp.viridisconservation.com/payouts/onboard/done",
+                        api_key: str | None = None,
+                        _transport=_default_transport) -> dict:
+    """Create a Stripe-hosted onboarding link for a connected account."""
+    if not isinstance(account_id, str) \
+            or not _ACCOUNT_ID_RE.fullmatch(account_id.strip()):
+        return _err("bad_account", "account_id must be a Stripe account id (acct_...)",
+                    field="account_id")
+    key = api_key or os.environ.get("STRIPE_API_KEY")
+    if not key:                                                        # P3/P12
+        return _err("no_api_key",
+                    "STRIPE_API_KEY not configured on the host; set it to enable Connect")
+    data = urllib.parse.urlencode({
+        "account": account_id.strip(), "refresh_url": refresh_url,
+        "return_url": return_url, "type": "account_onboarding"}).encode()
+    headers = {"Authorization": f"Bearer {key}",
+               "Stripe-Version": STRIPE_VERSION,
+               "Content-Type": "application/x-www-form-urlencoded"}
+    try:
+        resp = _transport(STRIPE_ACCOUNT_LINKS_API, data, headers)
+    except Exception as e:
+        return _err("stripe_error", _scrub(e, key))
+    url = resp.get("url")
+    if not isinstance(url, str) or not url.startswith("https://"):
+        return _err("stripe_error", "Stripe response missing onboarding url")
+    return {"status": "ok", "url": url, "expires_at": resp.get("expires_at"),
+            "timestamp": _now()}
+
+
+def get_connect_account(account_id: str, *, api_key: str | None = None,
+                        _transport=_default_get_transport) -> dict:
+    """P11: pull-verify a connected account's payout eligibility.
+
+    THE source of truth for whether a transfer may execute — never cached,
+    never self-attested (verify_session/PG10 posture). Returns
+    {status:"ok", account_id, payouts_enabled, charges_enabled,
+    details_submitted, requirements_currently_due, livemode} or an error.
+    """
+    if not isinstance(account_id, str) \
+            or not _ACCOUNT_ID_RE.fullmatch(account_id.strip()):
+        return _err("bad_account", "account_id must be a Stripe account id (acct_...)",
+                    field="account_id")
+    key = api_key or os.environ.get("STRIPE_API_KEY")
+    if not key:                                                        # P3/P12
+        return _err("no_api_key",
+                    "STRIPE_API_KEY not configured on the host; set it to enable Connect")
+    try:
+        resp = _transport(f"{STRIPE_ACCOUNTS_API}/{account_id.strip()}",
+                          {"Authorization": f"Bearer {key}",
+                           "Stripe-Version": STRIPE_VERSION})
+    except Exception as e:
+        return _err("stripe_error", _scrub(e, key))
+    if not isinstance(resp.get("id"), str):
+        return _err("stripe_error", "Stripe response missing account object")
+    reqs = resp.get("requirements") or {}
+    return {"status": "ok", "account_id": resp["id"],
+            "payouts_enabled": bool(resp.get("payouts_enabled")),
+            "charges_enabled": bool(resp.get("charges_enabled")),
+            "details_submitted": bool(resp.get("details_submitted")),
+            "requirements_currently_due": list(reqs.get("currently_due") or []),
+            "livemode": bool(resp.get("livemode", _key_is_live(key))),
+            "timestamp": _now()}

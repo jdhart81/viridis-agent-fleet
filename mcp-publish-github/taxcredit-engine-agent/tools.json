@@ -4,72 +4,89 @@
   "tools": [
     {
       "name": "calculate_tax_credit",
-      "description": "Calculate an auditable tax-credit scenario. credit is 45Q, 45V, 45Y,\n48E, or 45X. facts must contain the explicit credit-specific eligibility\nfacts; missing facts return indeterminate. This is not tax or filing advice.",
+      "description": "Calculate an auditable tax-credit scenario. credit is 45Q, 45V, 45Y,\n48E, or 45X. facts must contain the explicit credit-specific eligibility\nfacts; missing facts return indeterminate. This is not tax or filing advice.\nPrice: $2.00 per call after 10 free calls/day. Pay at\n/x402/taxcredit-engine/calculate_tax_credit with Base USDC, cash-fund\npayment_ref through escrow_checkout + confirm_escrow_funding, or use /seats.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "credit": {
+            "title": "Credit",
             "type": "string"
           },
           "facts": {
+            "additionalProperties": true,
+            "title": "Facts",
             "type": "object"
           },
           "payment_ref": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
           }
         },
         "required": [
           "credit",
           "facts"
-        ]
+        ],
+        "title": "calculate_tax_creditArguments",
+        "type": "object"
       }
     },
     {
       "name": "list_rule_packs",
       "description": "List supported credits and the current bundled rule-pack digest.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "list_rule_packsArguments",
+        "type": "object"
       }
     },
     {
       "name": "get_rule_pack",
       "description": "Return the bundled rules and official source metadata for one credit.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "credit": {
+            "title": "Credit",
             "type": "string"
           }
         },
         "required": [
           "credit"
-        ]
+        ],
+        "title": "get_rule_packArguments",
+        "type": "object"
       }
     },
     {
       "name": "verify_tax_credit_result",
       "description": "Verify an engine result's audit_sha256. Pass the prior result object as\nJSON; any changed amount, fact, rule step, or source digest fails.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "result_json": {
+            "title": "Result Json",
             "type": "string"
           }
         },
         "required": [
           "result_json"
-        ]
+        ],
+        "title": "verify_tax_credit_resultArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Return fleet-standard capabilities, version, and pricing.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ]

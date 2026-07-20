@@ -36,6 +36,11 @@ PRX6 NO CUSTODY, NO KEYS: this module never holds funds or private keys;
 PRX7 KILL SWITCH: is_enabled() is false unless X402_ENABLED=1 AND an
      address AND a facilitator URL are configured. Disabled => the gate
      behaves exactly as it does today (Stripe checkout + internal ledger).
+PRX8 RESOURCE BINDING: the facilitator payload carries the exact advertised
+     resource URL. A conflicting client-supplied resource is refused; an
+     absent v1 field is added to the facilitator envelope so CDP Bazaar can
+     associate a successful settlement with its HTTP endpoint. This changes
+     no EIP-3009 signature or transfer logic.
 """
 from __future__ import annotations
 
@@ -218,10 +223,18 @@ def verify_and_settle(
             return {"settled": False, "reason": "network_mismatch"}
         if str(payment_payload.get("scheme", "exact")) != requirements["scheme"]:
             return {"settled": False, "reason": "scheme_mismatch"}
+        advertised_resource = requirements.get("resource")
+        supplied_resource = payment_payload.get("resource")
+        if (supplied_resource is not None
+                and supplied_resource != advertised_resource):
+            return {"settled": False, "reason": "resource_mismatch"}
+        bound_payload = dict(payment_payload)
+        if advertised_resource:
+            bound_payload["resource"] = advertised_resource
         base = c["facilitator"]
         verify = post(f"{base}/verify",
                       {"x402Version": X402_VERSION,
-                       "paymentPayload": payment_payload,
+                       "paymentPayload": bound_payload,
                        "paymentRequirements": requirements})
         if not (isinstance(verify, dict) and verify.get("isValid") is True):
             reason = (verify.get("invalidReason")
@@ -230,7 +243,7 @@ def verify_and_settle(
         # PRX3: only settle after a passing verify.
         settle = post(f"{base}/settle",
                       {"x402Version": X402_VERSION,
-                       "paymentPayload": payment_payload,
+                       "paymentPayload": bound_payload,
                        "paymentRequirements": requirements})
         if not (isinstance(settle, dict) and settle.get("success") is True):
             reason = (settle.get("errorReason")

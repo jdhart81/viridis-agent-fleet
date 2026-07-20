@@ -39,6 +39,19 @@ RV6  A2A escrow settlement (PG13-PG16) is reported in its own a2a_escrow
      Checkout, so it is a SUBSET of settled_minor — reported alongside it,
      never added to it — and custody-funded sessions are excluded from the
      paid_not_redeemed discrepancy (they bought an escrow, not credits).
+RV7  Connect-rail outflows (2026-07-19, additive, read-only) get their own
+     connect_rail bucket: transfers executed via connect_rail.py (Stripe's
+     licensed Transfer rail — Stripe, not Viridis, is the money
+     transmitter) and refunds executed via escrow_custody's
+     refund-to-originator path (a real Stripe refund_id present on the
+     instruction). Both are money OUT and are never summed into
+     settled_minor/redeemed_minor/a2a_escrow — this bucket exists so an
+     outflow is visible somewhere, not to reconcile it against inflow.
+     Transfers are grouped by transfer_group, which is always the
+     originating escrow_id or bond_id (escrow_custody/bond_bridge set it),
+     so a group key joins straight back to that escrow/bond record.
+     Degrades like RV4: no connect/custody object -> an empty, valid
+     bucket, never a crash.
 """
 from __future__ import annotations
 
@@ -54,7 +67,7 @@ def _now() -> str:
 async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
                        list_sessions: Optional[Callable[..., dict]] = None,
                        now_epoch: Optional[int] = None,
-                       custody: Any = None) -> dict:
+                       custody: Any = None, connect: Any = None) -> dict:
     """Compose the reconciliation report. `gate` is the PaymentGate (for
     redemption records); `list_sessions` is injectable for tests and defaults
     to stripe_payments.list_checkout_sessions (RV1: all reads)."""
@@ -169,6 +182,46 @@ async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
         except Exception:
             a2a_escrow["custody"] = {"error": "custody status unavailable"}
 
+    # ---- 2c. Connect-rail outflows: money OUT, licensed rails (RV7) ------
+    connect_rail: dict = {
+        "transfers": {"by_group": {}, "total_minor": 0, "count": 0},
+        "refunds": {"total_minor": 0, "count": 0},
+        "meaning": "money OUT via Stripe's licensed rails — Connect "
+                   "transfers to onboarded third-party payees, and "
+                   "refunds to the original payer. NEVER cash in; not "
+                   "summed into settled_minor/redeemed_minor/a2a_escrow "
+                   "(RV7). by_group keys are transfer_group, which is "
+                   "always the originating escrow_id or bond_id.",
+    }
+    if connect is not None:
+        try:
+            transfers = dict(getattr(getattr(connect, "state", None),
+                                     "transfers", {}) or {})
+        except Exception:      # RV4 posture: reporting never crashes
+            transfers = {}
+        for purpose_key, t in transfers.items():
+            group = t.get("transfer_group") or "ungrouped"
+            bucket = connect_rail["transfers"]["by_group"].setdefault(
+                group, {"transfers_minor": 0, "count": 0,
+                       "purpose_keys": []})
+            amount = int(t.get("amount_minor") or 0)
+            bucket["transfers_minor"] += amount
+            bucket["count"] += 1
+            bucket["purpose_keys"].append(purpose_key)
+            connect_rail["transfers"]["total_minor"] += amount
+            connect_rail["transfers"]["count"] += 1
+    if custody is not None:
+        try:
+            instructions = dict(getattr(getattr(custody, "state", None),
+                                        "instructions", {}) or {})
+        except Exception:      # RV4 posture: reporting never crashes
+            instructions = {}
+        for instr in instructions.values():
+            if instr.get("refund_id"):     # RV7: real Stripe refund issued
+                connect_rail["refunds"]["total_minor"] += int(
+                    instr.get("refund_minor") or 0)
+                connect_rail["refunds"]["count"] += 1
+
     # ---- 3. Stripe side: settled cash in the window (RV4) ----------------
     if list_sessions is None:
         import stripe_payments
@@ -225,6 +278,7 @@ async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
         "ledger": {"providers": ledger_providers, "totals": ledger_totals},
         "redemptions": redemptions,
         "a2a_escrow": a2a_escrow,
+        "connect_rail": connect_rail,
         "stripe": stripe_side,
         "discrepancies": discrepancies,
         "definitions": {
@@ -239,5 +293,12 @@ async def build_report(metering_core: Any, gate: Any, *, days: int = 30,
             "escrow_settled_minor": "escrows consumed for credits over the "
                                     "a2a rail — internal ledger only, NOT "
                                     "cash (RV6); excluded from settled_minor",
+            "connect_rail.transfers": "money OUT to Connect-onboarded "
+                                      "third-party payees via Stripe's "
+                                      "licensed Transfer rail (RV7); never "
+                                      "cash in, never summed elsewhere",
+            "connect_rail.refunds": "money OUT back to the original payer "
+                                    "via a real Stripe refund (RV7); never "
+                                    "cash in, never summed elsewhere",
         },
     }

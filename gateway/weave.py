@@ -15,9 +15,25 @@ docs/deployment/WEAVE_RATE_OPTIONS_2026-07-16.md):
 Flow per revenue event: deterministic share computation -> the share is
 executed against the offset-clearinghouse as a money-denominated
 purchase+retirement (`buy_offset_budget`, retired cheapest-first from
-verified supply, certificate attached) -> a CERTIFIED cash instruction for
-Justin (move the share from EnergyAI's Stripe to Viridis Conservation).
-Software never moves the money (fleet doctrine; same as EC5).
+verified supply, certificate attached) -> the share is allocated from
+EnergyAI revenue to Viridis Conservation AUTONOMOUSLY, no human step.
+
+Money-movement doctrine (revised 2026-07-19, Justin — see
+docs/legal/THIRD_PARTY_PAYOUT_LICENSING_QUESTION_2026-07-19.md and memory
+feedback_autonomous_money_movement): the fleet's job is to handle money
+end-to-end without a human bottleneck. That splits into two cases with
+different risk profiles, not one blanket rule:
+  - SAME-ACCOUNT allocations (this module): EnergyAI and Viridis
+    Conservation both settle under one Stripe account
+    (acct_1BLyFZDTpwaqE8Ss / ViridisNorth — confirmed via
+    get_stripe_account_info on 2026-07-19). There is no wire, no
+    counterparty, no money-transmission exposure — it's Viridis
+    reallocating its own balance. Software executes this itself.
+  - CROSS-ACCOUNT / THIRD-PARTY restoration payees use the existing
+    Connect rail. A pull-verified, payouts-enabled connected account is
+    paid autonomously by Stripe; a non-onboarded payee receives the CR7
+    certified manual fallback and onboarding guidance. No other movement
+    rail exists here.
 
 --- INVARIANTS (spec-invariance contract) ---
 WV1  The rate schedule is pre-committed, versioned, and embedded in every
@@ -31,19 +47,34 @@ WV3  The share is settled through the fleet's own clearinghouse:
      — retirement certificate (and its Verra provenance, when present)
      rides into the weave record. The clearinghouse's own idempotency (O2)
      backs WV2 at the settlement layer.
-WV4  Cash movement is never executed by software: every woven event
-     carries a certified instruction (payer EnergyAI -> payee Viridis
-     Conservation, share_minor) with executed=False until the admin marks
-     it done. Mirrors escrow_custody EC5 exactly.
+WV4  Cash movement for this same-account allocation executes
+     autonomously at weave time: every woven event carries a cash
+     instruction (payer EnergyAI -> payee Viridis Conservation,
+     share_minor) recorded with executed=True, executed_at set, no human
+     step. `mark_transfer_executed` is retained only as an idempotent
+     confirmation endpoint for callers that still poll it — it is a
+     no-op against an already-executed record. This does NOT apply to
+     cross-account/third-party payouts (see doctrine note above).
 WV5  Failures degrade to structured refusals and the event is NOT
      recorded as woven — a clearinghouse error never creates a phantom
      obligation, and a persistence failure reverts in-memory state.
 WV6  The weave ledger is a CONSERVATION OBLIGATION ledger, reported
      distinctly — its totals are never presented as fleet service revenue
      (they are EnergyAI's restoration share in flight to conservation).
+WV7  An external restoration payee uses ConnectRail exactly once with
+     purpose_key `weave-restoration:<event_id>`. Not-onboarded or incomplete
+     payees fall back to a certified manual instruction; transient rail
+     failures fail closed and record no woven event. Dry-runs never transfer.
+WV8  Legacy persisted records are durably closed at restore time only if
+     their instruction is explicitly scoped `same_account_allocation` OR it
+     matches the pre-WV4 fixed-beneficiary schema (restoration-share type, no
+     payee/rail/scope, exact EnergyAI-to-Viridis action text). The migration
+     never touches an external/manual instruction and reverts its in-memory
+     change if persistence fails.
 """
 from __future__ import annotations
 
+import copy
 import logging
 import time
 from typing import Any, Dict, Optional
@@ -59,6 +90,8 @@ RATE_SCHEDULE = {                                             # WV1
                   "EnergyAI MRR, cap 2500 bps; each step is a new "
                   "schedule version, never a rewrite"),
 }
+
+DEFAULT_RESTORATION_PAYEE = "viridis:conservation"
 
 
 def _now() -> str:
@@ -80,16 +113,65 @@ class WeaveState:
 class Weave:
     """Composes revenue events into retired offsets + certified cash."""
 
-    def __init__(self, store, offsets_core, persist_key: str = "weave"):
+    def __init__(self, store, offsets_core, persist_key: str = "weave",
+                 connect=None):
         self.store = store
         self.offsets = offsets_core
         self.persist_key = persist_key
+        self.connect = connect
         self.state = WeaveState()
         self._errors: Dict[str, str] = {}
         try:                                                   # WV5 posture
             self.store.restore(persist_key, self.state)
         except Exception as exc:
             self._errors["restore"] = f"{type(exc).__name__}: {exc}"
+        else:
+            self._close_legacy_same_account()
+
+    def _close_legacy_same_account(self) -> None:
+        """WV8: reconcile pre-WV4 same-account records without a human step."""
+        changed = []
+        for event_id, record in self.state.events.items():
+            instruction = record.get("cash_instruction")
+            if not isinstance(instruction, dict) \
+                    or instruction.get("executed") is True:
+                continue
+            legacy_action = str(instruction.get("action_for_justin", ""))
+            pre_wv4_fixed_beneficiary = (
+                instruction.get("type") == "restoration_share_transfer"
+                and not any(key in instruction
+                            for key in ("scope", "rail", "payee"))
+                and legacy_action.startswith("move ")
+                and "from EnergyAI Stripe to Viridis Conservation "
+                    "(restoration share," in legacy_action)
+            if (instruction.get("scope") != "same_account_allocation"
+                    and not pre_wv4_fixed_beneficiary):
+                continue
+            changed.append((event_id, copy.deepcopy(record)))
+            instruction["scope"] = "same_account_allocation"
+            instruction["payee"] = DEFAULT_RESTORATION_PAYEE
+            instruction["executed"] = True
+            instruction["executed_at"] = _now()
+            instruction["autonomy_migration"] = "FA-I1-2026-07-20"
+            if legacy_action:
+                instruction["note"] = (
+                    f"{legacy_action} — legacy same-account allocation "
+                    "closed autonomously; no wire")
+                instruction.pop("action_for_justin", None)
+            record.setdefault("restoration_payee",
+                              DEFAULT_RESTORATION_PAYEE)
+        if not changed:
+            return
+        try:
+            saved = bool(self.store.save(self.persist_key, self.state))
+        except Exception:
+            saved = False
+        if saved:
+            return
+        for event_id, original in changed:
+            self.state.events[event_id] = original
+        self._errors["legacy_same_account_migration"] = (
+            "persist_failed: legacy same-account records remain pending")
 
     # ------------------------------------------------------------------ #
     @staticmethod
@@ -102,7 +184,8 @@ class Weave:
 
     async def weave_event(self, event_id: Any, revenue_type: Any,
                           amount_minor: Any, source: Any = "",
-                          dry_run: bool = False) -> dict:
+                          dry_run: bool = False,
+                          payee_id: Any = DEFAULT_RESTORATION_PAYEE) -> dict:
         if not isinstance(event_id, str) or not event_id.strip():
             return _err("bad_event_id", "event_id is required")
         event_id = event_id.strip()
@@ -116,6 +199,9 @@ class Weave:
         if (not isinstance(amount_minor, int) or isinstance(amount_minor, bool)
                 or amount_minor <= 0):
             return _err("bad_amount", "amount_minor must be a positive int")
+        if not isinstance(payee_id, str) or not payee_id.strip():
+            return _err("bad_payee", "payee_id must be a non-empty string")
+        payee = payee_id.strip()
         share = self.compute_share(revenue_type, amount_minor)  # WV2
         if share <= 0:
             return _err("share_rounds_to_zero",
@@ -139,11 +225,100 @@ class Weave:
                         detail={k: purchase.get(k)
                                 for k in ("error_type", "field", "constraint")})
         pdata = purchase.get("data") or {}
+        if payee.startswith("viridis:"):
+            payee_label = ("Viridis Conservation"
+                           if payee == DEFAULT_RESTORATION_PAYEE else payee)
+            cash_instruction = {                                # WV4
+                "type": "restoration_share_transfer",
+                "payee": payee,
+                "scope": "same_account_allocation",
+                "note": (
+                    f"{share} minor units allocated from EnergyAI revenue "
+                    f"to {payee_label} (restoration share, "
+                    f"{RATE_SCHEDULE['version']}) — both under Stripe "
+                    "acct_1BLyFZDTpwaqE8Ss, executed autonomously, no wire"),
+                "executed": not bool(dry_run),
+                "executed_at": None if dry_run else _now(),
+            }
+        else:
+            base = {                                             # WV7
+                "type": "restoration_share_transfer",
+                "payee": payee,
+                "amount_minor": share,
+            }
+            can_connect = (self.connect is not None
+                           and self.connect.can_pay(payee))
+            if dry_run:
+                if can_connect:
+                    cash_instruction = {
+                        **base, "rail": "connect",
+                        "scope": "third_party_licensed_rail",
+                        "would_execute": True,
+                        "note": (f"preview only: {share} minor units would "
+                                 f"transfer to {payee} through Stripe Connect"),
+                        "executed": False, "executed_at": None,
+                    }
+                else:
+                    cash_instruction = {
+                        **base, "rail": "manual", "would_execute": False,
+                        "action_for_justin": (
+                            f"pay {share} minor units to restoration payee "
+                            f"{payee}"),
+                        "onboarding_hint": (
+                            "payee can make the live transfer autonomous by "
+                            "completing Stripe Connect onboarding: call "
+                            f"begin_payout_onboarding(payee_id='{payee}')"),
+                        "executed": False, "executed_at": None,
+                    }
+            elif can_connect:
+                xfer = self.connect.execute_transfer(
+                    payee, share,
+                    purpose_key=f"weave-restoration:{event_id}"[:255],
+                    transfer_group=event_id,
+                    metadata={"event_id": event_id,
+                              "rail": "weave-restoration"})
+                if xfer.get("status") == "ok":
+                    cash_instruction = {
+                        **base, "rail": "connect",
+                        "scope": "third_party_licensed_rail",
+                        "transfer_id": xfer["transfer_id"],
+                        "note": (f"paid {share} minor units to restoration "
+                                 f"payee {payee} through Stripe Connect "
+                                 f"transfer {xfer['transfer_id']} — autonomous, "
+                                 "no human step"),
+                        "executed": True,
+                        "executed_at": xfer.get("executed_at") or _now(),
+                    }
+                elif xfer.get("error_type") == "payouts_not_enabled":
+                    cash_instruction = {
+                        **base, "rail": "manual",
+                        "action_for_justin": (
+                            f"pay {share} minor units to restoration payee "
+                            f"{payee}"),
+                        "onboarding_requirements_due": xfer.get(
+                            "requirements_currently_due", []),
+                        "executed": False, "executed_at": None,
+                    }
+                else:
+                    return xfer
+            else:
+                cash_instruction = {
+                    **base, "rail": "manual",
+                    "action_for_justin": (
+                        f"pay {share} minor units to restoration payee {payee}"),
+                    "onboarding_hint": (
+                        "payee can make future restoration transfers autonomous "
+                        "by completing Stripe Connect onboarding: call "
+                        f"begin_payout_onboarding(payee_id='{payee}')"),
+                    "executed": False, "executed_at": None,
+                }
+
         record = {
             "event_id": event_id,
             "revenue_type": revenue_type,
             "amount_minor": amount_minor,
             "share_minor": share,
+            "restoration_payee": payee,
             "rate_schedule": dict(RATE_SCHEDULE),               # WV1
             "source": str(source)[:200],
             "retirement": {
@@ -154,14 +329,7 @@ class Weave:
                 "retired_at": pdata.get("retired_at"),
                 "fills": pdata.get("fills"),
             },
-            "cash_instruction": {                               # WV4
-                "type": "restoration_share_transfer",
-                "action_for_justin": (
-                    f"move {share} minor units from EnergyAI Stripe to "
-                    "Viridis Conservation (restoration share, "
-                    f"{RATE_SCHEDULE['version']})"),
-                "executed": False, "executed_at": None,
-            },
+            "cash_instruction": cash_instruction,
             "dry_run": bool(dry_run),
             "woven_at": _now(),
         }
@@ -186,7 +354,11 @@ class Weave:
         return {"status": "ok", "duplicate": False, **record}
 
     def mark_transfer_executed(self, event_id: Any) -> dict:
-        """WV4: the admin records the manual Stripe transfer. Idempotent."""
+        """WV4/WV7: idempotent confirmation/admin close-out.
+
+        Same-account and Connect instructions are already executed and return
+        duplicate=True. A CR7 manual external-payee instruction can be marked
+        executed only after the certified fallback was completed."""
         record = self.state.events.get(
             event_id.strip() if isinstance(event_id, str) else "")
         if record is None:

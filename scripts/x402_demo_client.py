@@ -12,9 +12,10 @@ Paid Base-mainnet run (wallet needs Base USDC; never paste the key in code):
   python3 scripts/x402_demo_client.py
 
 The five list prices total $5.75 USDC ($0.50 + $1 + $2 + $2 + $0.25).
-If x402-intro-v1 is later enabled, a wallet's first route is $0.01 and the
-same chain totals $5.26. The deployment keeps that switch OFF until Justin
-explicitly approves activation.
+x402-intro-v1 is active: a new wallet's first route is $0.01, so this ordered
+same-wallet chain totals $5.26. An unpaid dry run never consumes the intro;
+the summary therefore distinguishes independent preflight quotes from the
+amount one wallet would actually settle across the chain.
 
 CDP Bazaar merchant inventory:
 https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329
@@ -44,6 +45,7 @@ class Step:
     agent: str
     tool: str
     value: str
+    list_amount_atomic: int
     build_input: Callable[[dict], dict]
 
     def url(self, base_url: str) -> str:
@@ -123,15 +125,15 @@ def _radar_input(outputs: dict) -> dict:
 
 
 STEPS = (
-    Step("measure", "quantity-takeoff", "calculate_takeoff", "$0.50",
+    Step("measure", "quantity-takeoff", "calculate_takeoff", "$0.50", 500_000,
          _takeoff_input),
-    Step("account", "ghg-ledger", "calculate_inventory", "$1.00",
+    Step("account", "ghg-ledger", "calculate_inventory", "$1.00", 1_000_000,
          _ghg_input),
-    Step("disclose", "disclosure-compiler", "compile_disclosure", "$2.00",
+    Step("disclose", "disclosure-compiler", "compile_disclosure", "$2.00", 2_000_000,
          _disclosure_input),
-    Step("claim", "taxcredit-engine", "calculate_tax_credit", "$2.00",
+    Step("claim", "taxcredit-engine", "calculate_tax_credit", "$2.00", 2_000_000,
          _tax_input),
-    Step("scan", "regulatory-radar", "scan_regulations", "$0.25",
+    Step("scan", "regulatory-radar", "scan_regulations", "$0.25", 250_000,
          _radar_input),
 )
 
@@ -241,6 +243,7 @@ class DryRunBuyer:
 def run_workflow(base_url: str, buyer: Any, dry_run: bool = False) -> dict:
     outputs: dict = {}
     total_atomic = 0
+    quoted_amounts = []
     for step in STEPS:
         payload = step.build_input(outputs)
         challenge = buyer.challenge(step.url(base_url), payload)
@@ -249,7 +252,9 @@ def run_workflow(base_url: str, buyer: Any, dry_run: bool = False) -> dict:
                 f"{step.name}: expected HTTP 402, got {challenge['status']}")
         required = _payment_required(challenge)
         _display_challenge(step, required)
-        total_atomic += _amount_atomic(required)
+        quoted = _amount_atomic(required)
+        quoted_amounts.append(quoted)
+        total_atomic += quoted
         if dry_run:
             outputs[step.name] = {"dry_run": True, "input": payload}
             continue
@@ -261,11 +266,26 @@ def run_workflow(base_url: str, buyer: Any, dry_run: bool = False) -> dict:
         outputs[step.name] = paid["body"]
         print(f"[{step.name}] settled and returned:")
         print(json.dumps(paid["body"], indent=2, sort_keys=True))
+    list_total = sum(step.list_amount_atomic for step in STEPS)
+    expected_same_wallet = list_total
+    if quoted_amounts and quoted_amounts[0] < STEPS[0].list_amount_atomic:
+        expected_same_wallet = (
+            list_total - STEPS[0].list_amount_atomic + quoted_amounts[0])
     summary = {
         "workflow": "measure -> account -> disclose -> claim -> scan",
         "dry_run": dry_run,
+        "list_total_atomic_usdc": list_total,
+        "list_total_usdc": f"{list_total / 1_000_000:.2f}",
         "quoted_total_atomic_usdc": total_atomic,
         "quoted_total_usdc": f"{total_atomic / 1_000_000:.2f}",
+        "same_wallet_expected_total_atomic_usdc": expected_same_wallet,
+        "same_wallet_expected_total_usdc": (
+            f"{expected_same_wallet / 1_000_000:.2f}"),
+        "preflight_note": (
+            "Dry-run challenges are independent and never consume the "
+            "new-wallet intro. One wallet receives the intro once; later "
+            "calls use list price." if dry_run else
+            "Paid totals are the amounts actually settled."),
         "outputs": outputs,
     }
     print("\nComposed workflow output:")
