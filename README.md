@@ -28,6 +28,19 @@ tamper-evident delivery receipts, and
 [x402-C](docs/standards/X402C_CARBON_RECEIPTS.md) is our draft standard for
 carbon receipts on machine-to-machine payments — comments welcome via issues.
 
+## Pay per call with x402
+
+💸 Also payable per call via x402/USDC on Base: five carbon and compliance
+routes indexed in CDP Bazaar, designed to chain
+**measure → account → disclose → claim → scan**. No signup or API key is
+required. Start with the [free dry-run](https://mcp.viridisconservation.com/quickstart),
+inspect the [live agent suite](https://mcp.viridisconservation.com/agents), or
+verify the [indexed Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329).
+
+The five-route [demo client](scripts/x402_demo_client.py) is runnable locally;
+`--dry-run` makes no payment. Viridis has received its first external paid call:
+a $0.25 regulatory-radar scan settled in USDC on Base.
+
 ## The economy: identity → trust → escrow → settlement → constitution
 
 Trustworthy agents transacting with agents needs rails. This fleet ships them
