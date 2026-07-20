@@ -1,5 +1,46 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-20, mission closure builds 1–4 — DEPLOYED/ACTIVE] Bond returns,
+> agent-native discovery, an owned GitHub acquisition channel, and
+> campaign-to-settlement attribution are live.** Gateway image
+> `sha256:bb6f10ea062a1968bb2eab674f67015d82165d9fdac817346752d3a11551b68e`;
+> rollback `viridis-stable:prev-2026-07-20-closure` points to
+> `sha256:edabff21fbfc1265ab56d2340b6be332767b9d88fa3291ba15174083ee5ffdac`.
+> Growth image
+> `sha256:d983f5f4f547979228bbfb324cf63188bddd29a6d2f1149d8c113fbf4dcb5c15`;
+> rollback `viridis-growth-agent:prev-2026-07-20-closure` points to
+> `sha256:c7b46c2030401b0f39e48e6edbc2535a3e0dea44facc6e660c1c7d611479394c`.
+> Full local and droplet gates are **1230 passed / 0 failed / 31/31**;
+> isolated production gateway is **362 passed** and growth is **22 passed**.
+>
+> FA-15 now executes clean provider-return bond legs through a real partial
+> Stripe refund against the original collateral Checkout Session, using a
+> deterministic idempotency key. `executed:true` is impossible without a
+> `refund_id`, `transfer_id`, or certified `money_primitive_id`; transient
+> errors fail closed and remain retryable. Production has zero bond records,
+> so no money moved during deployment.
+>
+> `/llms.txt`, `/x402/catalog`, `/agents`, and `/quickstart` are live with all
+> five priced HTTP routes, the active $0.01 new-wallet offer, and a free
+> `--dry-run`. The public mirror shipped at `e9f0b19`; the isolated growth
+> worker then made its first owned-GitHub update at commit `9c8637c` to
+> `docs/LIVE_AGENT_SUITE.md`. Its fine-grained token is restricted to
+> `jdhart81/viridis-agent-fleet`, Contents read/write plus required Metadata
+> read-only, and expires 2026-08-19. Runtime inspection shows **zero**
+> Stripe/CDP/x402/payment credential variables.
+>
+> The append-only growth log now stores each target's route scope and the
+> settlement/payer/revenue baseline before send, then correlates later deltas
+> without double-crediting the same settlement. The first GitHub attempt is
+> stored against fleet-wide scope `*` with the live one-external-payer,
+> 250000-atomic revenue baseline. Current live telemetry remains honest at
+> **1 external settlement / 1 external payer / $0.25 USDC**. Frozen MCP-v1
+> x402 SHA remains
+> `ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770`;
+> the production image contains no ViridisOS files. **Did NOT change:** list
+> prices, participant spend, CR1–CR7, EC-series, FA-I3 manual fallback, or the
+> frozen v1 lane.
+
 > **[2026-07-20, OpenAI growth operator — DEPLOYED/ACTIVE] The isolated growth
 > worker now uses a scoped OpenAI Agent for grounded sales copy and target
 > prioritization.** Production growth image
