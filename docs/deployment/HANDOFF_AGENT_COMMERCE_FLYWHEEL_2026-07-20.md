@@ -24,7 +24,7 @@ mainnet USDC configuration. No payment or money-movement rail was added.
 | Gateway rollback | `viridis-stable:prev-2026-07-20-commerce` -> `sha256:bb6f10ea062a1968bb2eab674f67015d82165d9fdac817346752d3a11551b68e` |
 | Growth image | `sha256:bc4caf67f6a80bcb759e0ec28683f73724fb9ce1b527f9fd92d14173aa2f1fed` |
 | Growth rollback | `viridis-growth-agent:prev-2026-07-20-commerce` -> `sha256:d983f5f4f547979228bbfb324cf63188bddd29a6d2f1149d8c113fbf4dcb5c15` |
-| Droplet disk | 24G total, 5.3G used before build; 5.5G after cleanup; 18G free |
+| Droplet disk | 24G total, 5.3G used before build; 5.2G after cleanup; 19G free |
 
 The production build context excluded `.git`, the public mirror, archives,
 staging trees, bytecode, environment files, PEM files, secrets, databases,
