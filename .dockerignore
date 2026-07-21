@@ -2,6 +2,8 @@
 .git/**
 .env
 **/.env
+.env*
+**/.env*
 env
 env/**
 **/secrets
@@ -42,4 +44,3 @@ Agent harvest /**
 *.bak_n*
 .DS_Store
 **/.DS_Store
-

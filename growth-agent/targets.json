@@ -62,6 +62,20 @@
     "base_weight": 5.0
   },
   {
+    "id": "smithery-agent-market-network",
+    "platform": "smithery",
+    "channel": "Smithery hartjustin6/agent-market-network listing",
+    "qualified_name": "hartjustin6/agent-market-network",
+    "homepage": "https://mcp.viridisconservation.com/network/catalog",
+    "route": "*",
+    "credential_env": "GROWTH_SMITHERY_API_KEY",
+    "enabled": true,
+    "policy_cleared": true,
+    "policy_reason": "official owner-authenticated metadata API for the owned Agent Market listing",
+    "cooldown_days": 30,
+    "base_weight": 6.0
+  },
+  {
     "id": "viridis-owned-github",
     "platform": "github_owned_content",
     "channel": "jdhart81/viridis-agent-fleet live agent suite",

@@ -25,9 +25,11 @@ post, move money, change prices, or bypass policy.
   the generated copy ineligible for posting.
 - Model usage and estimated cost are written to the append-only SQLite log.
 
-Policy-cleared live targets are owned Smithery listings and one factual
-discovery file in `jdhart81/viridis-agent-fleet`. Smithery uses its official
-metadata API with `GROWTH_SMITHERY_API_KEY`. GitHub uses the official Contents
+Policy-cleared live targets are owned Smithery listings, including the public
+Agent Market Network listing, and one factual discovery file in
+`jdhart81/viridis-agent-fleet`. Smithery uses its official metadata API with
+`GROWTH_SMITHERY_API_KEY`; its adapter can link only the Viridis agent-suite or
+Agent Market catalog. GitHub uses the official Contents
 API with a repository-only GitHub App. The worker signs a short-lived JWT
 from a read-only private-key mount and automatically mints one-hour
 installation tokens; there is no recurring PAT rotation. It can update only

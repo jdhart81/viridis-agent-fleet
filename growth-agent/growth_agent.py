@@ -824,23 +824,33 @@ class GitHubOwnedContentAdapter:
 class SmitheryMetadataAdapter:
     """Official API updates for listings owned by the credential holder."""
 
+    ALLOWED_HOMEPAGES = frozenset({
+        "https://mcp.viridisconservation.com/agents",
+        "https://mcp.viridisconservation.com/network/catalog",
+    })
+
     def __init__(self, opener: Callable[..., Any] = urllib.request.urlopen):
         self.opener = opener
 
     def send(self, target: dict, content: str, credentials: dict) -> dict:
         token = credentials.get("GROWTH_SMITHERY_API_KEY", "")
         qualified_name = str(target.get("qualified_name", ""))
+        homepage = str(target.get("homepage") or
+                       "https://mcp.viridisconservation.com/agents")
         if not token:
             raise GrowthError("Smithery API credential is missing")
         if not re.fullmatch(r"hartjustin6/[A-Za-z0-9_.-]+", qualified_name):
             raise GrowthError(
                 "Smithery adapter is restricted to hartjustin6 listings")
+        if homepage not in self.ALLOWED_HOMEPAGES:
+            raise GrowthError(
+                "Smithery adapter homepage is restricted to Viridis discovery")
         encoded = urllib.parse.quote(qualified_name, safe="")
         request = urllib.request.Request(
             f"https://api.smithery.ai/servers/{encoded}",
             data=json.dumps({
                 "description": content,
-                "homepage": "https://mcp.viridisconservation.com/agents",
+                "homepage": homepage,
                 "unlisted": False,
             }).encode(), method="PATCH",
             headers={"Authorization": f"Bearer {token}",

@@ -1,5 +1,38 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-20, Agent Market distribution — DEPLOYED/ACTIVE] The verified
+> Agent Market MCP is now public on Smithery and maintained autonomously.**
+> Smithery release `d7ddb407-24e8-4aaf-8bdc-dfd32da4b7d0` succeeded, scanned
+> all 16 tools, and is searchable at
+> `hartjustin6/agent-market-network`. The public description is grounded in
+> live route prices, the $0.01 new-wallet offer, the one external settlement,
+> and the exact three open job IDs/budgets.
+>
+> The isolated growth worker now includes the owned listing as a policy-cleared
+> suite-wide target with a 30-day cooldown. Its Smithery adapter remains locked
+> to `hartjustin6/*` and now also restricts homepages to the Viridis agent-suite
+> or Agent Market catalog. The first live refresh wrote `send_attempt` before
+> `send_result`, then succeeded at `2026-07-21T05:23:06Z`; content SHA-256
+> `aa27eac756c19370aab5f40d33777a56677370ca960a2b0359f952a124e9e08c`,
+> OpenAI cost **$0.010180**, monthly model spend **$0.071417 / $20**.
+>
+> Growth image
+> `sha256:4dbe5042f2697d73c5493d3691073559baa1eb87fd4976c6b75f4d93141a2dd6`
+> is tagged `deployed-2026-07-20-market-distribution`; rollback
+> `prev-2026-07-20-market-distribution` preserves
+> `sha256:380820a46e6656c68b83ee8f221005ee7df88fdaab388a676ff1c2c756bf237b`.
+> Local and droplet gates are **1272 passed / 0 failed / 33/33**. Gateway and
+> market remain healthy; 3 paid jobs are open, independently verified jobs
+> remain 0, and x402 telemetry remains 1 external settlement / 1 payer.
+>
+> Pre-build transport caught `.env.openai.local` outside the old exact-name
+> ignore. No image was built until `.env*` and `**/.env*` were excluded. The
+> transported duplicate was deleted, the running worker's growth-only `.env`
+> and GitHub App key were recovered at mode 0600, and a regression test now
+> pins the broad exclusion. Candidate context was 56.37 kB; image inspection
+> found no environment or key file. **Did NOT change:** gateway, market, Hub,
+> prices, payment rails, Connect, escrow, bond, participant, FA-I3, or x402 v1.
+
 > **[2026-07-20, Viridis Hub Kernel — DEPLOYED/ACTIVE] Agent-market work now
 > closes through independent payment verification, signed identity, durable
 > delivery evidence, reputation, and market-aware distribution.** Gateway image

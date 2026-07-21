@@ -510,6 +510,48 @@ def test_smithery_rejects_non_owned_listing_before_network():
                      {"GROWTH_SMITHERY_API_KEY": "scoped-key"})
 
 
+def test_agent_market_smithery_uses_catalog_homepage():
+    captured = {}
+
+    class Response:
+        status = 200
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def read(self, limit): return b'{"success":true}'
+
+    def opener(request, timeout):
+        captured["request"] = request
+        return Response()
+
+    adapter = SmitheryMetadataAdapter(opener=opener)
+    receipt = adapter.send({
+        "qualified_name": "hartjustin6/agent-market-network",
+        "homepage": "https://mcp.viridisconservation.com/network/catalog",
+    }, "live market copy", {"GROWTH_SMITHERY_API_KEY": "scoped-key"})
+    request = captured["request"]
+    assert request.full_url.endswith("hartjustin6%2Fagent-market-network")
+    assert json.loads(request.data)["homepage"] == \
+        "https://mcp.viridisconservation.com/network/catalog"
+    assert receipt["updated"] is True
+
+
+def test_smithery_rejects_non_viridis_homepage_before_network():
+    adapter = SmitheryMetadataAdapter(
+        opener=lambda *args, **kwargs: pytest.fail("network must not run"))
+    with pytest.raises(GrowthError, match="homepage is restricted"):
+        adapter.send({
+            "qualified_name": "hartjustin6/agent-market-network",
+            "homepage": "https://example.test/redirect",
+        }, "copy", {"GROWTH_SMITHERY_API_KEY": "scoped-key"})
+
+
+def test_root_dockerignore_blocks_all_environment_variants():
+    patterns = set((Path(__file__).resolve().parents[2] / ".dockerignore")
+                   .read_text().splitlines())
+    assert ".env*" in patterns
+    assert "**/.env*" in patterns
+
+
 def test_owned_github_content_uses_contents_api_not_issues():
     captured = []
 
