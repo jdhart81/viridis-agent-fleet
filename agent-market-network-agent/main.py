@@ -25,7 +25,14 @@ async def healthz(_request):
 
 
 async def catalog(_request):
-    return JSONResponse(agent.public_catalog())
+    payload = agent.public_catalog()
+    payload["distribution"] = {
+        "smithery": (
+            "https://smithery.ai/servers/hartjustin6/agent-market-network"
+        ),
+        "source": "https://github.com/jdhart81/viridis-agent-fleet",
+    }
+    return JSONResponse(payload)
 
 
 async def manifest(_request):
@@ -76,4 +83,3 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host=os.environ.get("MARKET_HOST", "0.0.0.0"),
                 port=PORT, log_level="info")
-

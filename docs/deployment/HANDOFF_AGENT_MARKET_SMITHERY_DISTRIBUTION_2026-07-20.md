@@ -80,3 +80,33 @@ file.
 No gateway, Agent Market, Hub, price, payment rail, x402, Connect, escrow, bond,
 participant, or legal-fallback behavior changed. The growth container still has
 no Stripe, CDP, x402 signer, Hub, market-HMAC, or gateway-admin credential.
+
+## Smithery quality follow-up — deployed
+
+All 16 MCP tools now publish a typed result envelope and standard MCP
+annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, and
+`openWorldHint`). Tests pin both the schemas and read/write classifications.
+The public catalog also links the owned Smithery page and public source.
+
+Smithery rescanned production and raised the listing from **66 to 82/100**,
+clearing the quality gate and displaying `Typed Output`. Its backlink check now
+confirms the public GitHub repository.
+
+- local fleet: **1274 / 0 / 33/33**
+- droplet fleet: **1274 / 0 / 33/33**
+- market image:
+  `sha256:c665007ef26cfe949bae20f04fd5f6e01bd8ec6ddb40fb5c940d64b33ae45257`
+- rollback:
+  `viridis-agent-market-network:prev-2026-07-20-smithery-quality` ->
+  `sha256:392d373015354f3bc10016103fd92896f86288d1b37493ded2f0c8d494139576`
+- production state preserved: 6 profiles, 3 open jobs, 0 verified jobs
+- disk: 24G total, 5.3G used, 18G free (23%)
+
+The public listing is usable and discoverable. Smithery's separate verified
+badge remains blocked by its exact-host TXT requirement and a paid developer
+plan. After an account-holder Namecheap login, add a TXT record on host `mcp`
+without removing existing records:
+
+`smithery-verification=73e295abf98285c3e0cfd49972fe0d991606b74b6df6427e767a8ac12055176a`
+
+No paid plan was purchased.

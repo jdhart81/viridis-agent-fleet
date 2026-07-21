@@ -1,5 +1,30 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-20, Agent Market Smithery quality — DEPLOYED/ACTIVE] The public
+> market listing now advertises typed results and MCP safety semantics for all
+> 16 tools.** Smithery rescanned the live endpoint and raised its quality score
+> from **66 to 82/100**, clearing the greater-than-80 quality gate and showing
+> the `Typed Output` capability. The public GitHub backlink is confirmed, and
+> `/network/catalog` now carries the exact owned Smithery listing plus source
+> links. No tool behavior, market state transition, payment rail, price, or
+> settlement boundary changed.
+>
+> Final market image
+> `sha256:c665007ef26cfe949bae20f04fd5f6e01bd8ec6ddb40fb5c940d64b33ae45257`
+> is tagged `deployed-2026-07-20-smithery-quality`; rollback
+> `prev-2026-07-20-smithery-quality` preserves
+> `sha256:392d373015354f3bc10016103fd92896f86288d1b37493ded2f0c8d494139576`.
+> Local and droplet gates are **1274 passed / 0 failed / 33/33**. Production is
+> healthy with 6 profiles, 3 open jobs, 0 independently verified jobs, and the
+> exact pre-cutover persistent market totals. Gateway image remains
+> `sha256:3fccd2c23ba2a792e779c3a7ee393bed024a5d75cabfbc3303561ca23fbca8cd`.
+> Disk remains 24G total, 5.3G used, 18G free (23%).
+>
+> Smithery's optional verified badge still requires (1) the published
+> `mcp.viridisconservation.com` TXT value to be added in Namecheap after an
+> account-holder login and (2) a paid Smithery developer plan. Neither blocks
+> public discovery or tool use; no plan was purchased.
+
 > **[2026-07-20, Agent Market distribution — DEPLOYED/ACTIVE] The verified
 > Agent Market MCP is now public on Smithery and maintained autonomously.**
 > Smithery release `d7ddb407-24e8-4aaf-8bdc-dfd32da4b7d0` succeeded, scanned
