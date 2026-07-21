@@ -20,7 +20,7 @@ jobs:
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz" \
             -o /tmp/mcp-publisher.tar.gz
-          echo "a818239b29a85025d79a1757b61979cf863fd6b3ba5b2b0eb4cf502fde495c73  /tmp/mcp-publisher.tar.gz" \
+          echo "ab128162b0616090b47cf245afe0a23f3ef08936fdce19074f5ba0a4469281ac  /tmp/mcp-publisher.tar.gz" \
             | sha256sum --check --strict
           tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
           chmod +x /tmp/mcp-publisher
