@@ -30,9 +30,11 @@
 > tokens; `GROWTH_GITHUB_TOKEN` is absent. The first cycle correctly made no
 > duplicate send because every cleared target was on cooldown. During a
 > deployment inspection the prior OpenAI key was rendered into command output;
-> the worker was immediately stopped, the key was removed, and it restarted
-> with `GROWTH_OPENAI_ENABLED=0` and deterministic copy. **The exposed OpenAI
-> key must be revoked and replaced before LLM phrasing is re-enabled.** The
+> the worker was immediately stopped and the key was removed. Rotation is now
+> complete: the exposed `Codex` key is revoked, replacement key `Agent fleet
+> CEO` is live only in the isolated growth worker, and `gpt-5.6-terra` is
+> re-enabled under the existing $20/month cap. A no-post production smoke cost
+> **$0.010403** and returned grounded model copy; no outbound send occurred. The
 > local `env/` credential folder was also found in the encrypted droplet source
 > transport and candidate context; no Dockerfile copied it into an image, both
 > remote copies were deleted, image absence was verified, and the originals

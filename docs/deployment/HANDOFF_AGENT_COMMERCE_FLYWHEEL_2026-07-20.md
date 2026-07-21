@@ -89,18 +89,23 @@ the approved repository. The old `GROWTH_GITHUB_TOKEN` variable is absent.
 The worker's first post-cutover cycle selected no target because every cleared
 owned target was still on cooldown, so it correctly made no network send.
 
-## Credential incident and safe state
+## Credential incident, rotation, and final state
 
 While validating production configuration, a compose rendering command
 expanded the prior OpenAI API key into tool output. The growth worker was
 stopped immediately; the key was removed from its environment; and the worker
-was restarted with `GROWTH_OPENAI_ENABLED=0`. Runtime verification shows the
-OpenAI key is empty, the PAT is absent, and Stripe/CDP/x402 credential variables
-are absent. Deterministic grounded copy remains active.
+was restarted with `GROWTH_OPENAI_ENABLED=0` while rotation was performed.
+Replacement project key `Agent fleet CEO` was created through the encrypted
+OpenAI Platform workflow, saved locally at mode 0600, installed through the
+isolated production secret path, and validated before activation. The exposed
+`Codex` key was then revoked in the OpenAI Platform.
 
-Required account action: revoke the exposed OpenAI project key in the OpenAI
-Platform and create a replacement before re-enabling LLM phrasing. The current
-release intentionally fails safe without it.
+Production is now back on `GROWTH_OPENAI_ENABLED=1` with `gpt-5.6-terra`. The
+one-off image validation cost $0.008798; the persisted production no-post smoke
+cost $0.010403 and raised recorded monthly spend to $0.061237. Both smokes had
+`send_attempted:false`. Runtime verification shows the replacement key is
+nonempty, the PAT is absent, GitHub App authentication remains active, and
+Stripe/CDP/x402 credential variables are absent.
 
 The local top-level `env/` credential folder was also inadvertently included
 in the SSH-protected full-tree source transport and isolated Docker build
