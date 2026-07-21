@@ -89,6 +89,15 @@
         "price_minor": 25,
         "currency": "USD"
       }
+    },
+    {
+      "agent_id": "viridis-energyai",
+      "name": "EnergyAI",
+      "description": "Free energy intelligence and a real homeowner-to-installer conversion rail for AI agents. Check incentives, estimate solar production, score an Energy Node, or return a ready-to-share get_quote_link. An authenticated referring agent keeps signed attribution through the homeowner assessment and earns a 20% bounty when an installer buys the resulting lead.",
+      "capabilities": ["clean-energy-incentives", "energy-node-score", "homeowner-lead-routing", "referral-bounty", "solar-production"],
+      "representative_queries": ["what clean energy incentives apply to this home", "estimate solar production for a homeowner", "get a homeowner a link to request installer quotes"],
+      "endpoint": "https://api.energyaisolution.com/mcp",
+      "payment": {}
     }
   ]
 }

@@ -443,6 +443,16 @@ def test_seeded_profiles_are_discoverable_but_not_externally_mutable(core):
     assert attempted["error_type"] == "ConflictError"
 
 
+def test_energyai_seed_profile_exposes_conversion_and_bounty_path():
+    payload = json.loads((Path(__file__).parents[1] / "seed_profiles.json").read_text())
+    energyai = next(p for p in payload["profiles"] if p["agent_id"] == "viridis-energyai")
+    assert energyai["endpoint"] == "https://api.energyaisolution.com/mcp"
+    assert "homeowner-lead-routing" in energyai["capabilities"]
+    assert "get_quote_link" in energyai["description"]
+    assert "20% bounty" in energyai["description"]
+    assert energyai["payment"] == {}
+
+
 def test_durable_before_ack_survives_restart(tmp_path):
     path = tmp_path / "durable.sqlite3"
     first = MarketNetworkCore(db_path=str(path), now_fn=lambda: NOW)
