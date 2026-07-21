@@ -15,8 +15,9 @@ ENV MARKET_HOST=0.0.0.0 \
     MARKET_PORT=8410 \
     MARKET_PUBLIC_BASE=https://mcp.viridisconservation.com/network \
     MARKET_STATE_DB=/state/agent_market_network.sqlite3 \
-    MARKET_SEED_PROFILES=/app/seed_profiles.json
+    MARKET_SEED_PROFILES=/app/seed_profiles.json \
+    MARKET_HUB_REQUIRED=0 \
+    MARKET_HUB_URL=
 EXPOSE 8410
 HEALTHCHECK --interval=30s --timeout=5s CMD python3 -c "import urllib.request,sys; sys.exit(0 if b'\"status\":\"ok\"' in urllib.request.urlopen('http://127.0.0.1:8410/healthz').read() else 1)"
 CMD ["python3", "main.py"]
-

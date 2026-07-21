@@ -189,6 +189,62 @@ def test_live_snapshot_drives_prices_and_intro_copy():
     assert "https://example.test/quickstart" in content
 
 
+def test_open_market_work_is_promoted_with_exact_live_budget_and_id():
+    base = snapshot(external=1)
+    live = FleetSnapshot(
+        routes=base.routes, metrics=base.metrics,
+        route_metrics=base.route_metrics, intro_enabled=base.intro_enabled,
+        agents_url=base.agents_url, quickstart_url=base.quickstart_url,
+        captured_at=base.captured_at,
+        market_url="https://mcp.viridisconservation.com/network/catalog",
+        open_work=({"work_id": "work_abc12345",
+                    "title": "Build a LangGraph adapter",
+                    "budget_minor": 2500, "currency": "USD"},))
+    content = render_content(live)
+    assert "$25.00 — Build a LangGraph adapter (work_abc12345)" in content
+    assert live.market_url in content
+    assert validate_generated_content(content, live) == content
+    with pytest.raises(GrowthError, match="altered or omitted an open job"):
+        validate_generated_content(content.replace("$25.00", "$30.00"), live)
+
+
+def test_full_live_market_content_stays_within_posting_limit():
+    base = snapshot(external=1)
+    routes = tuple(
+        {
+            "agent": f"agent-{index}",
+            "tool": f"tool-{index}",
+            "endpoint": f"/x402/agent-{index}/tool-{index}",
+            "price_minor": 25 + index,
+            "amount_atomic_usdc": (25 + index) * 10_000,
+            "description": "Detailed deterministic climate workflow " * 20,
+        }
+        for index in range(5)
+    )
+    jobs = tuple(
+        {
+            "work_id": f"work_production_{index}",
+            "title": "Build and verify an agent-market integration " * 8,
+            "budget_minor": 2500 + index * 2500,
+            "currency": "USD",
+        }
+        for index in range(3)
+    )
+    live = FleetSnapshot(
+        routes=routes, metrics=base.metrics,
+        route_metrics=base.route_metrics, intro_enabled=True,
+        agents_url=base.agents_url, quickstart_url=base.quickstart_url,
+        captured_at=base.captured_at,
+        market_url="https://mcp.viridisconservation.com/network/catalog",
+        open_work=jobs)
+    content = render_content(live)
+    assert len(content) <= 1900
+    for job in jobs:
+        assert job["work_id"] in content
+        assert f"${job['budget_minor'] / 100:.2f}" in content
+    assert validate_generated_content(content, live) == content
+
+
 def test_generated_copy_validator_refuses_price_or_claim_drift():
     live = snapshot(external=2, payers=2, intro=True)
     content = render_content(live)

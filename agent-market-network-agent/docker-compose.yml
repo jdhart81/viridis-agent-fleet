@@ -6,6 +6,9 @@ services:
       MARKET_PUBLIC_BASE: ${MARKET_PUBLIC_BASE:-https://mcp.viridisconservation.com/network}
       MARKET_STATE_DB: /state/agent_market_network.sqlite3
       MARKET_SEED_PROFILES: /app/seed_profiles.json
+      MARKET_HUB_REQUIRED: ${MARKET_HUB_REQUIRED:-0}
+      MARKET_HUB_URL: ${MARKET_HUB_URL:-}
+      HUB_EVENT_SECRET: ${HUB_EVENT_SECRET:-}
     volumes:
       - agent_market_state:/state
     ports:
@@ -13,4 +16,3 @@ services:
 
 volumes:
   agent_market_state:
-

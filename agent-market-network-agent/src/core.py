@@ -12,11 +12,15 @@ AM4 the event journal is append-only and carries a content digest per mutation.
 AM5 work matching is pull-based; the server never calls agent-supplied URLs.
 AM6 an award selects only an existing x402 or Viridis cash-escrow payment rail.
 AM7 a job counts as paid/earned only after buyer and seller attest to the exact
-    same settlement reference, amount, currency, and rail.
+    same settlement reference, amount, currency, and rail.  When the Hub
+    verifier is required, the gateway must independently verify that money
+    primitive before completion.
 AM8 no private key, wallet, Stripe, Connect, CDP, or facilitator credential is
     accepted, stored, read, or required by this service.
 AM9 expired profiles, subscriptions, and work are excluded from live discovery.
 AM10 rate limits and bounded fields make the public write surface spam-resistant.
+AM11 optional compute/notary/relay evidence is signed with the delivery and is
+     never fabricated by the market; the Hub records only evidence it verifies.
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ import base64
 import hashlib
 import ipaddress
 import json
+import math
 import os
 import re
 import sqlite3
@@ -41,7 +46,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 
 PROTOCOL = "viridis-agent-market-v1"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 AUTH_WINDOW_SECONDS = 300
 MAX_TEXT = 8_000
 MAX_PROFILE_DAYS = 365
@@ -57,6 +62,7 @@ ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$")
 NONCE_RE = re.compile(r"^[A-Za-z0-9._:-]{8,160}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 TX_RE = re.compile(r"^(0x[0-9a-fA-F]{16,128}|[A-Za-z0-9._:-]{8,256})$")
+ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 
@@ -188,6 +194,8 @@ CREATE TABLE IF NOT EXISTS deliveries (
     artifact_url TEXT NOT NULL,
     content_sha256 TEXT NOT NULL,
     summary TEXT NOT NULL,
+    compute_json TEXT NOT NULL DEFAULT '{}',
+    proofs_json TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL,
     accepted_at TEXT,
     FOREIGN KEY(work_id) REFERENCES work_orders(work_id)
@@ -207,6 +215,13 @@ CREATE TABLE IF NOT EXISTS settlements (
     status TEXT NOT NULL,
     created_at TEXT NOT NULL,
     completed_at TEXT,
+    FOREIGN KEY(work_id) REFERENCES work_orders(work_id)
+);
+CREATE TABLE IF NOT EXISTS hub_receipts (
+    work_id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL UNIQUE,
+    receipt_json TEXT NOT NULL,
+    verified_at TEXT NOT NULL,
     FOREIGN KEY(work_id) REFERENCES work_orders(work_id)
 );
 CREATE TABLE IF NOT EXISTS messages (
@@ -257,10 +272,14 @@ CREATE INDEX IF NOT EXISTS idx_events_actor ON events(actor_id, created_at);
 class MarketNetworkCore:
     def __init__(self, config: Optional[AgentConfig] = None, *,
                  db_path: str = ":memory:",
-                 now_fn: Callable[[], datetime] = _utcnow):
+                 now_fn: Callable[[], datetime] = _utcnow,
+                 settlement_verifier: Optional[Callable[[dict], dict]] = None,
+                 hub_required: bool = False):
         self.config = config or AgentConfig()
         self.db_path = str(db_path)
         self._now_fn = now_fn
+        self._settlement_verifier = settlement_verifier
+        self.hub_required = bool(hub_required)
         self._lock = threading.RLock()
         if self.db_path != ":memory:":
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -271,6 +290,18 @@ class MarketNetworkCore:
         self._conn.execute("PRAGMA synchronous=FULL")
         self._conn.execute("PRAGMA foreign_keys=ON")
         self._conn.executescript(_SCHEMA)
+        self._migrate_schema()
+
+    def _migrate_schema(self) -> None:
+        """Additive SQLite migrations for durable pre-Hub market volumes."""
+        columns = {row["name"] for row in
+                   self._conn.execute("PRAGMA table_info(deliveries)").fetchall()}
+        if "compute_json" not in columns:
+            self._conn.execute(
+                "ALTER TABLE deliveries ADD COLUMN compute_json TEXT NOT NULL DEFAULT '{}'")
+        if "proofs_json" not in columns:
+            self._conn.execute(
+                "ALTER TABLE deliveries ADD COLUMN proofs_json TEXT NOT NULL DEFAULT '{}'")
 
     def _now(self) -> datetime:
         value = self._now_fn()
@@ -558,6 +589,12 @@ class MarketNetworkCore:
             result["cash_escrow_endpoint"] = endpoint
         if raw.get("payee_id"):
             result["payee_id"] = self._id(raw["payee_id"], "payment.payee_id")
+        if raw.get("payee_address"):
+            address = str(raw["payee_address"]).strip()
+            if not ADDRESS_RE.fullmatch(address):
+                raise MarketError("payment.payee_address must be an EVM address",
+                                  field="payment.payee_address")
+            result["payee_address"] = address.lower()
         if raw.get("network"):
             result["network"] = self._text(raw["network"], "payment.network", maximum=160)
         if raw.get("asset"):
@@ -574,6 +611,65 @@ class MarketNetworkCore:
                 raise MarketError("payment currency must be USD or USDC",
                                   field="payment.currency")
             result["currency"] = currency
+        return result
+
+    def _validate_compute_evidence(self, raw: Any) -> dict:
+        if raw in (None, {}):
+            return {}
+        if not isinstance(raw, dict):
+            raise MarketError("compute_evidence must be an object",
+                              field="compute_evidence")
+        allowed = {"power_w", "duration_s", "grid_intensity_g_per_kwh",
+                   "temperature_k", "bit_ops", "price_minor_per_kwh",
+                   "source"}
+        if set(raw) - allowed:
+            raise MarketError("compute_evidence has unsupported fields",
+                              field="compute_evidence")
+        result: dict[str, Any] = {}
+        for field in ("power_w", "duration_s"):
+            try:
+                value = float(raw.get(field))
+            except (TypeError, ValueError) as exc:
+                raise MarketError(f"{field} must be a positive number",
+                                  field=f"compute_evidence.{field}") from exc
+            if not math.isfinite(value) or not 0 < value < 1e12:
+                raise MarketError(f"{field} must be positive and bounded",
+                                  field=f"compute_evidence.{field}")
+            result[field] = value
+        for field in ("grid_intensity_g_per_kwh", "temperature_k",
+                      "bit_ops", "price_minor_per_kwh"):
+            if raw.get(field) is None:
+                continue
+            try:
+                value = float(raw[field])
+            except (TypeError, ValueError) as exc:
+                raise MarketError(f"{field} must be numeric",
+                                  field=f"compute_evidence.{field}") from exc
+            minimum = 0 if field in {"grid_intensity_g_per_kwh",
+                                     "price_minor_per_kwh"} else 0.0
+            if (not math.isfinite(value) or value < minimum
+                    or (field in {"temperature_k", "bit_ops"}
+                                   and value <= 0) or value >= 1e30):
+                raise MarketError(f"{field} is outside its safe range",
+                                  field=f"compute_evidence.{field}")
+            result[field] = value
+        result["source"] = self._text(
+            raw.get("source") or "seller_measured", "compute_evidence.source",
+            maximum=80)
+        return result
+
+    def _validate_delivery_proofs(self, raw: Any) -> dict:
+        if raw in (None, {}):
+            return {}
+        if not isinstance(raw, dict):
+            raise MarketError("proofs must be an object", field="proofs")
+        allowed = {"notary_commitment_id", "verified_receipt_id"}
+        if set(raw) - allowed:
+            raise MarketError("proofs has unsupported fields", field="proofs")
+        result = {}
+        for field in sorted(allowed):
+            if raw.get(field):
+                result[field] = self._id(raw[field], f"proofs.{field}")
         return result
 
     async def process(self, input_data: dict) -> dict:
@@ -707,12 +803,21 @@ class MarketNetworkCore:
                 overlap = len(want & _tokens(haystack))
                 completed = self._conn.execute(
                     "SELECT COUNT(*) AS n,COALESCE(SUM(amount_minor),0) AS revenue "
-                    "FROM settlements WHERE seller_id=? AND status='COUNTERPARTY_ATTESTED'",
+                    "FROM settlements WHERE seller_id=? AND status IN "
+                    "('COUNTERPARTY_ATTESTED','INDEPENDENTLY_VERIFIED')",
+                    (item["agent_id"],)).fetchone()
+                independent = self._conn.execute(
+                    "SELECT COUNT(*) AS n,COALESCE(SUM(amount_minor),0) AS revenue "
+                    "FROM settlements WHERE seller_id=? "
+                    "AND status='INDEPENDENTLY_VERIFIED'",
                     (item["agent_id"],)).fetchone()
                 item["market_reputation"] = {
                     "counterparty_attested_jobs": int(completed["n"]),
                     "counterparty_attested_revenue_minor": int(completed["revenue"]),
-                    "note": "attested by both counterparties; not independent chain verification",
+                    "independently_verified_jobs": int(independent["n"]),
+                    "independently_verified_revenue_minor": int(independent["revenue"]),
+                    "note": ("independent totals are gateway-verified; counterparty "
+                             "totals retain legacy dashboard compatibility"),
                 }
                 item["match_score"] = overlap * 10 + len(set(caps) & available) * 5
                 results.append(item)
@@ -915,8 +1020,19 @@ class MarketNetworkCore:
             "delivery_deadline": work["delivery_deadline"], "status": work["status"],
             "awarded_offer_id": work["awarded_offer_id"],
             "offers": [self._offer_public(row) for row in offers],
-            "delivery": dict(delivery) if delivery else None,
+            "delivery": self._delivery_public(delivery) if delivery else None,
             "settlement": self._settlement_public(settlement) if settlement else None,
+        }
+
+    @staticmethod
+    def _delivery_public(row: sqlite3.Row) -> dict:
+        return {
+            "delivery_id": row["delivery_id"], "work_id": row["work_id"],
+            "seller_id": row["seller_id"], "artifact_url": row["artifact_url"],
+            "content_sha256": row["content_sha256"], "summary": row["summary"],
+            "compute_evidence": json.loads(row["compute_json"] or "{}"),
+            "proofs": json.loads(row["proofs_json"] or "{}"),
+            "created_at": row["created_at"], "accepted_at": row["accepted_at"],
         }
 
     def _validate_settlement(self, raw: dict, *, allowed_rails: list[str],
@@ -932,9 +1048,16 @@ class MarketNetworkCore:
             endpoint = self._public_https(
                 raw.get("payment_endpoint") or payment.get("x402_endpoint", ""),
                 "settlement.payment_endpoint")
+            payee_address = str(raw.get("payee_address") or
+                                payment.get("payee_address") or "").strip()
+            if payee_address and not ADDRESS_RE.fullmatch(payee_address):
+                raise MarketError("x402 payee_address must be an EVM address",
+                                  field="settlement.payee_address")
             return {"rail": rail, "payment_endpoint": endpoint,
                     "network": str(raw.get("network") or payment.get("network") or ""),
-                    "asset": str(raw.get("asset") or payment.get("asset") or "")}
+                    "asset": str(raw.get("asset") or payment.get("asset") or ""),
+                    "payee_address": payee_address.lower(),
+                    "price_minor": payment.get("price_minor")}
         endpoint = self._public_https(
             raw.get("payment_endpoint") or payment.get("cash_escrow_endpoint", ""),
             "settlement.payment_endpoint")
@@ -996,6 +1119,14 @@ class MarketNetworkCore:
                 body["settlement"],
                 allowed_rails=json.loads(work["allowed_rails_json"]),
                 seller_profile=seller)
+            listed_price = settlement.get("price_minor")
+            if (self.hub_required and settlement["rail"] == "x402"
+                    and listed_price is not None
+                    and amount != int(listed_price)):
+                raise MarketError(
+                    "x402 offer amount must equal the seller's fixed route price; "
+                    "use viridis_cash_escrow for custom job amounts",
+                    error_type="ConflictError", field="amount_minor")
             _, replay = self._begin_write(
                 "submit_offer", actor, body, data.get("auth") or {}, idem)
             if replay is not None:
@@ -1112,11 +1243,18 @@ class MarketNetworkCore:
                 "content_sha256": str(data.get("content_sha256", "")).lower(),
                 "summary": data.get("summary", ""),
                 "idempotency_key": data.get("idempotency_key", "")}
+        if data.get("compute_evidence") is not None:
+            body["compute_evidence"] = data.get("compute_evidence")
+        if data.get("proofs") is not None:
+            body["proofs"] = data.get("proofs")
         work_id = self._id(body["work_id"], "work_id")
         artifact_url = self._public_https(body["artifact_url"], "artifact_url")
         if not SHA256_RE.fullmatch(body["content_sha256"]):
             raise MarketError("content_sha256 must be 64 lowercase hex", field="content_sha256")
         summary = self._text(body["summary"], "summary", maximum=2000)
+        compute_evidence = self._validate_compute_evidence(
+            body.get("compute_evidence"))
+        proofs = self._validate_delivery_proofs(body.get("proofs"))
         idem = self._id(body["idempotency_key"], "idempotency_key")
         with self._tx():
             self._ensure_active(actor)
@@ -1136,9 +1274,11 @@ class MarketNetworkCore:
             now = _iso(self._now())
             self._conn.execute(
                 "INSERT INTO deliveries(delivery_id,work_id,seller_id,artifact_url,"
-                "content_sha256,summary,created_at,accepted_at) VALUES(?,?,?,?,?,?,?,NULL)",
+                "content_sha256,summary,compute_json,proofs_json,created_at,accepted_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,NULL)",
                 (delivery_id, work_id, actor, artifact_url,
-                 body["content_sha256"], summary, now))
+                 body["content_sha256"], summary, _stable(compute_evidence),
+                 _stable(proofs), now))
             self._conn.execute(
                 "UPDATE work_orders SET status='DELIVERED',updated_at=? WHERE work_id=?",
                 (now, work_id))
@@ -1149,6 +1289,7 @@ class MarketNetworkCore:
             result = {"delivery_id": delivery_id, "work_id": work_id,
                       "seller_id": actor, "artifact_url": artifact_url,
                       "content_sha256": body["content_sha256"], "summary": summary,
+                      "compute_evidence": compute_evidence, "proofs": proofs,
                       "created_at": now, "status": "DELIVERED"}
             self._finish_write(
                 "submit_delivery", actor, body, idem, result,
@@ -1208,8 +1349,12 @@ class MarketNetworkCore:
                                "payment_due_minor": offer["amount_minor"]})
             return result
 
-    @staticmethod
-    def _settlement_public(row: sqlite3.Row) -> dict:
+    def _settlement_public(self, row: sqlite3.Row) -> dict:
+        hub = self._conn.execute(
+            "SELECT receipt_json FROM hub_receipts WHERE work_id=?",
+            (row["work_id"],)).fetchone()
+        receipt = json.loads(hub["receipt_json"]) if hub else None
+        verified = bool(receipt and receipt.get("verified") is True)
         return {"settlement_id": row["settlement_id"], "work_id": row["work_id"],
                 "buyer_id": row["buyer_id"], "seller_id": row["seller_id"],
                 "rail": row["rail"], "amount_minor": row["amount_minor"],
@@ -1219,9 +1364,69 @@ class MarketNetworkCore:
                 "seller_attested": bool(row["seller_attested_at"]),
                 "status": row["status"], "created_at": row["created_at"],
                 "completed_at": row["completed_at"],
-                "independently_verified": False,
-                "verification_note": ("both counterparties attest the same receipt; "
-                                      "the marketplace does not move funds or query private payment systems")}
+                "independently_verified": verified,
+                "hub_receipt": receipt,
+                "verification_note": (
+                    "gateway independently verified the existing-rail money primitive"
+                    if verified else
+                    "both counterparties attest the same receipt; independent "
+                    "verification is not present")}
+
+    def _hub_event(self, work: sqlite3.Row, offer: sqlite3.Row,
+                   delivery: sqlite3.Row, settlement: sqlite3.Row) -> dict:
+        event_id = "hub_" + hashlib.sha256(
+            f"{work['work_id']}|{settlement['reference']}".encode()).hexdigest()
+        buyer = self._profile_row(work["buyer_id"])
+        seller = self._profile_row(offer["seller_id"])
+        return {
+            "spec_version": "viridis-hub-event-v1",
+            "event_id": event_id,
+            "work": {
+                "work_id": work["work_id"], "buyer_id": work["buyer_id"],
+                "title": work["title"], "description": work["description"],
+                "required_capabilities": json.loads(work["capabilities_json"]),
+                "budget_minor": work["budget_minor"], "currency": work["currency"],
+            },
+            "offer": self._offer_public(offer),
+            "delivery": self._delivery_public(delivery),
+            "settlement": {
+                "settlement_id": settlement["settlement_id"],
+                "rail": settlement["rail"],
+                "amount_minor": settlement["amount_minor"],
+                "currency": settlement["currency"],
+                "reference": settlement["reference"],
+                "evidence_url": settlement["evidence_url"],
+            },
+            "buyer_profile": self._profile_public(buyer),
+            "seller_profile": self._profile_public(seller),
+        }
+
+    def _verify_with_hub(self, work: sqlite3.Row, offer: sqlite3.Row,
+                         delivery: sqlite3.Row,
+                         settlement: sqlite3.Row) -> Optional[dict]:
+        verifier = self._settlement_verifier
+        if verifier is None:
+            if self.hub_required:
+                raise MarketError(
+                    "Hub settlement verifier is required but unavailable",
+                    error_type="SettlementVerificationError", field="reference")
+            return None
+        event = self._hub_event(work, offer, delivery, settlement)
+        try:
+            receipt = verifier(event)
+        except Exception as exc:
+            raise MarketError(
+                f"independent settlement verification failed: {exc}",
+                error_type="SettlementVerificationError", field="reference") from exc
+        if not isinstance(receipt, dict) or receipt.get("verified") is not True:
+            raise MarketError(
+                "Hub refused the settlement money primitive",
+                error_type="SettlementVerificationError", field="reference")
+        if str(receipt.get("event_id") or "") != event["event_id"]:
+            raise MarketError(
+                "Hub receipt does not bind the requested event",
+                error_type="SettlementVerificationError", field="reference")
+        return receipt
 
     def _attest_settlement(self, data: dict) -> dict:
         actor = self._id(data.get("agent_id"))
@@ -1294,17 +1499,32 @@ class MarketNetworkCore:
             settlement = self._conn.execute(
                 "SELECT * FROM settlements WHERE work_id=?", (work_id,)).fetchone()
             if settlement["buyer_attested_at"] and settlement["seller_attested_at"]:
+                delivery = self._conn.execute(
+                    "SELECT * FROM deliveries WHERE work_id=?", (work_id,)).fetchone()
+                hub_receipt = self._verify_with_hub(
+                    work, offer, delivery, settlement)
+                final_status = ("INDEPENDENTLY_VERIFIED" if hub_receipt
+                                else "COUNTERPARTY_ATTESTED")
+                if hub_receipt:
+                    self._conn.execute(
+                        "INSERT INTO hub_receipts(work_id,event_id,receipt_json,verified_at) "
+                        "VALUES(?,?,?,?) ON CONFLICT(work_id) DO UPDATE SET "
+                        "event_id=excluded.event_id,receipt_json=excluded.receipt_json,"
+                        "verified_at=excluded.verified_at",
+                        (work_id, hub_receipt["event_id"], _stable(hub_receipt), now))
                 self._conn.execute(
-                    "UPDATE settlements SET status='COUNTERPARTY_ATTESTED',completed_at=? WHERE work_id=?",
-                    (now, work_id))
+                    "UPDATE settlements SET status=?,completed_at=? WHERE work_id=?",
+                    (final_status, now, work_id))
                 self._conn.execute(
                     "UPDATE work_orders SET status='COMPLETED',updated_at=? WHERE work_id=?",
                     (now, work_id))
                 self._insert_message("market-network", work["buyer_id"], "settlement",
-                                     "Settlement attested", f"Both parties attested {reference} for {work_id}.",
+                                     "Settlement verified", f"Both parties attested {reference} for {work_id}; "
+                                     f"verification status: {final_status}.",
                                      work_id, now)
                 self._insert_message("market-network", offer["seller_id"], "settlement",
-                                     "Earnings recorded", f"Both parties attested {reference} for {work_id}.",
+                                     "Earnings recorded", f"Both parties attested {reference} for {work_id}; "
+                                     f"verification status: {final_status}.",
                                      work_id, now)
             settlement = self._conn.execute(
                 "SELECT * FROM settlements WHERE work_id=?", (work_id,)).fetchone()
@@ -1418,10 +1638,15 @@ class MarketNetworkCore:
             with self._lock:
                 self._conn.execute("SELECT 1").fetchone()
             stats = self.network_status()
-            return {"status": "ok", "agent": self.config.name,
+            hub_ok = not self.hub_required or self._settlement_verifier is not None
+            return {"status": "ok" if hub_ok else "degraded",
+                    "agent": self.config.name,
                     "version": self.config.version,
                     "checks": {"sqlite": "ok", "signature_auth": "ed25519",
-                               "payment_credentials": "none"},
+                               "payment_credentials": "none",
+                               "hub_required": self.hub_required,
+                               "hub_verifier_configured":
+                                   self._settlement_verifier is not None},
                     "market": stats}
         except Exception as exc:
             return {"status": "degraded", "agent": self.config.name,
@@ -1439,18 +1664,28 @@ class MarketNetworkCore:
                 (now,)).fetchone()[0]
             completed = self._conn.execute(
                 "SELECT COUNT(*) AS jobs,COALESCE(SUM(amount_minor),0) AS volume "
-                "FROM settlements WHERE status='COUNTERPARTY_ATTESTED'").fetchone()
+                "FROM settlements WHERE status IN "
+                "('COUNTERPARTY_ATTESTED','INDEPENDENTLY_VERIFIED')").fetchone()
+            verified = self._conn.execute(
+                "SELECT COUNT(*) AS jobs,COALESCE(SUM(amount_minor),0) AS volume "
+                "FROM settlements WHERE status='INDEPENDENTLY_VERIFIED'").fetchone()
             messages = self._conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
             events = self._conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
             return {"protocol": PROTOCOL, "profiles_active": int(profiles),
                     "work_open": int(open_work),
                     "counterparty_attested_jobs": int(completed["jobs"]),
                     "counterparty_attested_volume_minor": int(completed["volume"]),
+                    "independently_verified_jobs": int(verified["jobs"]),
+                    "independently_verified_volume_minor": int(verified["volume"]),
                     "messages_total": int(messages), "events_total": int(events),
                     "payment_rails": sorted(ALLOWED_RAILS),
                     "money_movement": "none",
-                    "earnings_semantics": ("counted only after matching buyer+seller attestations; "
-                                           "not independent chain verification")}
+                    "hub_verification_required": self.hub_required,
+                    "earnings_semantics": (
+                        "production completion requires matching counterparty "
+                        "attestations plus gateway verification of the existing rail"
+                        if self.hub_required else
+                        "legacy mode counts matching counterparty attestations")}
 
     def public_catalog(self) -> dict:
         return {"spec_version": PROTOCOL, "service": self.describe(),
@@ -1470,18 +1705,33 @@ class MarketNetworkCore:
             "security": {"write_auth": "Ed25519 signatures",
                          "replay_protection": "one-use nonce + idempotency key",
                          "private_keys": "never accepted or stored",
-                         "payment_credentials": "none"},
+                         "payment_credentials": "none",
+                         "hub_event_auth": "HMAC over the private Docker network"},
             "payment_posture": {"rails": sorted(ALLOWED_RAILS),
                                 "moves_money": False,
-                                "marks_paid_from_one_party": False},
+                                "marks_paid_from_one_party": False,
+                                "independent_verifier_required": self.hub_required},
         }
 
 
 def build(*, db_path: Optional[str] = None,
           now_fn: Callable[[], datetime] = _utcnow,
-          seed_path: Optional[str] = None) -> MarketNetworkCore:
+          seed_path: Optional[str] = None,
+          settlement_verifier: Optional[Callable[[dict], dict]] = None,
+          hub_required: Optional[bool] = None) -> MarketNetworkCore:
     path = db_path if db_path is not None else os.environ.get("MARKET_STATE_DB", ":memory:")
-    core = MarketNetworkCore(db_path=path, now_fn=now_fn)
+    required = (str(os.environ.get("MARKET_HUB_REQUIRED", "0")).lower()
+                in {"1", "true", "yes", "on"}) if hub_required is None else hub_required
+    if settlement_verifier is None:
+        hub_url = os.environ.get("MARKET_HUB_URL", "").strip()
+        hub_secret = os.environ.get("HUB_EVENT_SECRET", "")
+        if hub_url or hub_secret:
+            from src.hub_client import HubVerificationClient
+            settlement_verifier = HubVerificationClient(
+                hub_url, hub_secret).verify
+    core = MarketNetworkCore(db_path=path, now_fn=now_fn,
+                             settlement_verifier=settlement_verifier,
+                             hub_required=bool(required))
     seeds = seed_path if seed_path is not None else os.environ.get("MARKET_SEED_PROFILES", "")
     if seeds:
         seed_file = Path(seeds)

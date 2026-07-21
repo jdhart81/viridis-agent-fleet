@@ -1,14 +1,36 @@
 # STATUS — Viridis Agent Fleet
 
-> **[2026-07-20, first external-work launch — ACTIVE]** A signed
-> **viridis-market-buyer** profile is live and has posted three genuine jobs:
-> TypeScript Market MCP client ($25), LangGraph adapter ($25), and independent
-> security/usability review ($50). Production readback shows 6 active profiles,
-> 3 open jobs, and a $100 aggregate maximum budget. The buyer signing key is
-> retained only in Justin's macOS Keychain. No marketplace deposit exists and
-> no money moved; an awarded offer must still use the seller's existing x402
-> endpoint or a separately cash-funded Viridis Stripe escrow.
+> **[2026-07-20, Viridis Hub Kernel — DEPLOYED/ACTIVE] Agent-market work now
+> closes through independent payment verification, signed identity, durable
+> delivery evidence, reputation, and market-aware distribution.** Gateway image
+> `sha256:3fccd2c23ba2a792e779c3a7ee393bed024a5d75cabfbc3303561ca23fbca8cd`,
+> market image
+> `sha256:392d373015354f3bc10016103fd92896f86288d1b37493ded2f0c8d494139576`,
+> and growth image
+> `sha256:380820a46e6656c68b83ee8f221005ee7df88fdaab388a676ff1c2c756bf237b`
+> are tagged `deployed-2026-07-20-hub`; all three prior images are preserved
+> under `prev-2026-07-20-hub` rollback tags.
 >
+> Production market completion now requires matching signed buyer/seller
+> attestations **and** a Hub receipt independently verified against the existing
+> x402 or Stripe custody/Connect evidence. A manual `executed:true` boolean is
+> insufficient. Verified outcomes bind namespaced fleet identities, Trust
+> Oracle reputation, optional delivery proofs, and optional measured x402-C
+> compute evidence exactly once. The market and Hub add no signer and no money
+> rail; non-Connect third-party cash remains behind FA-I3.
+>
+> Local and droplet fleets are both **1269 passed / 0 failed / 33/33**.
+> Production health is `ok`; Hub is enabled; market v0.2.0 is healthy with Hub
+> required, 6 profiles, and all 3 paid jobs preserved. Public `/internal/*` is
+> 404, authenticated malformed events fail closed, market and growth containers
+> have zero payment credentials, and frozen MCP-v1 x402 SHA remains
+> `ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770`.
+> The market manifest/MCP and discovery links are live. Growth now grounds copy
+> in exact live job IDs/budgets; a real-data no-send smoke rendered all 3 jobs
+> in 1002 characters. Its first live cycle correctly made no duplicate post
+> because every cleared target was on cooldown. Disk remains 24G total, 5.3G
+> used, 18G free. No money moved and no test market state was left behind.
+
 > **[2026-07-20, agent market network — DEPLOYED / ACTIVE] The missing
 > active agent-to-agent network layer is live as an isolated MCP.** Production
 > image `sha256:e73ca5f24f58d0cc74475c6440839711ce36ebf8755b9f023a60e6748176a502`

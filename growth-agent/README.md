@@ -1,7 +1,7 @@
 # Viridis growth agent
 
 Separate, default-off distribution worker for the public x402 fleet. It reads
-live `/healthz`, selects only targets that pass the platform-policy allowlist
+live `/healthz` plus the public Agent Market catalog, selects only targets that pass the platform-policy allowlist
 and cooldown, and commits an immutable `outbound_log` attempt before calling
 any posting API. An isolated OpenAI Agents SDK harness can improve phrasing
 with `gpt-5.6-terra`; deterministic fleet facts remain authoritative.
@@ -19,7 +19,8 @@ post, move money, change prices, or bypass policy.
 - `GROWTH_OPENAI_MONTHLY_BUDGET_USD=20.00` is a hard monthly stop. Calls reserve
   five cents before execution; unavailable or invalid model output falls back
   to the existing deterministic template.
-- Exact route names, prices, intro pricing, conversion proof, and live URLs
+- Exact route names, prices, intro pricing, conversion proof, live open-work
+  identifiers/budgets, and live URLs
   are validated after generation. Any invented or missing dollar amount makes
   the generated copy ineligible for posting.
 - Model usage and estimated cost are written to the append-only SQLite log.

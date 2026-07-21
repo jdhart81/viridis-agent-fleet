@@ -88,6 +88,7 @@ MOUNTS = {
     "verdigraph":       "verdigraph-brain-agent",
     "neurogenesis":     "neurogenesis-agent",
     "green-router":     "green-router-agent",
+    "viridisos":        "viridisos",
 }
 
 # Agent-discovery ("agent SEO") metadata for the ARD /.well-known/ai-catalog.json.
@@ -249,6 +250,12 @@ AGENT_SEO = {
                     "Cut LLM compute cost without regressing quality",
                     "Track how an AI agent developed with an audit ledger",
                     "Self-improving agent with safety constraints"]},
+    "viridisos": {
+        "desc": "ViridisOS — theorem-backed conservation certification. Certify a parcel against a gate-passed canon theorem and receive a 'Certified by ViridisOS' mark; bind did:viridis identities; price the unified protocol toll. Staging preview; non-authoritative until the K3 swap.",
+        "queries": ["Certify this parcel against a verified theorem",
+                    "Is this conservation claim backed by a machine-checked proof?",
+                    "Bind a did:viridis identity for my agent",
+                    "Which ViridisOS modules are live?"]},
 }
 
 
@@ -982,7 +989,7 @@ def build_app():
 
     # Subscriptions is fleet revenue infrastructure, not a twenty-second leaf
     # agent. It is mounted and persisted separately so /healthz agents remains
-    # the production-coherent count of 25 (green-router mounted 2026-07-18: the restoration function of the Intelligence Bound as a product).
+    # the production-coherent count of 26 (green-router mounted 2026-07-18: the restoration function of the Intelligence Bound as a product).
     subscription_adapter = _load_adapter("subscriptions", "subscriptions-agent")
     subscription_src_modules = {
         module: sys.modules[module] for module in list(sys.modules)
@@ -1048,6 +1055,16 @@ def build_app():
         # read sync from the verified core (V7 pure surface); payee id
         # must equal the registered provider string (uw-v1 keying).
         verified_stats=verified_stats_from_core(cores["verified"]))
+
+    # Hub Kernel (HK1-HK8): the isolated agent market may ask the gateway to
+    # verify an already-executed x402/escrow settlement. It receives no Stripe,
+    # CDP, wallet, or gateway admin credential. Only after the existing money
+    # primitive verifies do identity, trust, optional Notary/Verified evidence,
+    # and optional x402-C accounting compose into one durable receipt.
+    from hub_kernel import HubKernel, make_hub_route
+    hub = HubKernel(store, cores, custody)
+    hub_required = str(os.environ.get("HUB_KERNEL_REQUIRED", "0")).lower() in {
+        "1", "true", "yes", "on"}
 
     # Freemium x402 gate (PG1-PG22, see payment_gate.py): sellable services
     # stay "free to call today" (FREE_CALLS_PER_DAY, default 10), then return
@@ -1530,9 +1547,12 @@ def build_app():
             federated[key] = await _probe_federated(m)
         # Trust infrastructure fails loud: agents up but state not durable
         # is a degraded gateway, not a healthy one.
+        hub_status = hub.status()
         ok = (all(c.get("status") == "ok" for c in checks.values())
               and subscription_health.get("status") == "ok"
-              and persistence["available"] and not persistence["errors"])
+              and persistence["available"] and not persistence["errors"]
+              and (not hub_required or hub_status["enabled"])
+              and not hub_status["errors"])
         return JSONResponse({"status": "ok" if ok else "degraded",
                              "gateway": "viridis-agent-stable",
                              "human_surfaces": {
@@ -1544,6 +1564,7 @@ def build_app():
                                  "deck": public_base + "/deck",
                                  "a2a_agent_card": (public_base +
                                                     "/.well-known/agent-card.json"),
+                                 "agent_market": public_base + "/network/catalog",
                              },
                              "persistence": persistence,
                              "payment_gate": gate.status(),
@@ -1553,6 +1574,7 @@ def build_app():
                              "participants": participants.status(),
                              "collateralized_bonds": bonds.status(),
                              "a2a_commerce": a2a_status(),
+                             "hub_kernel": hub_status,
                              "subscriptions": subscription_health,
                              "agents": checks,
                              "federated": federated}, status_code=200 if ok else 503)
@@ -1570,6 +1592,12 @@ def build_app():
                     **{key: subscription_core.describe()[key]
                        for key in ("name", "version", "capabilities")}},
                 "payments": {"endpoint": "/payments/mcp"},
+                "agent_market": {
+                    "endpoint": "/network/mcp",
+                    "catalog": "/network/catalog",
+                    "description": ("Signed agent discovery, paid work, and "
+                                    "Hub-verified settlement reputation"),
+                },
             },
             "human_surfaces": {
                 "agents": {
@@ -1599,6 +1627,10 @@ def build_app():
                     "money_movement": "Stripe-hosted human action only",
                 },
                 "deck": {"endpoint": "/deck"},
+                "agent_market": {
+                    "endpoint": "/network/catalog",
+                    "description": "Open paid work and agent capability market",
+                },
             },
             "federated_members": [
                 {"name": m["displayName"], "url": m["url"],
@@ -1691,7 +1723,9 @@ def build_app():
                              "agentsUrl": public_base + "/agents",
                              "x402QuickstartUrl": public_base + "/quickstart",
                              "llmsTxtUrl": public_base + "/llms.txt",
-                             "x402CatalogUrl": public_base + "/x402/catalog"},
+                             "x402CatalogUrl": public_base + "/x402/catalog",
+                             "agentMarketUrl": public_base + "/network/catalog",
+                             "agentMarketMcpUrl": public_base + "/network/mcp"},
                 "trustManifest": {"identity": public_base, "identityType": "https"},
             },
             "entries": entries,
@@ -1735,6 +1769,15 @@ def build_app():
                     "url": public_base + "/seats",
                     "description": ("Human pricing and Stripe-hosted checkout "
                                     "for live Viridis seat plans."),
+                },
+                {
+                    "identifier": "urn:air:viridis:agent-market",
+                    "displayName": "Viridis Agent Market Network",
+                    "type": "application/mcp-server+json",
+                    "url": public_base + "/network/mcp",
+                    "description": ("Signed agent profiles, open paid work, offers, "
+                                    "verified delivery, independently verified existing-rail "
+                                    "settlement, and trust receipts."),
                 },
             ],
         }, media_type="application/ai-catalog+json")
@@ -1830,7 +1873,8 @@ def build_app():
             try:
                 yield
             finally:
-                store.save_all({**cores, "subscriptions": subscription_core})
+                store.save_all({**cores, "subscriptions": subscription_core,
+                                "hub_kernel": hub.state})
                 store.close()
 
     seat_routes = _build_seat_routes(
@@ -1848,6 +1892,8 @@ def build_app():
                                   methods=["GET", "POST"])]
     except Exception:
         logger.warning("x402 HTTP-402 surface not loaded", exc_info=True)
+    hub_routes = [Route("/internal/hub/events", make_hub_route(hub),
+                        methods=["POST"])]
 
     app = Starlette(routes=[Route("/", directory), Route("/healthz", healthz),
                             Route("/agents", agents_page),
@@ -1857,6 +1903,7 @@ def build_app():
                             Route("/deck", deck), Route("/stats", stats),
                             Route("/.well-known/ai-catalog.json", ard_catalog),
                             *seat_routes, *a2a_routes, *x402_http_routes,
+                            *hub_routes,
                             *routes],
                     lifespan=lifespan)
     # CORS for the read-only observability surface (healthz / directory /

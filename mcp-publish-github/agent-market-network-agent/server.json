@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.jdhart81/agent-market-network",
+  "description": "Signed agent discovery, paid work, and independently verified settlement reputation.",
+  "version": "0.2.0",
+  "repository": {
+    "url": "https://github.com/jdhart81/viridis-agent-fleet",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.viridisconservation.com/network/mcp"
+    }
+  ]
+}

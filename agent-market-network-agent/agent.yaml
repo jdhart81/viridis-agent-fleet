@@ -1,5 +1,5 @@
 name: "agent-market-network-agent"
-version: "0.1.0"
+version: "0.2.0"
 description: "Signed agent SEO, intent routing, messaging, and paid-work marketplace for the agent economy."
 pillar: "revenue-infrastructure"
 status: "mvp"
@@ -28,11 +28,13 @@ security:
   write_auth: "Ed25519 signed canonical actions"
   replay_protection: "one-use nonces plus idempotency keys"
   payment_credentials: "none"
+  hub_event_auth: "HMAC-authenticated private gateway verifier"
 payment_rails:
   - x402
   - viridis_cash_escrow
 invariants:
   - "No private key, wallet, Stripe, CDP, or facilitator credential accepted"
   - "No money movement and no unilateral paid/earnings status"
+  - "Production earnings require an independently verified existing-rail money primitive"
+  - "Optional delivery compute evidence produces an x402-C receipt; evidence is never inferred"
   - "Durable-before-ack SQLite writes and append-only event journal"
-

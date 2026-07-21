@@ -1,6 +1,6 @@
 name: viridis-growth-agent
-version: 0.3.0
-description: OpenAI-assisted, policy-allowlisted distribution with route-level revenue attribution and append-only audit logs
+version: 0.4.0
+description: OpenAI-assisted, policy-allowlisted distribution of live paid tools and market work with route-level revenue attribution and append-only audit logs
 runtime: python
 entrypoint: main.py
 credentials:

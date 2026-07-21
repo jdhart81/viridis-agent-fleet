@@ -11,6 +11,7 @@
         "x402_endpoint": "https://mcp.viridisconservation.com/x402/quantity-takeoff/calculate_takeoff",
         "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
         "payee_id": "viridis:quantity-takeoff",
+        "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
         "network": "eip155:8453",
         "asset": "USDC",
         "price_minor": 50,
@@ -28,6 +29,7 @@
         "x402_endpoint": "https://mcp.viridisconservation.com/x402/ghg-ledger/calculate_inventory",
         "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
         "payee_id": "viridis:ghg-ledger",
+        "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
         "network": "eip155:8453",
         "asset": "USDC",
         "price_minor": 100,
@@ -45,6 +47,7 @@
         "x402_endpoint": "https://mcp.viridisconservation.com/x402/disclosure-compiler/compile_disclosure",
         "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
         "payee_id": "viridis:disclosure-compiler",
+        "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
         "network": "eip155:8453",
         "asset": "USDC",
         "price_minor": 200,
@@ -62,6 +65,7 @@
         "x402_endpoint": "https://mcp.viridisconservation.com/x402/taxcredit-engine/calculate_tax_credit",
         "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
         "payee_id": "viridis:taxcredit-engine",
+        "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
         "network": "eip155:8453",
         "asset": "USDC",
         "price_minor": 200,
@@ -79,6 +83,7 @@
         "x402_endpoint": "https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations",
         "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
         "payee_id": "viridis:regulatory-radar",
+        "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
         "network": "eip155:8453",
         "asset": "USDC",
         "price_minor": 25,
@@ -87,4 +92,3 @@
     }
   ]
 }
-

@@ -302,6 +302,59 @@ def test_only_both_matching_attestations_record_earnings(core):
     assert core.get_work(work["work_id"])["status"] == "COMPLETED"
 
 
+def test_production_hub_receipt_is_required_before_completion(core):
+    buyer_key, seller_key, work, _, _ = full_awarded(core)
+    core.hub_required = True
+    core._settlement_verifier = lambda event: (_ for _ in ()).throw(
+        RuntimeError("money primitive not found"))
+    assert attest(core, "buyer-agent", buyer_key, work["work_id"],
+                  "buyer")["status"] == "ok"
+    refused = attest(core, "seller-agent", seller_key, work["work_id"],
+                     "seller")
+    assert refused["status"] == "error"
+    assert refused["error_type"] == "SettlementVerificationError"
+    assert core.get_work(work["work_id"])["status"] == "ACCEPTED_PAYMENT_DUE"
+    assert core.network_status()["independently_verified_jobs"] == 0
+
+    def verified(event):
+        return {"verified": True, "event_id": event["event_id"],
+                "work_id": event["work"]["work_id"],
+                "money_primitive": {"tx_hash": event["settlement"]["reference"]}}
+
+    core._settlement_verifier = verified
+    retried = attest(core, "seller-agent", seller_key, work["work_id"],
+                     "seller")
+    assert retried["status"] == "ok"
+    assert retried["data"]["status"] == "INDEPENDENTLY_VERIFIED"
+    assert retried["data"]["independently_verified"] is True
+    assert retried["data"]["hub_receipt"]["verified"] is True
+    assert core.network_status()["independently_verified_jobs"] == 1
+
+
+def test_hub_required_fixed_x402_offer_cannot_claim_custom_job_amount(core):
+    buyer_key, _ = register(core, "fixed-buyer", "procurement")
+    seller_key, _ = register(core, "fixed-seller", "carbon")
+    work = post_work(core, "fixed-buyer", buyer_key)
+    core.hub_required = True
+    body = {
+        "work_id": work["work_id"], "amount_minor": 400, "currency": "USD",
+        "proposal": "custom job cannot use a fifty-cent fixed endpoint",
+        "delivery_seconds": 3600,
+        "settlement": {
+            "rail": "x402",
+            "payment_endpoint": "https://agents.example.com/fixed-seller/x402/run",
+            "network": "eip155:8453", "asset": "USDC",
+        },
+        "idempotency_key": "fixed-price-offer",
+    }
+    refused = run(core.process(signed_input(
+        "submit_offer", "seller_id", "fixed-seller", seller_key, body,
+        "fixed-price-offer-nonce")))
+    assert refused["status"] == "error"
+    assert refused["error_type"] == "ConflictError"
+    assert "fixed route price" in refused["message"]
+
+
 def test_mismatched_counterparty_attestation_cannot_mark_paid(core):
     buyer_key, seller_key, work, _, _ = full_awarded(core)
     assert attest(core, "buyer-agent", buyer_key, work["work_id"], "buyer")["status"] == "ok"
@@ -330,6 +383,31 @@ def test_wrong_actor_cannot_award_or_deliver(core):
         "attacker-award-nonce")))
     assert denied["error_type"] == "AuthenticationError"
     assert core.get_work(work["work_id"])["status"] == "OPEN"
+
+
+def test_delivery_compute_and_proof_evidence_is_signed_and_durable(core):
+    buyer_key, _ = register(core, "evidence-buyer", "procurement")
+    seller_key, _ = register(core, "evidence-seller", "carbon")
+    work = post_work(core, "evidence-buyer", buyer_key)
+    bid = offer(core, "evidence-seller", seller_key, work["work_id"])
+    award(core, "evidence-buyer", buyer_key, work["work_id"], bid["offer_id"])
+    digest = hashlib.sha256(b"evidenced delivery").hexdigest()
+    body = {
+        "work_id": work["work_id"],
+        "artifact_url": "https://artifacts.example.com/evidenced.json",
+        "content_sha256": digest, "summary": "Measured delivery.",
+        "idempotency_key": "evidenced-delivery",
+        "compute_evidence": {"power_w": 12.5, "duration_s": 4,
+                             "source": "seller_measured"},
+        "proofs": {"notary_commitment_id": "ncm_1234567890abcdef"},
+    }
+    result = run(core.process(signed_input(
+        "submit_delivery", "seller_id", "evidence-seller", seller_key, body,
+        "evidenced-delivery-nonce")))
+    assert result["status"] == "ok"
+    restored = core.get_work(work["work_id"])["delivery"]
+    assert restored["compute_evidence"]["power_w"] == 12.5
+    assert restored["proofs"]["notary_commitment_id"].startswith("ncm_")
 
 
 def test_private_endpoints_and_unapproved_rails_are_refused(core):
@@ -399,4 +477,3 @@ def test_source_has_no_payment_or_callback_credential_path():
     forbidden = ["STRIPE_API_KEY", "CDP_API_KEY", "X402_FACILITATOR",
                  "PRIVATE_KEY", "urlopen(", "requests.", "httpx."]
     assert all(token not in source for token in forbidden)
-

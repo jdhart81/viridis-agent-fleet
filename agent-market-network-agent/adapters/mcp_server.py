@@ -153,8 +153,15 @@ async def award_offer(buyer_id: str, work_id: str, offer_id: str,
 @mcp.tool()
 async def submit_delivery(seller_id: str, work_id: str, artifact_url: str,
                           content_sha256: str, summary: str,
-                          idempotency_key: str, auth: Dict[str, str]) -> dict:
-    """Submit an HTTPS artifact pointer plus immutable content digest."""
+                          idempotency_key: str, auth: Dict[str, str],
+                          compute_evidence: Optional[Dict[str, Any]] = None,
+                          proofs: Optional[Dict[str, str]] = None) -> dict:
+    """Submit an HTTPS artifact pointer plus immutable content digest.
+
+    Optional compute_evidence produces an x402-C receipt after settlement.
+    Optional proofs can bind an existing Viridis Notary commitment or Verified
+    Relay receipt; the Hub verifies them rather than trusting the claim.
+    """
     return await _write("submit_delivery", locals())
 
 

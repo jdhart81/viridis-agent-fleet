@@ -32,6 +32,8 @@ COPY agent-verified-relay-agent/ agent-verified-relay-agent/
 COPY verdigraph-brain-agent/ verdigraph-brain-agent/
 COPY neurogenesis-agent/ neurogenesis-agent/
 COPY green-router-agent/ green-router-agent/
+COPY viridisos/ viridisos/
+ENV VIRIDISOS_CANON_INDEX=/fleet/viridisos/_canon/canon_fingerprint_index.json
 COPY deploy/gateway/viridis_mcp_gateway.py deploy/gateway/
 COPY deploy/gateway/stripe_payments.py deploy/gateway/
 COPY deploy/gateway/state_store.py deploy/gateway/
@@ -43,6 +45,7 @@ COPY deploy/gateway/x402_rail.py deploy/gateway/
 COPY deploy/gateway/x402_http.py deploy/gateway/
 COPY deploy/gateway/x402_v2.py deploy/gateway/
 COPY deploy/gateway/a2a_commerce.py deploy/gateway/
+COPY deploy/gateway/hub_kernel.py deploy/gateway/
 COPY deploy/gateway/escrow_custody.py deploy/gateway/
 COPY deploy/gateway/connect_rail.py deploy/gateway/
 COPY deploy/gateway/weave.py deploy/gateway/

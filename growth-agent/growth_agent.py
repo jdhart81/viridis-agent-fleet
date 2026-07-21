@@ -34,6 +34,8 @@ from typing import Any, Callable, Dict, Iterable, Optional
 
 
 DEFAULT_HEALTH_URL = "https://mcp.viridisconservation.com/healthz"
+DEFAULT_MARKET_CATALOG_URL = (
+    "https://mcp.viridisconservation.com/network/catalog")
 DEFAULT_COOLDOWN_DAYS = 14
 DEFAULT_FEEDBACK_WINDOW_DAYS = 7
 DEFAULT_OPENAI_MODEL = "gpt-5.6-terra"
@@ -121,6 +123,8 @@ class FleetSnapshot:
     agents_url: str
     quickstart_url: str
     captured_at: str
+    market_url: str = ""
+    open_work: tuple[dict, ...] = ()
 
     @classmethod
     def from_health(cls, health: dict, *, captured_at: str) -> "FleetSnapshot":
@@ -179,20 +183,22 @@ class FleetSnapshot:
     def signature(self) -> str:
         body = json.dumps({"routes": self.routes, "metrics": self.metrics,
                            "route_metrics": self.route_metrics,
-                           "intro": self.intro_enabled}, sort_keys=True,
+                           "intro": self.intro_enabled,
+                           "market_url": self.market_url,
+                           "open_work": self.open_work}, sort_keys=True,
                           separators=(",", ":"))
         return hashlib.sha256(body.encode()).hexdigest()
 
 
 class LiveFleetClient:
     def __init__(self, health_url: str = DEFAULT_HEALTH_URL,
+                 market_catalog_url: str = "",
                  opener: Callable[..., Any] = urllib.request.urlopen):
         self.health_url = str(health_url)
+        self.market_catalog_url = str(market_catalog_url or "")
         self.opener = opener
 
-    def fetch(self, *, now: datetime) -> FleetSnapshot:
-        separator = "&" if "?" in self.health_url else "?"
-        url = f"{self.health_url}{separator}growth_ts={int(now.timestamp())}"
+    def _read_json(self, url: str, *, label: str) -> dict:
         request = urllib.request.Request(
             url, headers={"Accept": "application/json",
                           "User-Agent": "viridis-growth-agent/1"})
@@ -201,15 +207,60 @@ class LiveFleetClient:
                 status = int(getattr(response, "status", 200))
                 payload = response.read(2_000_000)
         except Exception as exc:
-            raise GrowthError(f"live fleet read failed: {type(exc).__name__}") \
+            raise GrowthError(f"live {label} read failed: {type(exc).__name__}") \
                 from exc
         if status != 200:
-            raise GrowthError(f"live fleet health returned HTTP {status}")
+            raise GrowthError(f"live {label} returned HTTP {status}")
         try:
-            health = json.loads(payload)
+            result = json.loads(payload)
         except (TypeError, ValueError) as exc:
-            raise GrowthError("live fleet health is not JSON") from exc
-        return FleetSnapshot.from_health(health, captured_at=_iso(now))
+            raise GrowthError(f"live {label} is not JSON") from exc
+        if not isinstance(result, dict):
+            raise GrowthError(f"live {label} is not an object")
+        return result
+
+    def fetch(self, *, now: datetime) -> FleetSnapshot:
+        separator = "&" if "?" in self.health_url else "?"
+        url = f"{self.health_url}{separator}growth_ts={int(now.timestamp())}"
+        health = self._read_json(url, label="fleet health")
+        snapshot = FleetSnapshot.from_health(health, captured_at=_iso(now))
+        if not self.market_catalog_url:
+            return snapshot
+        market_url = self.market_catalog_url
+        try:
+            separator = "&" if "?" in market_url else "?"
+            market = self._read_json(
+                f"{market_url}{separator}growth_ts={int(now.timestamp())}",
+                label="agent market catalog")
+            raw_work = market.get("open_work") or []
+            jobs = []
+            for item in raw_work:
+                if not isinstance(item, dict):
+                    continue
+                required = {"work_id", "title", "budget_minor", "currency"}
+                if not required.issubset(item):
+                    continue
+                budget = int(item["budget_minor"])
+                if budget <= 0 or str(item["currency"]).upper() != "USD":
+                    continue
+                jobs.append({key: item.get(key) for key in (
+                    "work_id", "title", "description", "budget_minor",
+                    "currency", "required_capabilities", "delivery_deadline")})
+            jobs.sort(key=lambda item: (-int(item["budget_minor"]),
+                                        str(item["work_id"])))
+            return FleetSnapshot(
+                routes=snapshot.routes, metrics=snapshot.metrics,
+                route_metrics=snapshot.route_metrics,
+                intro_enabled=snapshot.intro_enabled,
+                agents_url=snapshot.agents_url,
+                quickstart_url=snapshot.quickstart_url,
+                captured_at=snapshot.captured_at,
+                market_url=market_url.split("?", 1)[0],
+                open_work=tuple(jobs[:10]))
+        except GrowthError:
+            # Route promotion remains safe and live if the independent market
+            # process is temporarily unavailable. No stale jobs are claimed.
+            return snapshot
 
 
 class OutboundLog:
@@ -321,13 +372,20 @@ def _money(price_minor: int) -> str:
 
 
 def render_content(snapshot: FleetSnapshot) -> str:
+    # When paid work is available, reserve the finite posting budget for the
+    # exact job ids/budgets agents need in order to act. Route descriptions are
+    # still sourced and validated elsewhere, but repeating five long product
+    # descriptions alongside three jobs can exceed Discord's safe limit.
+    compact_routes = bool(snapshot.open_work and snapshot.market_url)
     lines = [
         "Live x402 carbon + compliance agent workflow on Base:",
         "measure → account → disclose → claim → scan", "",
     ]
     for route in snapshot.routes:
-        lines.append(f"• {route['agent']} — {_money(route['price_minor'])}: "
-                     f"{route['description']}")
+        route_line = f"• {route['agent']} — {_money(route['price_minor'])}"
+        if not compact_routes:
+            route_line += f": {route['description']}"
+        lines.append(route_line)
     lines.extend(["", "No signup or API key. A caller receives HTTP 402, "
                   "settles Base USDC, and gets the deterministic result."])
     if snapshot.intro_enabled:
@@ -337,6 +395,16 @@ def render_content(snapshot: FleetSnapshot) -> str:
     if external:
         lines.append(f"Live external proof: {external} settlement(s) from "
                      f"{payers} distinct payer(s).")
+    if snapshot.open_work and snapshot.market_url:
+        lines.extend(["", "Open paid work for outside agents:"])
+        for job in snapshot.open_work[:3]:
+            title = str(job["title"]).strip()
+            if len(title) > 96:
+                title = title[:93].rstrip() + "..."
+            lines.append(
+                f"• {_money(int(job['budget_minor']))} — {title} "
+                f"({job['work_id']})")
+        lines.append(f"Discover and bid: {snapshot.market_url}")
     lines.extend(["", f"Free dry-run: {snapshot.quickstart_url}",
                   f"Agent suite: {snapshot.agents_url}"])
     content = "\n".join(lines)
@@ -400,6 +468,14 @@ def validate_generated_content(content: str, snapshot: FleetSnapshot) -> str:
     for url in (snapshot.quickstart_url, snapshot.agents_url):
         if url not in candidate:
             raise GrowthError("model copy omitted a required live URL")
+    if snapshot.open_work and snapshot.market_url:
+        if snapshot.market_url not in candidate:
+            raise GrowthError("model copy omitted the live agent market URL")
+        for job in snapshot.open_work[:3]:
+            price = _money(int(job["budget_minor"]))
+            required_prices.add(price)
+            if str(job["work_id"]) not in candidate or price not in candidate:
+                raise GrowthError("model copy altered or omitted an open job")
     intro_line = "First paid call from a new wallet is $0.01."
     if snapshot.intro_enabled:
         required_prices.add("$0.01")
@@ -474,6 +550,8 @@ class OpenAIGrowthHarness:
             "intro_enabled": snapshot.intro_enabled,
             "agents_url": snapshot.agents_url,
             "quickstart_url": snapshot.quickstart_url,
+            "market_url": snapshot.market_url,
+            "open_work": list(snapshot.open_work),
             "required_factual_copy": deterministic_content,
         }
         prompt = json.dumps(facts, sort_keys=True, separators=(",", ":"))
@@ -483,7 +561,8 @@ class OpenAIGrowthHarness:
             "You are the Viridis autonomous growth operator. Improve the "
             "framing of the supplied required_factual_copy for the supplied "
             "policy-cleared target. Preserve every route name, exact dollar "
-            "amount, live proof sentence, URL, x402/Base/USDC claim, and intro "
+            "amount, open-job ID and budget, live proof sentence, URL, "
+            "x402/Base/USDC claim, and intro "
             "offer exactly. Do not invent results, customers, certifications, "
             "discounts, deadlines, compliance guarantees, or legal claims. "
             "Return one concise post plus a short strategy note. You have no "
@@ -1080,8 +1159,10 @@ def build_default() -> GrowthAgent:
                                   str(here / "targets.json"))
     db_path = os.environ.get("GROWTH_STATE_DB",
                              "/state/viridis_growth.sqlite3")
-    client = LiveFleetClient(os.environ.get("GROWTH_FLEET_HEALTH_URL",
-                                             DEFAULT_HEALTH_URL))
+    client = LiveFleetClient(
+        os.environ.get("GROWTH_FLEET_HEALTH_URL", DEFAULT_HEALTH_URL),
+        os.environ.get("GROWTH_MARKET_CATALOG_URL",
+                       DEFAULT_MARKET_CATALOG_URL))
     return GrowthAgent(client=client, log=OutboundLog(db_path),
                        targets=load_targets(targets_path),
                        copywriter=OpenAIGrowthHarness(environ=os.environ))
