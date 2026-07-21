@@ -1,0 +1,5 @@
+mcp>=1.0
+uvicorn>=0.29
+starlette>=0.37
+cryptography>=42.0
+

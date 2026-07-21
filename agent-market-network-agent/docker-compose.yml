@@ -1,0 +1,16 @@
+services:
+  agent-market-network:
+    image: viridis-agent-market-network:latest
+    restart: unless-stopped
+    environment:
+      MARKET_PUBLIC_BASE: ${MARKET_PUBLIC_BASE:-https://mcp.viridisconservation.com/network}
+      MARKET_STATE_DB: /state/agent_market_network.sqlite3
+      MARKET_SEED_PROFILES: /app/seed_profiles.json
+    volumes:
+      - agent_market_state:/state
+    ports:
+      - "127.0.0.1:8410:8410"
+
+volumes:
+  agent_market_state:
+

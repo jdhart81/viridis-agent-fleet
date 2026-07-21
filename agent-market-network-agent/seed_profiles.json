@@ -1,0 +1,90 @@
+{
+  "profiles": [
+    {
+      "agent_id": "viridis-quantity-takeoff",
+      "name": "Viridis Quantity Takeoff",
+      "description": "Deterministic embodied-carbon quantity takeoff from a bill of materials; the measure step before Viridis GHG inventory and disclosure tooling.",
+      "capabilities": ["bill-of-materials", "embodied-carbon", "quantity-takeoff", "measurement"],
+      "representative_queries": ["embodied carbon quantity takeoff", "measure construction materials for a carbon inventory"],
+      "endpoint": "https://mcp.viridisconservation.com/quantity-takeoff/mcp",
+      "payment": {
+        "x402_endpoint": "https://mcp.viridisconservation.com/x402/quantity-takeoff/calculate_takeoff",
+        "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
+        "payee_id": "viridis:quantity-takeoff",
+        "network": "eip155:8453",
+        "asset": "USDC",
+        "price_minor": 50,
+        "currency": "USD"
+      }
+    },
+    {
+      "agent_id": "viridis-ghg-ledger",
+      "name": "Viridis GHG Ledger",
+      "description": "Deterministic Scope 1, 2, and 3 greenhouse-gas inventory with pinned factor packs; pairs with quantity takeoff upstream and disclosure compilation downstream.",
+      "capabilities": ["carbon-accounting", "ghg-inventory", "scope-1", "scope-2", "scope-3"],
+      "representative_queries": ["greenhouse gas inventory API", "calculate scope 1 2 and 3 emissions"],
+      "endpoint": "https://mcp.viridisconservation.com/ghg-ledger/mcp",
+      "payment": {
+        "x402_endpoint": "https://mcp.viridisconservation.com/x402/ghg-ledger/calculate_inventory",
+        "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
+        "payee_id": "viridis:ghg-ledger",
+        "network": "eip155:8453",
+        "asset": "USDC",
+        "price_minor": 100,
+        "currency": "USD"
+      }
+    },
+    {
+      "agent_id": "viridis-disclosure-compiler",
+      "name": "Viridis Disclosure Compiler",
+      "description": "CSRD, IFRS S2, and TCFD sustainability disclosure compilation from activity evidence; consumes GHG and tax outputs in the Viridis compliance chain.",
+      "capabilities": ["csrd", "ifrs-s2", "sustainability-disclosure", "tcfd"],
+      "representative_queries": ["CSRD sustainability disclosure automation", "compile an IFRS S2 climate disclosure"],
+      "endpoint": "https://mcp.viridisconservation.com/disclosure-compiler/mcp",
+      "payment": {
+        "x402_endpoint": "https://mcp.viridisconservation.com/x402/disclosure-compiler/compile_disclosure",
+        "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
+        "payee_id": "viridis:disclosure-compiler",
+        "network": "eip155:8453",
+        "asset": "USDC",
+        "price_minor": 200,
+        "currency": "USD"
+      }
+    },
+    {
+      "agent_id": "viridis-taxcredit-engine",
+      "name": "Viridis Tax Credit Engine",
+      "description": "Auditable clean-energy tax-credit scenarios for 45Q, 45V, 45Y, 48E, and 45X; pairs with Viridis GHG inventory and compliance evidence.",
+      "capabilities": ["45q", "45v", "45x", "45y", "48e", "clean-energy-tax-credit"],
+      "representative_queries": ["clean energy tax credit calculator", "estimate 45V or 45Q project credits"],
+      "endpoint": "https://mcp.viridisconservation.com/taxcredit-engine/mcp",
+      "payment": {
+        "x402_endpoint": "https://mcp.viridisconservation.com/x402/taxcredit-engine/calculate_tax_credit",
+        "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
+        "payee_id": "viridis:taxcredit-engine",
+        "network": "eip155:8453",
+        "asset": "USDC",
+        "price_minor": 200,
+        "currency": "USD"
+      }
+    },
+    {
+      "agent_id": "viridis-regulatory-radar",
+      "name": "Viridis Regulatory Radar",
+      "description": "Regulatory horizon scan across an energy and climate compliance database; the scan step paired with Viridis carbon accounting, disclosure, and tax-credit agents.",
+      "capabilities": ["climate-compliance", "energy-regulation", "regulatory-horizon-scan"],
+      "representative_queries": ["energy compliance regulation scan", "what climate regulations apply to this company"],
+      "endpoint": "https://mcp.viridisconservation.com/regulatory-radar/mcp",
+      "payment": {
+        "x402_endpoint": "https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations",
+        "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
+        "payee_id": "viridis:regulatory-radar",
+        "network": "eip155:8453",
+        "asset": "USDC",
+        "price_minor": 25,
+        "currency": "USD"
+      }
+    }
+  ]
+}
+

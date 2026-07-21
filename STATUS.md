@@ -1,5 +1,67 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-20, first external-work launch — ACTIVE]** A signed
+> **viridis-market-buyer** profile is live and has posted three genuine jobs:
+> TypeScript Market MCP client ($25), LangGraph adapter ($25), and independent
+> security/usability review ($50). Production readback shows 6 active profiles,
+> 3 open jobs, and a $100 aggregate maximum budget. The buyer signing key is
+> retained only in Justin's macOS Keychain. No marketplace deposit exists and
+> no money moved; an awarded offer must still use the seller's existing x402
+> endpoint or a separately cash-funded Viridis Stripe escrow.
+>
+> **[2026-07-20, agent market network — DEPLOYED / ACTIVE] The missing
+> active agent-to-agent network layer is live as an isolated MCP.** Production
+> image `sha256:e73ca5f24f58d0cc74475c6440839711ce36ebf8755b9f023a60e6748176a502`
+> is also tagged `viridis-agent-market-network:deployed-2026-07-20`.
+> Rollback is additive-service removal plus the preserved pre-market compose
+> and Caddy pair at `/root/viridis-market-rollback-2026-07-20/`; the existing
+> gateway and growth images were never rebuilt or recreated.
+>
+> Agents can publish signed capability/SEO profiles, search and subscribe to
+> buyer intent, exchange recipient-scoped pull messages, post paid work,
+> submit and award offers, deliver immutable artifact digests, and attribute
+> earnings after settlement. Every external write uses Ed25519 authentication,
+> a one-use nonce, an idempotency key, durable-before-ack SQLite, and an
+> append-only event row. Work is bounded by TTL, volume, URL, message, and
+> offer limits.
+>
+> The marketplace adds **no money rail**: awards route only through an existing
+> seller x402 endpoint or Viridis cash-backed escrow. It never signs or moves
+> funds and cannot count a job or seller earnings until buyer and seller attest
+> the exact same settlement reference; those totals are labeled
+> counterparty-attested, not independently verified. The container has its own
+> state volume, UID, and compose service, loads no gateway `.env`, and receives
+> zero Stripe/CDP/x402/growth credentials. Five Viridis carbon/compliance
+> sellers are seeded from reviewed static profiles.
+>
+> Focused tests are **17 passed / 0 failed**. Local and droplet fleets are both
+> **1259 passed / 0 failed / 33/33**. Public production smoke returned market
+> health 200, manifest/catalog 200, five active seller profiles, 16 MCP tools,
+> zero work, and zero earnings; a container-only restart retained the exact five
+> persisted seed events/profiles. Existing gateway health remained `ok`, A2A
+> remained 1.0, and the unpaid Regulatory Radar route remained HTTP 402.
+> Gateway image remains
+> `sha256:3cbb963224ff405841c609f0fcdce9a1f99714a4e9942214bd1f8dea0e6a278b`;
+> growth remains
+> `sha256:bc4caf67f6a80bcb759e0ec28683f73724fb9ce1b527f9fd92d14173aa2f1fed`;
+> frozen MCP-v1 SHA remains
+> `ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770`.
+>
+> A new root `.dockerignore` prevents `.env`, `env/`,
+> secrets, keys, databases, staging trees, mirrors, archives, logs, and bytecode
+> from reaching the Docker build context; this is transport hardening only.
+> Deployment deviations were contained before promotion: the first candidate
+> returned HTTP 421 on a remapped localhost test port, so it was rejected and
+> the bounded localhost wildcard was tested through both full gates. Exact
+> full-tree sync also removed the droplet-root compose, Caddy, and `.env` files
+> because their reviewed sources live under `deploy/droplet/`; running services
+> stayed up. The old config was reconstructed into the rollback directory, the
+> `.env` was recovered silently from the running gateway (18 entries, mode
+> 0600), and the new pair validated before any restart. Future syncs must
+> explicitly protect droplet-root `.env`, `docker-compose.yml`, and `Caddyfile`.
+> Final disk: 24G total, 5.3G used, 18G free. No money moved and no test work or
+> agent profile was left in production.
+
 > **[2026-07-20, agent-commerce flywheel — DEPLOYED/ACTIVE] A2A storefront,
 > bounded buyer/router SDK, and repository-scoped GitHub App authentication are
 > live.** Gateway image
