@@ -1,0 +1,35 @@
+name: Publish Agent Market MCP
+
+on:
+  push:
+    tags:
+      - "agent-market-v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Install MCP publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz" \
+            -o /tmp/mcp-publisher.tar.gz
+          echo "a818239b29a85025d79a1757b61979cf863fd6b3ba5b2b0eb4cf502fde495c73  /tmp/mcp-publisher.tar.gz" \
+            | sha256sum --check --strict
+          tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
+          chmod +x /tmp/mcp-publisher
+
+      - name: Authenticate with GitHub OIDC
+        run: /tmp/mcp-publisher login github-oidc
+
+      - name: Validate manifest
+        run: /tmp/mcp-publisher validate mcp-publish-github/agent-market-network-agent/server.json
+
+      - name: Publish manifest
+        run: /tmp/mcp-publisher publish mcp-publish-github/agent-market-network-agent/server.json
