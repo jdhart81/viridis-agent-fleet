@@ -28,8 +28,10 @@
 > The market manifest/MCP and discovery links are live. Growth now grounds copy
 > in exact live job IDs/budgets; a real-data no-send smoke rendered all 3 jobs
 > in 1002 characters. Its first live cycle correctly made no duplicate post
-> because every cleared target was on cooldown. Disk remains 24G total, 5.3G
-> used, 18G free. No money moved and no test market state was left behind.
+> because every cleared target was on cooldown. Official MCP Registry discovery
+> is active at `io.github.jdhart81/agent-market-network` v0.2.0 and publishes
+> through tokenless GitHub OIDC. Disk remains 24G total, 5.3G used, 18G free.
+> No money moved and no test market state was left behind.
 
 > **[2026-07-20, agent market network — DEPLOYED / ACTIVE] The missing
 > active agent-to-agent network layer is live as an isolated MCP.** Production

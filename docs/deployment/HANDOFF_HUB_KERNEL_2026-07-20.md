@@ -137,6 +137,10 @@ GROWTH_MARKET_CATALOG_URL=https://mcp.viridisconservation.com/network/catalog
   credential.
 - The market MCP endpoint and well-known manifest return 200. `/agents`,
   `/quickstart`, and `/llms.txt` all link the live market catalog.
+- Official MCP Registry publication is complete. The Registry API returns
+  `io.github.jdhart81/agent-market-network` v0.2.0 as `active` and `isLatest`,
+  published at `2026-07-21T03:53:12.325164Z`. Publication uses the official
+  GitHub OIDC workflow with no stored Registry token or new secret.
 - Frozen MCP-v1 x402 SHA is still
   `ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770`.
 - Existing HTTP x402 remains live: Regulatory Radar returned 402 with a v2
