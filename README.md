@@ -8,6 +8,11 @@ before execution and returns structured JSON plus a payment receipt.
 The first paid call from a new wallet is currently **$0.01**. Subsequent calls
 use the unchanged list prices below.
 
+**Security plane:** Viridis Security remains on its separate runtime and billing
+boundary, while fleet discovery lists its live Injection Detector and Agent
+Market supports signed, expiring security-posture attestations. Coverage
+evidence is never promoted to a "secure" or vulnerability-free claim.
+
 | Step | HTTP endpoint | Price | What it does | Chains with |
 |---|---|---:|---|---|
 | Measure | `/x402/quantity-takeoff/calculate_takeoff` | $0.50 | Embodied-carbon quantity takeoff from a bill of materials | GHG Ledger |

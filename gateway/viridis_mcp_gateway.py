@@ -288,6 +288,36 @@ EXTERNAL_MEMBERS = [
         "version": "1.1.0",
         "infra": "own droplet energyai-prod + energyaisolution.com (Cloudflare/Caddy)",
     },
+    {
+        "identifier": "urn:air:viridis:security-injection-detector",
+        "displayName": "Viridis Security Injection Detector",
+        "url": "https://mcp.viridis-security.com/mcp",
+        "description": (
+            "Agent-native prompt and tool-injection screening. Detect adversarial "
+            "instructions before an agent consumes them, or analyze an agent trace "
+            "for tool-policy violations. Results are evidence-bounded verdicts and "
+            "recommended actions, not a vulnerability-free guarantee. Discovery is "
+            "public; tool calls require a Viridis Security API key, with a 1,000-call "
+            "monthly free tier."),
+        "capabilities": ["detect_injection", "detect_trace_tool_policy"],
+        "representativeQueries": [
+            "Screen this untrusted text for prompt injection before my agent reads it",
+            "Check whether this agent trace violated the user-approved tool policy",
+            "Add an MCP security guardrail to an autonomous agent"],
+        "version": "0.1.0",
+        "infra": "Viridis Security runtime + mcp.viridis-security.com",
+        "category": "security-plane",
+        "role": "security-posture-provider",
+        "auth": "Bearer API key",
+        "signup": "https://mcp.viridis-security.com/signup",
+        "tags": ["security", "agent-security", "mcp-security"],
+        "metadata": {
+            "securityPlane": True,
+            "officialRegistryName": "io.github.viridis-security/injection-detector",
+            "claimBoundary": (
+                "Detection coverage is not a secure or vulnerability-free guarantee."),
+        },
+    },
 ]
 
 
@@ -1634,7 +1664,12 @@ def build_app():
             },
             "federated_members": [
                 {"name": m["displayName"], "url": m["url"],
-                 "capabilities": m.get("capabilities", []), "infra": m.get("infra", "")}
+                 "capabilities": m.get("capabilities", []),
+                 "infra": m.get("infra", ""),
+                 "category": m.get("category", "federated-service"),
+                 "role": m.get("role", "federated-member"),
+                 **({"auth": m["auth"]} if m.get("auth") else {}),
+                 **({"signup": m["signup"]} if m.get("signup") else {})}
                 for m in EXTERNAL_MEMBERS],
         })
 
@@ -1702,12 +1737,15 @@ def build_app():
                 "type": "application/mcp-server+json",
                 "url": m["url"],
                 "description": m["description"],
-                "tags": ["viridis", "agent-economy", "federated-member"],
+                "tags": list(dict.fromkeys(
+                    ["viridis", "agent-economy", "federated-member",
+                     *m.get("tags", [])])),
                 "capabilities": m.get("capabilities", []),
                 "representativeQueries": m.get("representativeQueries", [])[:5],
                 "version": str(m.get("version", "1.0.0")),
                 "updatedAt": now,
-                "metadata": {"federated": "true", "infra": m.get("infra", "")},
+                "metadata": {"federated": "true", "infra": m.get("infra", ""),
+                             **m.get("metadata", {})},
                 "trustManifest": {"identity": m["url"].rsplit("/", 1)[0],
                                   "identityType": "https"},
             })

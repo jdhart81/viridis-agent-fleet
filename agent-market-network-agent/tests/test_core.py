@@ -160,6 +160,31 @@ def attest(core, agent_id, private, work_id, suffix):
         f"settlement-{suffix}-nonce-0001")))
 
 
+def security_attest(core, attester_id, private, target_agent_id, *,
+                    posture="SCANNED", suffix="scan", ttl_days=30):
+    evidence_sha = hashlib.sha256(
+        f"security-report:{attester_id}:{target_agent_id}:{suffix}".encode()
+    ).hexdigest()
+    body = {
+        "target_agent_id": target_agent_id,
+        "posture": posture,
+        "coverage": ["mcp-tools", "prompt-inputs"],
+        "scanner": {"name": "viridis-injection-detector", "version": "0.1.0"},
+        "result_counts": {"checks": 12, "passed": 11, "warnings": 1,
+                          "findings": 0, "errors": 0},
+        "claim_boundary": (
+            "Covers the named MCP tools and supplied prompt inputs only; "
+            "does not prove the target vulnerability-free."),
+        "evidence_url": f"https://evidence.example.com/{target_agent_id}/{suffix}.json",
+        "evidence_sha256": evidence_sha,
+        "ttl_days": ttl_days,
+        "idempotency_key": f"security-{suffix}-0001",
+    }
+    return run(core.process(signed_input(
+        "publish_security_attestation", "attester_id", attester_id,
+        private, body, f"security-{suffix}-nonce-0001")))
+
+
 def full_awarded(core):
     buyer_key, _ = register(core, "buyer-agent", "procurement")
     seller_key, _ = register(core, "seller-agent", "carbon")
@@ -182,6 +207,54 @@ def test_signed_profile_binds_key_and_is_searchable(core):
     assert found["count"] == 1
     assert found["results"][0]["agent_id"] == "carbon-seller"
     assert found["results"][0]["payment"]["price_minor"] == 50
+
+
+def test_signed_security_attestation_is_expiring_evidence_not_a_guarantee(core):
+    _, _ = register(core, "guarded-agent", "agent-security")
+    attester_key, _ = register(core, "security-attester", "security-assessment")
+    result = security_attest(
+        core, "security-attester", attester_key, "guarded-agent")
+    assert result["status"] == "ok", result
+    attestation = result["data"]
+    assert attestation["posture"] == "SCANNED"
+    assert attestation["relation"] == "THIRD_PARTY_ATTESTER"
+    assert attestation["market_verdict"].startswith("coverage evidence only")
+    assert attestation["evidence_sha256"] == hashlib.sha256(
+        b"security-report:security-attester:guarded-agent:scan").hexdigest()
+
+    listed = core.list_security_attestations(
+        target_agent_id="guarded-agent")
+    assert listed["count"] == 1
+    assert "not a guarantee" in listed["claim_boundary"]
+
+    found = core.search_agents(
+        security_posture="SCANNED", security_attester="security-attester")
+    assert [item["agent_id"] for item in found["results"]] == ["guarded-agent"]
+    posture = found["results"][0]["security_posture"]
+    assert posture["status"] == "COVERAGE_REPORTED"
+    assert posture["coverage_score"] == 1
+    assert posture["third_party_attesters"] == ["security-attester"]
+
+
+def test_security_attestation_expires_and_drops_out_of_discovery(tmp_path):
+    clock = [NOW]
+    item = MarketNetworkCore(db_path=str(tmp_path / "security.sqlite3"),
+                             now_fn=lambda: clock[0])
+    try:
+        _, _ = register(item, "expiring-target", "agent-security")
+        attester_key, _ = register(item, "expiring-attester", "security-assessment")
+        assert security_attest(
+            item, "expiring-attester", attester_key, "expiring-target",
+            ttl_days=1)["status"] == "ok"
+        assert item.list_security_attestations(
+            target_agent_id="expiring-target")["count"] == 1
+        clock[0] = NOW + timedelta(days=2)
+        assert item.list_security_attestations(
+            target_agent_id="expiring-target")["count"] == 0
+        assert item.search_agents(
+            security_posture="SCANNED")["count"] == 0
+    finally:
+        item.close()
 
 
 def test_bad_signature_and_stale_signature_fail_closed(core):
@@ -451,6 +524,17 @@ def test_energyai_seed_profile_exposes_conversion_and_bounty_path():
     assert "get_quote_link" in energyai["description"]
     assert "20% bounty" in energyai["description"]
     assert energyai["payment"] == {}
+
+
+def test_viridis_security_seed_keeps_auth_and_billing_on_its_own_runtime():
+    payload = json.loads((Path(__file__).parents[1] / "seed_profiles.json").read_text())
+    security = next(
+        p for p in payload["profiles"]
+        if p["agent_id"] == "viridis-security-injection-detector")
+    assert security["endpoint"] == "https://mcp.viridis-security.com/mcp"
+    assert "prompt-injection-detection" in security["capabilities"]
+    assert "API key" in security["description"]
+    assert security["payment"] == {}
 
 
 def test_durable_before_ack_survives_restart(tmp_path):

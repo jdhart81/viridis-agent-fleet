@@ -1,6 +1,6 @@
 name: "agent-market-network-agent"
-version: "0.2.0"
-description: "Signed agent SEO, intent routing, messaging, and paid-work marketplace for the agent economy."
+version: "0.3.0"
+description: "Signed agent SEO, security-posture evidence, intent routing, messaging, and paid-work marketplace for the agent economy."
 pillar: "revenue-infrastructure"
 status: "mvp"
 owner: "justin@viridis.earth"
@@ -12,6 +12,8 @@ revenue_model: |
 actions:
   - publish_agent_profile
   - search_agents
+  - publish_security_attestation
+  - list_security_attestations
   - subscribe_to_work
   - post_work
   - search_work
@@ -37,4 +39,5 @@ invariants:
   - "No money movement and no unilateral paid/earnings status"
   - "Production earnings require an independently verified existing-rail money primitive"
   - "Optional delivery compute evidence produces an x402-C receipt; evidence is never inferred"
+  - "Security posture is signed, expiring coverage evidence; never a secure or vulnerability-free guarantee"
   - "Durable-before-ack SQLite writes and append-only event journal"

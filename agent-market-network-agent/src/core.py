@@ -21,6 +21,9 @@ AM9 expired profiles, subscriptions, and work are excluded from live discovery.
 AM10 rate limits and bounded fields make the public write surface spam-resistant.
 AM11 optional compute/notary/relay evidence is signed with the delivery and is
      never fabricated by the market; the Hub records only evidence it verifies.
+AM12 security posture is evidence-bounded: signed, expiring attestations describe
+     tested coverage and claim boundaries; they never assert that an agent is
+     "secure" or independently verified merely because an attestation exists.
 """
 from __future__ import annotations
 
@@ -46,7 +49,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 
 PROTOCOL = "viridis-agent-market-v1"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 AUTH_WINDOW_SECONDS = 300
 MAX_TEXT = 8_000
 MAX_PROFILE_DAYS = 365
@@ -56,8 +59,20 @@ MAX_ACTIVE_WORK_PER_BUYER = 25
 MAX_MESSAGES_PER_DAY = 100
 MAX_OFFERS_PER_WORK = 100
 MAX_BUDGET_MINOR = 10_000_000
+MAX_SECURITY_ATTESTATION_DAYS = 90
 ALLOWED_RAILS = frozenset({"x402", "viridis_cash_escrow"})
 ALLOWED_CURRENCIES = frozenset({"USD", "USDC"})
+SECURITY_POSTURES = frozenset({
+    "SCANNED", "RUNTIME_GUARDED", "INCIDENT_EVIDENCE_AVAILABLE",
+})
+SECURITY_RESULT_FIELDS = frozenset({
+    "checks", "passed", "warnings", "findings", "errors",
+})
+SECURITY_POSTURE_WEIGHT = {
+    "SCANNED": 1,
+    "RUNTIME_GUARDED": 2,
+    "INCIDENT_EVIDENCE_AVAILABLE": 3,
+}
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$")
 NONCE_RE = re.compile(r"^[A-Za-z0-9._:-]{8,160}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -143,6 +158,25 @@ CREATE TABLE IF NOT EXISTS profiles (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     expires_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS security_attestations (
+    attestation_id TEXT PRIMARY KEY,
+    attester_id TEXT NOT NULL,
+    target_agent_id TEXT NOT NULL,
+    posture TEXT NOT NULL,
+    coverage_json TEXT NOT NULL,
+    scanner_json TEXT NOT NULL,
+    result_counts_json TEXT NOT NULL,
+    claim_boundary TEXT NOT NULL,
+    evidence_url TEXT NOT NULL,
+    evidence_sha256 TEXT NOT NULL,
+    relation TEXT NOT NULL,
+    status TEXT NOT NULL,
+    issued_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(attester_id) REFERENCES profiles(agent_id),
+    FOREIGN KEY(target_agent_id) REFERENCES profiles(agent_id)
 );
 CREATE TABLE IF NOT EXISTS subscriptions (
     subscription_id TEXT PRIMARY KEY,
@@ -264,6 +298,10 @@ CREATE TABLE IF NOT EXISTS events (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_work_live ON work_orders(status, expires_at);
+CREATE INDEX IF NOT EXISTS idx_security_target_live
+    ON security_attestations(target_agent_id, status, expires_at);
+CREATE INDEX IF NOT EXISTS idx_security_attester_live
+    ON security_attestations(attester_id, status, expires_at);
 CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_events_actor ON events(actor_id, created_at);
 """
@@ -516,6 +554,90 @@ class MarketNetworkCore:
             "expires_at": row["expires_at"],
         }
 
+    @staticmethod
+    def _security_attestation_public(row: sqlite3.Row) -> dict:
+        return {
+            "attestation_id": row["attestation_id"],
+            "attester_id": row["attester_id"],
+            "target_agent_id": row["target_agent_id"],
+            "posture": row["posture"],
+            "coverage": json.loads(row["coverage_json"]),
+            "scanner": json.loads(row["scanner_json"]),
+            "result_counts": json.loads(row["result_counts_json"]),
+            "claim_boundary": row["claim_boundary"],
+            "evidence_url": row["evidence_url"],
+            "evidence_sha256": row["evidence_sha256"],
+            "relation": row["relation"],
+            "status": row["status"],
+            "issued_at": row["issued_at"],
+            "expires_at": row["expires_at"],
+            "provenance": "signed_attester_statement",
+            "market_verdict": (
+                "coverage evidence only; not a guarantee of security or "
+                "independent verification"),
+        }
+
+    def list_security_attestations(
+            self, target_agent_id: str = "", attester_id: str = "",
+            posture: str = "", current_only: bool = True,
+            limit: int = 100) -> dict:
+        clauses = []
+        values: list[Any] = []
+        if target_agent_id:
+            clauses.append("target_agent_id=?")
+            values.append(self._id(target_agent_id, "target_agent_id"))
+        if attester_id:
+            clauses.append("attester_id=?")
+            values.append(self._id(attester_id, "attester_id"))
+        normalized_posture = str(posture or "").strip().upper()
+        if normalized_posture:
+            if normalized_posture not in SECURITY_POSTURES:
+                raise MarketError("unknown security posture", field="posture",
+                                  constraint=", ".join(sorted(SECURITY_POSTURES)))
+            clauses.append("posture=?")
+            values.append(normalized_posture)
+        if current_only:
+            clauses.extend(["status='ACTIVE'", "expires_at>?"])
+            values.append(_iso(self._now()))
+        bounded_limit = max(1, min(int(limit), 100))
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM security_attestations" + where +
+                " ORDER BY issued_at DESC,attestation_id LIMIT ?",
+                (*values, bounded_limit)).fetchall()
+        items = [self._security_attestation_public(row) for row in rows]
+        return {"count": len(items), "attestations": items,
+                "current_only": bool(current_only),
+                "claim_boundary": (
+                    "Attestations report signed test coverage. They are not a "
+                    "guarantee that a target is secure, vulnerability-free, or "
+                    "independently verified.")}
+
+    def _security_posture(self, target_agent_id: str) -> dict:
+        items = self.list_security_attestations(
+            target_agent_id=target_agent_id, current_only=True,
+            limit=100)["attestations"]
+        postures = sorted({item["posture"] for item in items})
+        attesters = sorted({item["attester_id"] for item in items})
+        third_party = sorted({item["attester_id"] for item in items
+                              if item["relation"] == "THIRD_PARTY_ATTESTER"})
+        return {
+            "status": "COVERAGE_REPORTED" if items else "UNASSESSED",
+            "current_attestations": len(items),
+            "postures": postures,
+            "attesters": attesters,
+            "third_party_attesters": third_party,
+            "coverage_score": max(
+                (SECURITY_POSTURE_WEIGHT[item["posture"]] for item in items),
+                default=0),
+            "latest_issued_at": items[0]["issued_at"] if items else None,
+            "attestation_ids": [item["attestation_id"] for item in items],
+            "claim_boundary": (
+                "Coverage evidence only; no vulnerability-free or independent-"
+                "verification claim is inferred by the market."),
+        }
+
     def seed_owned_profiles(self, profiles: Iterable[dict]) -> int:
         """Idempotently seed operator-owned public listings; never grants writes."""
         changed = 0
@@ -672,12 +794,126 @@ class MarketNetworkCore:
                 result[field] = self._id(raw[field], f"proofs.{field}")
         return result
 
+    def _publish_security_attestation(self, data: dict) -> dict:
+        attester_id = self._id(data.get("attester_id"), "attester_id")
+        target_agent_id = self._id(
+            data.get("target_agent_id"), "target_agent_id")
+        posture = str(data.get("posture") or "").strip().upper()
+        body = {
+            "target_agent_id": target_agent_id,
+            "posture": posture,
+            "coverage": data.get("coverage", []),
+            "scanner": data.get("scanner") or {},
+            "result_counts": data.get("result_counts") or {},
+            "claim_boundary": data.get("claim_boundary", ""),
+            "evidence_url": data.get("evidence_url", ""),
+            "evidence_sha256": data.get("evidence_sha256", ""),
+            "ttl_days": int(data.get("ttl_days", 30)),
+            "idempotency_key": data.get("idempotency_key", ""),
+        }
+        if posture not in SECURITY_POSTURES:
+            raise MarketError("unknown security posture", field="posture",
+                              constraint=", ".join(sorted(SECURITY_POSTURES)))
+        coverage = self._tags(body["coverage"], "coverage", maximum=50)
+        scanner_raw = body["scanner"]
+        if not isinstance(scanner_raw, dict):
+            raise MarketError("scanner must be an object", field="scanner")
+        allowed_scanner = {"name", "version", "canon_digest"}
+        if set(scanner_raw) - allowed_scanner:
+            raise MarketError("scanner has unsupported fields", field="scanner")
+        scanner = {
+            "name": self._text(scanner_raw.get("name"), "scanner.name",
+                               maximum=160),
+            "version": self._text(scanner_raw.get("version"),
+                                  "scanner.version", maximum=80),
+        }
+        if scanner_raw.get("canon_digest"):
+            canon_digest = str(scanner_raw["canon_digest"]).lower()
+            if not SHA256_RE.fullmatch(canon_digest):
+                raise MarketError("scanner.canon_digest must be sha256 hex",
+                                  field="scanner.canon_digest")
+            scanner["canon_digest"] = canon_digest
+        result_counts_raw = body["result_counts"]
+        if not isinstance(result_counts_raw, dict):
+            raise MarketError("result_counts must be an object",
+                              field="result_counts")
+        if set(result_counts_raw) - SECURITY_RESULT_FIELDS:
+            raise MarketError("result_counts has unsupported fields",
+                              field="result_counts")
+        result_counts = {}
+        for field, raw_value in sorted(result_counts_raw.items()):
+            if isinstance(raw_value, bool) or not isinstance(raw_value, int) \
+                    or not 0 <= raw_value <= 1_000_000_000:
+                raise MarketError(
+                    "security result counts must be bounded non-negative integers",
+                    field=f"result_counts.{field}")
+            result_counts[field] = raw_value
+        if not result_counts:
+            raise MarketError("result_counts cannot be empty",
+                              field="result_counts")
+        claim_boundary = self._text(body["claim_boundary"], "claim_boundary",
+                                    minimum=20, maximum=2_000)
+        evidence_url = self._public_https(body["evidence_url"], "evidence_url")
+        evidence_sha256 = str(body["evidence_sha256"] or "").lower()
+        if not SHA256_RE.fullmatch(evidence_sha256):
+            raise MarketError("evidence_sha256 must be sha256 hex",
+                              field="evidence_sha256")
+        ttl_days = body["ttl_days"]
+        if not 1 <= ttl_days <= MAX_SECURITY_ATTESTATION_DAYS:
+            raise MarketError("ttl_days outside 1..90", field="ttl_days")
+        idem = self._id(body["idempotency_key"], "idempotency_key")
+        auth = data.get("auth") or {}
+        with self._tx():
+            self._ensure_active(attester_id)
+            self._ensure_active(target_agent_id)
+            _, replay = self._begin_write(
+                "publish_security_attestation", attester_id, body, auth, idem)
+            if replay is not None:
+                return replay
+            issued_at = _iso(self._now())
+            expires_at = _iso(
+                self._now() + timedelta(days=ttl_days))
+            relation = ("SELF_ATTESTED" if attester_id == target_agent_id
+                        else "THIRD_PARTY_ATTESTER")
+            attestation_id = "sec-" + _digest({
+                "attester_id": attester_id,
+                "body": body,
+            })[:24]
+            self._conn.execute(
+                "INSERT INTO security_attestations(attestation_id,attester_id,"
+                "target_agent_id,posture,coverage_json,scanner_json,"
+                "result_counts_json,claim_boundary,evidence_url,evidence_sha256,"
+                "relation,status,issued_at,expires_at,created_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (attestation_id, attester_id, target_agent_id, posture,
+                 _stable(coverage), _stable(scanner), _stable(result_counts),
+                 claim_boundary, evidence_url, evidence_sha256, relation,
+                 "ACTIVE", issued_at, expires_at, issued_at))
+            row = self._conn.execute(
+                "SELECT * FROM security_attestations WHERE attestation_id=?",
+                (attestation_id,)).fetchone()
+            result = self._security_attestation_public(row)
+            self._finish_write(
+                "publish_security_attestation", attester_id, body, idem, result,
+                event_type="security.attestation.published",
+                object_type="security_attestation",
+                object_id=attestation_id,
+                event_payload={
+                    "target_agent_id": target_agent_id,
+                    "posture": posture,
+                    "relation": relation,
+                    "evidence_sha256": evidence_sha256,
+                    "claim_boundary": claim_boundary,
+                })
+            return result
+
     async def process(self, input_data: dict) -> dict:
         if not isinstance(input_data, dict):
             return self._error(MarketError("input must be an object", field="input"))
         action = str(input_data.get("action") or "")
         handlers = {
             "publish_profile": self._publish_profile,
+            "publish_security_attestation": self._publish_security_attestation,
             "subscribe_work": self._subscribe_work,
             "post_work": self._post_work,
             "submit_offer": self._submit_offer,
@@ -775,10 +1011,19 @@ class MarketNetworkCore:
             return result
 
     def search_agents(self, query: str = "", capabilities: Optional[list[str]] = None,
-                      payment_rail: str = "", limit: int = 25) -> dict:
+                      payment_rail: str = "", limit: int = 25,
+                      security_posture: str = "",
+                      security_attester: str = "") -> dict:
         caps = self._tags(capabilities or [], "capabilities", required=False)
         if payment_rail and payment_rail not in ALLOWED_RAILS:
             raise MarketError("unknown payment rail", field="payment_rail")
+        wanted_posture = str(security_posture or "").strip().upper()
+        if wanted_posture and wanted_posture not in SECURITY_POSTURES:
+            raise MarketError("unknown security posture",
+                              field="security_posture",
+                              constraint=", ".join(sorted(SECURITY_POSTURES)))
+        wanted_attester = (self._id(security_attester, "security_attester")
+                           if security_attester else "")
         limit = max(1, min(int(limit), 100))
         want = _tokens(query)
         now = _iso(self._now())
@@ -797,6 +1042,12 @@ class MarketNetworkCore:
                     continue
                 if payment_rail == "viridis_cash_escrow" and not payment.get("cash_escrow_endpoint"):
                     continue
+                security = self._security_posture(item["agent_id"])
+                if wanted_posture and wanted_posture not in security["postures"]:
+                    continue
+                if wanted_attester and wanted_attester not in security["attesters"]:
+                    continue
+                item["security_posture"] = security
                 haystack = " ".join([item["name"], item["description"],
                                      *item["capabilities"],
                                      *item["representative_queries"]])
@@ -822,10 +1073,16 @@ class MarketNetworkCore:
                 item["match_score"] = overlap * 10 + len(set(caps) & available) * 5
                 results.append(item)
             results.sort(key=lambda item: (-item["match_score"],
+                                           -item["market_reputation"]["independently_verified_jobs"],
+                                           -item["security_posture"]["coverage_score"],
                                            -item["market_reputation"]["counterparty_attested_jobs"],
                                            item["agent_id"]))
             return {"count": len(results[:limit]), "results": results[:limit],
-                    "query": query, "capabilities": caps}
+                    "query": query, "capabilities": caps,
+                    "security_posture": wanted_posture,
+                    "security_attester": wanted_attester,
+                    "ranking": ("semantic match, independently verified work, "
+                                "current security coverage, counterparty outcomes")}
 
     def _subscribe_work(self, data: dict) -> dict:
         actor = self._id(data.get("agent_id"))
@@ -1671,12 +1928,22 @@ class MarketNetworkCore:
                 "FROM settlements WHERE status='INDEPENDENTLY_VERIFIED'").fetchone()
             messages = self._conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
             events = self._conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+            security = self._conn.execute(
+                "SELECT COUNT(*) AS attestations,"
+                "COUNT(DISTINCT target_agent_id) AS covered_agents "
+                "FROM security_attestations WHERE status='ACTIVE' AND expires_at>?",
+                (now,)).fetchone()
             return {"protocol": PROTOCOL, "profiles_active": int(profiles),
                     "work_open": int(open_work),
                     "counterparty_attested_jobs": int(completed["jobs"]),
                     "counterparty_attested_volume_minor": int(completed["volume"]),
                     "independently_verified_jobs": int(verified["jobs"]),
                     "independently_verified_volume_minor": int(verified["volume"]),
+                    "security_attestations_current": int(security["attestations"]),
+                    "security_covered_agents": int(security["covered_agents"]),
+                    "security_claim_boundary": (
+                        "signed expiring coverage evidence; never a secure or "
+                        "vulnerability-free guarantee"),
                     "messages_total": int(messages), "events_total": int(events),
                     "payment_rails": sorted(ALLOWED_RAILS),
                     "money_movement": "none",
@@ -1701,12 +1968,16 @@ class MarketNetworkCore:
                             "settlement marketplace."),
             "capabilities": ["agent-seo", "capability-discovery", "intent-routing",
                              "agent-messaging", "work-marketplace", "offer-negotiation",
-                             "settlement-attribution"],
+                             "settlement-attribution", "security-posture-attestations",
+                             "security-aware-discovery"],
             "security": {"write_auth": "Ed25519 signatures",
                          "replay_protection": "one-use nonce + idempotency key",
                          "private_keys": "never accepted or stored",
                          "payment_credentials": "none",
-                         "hub_event_auth": "HMAC over the private Docker network"},
+                         "hub_event_auth": "HMAC over the private Docker network",
+                         "posture_semantics": (
+                             "signed, expiring coverage statements with explicit "
+                             "claim boundaries; no guarantee or independence inferred")},
             "payment_posture": {"rails": sorted(ALLOWED_RAILS),
                                 "moves_money": False,
                                 "marks_paid_from_one_party": False,

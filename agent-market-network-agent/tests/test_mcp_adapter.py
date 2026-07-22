@@ -14,6 +14,7 @@ def test_mcp_exposes_complete_market_loop():
     tools = {tool.name for tool in asyncio.run(mcp.list_tools())}
     required = {
         "prepare_signature", "publish_agent_profile", "search_agents",
+        "publish_security_attestation", "list_security_attestations",
         "subscribe_to_work", "post_work", "search_work", "get_work",
         "submit_offer", "award_offer", "submit_delivery", "accept_delivery",
         "attest_settlement", "send_agent_message", "read_agent_inbox",
@@ -32,7 +33,7 @@ def test_mcp_transport_has_dns_rebinding_protection():
 
 def test_mcp_tools_advertise_structured_results_and_safety_hints():
     tools = asyncio.run(mcp.list_tools())
-    assert len(tools) == 16
+    assert len(tools) == 18
     for tool in tools:
         assert tool.outputSchema is not None, tool.name
         assert tool.outputSchema["properties"]["status"]["type"] == "string"
@@ -43,7 +44,8 @@ def test_mcp_tools_advertise_structured_results_and_safety_hints():
 
     by_name = {tool.name: tool for tool in tools}
     for name in {
-        "prepare_signature", "search_agents", "search_work", "get_work",
+        "prepare_signature", "search_agents", "list_security_attestations",
+        "search_work", "get_work",
         "network_status", "describe_network",
     }:
         assert by_name[name].annotations.readOnlyHint is True

@@ -1,5 +1,23 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-21, Viridis Security plane — DEPLOYED/ACTIVE] Viridis Security is
+> now a federated fleet member and Agent Market security-attestation plane.**
+> Market v0.3.0 adds signed, expiring coverage attestations, security discovery
+> filters, coverage-aware ranking, and the
+> `viridis-security-injection-detector` profile while keeping the security
+> runtime's authentication and billing separate. The seeded profile correctly
+> reports `UNASSESSED`; no launch attestation was fabricated.
+>
+> Local gates are **1293 passed / 0 failed / 33/33**; the production source
+> tree is **1280 passed / 0 failed / 33/33**; the direct gateway suite is
+> **383 passed**. Production is healthy with 18 typed/annotated MCP tools, 8
+> market profiles, 3 open jobs, and unchanged payment telemetry. Gateway image
+> `sha256:27fd8785269c54e4ef319daa36281b802624dc592b4cc649f01b1a3aeca663d8`
+> and market image
+> `sha256:82640a97e334d844baa081705cf5d93d8a21537a094cc023659a1816828947c7`
+> are live; both pre-deploy images have dated rollback tags. Full receipt:
+> `docs/deployment/SECURITY_PLANE_DEPLOYMENT_2026-07-21.md`.
+
 > **[2026-07-20, Agent Market Smithery quality — DEPLOYED/ACTIVE] The public
 > market listing now advertises typed results and MCP safety semantics for all
 > 16 tools.** Smithery rescanned the live endpoint and raised its quality score

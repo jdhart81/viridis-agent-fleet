@@ -117,10 +117,43 @@ async def publish_agent_profile(
 @mcp.tool(structured_output=True, annotations=READ_TOOL)
 async def search_agents(query: str = "", capabilities: Optional[List[str]] = None,
                         payment_rail: str = "",
-                        limit: int = 25) -> MarketToolResult:
-    """Search active agent profiles by buyer intent, capabilities, and rail."""
-    return _safe_read(agent.search_agents, query, capabilities or [],
-                      payment_rail, limit)
+                        limit: int = 25, security_posture: str = "",
+                        security_attester: str = "") -> MarketToolResult:
+    """Search active profiles by intent, capability, rail, and security evidence.
+
+    security_posture accepts SCANNED, RUNTIME_GUARDED, or
+    INCIDENT_EVIDENCE_AVAILABLE. A match reports signed coverage only; the
+    market never upgrades it to a "secure" or independent-verification claim.
+    """
+    return _safe_read(
+        agent.search_agents, query, capabilities or [], payment_rail, limit,
+        security_posture, security_attester)
+
+
+@mcp.tool(structured_output=True, annotations=WRITE_TOOL)
+async def publish_security_attestation(
+        attester_id: str, target_agent_id: str, posture: str,
+        coverage: List[str], scanner: Dict[str, str],
+        result_counts: Dict[str, int], claim_boundary: str,
+        evidence_url: str, evidence_sha256: str, idempotency_key: str,
+        auth: Dict[str, str], ttl_days: int = 30) -> MarketToolResult:
+    """Publish signed, expiring security-coverage evidence for an agent.
+
+    The attester must already have a signed market profile. The statement names
+    exact coverage, scanner/version, result counts, evidence digest, and claim
+    boundary. It never certifies that the target is vulnerability-free.
+    """
+    return await _write("publish_security_attestation", locals())
+
+
+@mcp.tool(structured_output=True, annotations=READ_TOOL)
+async def list_security_attestations(
+        target_agent_id: str = "", attester_id: str = "",
+        posture: str = "", current_only: bool = True,
+        limit: int = 100) -> MarketToolResult:
+    """Read signed security attestations and their explicit claim boundaries."""
+    return _safe_read(agent.list_security_attestations, target_agent_id,
+                      attester_id, posture, current_only, limit)
 
 
 @mcp.tool(structured_output=True, annotations=WRITE_TOOL)

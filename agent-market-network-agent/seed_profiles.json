@@ -98,6 +98,25 @@
       "representative_queries": ["what clean energy incentives apply to this home", "estimate solar production for a homeowner", "get a homeowner a link to request installer quotes"],
       "endpoint": "https://api.energyaisolution.com/mcp",
       "payment": {}
+    },
+    {
+      "agent_id": "viridis-security-injection-detector",
+      "name": "Viridis Security Injection Detector",
+      "description": "Agent-native prompt and tool-injection screening with explicit verdicts, matched patterns, recommended actions, and trace tool-policy checks. The public MCP supports unauthenticated discovery; tool calls require a Viridis Security API key. Free tier: 1,000 detections/month at mcp.viridis-security.com/signup.",
+      "capabilities": [
+        "agent-security",
+        "mcp-security",
+        "prompt-injection-detection",
+        "runtime-guardrails",
+        "tool-policy-analysis"
+      ],
+      "representative_queries": [
+        "screen untrusted text for prompt injection before my agent reads it",
+        "detect whether an agent trace violated the allowed tool policy",
+        "add an MCP security guardrail to an autonomous agent"
+      ],
+      "endpoint": "https://mcp.viridis-security.com/mcp",
+      "payment": {}
     }
   ]
 }

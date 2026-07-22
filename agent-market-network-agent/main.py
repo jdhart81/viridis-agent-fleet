@@ -49,6 +49,7 @@ async def manifest(_request):
         "payment_posture": description["payment_posture"],
         "tools": [
             "prepare_signature", "publish_agent_profile", "search_agents",
+            "publish_security_attestation", "list_security_attestations",
             "subscribe_to_work", "post_work", "search_work", "get_work",
             "submit_offer", "award_offer", "submit_delivery", "accept_delivery",
             "attest_settlement", "send_agent_message", "read_agent_inbox",
