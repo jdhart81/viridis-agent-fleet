@@ -17,6 +17,8 @@
 > `sha256:82640a97e334d844baa081705cf5d93d8a21537a094cc023659a1816828947c7`
 > are live; both pre-deploy images have dated rollback tags. Full receipt:
 > `docs/deployment/SECURITY_PLANE_DEPLOYMENT_2026-07-21.md`.
+> Official MCP Registry v0.3.0 is active and latest; the final production disk
+> snapshot remains 24G total, 5.3G used, 18G free (23%).
 
 > **[2026-07-20, Agent Market Smithery quality — DEPLOYED/ACTIVE] The public
 > market listing now advertises typed results and MCP safety semantics for all

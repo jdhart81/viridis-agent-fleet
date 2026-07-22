@@ -46,6 +46,9 @@ The integration increases the fleet's network effect in two ways:
   federated
 - Existing settlement telemetry unchanged: 5 settlements, 1 external payer,
   250000 atomic external volume
+- Official MCP Registry: `io.github.jdhart81/agent-market-network` v0.3.0,
+  active and latest
+- Final production disk: 24G total, 5.3G used, 18G available (23%)
 
 The local/production test-count difference is pre-existing inventory drift;
 both environments completed all 33 discovered suites with no failures.
@@ -66,3 +69,15 @@ both environments completed all 33 discovered suites with no failures.
 Only the gateway and Agent Market containers were recreated. Persistent market
 state, payment rails, Hub verification, prices, and the growth worker were not
 changed.
+
+## Publication
+
+- Public source commit: `f5759f2b1d675a20df57780df78b19d5e7a62082`
+- Release tag: `agent-market-v0.3.0-r1`
+- Registry workflow: successful
+- Registry record: v0.3.0 is `active` and `isLatest: true`
+
+The first `agent-market-v0.3.0` publication attempt failed validation because
+the registry caps descriptions at 100 characters. The source manifest was
+repaired to 93 characters and republished through the established `-r1` retry
+tag. This publication-only failure never affected the live fleet.
