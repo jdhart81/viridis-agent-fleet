@@ -70,6 +70,11 @@ X402_HTTP_TOOLS: Dict[Tuple[str, str], str] = {
     ("disclosure-compiler", "compile_disclosure"): "compile_disclosure",
 }
 
+AGENT402_FIXED_ROUTE = ("regulatory-radar", "scan_regulations_agent402")
+AGENT402_HTTP_TOOLS: Dict[Tuple[str, str], str] = {
+    AGENT402_FIXED_ROUTE: "scan",
+}
+
 X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
     ("regulatory-radar", "scan_regulations"): {
         "description": ("Energy and climate compliance regulation scan across "
@@ -216,6 +221,18 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
         },
     },
 }
+
+# Agent402 native listings advertise one static per-call price.  Keep this
+# compatibility alias at Regulatory Radar's $0.25 list price so the amount in
+# Agent402's PAYMENT-SIGNATURE always matches the Viridis challenge.  The
+# public scan_regulations route retains its one-time $0.01 intro schedule.
+X402_HTTP_METADATA[AGENT402_FIXED_ROUTE] = {
+    **X402_HTTP_METADATA[("regulatory-radar", "scan_regulations")],
+    "service_name": "Viridis Regulatory Radar",
+    "category": "Search",
+    "tags": ["climate", "energy", "compliance", "regulation", "CSRD"],
+}
+INTRO_EXEMPT_ROUTES = frozenset({AGENT402_FIXED_ROUTE})
 
 OUTPUT_SCHEMA = {"type": "object", "additionalProperties": True}
 SETTLEMENT_CLASSIFICATION_VERSION = 1
@@ -465,7 +482,8 @@ def make_x402_http_route(cores, store, public_base, tools=None):
     (test hook). Import-guarded so the gateway still serves if x402 absent."""
     import x402_rail
     from payment_gate import PRICE_MINOR, DEFAULT_PRICE_MINOR, GATE_ATTR
-    registry = tools if tools is not None else X402_HTTP_TOOLS
+    registry = (tools if tools is not None else
+                {**X402_HTTP_TOOLS, **AGENT402_HTTP_TOOLS})
 
     async def handler(request):
         agent = request.path_params.get("agent", "")
@@ -479,6 +497,8 @@ def make_x402_http_route(cores, store, public_base, tools=None):
         if not x402_rail.is_enabled():                         # H402-6
             return _resp({"error": "x402 rail disabled"}, 503)
         list_price = PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)
+        intro_for_route = (intro_enabled()
+                           and (agent, tool) not in INTRO_EXEMPT_ROUTES)
         payer_hint = str(request.headers.get(INTRO_PAYER_HEADER, "")).strip()
         price = list_price
         resource = f"{public_base}/x402/{agent}/{tool}"
@@ -491,7 +511,7 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                     return _resp({"error": "x402 v2 rail disabled or "
                                            "incompletely configured"}, 503)
                 price = (INTRO_SCHEDULE["price_minor"]
-                         if intro_enabled()
+                         if intro_for_route
                          and not _payer_seen(cores, payer_hint)
                          else list_price)
                 meta = X402_HTTP_METADATA[(agent, tool)]
@@ -501,14 +521,16 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                 required_headers = x402_v2.response_headers(payment_required)
                 signature = request.headers.get("payment-signature")
                 if not signature:
-                    return _resp({"error": "PAYMENT-SIGNATURE required"},
-                                 402, required_headers)
+                    body = (payment_required
+                            if (agent, tool) == AGENT402_FIXED_ROUTE
+                            else {"error": "PAYMENT-SIGNATURE required"})
+                    return _resp(body, 402, required_headers)
                 payload = x402_v2.parse_header(signature)
                 if payload is None:
                     return _resp({"error": "malformed PAYMENT-SIGNATURE"},
                                  402, required_headers)
                 payer = _payer_wallet(payload)
-                if intro_enabled():
+                if intro_for_route:
                     if not payer:
                         return _resp({"error": "signed payer address required "
                                               "for intro-price eligibility"},
@@ -559,15 +581,15 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                                  402, required_headers)
                 consumed[key] = _classified_settlement(
                     payload, agent, tool, result, identifier,
-                    intro_applied=(intro_enabled() and
+                    intro_applied=(intro_for_route and
                                    price == INTRO_SCHEDULE["price_minor"]),
                     list_price_minor=list_price)
                 intro_seen = gate_state.get(INTRO_SEEN_KEY, {})
-                if intro_enabled() and not isinstance(intro_seen, dict):
+                if intro_for_route and not isinstance(intro_seen, dict):
                     intro_seen = {}
-                if intro_enabled() and INTRO_SEEN_KEY not in gate_state:
+                if intro_for_route and INTRO_SEEN_KEY not in gate_state:
                     gate_state[INTRO_SEEN_KEY] = intro_seen
-                seen_key = payer.strip().lower() if intro_enabled() else ""
+                seen_key = payer.strip().lower() if intro_for_route else ""
                 seen_added = False
                 if seen_key and isinstance(intro_seen, dict):
                     seen_added = seen_key not in intro_seen
