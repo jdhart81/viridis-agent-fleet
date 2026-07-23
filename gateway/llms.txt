@@ -23,6 +23,10 @@ is required. The tools form one chain: measure -> account -> disclose -> claim
 2. Sign the advertised exact Base-mainnet USDC authorization and retry with PAYMENT-SIGNATURE.
 3. Viridis verifies and settles before executing, then returns JSON plus PAYMENT-RESPONSE. Any verification, settlement, replay, timeout, or persistence error fails closed and never returns a free tool result.
 
+Safest first paid call, when intro pricing is enabled:
+python3 scripts/x402_demo_client.py --route regulatory-radar --max-payment-usdc 0.01
+The client makes exactly one paid attempt and registers the 10000-atomic ceiling inside the x402 SDK payment selector. If the live quote exceeds $0.01, it stops before creating a signed payment.
+
 ## Discovery and examples
 
 - A2A 1.0 Agent Card: https://mcp.viridisconservation.com/.well-known/agent-card.json

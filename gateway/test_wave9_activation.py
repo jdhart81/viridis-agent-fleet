@@ -5,7 +5,10 @@ import importlib.util
 import json
 import os
 import sys
+import types
 from pathlib import Path
+
+import pytest
 
 
 HERE = Path(__file__).resolve().parent
@@ -94,6 +97,104 @@ def test_demo_client_dry_run_never_pays():
     assert "independent" in result["preflight_note"]
 
 
+def test_demo_client_single_route_pays_once_under_explicit_limit():
+    demo = _load_demo()
+
+    class IntroBuyer(FakeBuyer):
+        AMOUNTS = {
+            **FakeBuyer.AMOUNTS,
+            "regulatory-radar": "10000",
+        }
+
+    buyer = IntroBuyer()
+    result = demo.run_workflow(
+        "https://mcp.test",
+        buyer,
+        steps=demo.select_steps("regulatory-radar"),
+        max_payment_atomic=10_000,
+    )
+    assert [agent for agent, _ in buyer.challenges] == ["regulatory-radar"]
+    assert [agent for agent, _ in buyer.payments] == ["regulatory-radar"]
+    assert result["workflow"] == "scan"
+    assert result["selected_routes"] == ["regulatory-radar"]
+    assert result["quoted_total_atomic_usdc"] == 10_000
+    assert result["same_wallet_expected_total_atomic_usdc"] == 10_000
+    assert result["list_total_atomic_usdc"] == 250_000
+
+
+def test_demo_client_single_route_limit_refuses_before_payment():
+    demo = _load_demo()
+    buyer = FakeBuyer()
+    with pytest.raises(RuntimeError, match="no payment attempted"):
+        demo.run_workflow(
+            "https://mcp.test",
+            buyer,
+            steps=demo.select_steps("regulatory-radar"),
+            max_payment_atomic=10_000,
+        )
+    assert [agent for agent, _ in buyer.challenges] == ["regulatory-radar"]
+    assert buyer.payments == []
+
+
+def test_demo_client_payment_limit_is_exact_usdc():
+    demo = _load_demo()
+    assert demo._usdc_to_atomic("0.01") == 10_000
+    assert demo._usdc_to_atomic("0.000001") == 1
+    with pytest.raises(demo.argparse.ArgumentTypeError):
+        demo._usdc_to_atomic("0.0000001")
+
+
+def test_live_buyer_registers_limit_inside_sdk_payment_selector(monkeypatch):
+    demo = _load_demo()
+    created_clients = []
+
+    class FakeClient:
+        def __init__(self):
+            self.policies = []
+            created_clients.append(self)
+
+        def register(self, network, scheme):
+            self.network = network
+            self.scheme = scheme
+
+        def register_policy(self, policy):
+            self.policies.append(policy)
+
+    class FakeAccount:
+        @staticmethod
+        def from_key(_private_key):
+            return types.SimpleNamespace(address="0xBuyer")
+
+    class FakeSession:
+        def __init__(self):
+            self.headers = {}
+
+    module_values = {
+        "requests": types.ModuleType("requests"),
+        "eth_account": types.ModuleType("eth_account"),
+        "x402": types.ModuleType("x402"),
+        "x402.http": types.ModuleType("x402.http"),
+        "x402.http.clients": types.ModuleType("x402.http.clients"),
+        "x402.mechanisms": types.ModuleType("x402.mechanisms"),
+        "x402.mechanisms.evm": types.ModuleType("x402.mechanisms.evm"),
+        "x402.mechanisms.evm.exact": types.ModuleType(
+            "x402.mechanisms.evm.exact"),
+    }
+    module_values["eth_account"].Account = FakeAccount
+    module_values["x402"].x402ClientSync = FakeClient
+    module_values["x402"].max_amount = lambda limit: ("max_amount", limit)
+    module_values["x402.http.clients"].x402_requests = (
+        lambda _client: FakeSession())
+    module_values["x402.mechanisms.evm.exact"].ExactEvmScheme = (
+        lambda account: ("exact", account.address))
+    for name, module in module_values.items():
+        monkeypatch.setitem(sys.modules, name, module)
+
+    demo.LiveBuyer("0xPrivate", 30, max_payment_atomic=10_000)
+    assert len(created_clients) == 1
+    assert created_clients[0].policies == [("max_amount", 10_000)]
+
+
 def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
         tmp_path, monkeypatch):
     from starlette.testclient import TestClient
@@ -124,12 +225,16 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "quantity-takeoff" in quickstart.text
     assert "x402_demo_client.py" in quickstart.text
     assert "--dry-run" in quickstart.text
+    assert "--route regulatory-radar --max-payment-usdc 0.01" in quickstart.text
+    assert "max_amount(10_000)" in quickstart.text
     assert "Hermes Agent" in quickstart.text
     assert "hermes mcp add viridis-market" in quickstart.text
     assert "Viridis does not install or operate it" in quickstart.text
     assert "viridis-paid-tools/SKILL.md" in quickstart.text
     assert "First paid call from every new wallet is $0.01" in quickstart.text
     assert "Payable HTTP routes" in llms.text
+    assert "--route regulatory-radar --max-payment-usdc 0.01" in llms.text
+    assert "10000-atomic ceiling" in llms.text
     assert "Hermes Agent buyer guide" in llms.text
     assert "https://mcp.viridisconservation.com/network/mcp" in llms.text
     assert "First paid call from every new wallet is $0.01" in llms.text

@@ -7,6 +7,11 @@ Install (demo machine only; this SDK is NOT in the gateway image):
 Free discovery run (prints every live 402 challenge; moves no money):
   python3 scripts/x402_demo_client.py --dry-run
 
+Single paid Regulatory Radar call (new-wallet intro is currently $0.01):
+  export X402_BUYER_PRIVATE_KEY='0x...'
+  python3 scripts/x402_demo_client.py \
+    --route regulatory-radar --max-payment-usdc 0.01
+
 Paid Base-mainnet run (wallet needs Base USDC; never paste the key in code):
   export X402_BUYER_PRIVATE_KEY='0x...'
   python3 scripts/x402_demo_client.py
@@ -30,6 +35,7 @@ import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Optional
 
 
@@ -138,6 +144,30 @@ STEPS = (
 )
 
 
+def select_steps(route: Optional[str] = None) -> tuple[Step, ...]:
+    """Return the full workflow or exactly one explicitly selected route."""
+    if route is None:
+        return STEPS
+    selected = tuple(step for step in STEPS if step.agent == route)
+    if not selected:
+        raise ValueError(f"unknown route: {route}")
+    return selected
+
+
+def _usdc_to_atomic(value: str) -> int:
+    """Argparse converter for an exact positive USDC amount."""
+    try:
+        amount = Decimal(value)
+    except (InvalidOperation, ValueError) as exc:
+        raise argparse.ArgumentTypeError(
+            "must be a positive USDC amount with at most 6 decimals") from exc
+    atomic = amount * Decimal(1_000_000)
+    if amount <= 0 or atomic != atomic.to_integral_value():
+        raise argparse.ArgumentTypeError(
+            "must be a positive USDC amount with at most 6 decimals")
+    return int(atomic)
+
+
 def _json_response(status: int, headers: Any, raw: bytes) -> dict:
     try:
         body = json.loads(raw.decode("utf-8"))
@@ -197,11 +227,12 @@ def _display_challenge(step: Step, required: dict) -> None:
 class LiveBuyer:
     """Raw 402 inspection plus the official x402 SDK's requests adapter."""
 
-    def __init__(self, private_key: str, timeout: int):
+    def __init__(self, private_key: str, timeout: int,
+                 max_payment_atomic: Optional[int] = None):
         try:
             import requests
             from eth_account import Account
-            from x402 import x402ClientSync
+            from x402 import max_amount, x402ClientSync
             from x402.http.clients import x402_requests
             from x402.mechanisms.evm.exact import ExactEvmScheme
         except ImportError as exc:
@@ -212,6 +243,10 @@ class LiveBuyer:
         self.account = Account.from_key(private_key)
         client = x402ClientSync()
         client.register("eip155:*", ExactEvmScheme(self.account))
+        if max_payment_atomic is not None:
+            # Enforce the ceiling inside the SDK payment selector that creates
+            # the signed retry, not only against our earlier preview quote.
+            client.register_policy(max_amount(max_payment_atomic))
         self.session = x402_requests(client)
         self.session.headers.update({
             "Accept": "application/json",
@@ -240,11 +275,16 @@ class DryRunBuyer:
         raise AssertionError("dry-run never pays")
 
 
-def run_workflow(base_url: str, buyer: Any, dry_run: bool = False) -> dict:
+def run_workflow(base_url: str, buyer: Any, dry_run: bool = False,
+                 steps: Optional[tuple[Step, ...]] = None,
+                 max_payment_atomic: Optional[int] = None) -> dict:
+    active_steps = STEPS if steps is None else tuple(steps)
+    if not active_steps:
+        raise ValueError("at least one route is required")
     outputs: dict = {}
     total_atomic = 0
     quoted_amounts = []
-    for step in STEPS:
+    for step in active_steps:
         payload = step.build_input(outputs)
         challenge = buyer.challenge(step.url(base_url), payload)
         if challenge["status"] != 402:
@@ -258,6 +298,11 @@ def run_workflow(base_url: str, buyer: Any, dry_run: bool = False) -> dict:
         if dry_run:
             outputs[step.name] = {"dry_run": True, "input": payload}
             continue
+        if (max_payment_atomic is not None
+                and quoted > max_payment_atomic):
+            raise RuntimeError(
+                f"{step.agent}: quoted payment {quoted} atomic USDC exceeds "
+                f"the {max_payment_atomic} atomic limit; no payment attempted")
         paid = buyer.pay(step.url(base_url), payload)
         if paid["status"] != 200:
             raise RuntimeError(
@@ -266,13 +311,16 @@ def run_workflow(base_url: str, buyer: Any, dry_run: bool = False) -> dict:
         outputs[step.name] = paid["body"]
         print(f"[{step.name}] settled and returned:")
         print(json.dumps(paid["body"], indent=2, sort_keys=True))
-    list_total = sum(step.list_amount_atomic for step in STEPS)
+    list_total = sum(step.list_amount_atomic for step in active_steps)
     expected_same_wallet = list_total
-    if quoted_amounts and quoted_amounts[0] < STEPS[0].list_amount_atomic:
+    if (quoted_amounts
+            and quoted_amounts[0] < active_steps[0].list_amount_atomic):
         expected_same_wallet = (
-            list_total - STEPS[0].list_amount_atomic + quoted_amounts[0])
+            list_total - active_steps[0].list_amount_atomic
+            + quoted_amounts[0])
     summary = {
-        "workflow": "measure -> account -> disclose -> claim -> scan",
+        "workflow": " -> ".join(step.name for step in active_steps),
+        "selected_routes": [step.agent for step in active_steps],
         "dry_run": dry_run,
         "list_total_atomic_usdc": list_total,
         "list_total_usdc": f"{list_total / 1_000_000:.2f}",
@@ -295,22 +343,37 @@ def run_workflow(base_url: str, buyer: Any, dry_run: bool = False) -> dict:
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run or inspect the five-step Viridis x402 workflow")
+        description="Run or inspect one route or the full Viridis x402 workflow")
     parser.add_argument("--dry-run", action="store_true",
                         help="print live 402 requirements without paying")
+    parser.add_argument(
+        "--route", choices=tuple(step.agent for step in STEPS),
+        help="call exactly one route instead of the five-route workflow")
+    parser.add_argument(
+        "--max-payment-usdc", type=_usdc_to_atomic, metavar="USDC",
+        help="fail before payment if any live quote exceeds this amount")
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
     parser.add_argument("--timeout", type=int, default=30)
     args = parser.parse_args(argv)
+    if args.route and not args.dry_run and args.max_payment_usdc is None:
+        parser.error(
+            "single-route paid mode requires --max-payment-usdc")
     if args.dry_run:
         buyer = DryRunBuyer(args.timeout)
     else:
         private_key = os.environ.get("X402_BUYER_PRIVATE_KEY", "").strip()
         if not private_key:
             parser.error("paid mode requires X402_BUYER_PRIVATE_KEY")
-        buyer = LiveBuyer(private_key, args.timeout)
-    print(f"Viridis x402 workflow at {args.base_url}")
+        buyer = LiveBuyer(
+            private_key, args.timeout,
+            max_payment_atomic=args.max_payment_usdc)
+    selected = select_steps(args.route)
+    label = args.route or "five-route workflow"
+    print(f"Viridis x402 {label} at {args.base_url}")
     print(f"Bazaar: {BAZAAR_MERCHANT_URL}")
-    run_workflow(args.base_url, buyer, args.dry_run)
+    run_workflow(
+        args.base_url, buyer, args.dry_run, steps=selected,
+        max_payment_atomic=args.max_payment_usdc)
     return 0
 
 

@@ -71,16 +71,20 @@ Before a paid call:
 5. Accept the result only when the response is HTTP 200 and includes
    `PAYMENT-RESPONSE`. Preserve the result digest and settlement receipt.
 
-Use the public client only after the operator authorizes its stated spend:
+For a new wallet, prefer one Regulatory Radar call with a hard one-cent ceiling:
 
 ```bash
 python3 -m pip install "x402[requests,evm]==2.16.0"
 # Set X402_BUYER_PRIVATE_KEY outside the conversation and outside command logs.
-python3 scripts/x402_demo_client.py
+python3 scripts/x402_demo_client.py \
+  --route regulatory-radar --max-payment-usdc 0.01
 ```
 
-The full demo purchases five calls. Prefer a single selected route when the
-operator has not authorized the complete workflow.
+The client makes exactly one paid attempt. It checks the preview quote and
+registers the same ceiling inside the x402 SDK payment selector that creates
+the signed retry. If the live quote exceeds $0.01, it stops without paying.
+The command without `--route` purchases the full five-call workflow and must
+not run without explicit authorization for that complete spend.
 
 ## Use the Agent Market
 

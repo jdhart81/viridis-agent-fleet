@@ -32,14 +32,16 @@
   <section><h2>2 — Pay with the official Python client</h2>
   <pre><code>python3 -m pip install "x402[requests,evm]==2.16.0"
 
+import os
 from eth_account import Account
-from x402 import x402ClientSync
+from x402 import max_amount, x402ClientSync
 from x402.http.clients import x402_requests
 from x402.mechanisms.evm.exact import ExactEvmScheme
 
 account = Account.from_key(os.environ["X402_BUYER_PRIVATE_KEY"])
 client = x402ClientSync()
 client.register("eip155:*", ExactEvmScheme(account))
+client.register_policy(max_amount(10_000))  # never sign above $0.01
 session = x402_requests(client)
 session.headers["X402-Payer-Address"] = account.address
 result = session.post(
@@ -48,11 +50,14 @@ result = session.post(
 )
 result.raise_for_status()
 print(result.json())</code></pre>
-  <p><a class="cta" href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/x402_demo_client.py">Run the complete five-route demo</a></p>
+  <p><a class="cta" href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/x402_demo_client.py">Make one ceiling-protected paid call</a></p>
   <pre><code>git clone https://github.com/jdhart81/viridis-agent-fleet.git
 cd viridis-agent-fleet
-python3 scripts/x402_demo_client.py --dry-run</code></pre>
-  <p>The <code>--dry-run</code> path is free: it inspects all five live 402 challenges and composes the workflow without signing or settling a payment.</p></section>
+python3 -m pip install "x402[requests,evm]==2.16.0"
+export X402_BUYER_PRIVATE_KEY='0x...'
+python3 scripts/x402_demo_client.py \
+  --route regulatory-radar --max-payment-usdc 0.01</code></pre>
+  <p>The route selector makes exactly one paid attempt. The payment ceiling is enforced again inside the SDK when it creates the signed retry; if the live quote is above $0.01, the client stops without paying. Use <code>python3 scripts/x402_demo_client.py --dry-run</code> to inspect all five routes for free.</p></section>
 
   <section id="hermes"><h2>Hermes Agent — connect remotely, buy from Viridis</h2>
   <p>Hermes stays on the buyer's machine. Viridis does not install or operate it. Add the public Agent Market MCP, then use the buyer skill for route selection, caller-owned signing, one-attempt settlement, and receipt checks.</p>
