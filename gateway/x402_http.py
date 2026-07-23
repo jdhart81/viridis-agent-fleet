@@ -57,6 +57,7 @@ import os
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Tuple
+from urllib.parse import urlencode
 
 logger = logging.getLogger("viridis.x402_http")
 
@@ -248,6 +249,8 @@ INTRO_SCHEDULE = {
     "sybil_posture": ("intentionally light friction: wallet-level only; "
                        "no identity collection or cross-wallet linkage"),
 }
+CDP_MERCHANT_DISCOVERY_URL = (
+    "https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant")
 
 
 def intro_enabled() -> bool:
@@ -448,6 +451,47 @@ def discovery_entries(public_base: str) -> list:
                 v2_status["bazaar_extension_responses"].get(route_key, {}),
         })
     return entries
+
+
+def discovery_manifest(public_base: str) -> dict:
+    """Machine-readable v2 inventory for ``/.well-known/x402``.
+
+    Each resource carries the same PaymentRequirements and Bazaar declaration
+    used by the live unpaid challenge.  This keeps discovery terms derived
+    from the payment implementation rather than a second price/address table.
+    """
+    from payment_gate import PRICE_MINOR, DEFAULT_PRICE_MINOR
+    import x402_v2
+    base = public_base.rstrip("/")
+    resources = []
+    for agent, tool in X402_HTTP_TOOLS:
+        endpoint = f"{base}/x402/{agent}/{tool}"
+        required = x402_v2.build_payment_required(
+            agent, tool, PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR),
+            endpoint, "POST", X402_HTTP_METADATA[(agent, tool)])
+        resources.append({
+            **required["resource"],
+            "method": "POST",
+            "accepts": required["accepts"],
+            "extensions": required["extensions"],
+        })
+    pay_to = resources[0]["accepts"][0]["payTo"] if resources else ""
+    merchant_url = CDP_MERCHANT_DISCOVERY_URL + "?" + urlencode(
+        {"payTo": pay_to})
+    return {
+        "x402Version": x402_v2.X402_VERSION,
+        "specVersion": "viridis-x402-manifest-v1",
+        "provider": {
+            "name": "Viridis Agent Fleet",
+            "gateway": base,
+        },
+        "resources": resources,
+        "catalog": base + "/x402/catalog",
+        "merchant": {
+            "url": merchant_url,
+            "payTo": pay_to,
+        },
+    }
 
 
 def _decode_query_value(value: Any) -> Any:

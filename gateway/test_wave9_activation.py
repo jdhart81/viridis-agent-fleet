@@ -202,6 +202,10 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
 
     monkeypatch.setenv("STATE_DB", str(tmp_path / "gateway.db"))
     monkeypatch.setenv("X402_INTRO_ENABLED", "1")
+    monkeypatch.setenv("X402_ENABLED", "1")
+    monkeypatch.setenv("X402_V2_ENABLED", "1")
+    monkeypatch.setenv("VIRIDIS_X402_ADDRESS", "0xViridis")
+    monkeypatch.setenv("X402_FACILITATOR_URL", "https://fac.test")
     old_members = gateway.EXTERNAL_MEMBERS
     gateway.EXTERNAL_MEMBERS = []
     try:
@@ -211,6 +215,9 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
             llms = client.get("/llms.txt")
             brand_mark = client.get("/brand/viridis-mark.svg")
             x402_catalog = client.get("/x402/catalog")
+            x402_manifest = client.get("/.well-known/x402")
+            merchant = client.get(
+                "/x402/discovery/merchant", follow_redirects=False)
             health = client.get("/healthz")
             catalog = client.get("/.well-known/ai-catalog.json")
     finally:
@@ -223,8 +230,18 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert brand_mark.headers["content-type"].startswith("image/svg+xml")
     assert "Viridis connected land mark" in brand_mark.text
     assert x402_catalog.status_code == 200
+    assert x402_manifest.status_code == 200
+    assert x402_manifest.headers["content-type"].startswith(
+        "application/json")
+    assert len(x402_manifest.json()["resources"]) == 5
+    assert merchant.status_code == 307
+    assert merchant.headers["location"] == (
+        "https://api.cdp.coinbase.com/platform/v2/x402/discovery/"
+        "merchant?payTo=0xViridis")
     assert "5 live paid routes" in agents.text
     assert "CDP Bazaar" in agents.text
+    assert 'href="/x402/discovery/merchant"' in agents.text
+    assert 'href="/.well-known/x402"' in agents.text
     assert "First paid call from every new wallet is $0.01" in agents.text
     assert "quantity-takeoff" in quickstart.text
     assert "x402_demo_client.py" in quickstart.text
@@ -241,6 +258,7 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "10000-atomic ceiling" in llms.text
     assert "Hermes Agent buyer guide" in llms.text
     assert "https://mcp.viridisconservation.com/network/mcp" in llms.text
+    assert "https://mcp.viridisconservation.com/.well-known/x402" in llms.text
     assert "First paid call from every new wallet is $0.01" in llms.text
     machine = x402_catalog.json()
     assert machine["spec_version"] == "viridis-x402-catalog-v1"
@@ -259,6 +277,10 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
         "/llms.txt")
     assert health.json()["human_surfaces"]["x402_catalog"].endswith(
         "/x402/catalog")
+    assert health.json()["human_surfaces"]["x402_manifest"].endswith(
+        "/.well-known/x402")
+    assert health.json()["human_surfaces"]["x402_merchant"].endswith(
+        "/x402/discovery/merchant")
     surfaces = {item["url"] for item in catalog.json()["humanSurfaces"]}
     assert "https://mcp.viridisconservation.com/agents" in surfaces
     assert "https://mcp.viridisconservation.com/quickstart" in surfaces

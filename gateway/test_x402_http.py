@@ -258,5 +258,40 @@ def test_discovery_inventory_has_exact_prices_and_atomic_math():
     assert all(e["methods"] == ["GET", "POST"] for e in entries.values())
 
 
+def test_well_known_manifest_has_v2_terms_for_all_five_routes(monkeypatch):
+    monkeypatch.setenv("X402_ENABLED", "1")
+    monkeypatch.setenv("X402_V2_ENABLED", "1")
+    monkeypatch.setenv("VIRIDIS_X402_ADDRESS", "0xViridis")
+    monkeypatch.setenv("X402_FACILITATOR_URL", "https://fac.test")
+    manifest = x402_http.discovery_manifest("https://mcp.test/")
+    assert manifest["x402Version"] == 2
+    assert manifest["specVersion"] == "viridis-x402-manifest-v1"
+    assert manifest["provider"]["gateway"] == "https://mcp.test"
+    assert len(manifest["resources"]) == 5
+    assert {item["url"] for item in manifest["resources"]} == {
+        "https://mcp.test/x402/regulatory-radar/scan_regulations",
+        "https://mcp.test/x402/taxcredit-engine/calculate_tax_credit",
+        "https://mcp.test/x402/ghg-ledger/calculate_inventory",
+        "https://mcp.test/x402/quantity-takeoff/calculate_takeoff",
+        "https://mcp.test/x402/disclosure-compiler/compile_disclosure",
+    }
+    assert all(item["method"] == "POST" for item in manifest["resources"])
+    assert all(item["accepts"] for item in manifest["resources"])
+    assert all(item["accepts"][0]["scheme"] == "exact"
+               for item in manifest["resources"])
+    assert all(item["accepts"][0]["network"] == "eip155:8453"
+               for item in manifest["resources"])
+    assert all(item["accepts"][0]["payTo"] == "0xViridis"
+               for item in manifest["resources"])
+    assert all(item["extensions"]["bazaar"]["info"]["input"]["method"]
+               == "POST" for item in manifest["resources"])
+    assert manifest["merchant"] == {
+        "url": (
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/"
+            "merchant?payTo=0xViridis"),
+        "payTo": "0xViridis",
+    }
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))
