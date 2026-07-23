@@ -34,6 +34,8 @@ is required. The tools form one chain: measure -> account -> disclose -> claim
 - CDP Bazaar merchant: https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329
 - Source and runnable demo: https://github.com/jdhart81/viridis-agent-fleet
 - Bounded buyer/router SDK: https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/viridis_market_router.py — ranks outside sellers under an expiring spend mandate and requires a caller-injected signer; it never stores a wallet private key.
+- Hermes Agent buyer guide: https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/integrations/HERMES_BUYER_QUICKSTART.md — Hermes stays on the buyer's infrastructure; connect its remote MCP client to https://mcp.viridisconservation.com/network/mcp and use the existing x402 routes to purchase service. Viridis does not install or operate Hermes.
+- Hermes Agent skill: https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/integrations/viridis-paid-tools/SKILL.md — keyless procedure for discovery, free preflight, caller-owned signing, one-attempt settlement, and receipt verification; it contains no wallet credential.
 
 ## Agent Market Network
 
