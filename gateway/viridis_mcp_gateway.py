@@ -1860,6 +1860,10 @@ def build_app():
     _llms_path = Path(__file__).resolve().parent / "llms.txt"
     _llms_text = (_llms_path.read_text() if _llms_path.exists() else
                   "# Viridis agents\n\nllms.txt not deployed\n")
+    _brand_mark_path = Path(__file__).resolve().parent / "viridis-mark.svg"
+    _brand_mark_svg = (
+        _brand_mark_path.read_text() if _brand_mark_path.exists() else
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>')
 
     def _intro_public_line() -> str:
         try:
@@ -1891,6 +1895,11 @@ def build_app():
             _llms_text.replace("{{INTRO_STATUS}}", _intro_public_line()),
             headers=dict(_SEAT_PUBLIC_HEADERS),
             media_type="text/plain")
+
+    async def brand_mark(request):
+        from starlette.responses import Response
+        return Response(_brand_mark_svg, headers=dict(_SEAT_PUBLIC_HEADERS),
+                        media_type="image/svg+xml")
 
     async def x402_catalog(request):
         from x402_http import discovery_entries, intro_status
@@ -1937,6 +1946,7 @@ def build_app():
                             Route("/agents", agents_page),
                             Route("/quickstart", quickstart),
                             Route("/llms.txt", llms_txt),
+                            Route("/brand/viridis-mark.svg", brand_mark),
                             Route("/x402/catalog", x402_catalog),
                             Route("/deck", deck), Route("/stats", stats),
                             Route("/.well-known/ai-catalog.json", ard_catalog),

@@ -209,6 +209,7 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
             agents = client.get("/agents")
             quickstart = client.get("/quickstart")
             llms = client.get("/llms.txt")
+            brand_mark = client.get("/brand/viridis-mark.svg")
             x402_catalog = client.get("/x402/catalog")
             health = client.get("/healthz")
             catalog = client.get("/.well-known/ai-catalog.json")
@@ -218,6 +219,9 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert agents.status_code == 200
     assert quickstart.status_code == 200
     assert llms.status_code == 200
+    assert brand_mark.status_code == 200
+    assert brand_mark.headers["content-type"].startswith("image/svg+xml")
+    assert "Viridis connected land mark" in brand_mark.text
     assert x402_catalog.status_code == 200
     assert "5 live paid routes" in agents.text
     assert "CDP Bazaar" in agents.text
@@ -264,6 +268,7 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "COPY deploy/gateway/agents.html deploy/gateway/" in dockerfile
     assert "COPY deploy/gateway/quickstart.html deploy/gateway/" in dockerfile
     assert "COPY deploy/gateway/llms.txt deploy/gateway/" in dockerfile
+    assert "COPY deploy/gateway/viridis-mark.svg deploy/gateway/" in dockerfile
 
 
 def test_activation_copy_tracks_intro_kill_switch(tmp_path, monkeypatch):
