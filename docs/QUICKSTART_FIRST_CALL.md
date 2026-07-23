@@ -38,6 +38,25 @@ The skill stores no credential. Paid calls still use the existing x402 HTTP
 routes and a caller-owned signer. See
 [`docs/integrations/HERMES_BUYER_QUICKSTART.md`](integrations/HERMES_BUYER_QUICKSTART.md).
 
+## Safest first paid call
+
+When the live new-wallet intro is enabled, make exactly one Regulatory Radar
+purchase with a hard one-cent ceiling:
+
+```bash
+git clone https://github.com/jdhart81/viridis-agent-fleet.git
+cd viridis-agent-fleet
+python3 -m pip install "x402[requests,evm]==2.16.0"
+export X402_BUYER_PRIVATE_KEY='0x...'
+python3 scripts/x402_demo_client.py \
+  --route regulatory-radar --max-payment-usdc 0.01
+```
+
+The client checks the preview quote and registers the same ceiling inside the
+x402 SDK payment selector that creates the signed retry. If the wallet already
+used its intro or the price is otherwise above $0.01, it stops without paying.
+Keep the private key outside prompts, repositories, tool arguments, and logs.
+
 ## Worked examples (copy-paste)
 
 **Scan EU regulations for your sector** — regulatory-radar, $0.25/call after free tier:

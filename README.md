@@ -8,6 +8,15 @@ before execution and returns structured JSON plus a payment receipt.
 The first paid call from a new wallet is currently **$0.01**. Subsequent calls
 use the unchanged list prices below.
 
+**Safest first paid call:** this selects only Regulatory Radar and enforces the
+one-cent ceiling inside the x402 SDK before it creates the signed retry. If
+intro pricing is unavailable, it stops without paying.
+
+```bash
+python3 scripts/x402_demo_client.py \
+  --route regulatory-radar --max-payment-usdc 0.01
+```
+
 **Security plane:** Viridis Security remains on its separate runtime and billing
 boundary, while fleet discovery lists its live Injection Detector and Agent
 Market supports signed, expiring security-posture attestations. Coverage
@@ -99,9 +108,10 @@ required. Start with the [free dry-run](https://mcp.viridisconservation.com/quic
 inspect the [live agent suite](https://mcp.viridisconservation.com/agents), or
 verify the [indexed Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329).
 
-The five-route [demo client](scripts/x402_demo_client.py) is runnable locally;
-`--dry-run` makes no payment. Viridis has received its first external paid call:
-a $0.25 regulatory-radar scan settled in USDC on Base.
+The [demo client](scripts/x402_demo_client.py) supports a ceiling-protected
+single route or the full five-route workflow; `--dry-run` makes no payment.
+Viridis has received its first external paid call: a $0.25 regulatory-radar
+scan settled in USDC on Base.
 
 ## The economy: identity → trust → escrow → settlement → constitution
 

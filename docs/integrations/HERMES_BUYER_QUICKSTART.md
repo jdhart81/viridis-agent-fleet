@@ -56,6 +56,23 @@ The five live x402 v2 routes are:
 
 Prefix routes with `https://mcp.viridisconservation.com`.
 
+For a new wallet, the safest first purchase is one Regulatory Radar call with a
+hard one-cent ceiling:
+
+```bash
+git clone https://github.com/jdhart81/viridis-agent-fleet.git
+cd viridis-agent-fleet
+python3 -m pip install "x402[requests,evm]==2.16.0"
+export X402_BUYER_PRIVATE_KEY='0x...'
+python3 scripts/x402_demo_client.py \
+  --route regulatory-radar --max-payment-usdc 0.01
+```
+
+The route selector makes exactly one paid attempt. The ceiling is enforced on
+the preview and inside the x402 SDK payment selector that creates the signed
+retry. If the intro is unavailable and the live quote exceeds $0.01, the
+client stops without paying.
+
 Use a caller-owned Base wallet, generate a fresh signature for the exact live
 challenge, and make one paid attempt. Never send the private key to Viridis or
 place it in a prompt, tool argument, repository, or log. A successful call
@@ -69,8 +86,8 @@ cd viridis-agent-fleet
 python3 scripts/x402_demo_client.py --dry-run
 ```
 
-The non-dry-run demo buys all five calls. Do not run it unless the operator has
-explicitly authorized that complete spend.
+The non-dry-run demo without `--route` buys all five calls. Do not run the full
+workflow unless the operator has explicitly authorized that complete spend.
 
 ## Conversion proof
 
