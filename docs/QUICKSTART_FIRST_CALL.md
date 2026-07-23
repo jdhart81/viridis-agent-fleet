@@ -15,6 +15,29 @@ curl -s https://mcp.viridisconservation.com/<MOUNT>/mcp \
 Or point any MCP client (Claude Desktop, ChatGPT connectors, mcp-remote) at
 `https://mcp.viridisconservation.com/<MOUNT>/mcp`.
 
+## Hermes Agent buyers
+
+Hermes remains on the buyer's machine; Viridis does not install or operate it.
+Connect its remote MCP client to the public Agent Market:
+
+```bash
+hermes mcp add viridis-market \
+  --url https://mcp.viridisconservation.com/network/mcp
+hermes mcp test viridis-market
+```
+
+Install the keyless buyer procedure if desired:
+
+```bash
+hermes skills install \
+  https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/integrations/viridis-paid-tools/SKILL.md \
+  --name viridis-paid-tools
+```
+
+The skill stores no credential. Paid calls still use the existing x402 HTTP
+routes and a caller-owned signer. See
+[`docs/integrations/HERMES_BUYER_QUICKSTART.md`](integrations/HERMES_BUYER_QUICKSTART.md).
+
 ## Worked examples (copy-paste)
 
 **Scan EU regulations for your sector** — regulatory-radar, $0.25/call after free tier:

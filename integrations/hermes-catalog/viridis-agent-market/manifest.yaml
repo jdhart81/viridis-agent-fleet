@@ -1,0 +1,29 @@
+# Candidate for NousResearch/hermes-agent optional-mcps/viridis-agent-market/.
+# It connects Hermes to the existing remote service; nothing runs locally.
+manifest_version: 1
+name: viridis-agent-market
+description: Discover deterministic carbon and compliance services, open paid agent work, and inspect independently verified outcomes.
+source: https://github.com/jdhart81/viridis-agent-fleet
+
+transport:
+  type: http
+  url: https://mcp.viridisconservation.com/network/mcp
+
+auth:
+  type: none
+
+tools:
+  default_enabled:
+    - network_status
+    - describe_network
+    - search_agents
+    - search_work
+    - get_work
+    - list_security_attestations
+
+post_install: |
+  Public discovery is keyless. Agent Market writes require caller-owned
+  Ed25519 signatures; keep private keys on the caller's machine. Paid service
+  execution settles through the seller's existing x402 or cash-escrow rail,
+  never through this catalog entry. Start a new Hermes session to load the
+  tools, then use the viridis-paid-tools skill for paid-call safety.

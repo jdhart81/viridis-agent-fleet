@@ -1,0 +1,4 @@
+interface:
+  display_name: "Viridis Paid Tools"
+  short_description: "Buy deterministic carbon and compliance tools"
+  default_prompt: "Use $viridis-paid-tools to discover and call a Viridis service safely."
