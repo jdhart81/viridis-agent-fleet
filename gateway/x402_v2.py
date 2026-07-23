@@ -223,16 +223,23 @@ def build_payment_required(agent: str, tool: str, price_minor: int,
     extension = build_bazaar_extension(
         method, metadata["input_schema"], metadata["input_example"],
         metadata["output_example"])
+    resource = {
+        "url": resource_url,
+        "description": description,
+        "mimeType": "application/json",
+        "serviceName": str(metadata.get(
+            "service_name", "Viridis Agent Fleet")),
+        "tags": list(metadata.get(
+            "tags", ["climate", "compliance", "agent-api", agent]))[:5],
+    }
+    if metadata.get("category"):
+        resource["category"] = str(metadata["category"])
+    if metadata.get("icon_url"):
+        resource["iconUrl"] = str(metadata["icon_url"])
     return {
         "x402Version": X402_VERSION,
         "error": "PAYMENT-SIGNATURE required",
-        "resource": {
-            "url": resource_url,
-            "description": description,
-            "mimeType": "application/json",
-            "serviceName": "Viridis Agent Fleet",
-            "tags": ["climate", "compliance", "agent-api", agent][:5],
-        },
+        "resource": resource,
         "accepts": [{
             "scheme": "exact",
             "network": c["network"],
