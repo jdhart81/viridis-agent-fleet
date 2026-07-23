@@ -124,8 +124,14 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "quantity-takeoff" in quickstart.text
     assert "x402_demo_client.py" in quickstart.text
     assert "--dry-run" in quickstart.text
+    assert "Hermes Agent" in quickstart.text
+    assert "hermes mcp add viridis-market" in quickstart.text
+    assert "Viridis does not install or operate it" in quickstart.text
+    assert "viridis-paid-tools/SKILL.md" in quickstart.text
     assert "First paid call from every new wallet is $0.01" in quickstart.text
     assert "Payable HTTP routes" in llms.text
+    assert "Hermes Agent buyer guide" in llms.text
+    assert "https://mcp.viridisconservation.com/network/mcp" in llms.text
     assert "First paid call from every new wallet is $0.01" in llms.text
     machine = x402_catalog.json()
     assert machine["spec_version"] == "viridis-x402-catalog-v1"
