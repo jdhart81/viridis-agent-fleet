@@ -230,6 +230,8 @@ X402_HTTP_METADATA[AGENT402_FIXED_ROUTE] = {
     **X402_HTTP_METADATA[("regulatory-radar", "scan_regulations")],
     "service_name": "Viridis Regulatory Radar",
     "category": "Search",
+    "icon_url": (
+        "https://mcp.viridisconservation.com/brand/viridis-mark.svg"),
     "tags": ["climate", "energy", "compliance", "regulation", "CSRD"],
 }
 INTRO_EXEMPT_ROUTES = frozenset({AGENT402_FIXED_ROUTE})
