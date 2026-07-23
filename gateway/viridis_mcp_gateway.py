@@ -1590,6 +1590,10 @@ def build_app():
                                  "quickstart": public_base + "/quickstart",
                                  "llms_txt": public_base + "/llms.txt",
                                  "x402_catalog": public_base + "/x402/catalog",
+                                 "x402_manifest": (public_base +
+                                                   "/.well-known/x402"),
+                                 "x402_merchant": (public_base +
+                                                   "/x402/discovery/merchant"),
                                  "seats": public_base + "/seats",
                                  "deck": public_base + "/deck",
                                  "a2a_agent_card": (public_base +
@@ -1649,6 +1653,16 @@ def build_app():
                     "endpoint": "/x402/catalog",
                     "description": ("Machine-readable payable-route "
                                     "inventory and live activation policy"),
+                },
+                "x402_manifest": {
+                    "endpoint": "/.well-known/x402",
+                    "description": ("Well-known x402 v2 resources and "
+                                    "per-route payment terms"),
+                },
+                "x402_merchant": {
+                    "endpoint": "/x402/discovery/merchant",
+                    "description": ("Stable redirect to the live CDP Bazaar "
+                                    "merchant inventory"),
                 },
                 "seats": {
                     "endpoint": "/seats",
@@ -1762,6 +1776,10 @@ def build_app():
                              "x402QuickstartUrl": public_base + "/quickstart",
                              "llmsTxtUrl": public_base + "/llms.txt",
                              "x402CatalogUrl": public_base + "/x402/catalog",
+                             "x402ManifestUrl": (public_base +
+                                                "/.well-known/x402"),
+                             "x402MerchantUrl": (public_base +
+                                                "/x402/discovery/merchant"),
                              "agentMarketUrl": public_base + "/network/catalog",
                              "agentMarketMcpUrl": public_base + "/network/mcp"},
                 "trustManifest": {"identity": public_base, "identityType": "https"},
@@ -1860,6 +1878,10 @@ def build_app():
     _llms_path = Path(__file__).resolve().parent / "llms.txt"
     _llms_text = (_llms_path.read_text() if _llms_path.exists() else
                   "# Viridis agents\n\nllms.txt not deployed\n")
+    _brand_mark_path = Path(__file__).resolve().parent / "viridis-mark.svg"
+    _brand_mark_svg = (
+        _brand_mark_path.read_text() if _brand_mark_path.exists() else
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>')
 
     def _intro_public_line() -> str:
         try:
@@ -1892,6 +1914,11 @@ def build_app():
             headers=dict(_SEAT_PUBLIC_HEADERS),
             media_type="text/plain")
 
+    async def brand_mark(request):
+        from starlette.responses import Response
+        return Response(_brand_mark_svg, headers=dict(_SEAT_PUBLIC_HEADERS),
+                        media_type="image/svg+xml")
+
     async def x402_catalog(request):
         from x402_http import discovery_entries, intro_status
         return JSONResponse({
@@ -1901,7 +1928,33 @@ def build_app():
             "routes": discovery_entries(public_base),
             "quickstart": public_base + "/quickstart",
             "llms_txt": public_base + "/llms.txt",
+            "manifest": public_base + "/.well-known/x402",
+            "merchant": public_base + "/x402/discovery/merchant",
         })
+
+    async def x402_manifest(request):
+        import x402_v2
+        if not x402_v2.is_enabled():
+            return JSONResponse(
+                {"error": "x402 v2 rail disabled or incompletely configured"},
+                status_code=503,
+                headers=dict(_SEAT_PUBLIC_HEADERS))
+        from x402_http import discovery_manifest
+        return JSONResponse(discovery_manifest(public_base),
+                            headers=dict(_SEAT_PUBLIC_HEADERS))
+
+    async def x402_merchant(request):
+        import x402_v2
+        if not x402_v2.is_enabled():
+            return JSONResponse(
+                {"error": "x402 v2 rail disabled or incompletely configured"},
+                status_code=503,
+                headers=dict(_SEAT_PUBLIC_HEADERS))
+        from starlette.responses import RedirectResponse
+        from x402_http import discovery_manifest
+        target = discovery_manifest(public_base)["merchant"]["url"]
+        return RedirectResponse(target, status_code=307,
+                                headers=dict(_SEAT_PUBLIC_HEADERS))
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
@@ -1937,8 +1990,11 @@ def build_app():
                             Route("/agents", agents_page),
                             Route("/quickstart", quickstart),
                             Route("/llms.txt", llms_txt),
+                            Route("/brand/viridis-mark.svg", brand_mark),
                             Route("/x402/catalog", x402_catalog),
+                            Route("/x402/discovery/merchant", x402_merchant),
                             Route("/deck", deck), Route("/stats", stats),
+                            Route("/.well-known/x402", x402_manifest),
                             Route("/.well-known/ai-catalog.json", ard_catalog),
                             *seat_routes, *a2a_routes, *x402_http_routes,
                             *hub_routes,
