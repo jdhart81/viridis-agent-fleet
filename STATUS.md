@@ -1,5 +1,24 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-24, x402 validator fixture — DEPLOYED/ACTIVE] Regulatory Radar
+> now publishes one strict, copyable x402 v2 fixture across its live quickstart
+> and Bazaar schema.** The canonical body includes `jurisdiction`, `sector`,
+> and optional `query`; the public guide now states the
+> `PAYMENT-REQUIRED` → `PAYMENT-SIGNATURE` → `PAYMENT-RESPONSE` sequence and
+> marks `X-PAYMENT*` as legacy v1. Operational and public-mirror focused gates
+> are **52 passed / 0 failed each**. The isolated candidate and public route
+> both returned the exact HTTP 402 contract without a signature or payment.
+>
+> Production gateway image
+> `sha256:a4b3c2ee3eea0e25231ee0d5732885bfcec984885db17cc898e288f9f6086335`
+> is healthy; rollback tag
+> `viridis-stable:prev-2026-07-24-x402-fixture` preserves
+> `sha256:ee4f923e36351692b0ab17cf9c5a39bfe1ff09ac898c1ef0fe0cd4b108169e1b`.
+> Caddy, Agent Market, and Growth Agent were not recreated. Settlement truth
+> remains 6 total / 2 external / 2 distinct external payers / $0.26 external
+> revenue, with $0 MRR. Full receipt:
+> `docs/deployment/X402_FIXTURE_CONTRACT_RELEASE_2026-07-24.md`.
+
 > **[2026-07-21, Viridis Security plane — DEPLOYED/ACTIVE] Viridis Security is
 > now a federated fleet member and Agent Market security-attestation plane.**
 > Market v0.3.0 adds signed, expiring coverage attestations, security discovery

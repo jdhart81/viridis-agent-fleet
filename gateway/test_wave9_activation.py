@@ -227,6 +227,11 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "--dry-run" in quickstart.text
     assert "--route regulatory-radar --max-payment-usdc 0.01" in quickstart.text
     assert "max_amount(10_000)" in quickstart.text
+    assert "PAYMENT-REQUIRED" in quickstart.text
+    assert "PAYMENT-SIGNATURE" in quickstart.text
+    assert "PAYMENT-RESPONSE" in quickstart.text
+    assert "45V clean energy tax credit emissions disclosure" in quickstart.text
+    assert "legacy v1 header names" in quickstart.text
     assert "Hermes Agent" in quickstart.text
     assert "hermes mcp add viridis-market" in quickstart.text
     assert "Viridis does not install or operate it" in quickstart.text

@@ -57,6 +57,28 @@ x402 SDK payment selector that creates the signed retry. If the wallet already
 used its intro or the price is otherwise above $0.01, it stops without paying.
 Keep the private key outside prompts, repositories, tool arguments, and logs.
 
+## Canonical Regulatory Radar strict-v2 fixture
+
+Use this exact request when recording or validating the paid Regulatory Radar
+exchange:
+
+```text
+POST https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations
+Content-Type: application/json
+
+{"jurisdiction":"US","sector":"energy","query":"45V clean energy tax credit emissions disclosure"}
+```
+
+The live x402 v2 sequence is:
+
+1. The unpaid request returns HTTP 402 plus `PAYMENT-REQUIRED`.
+2. The buyer retries with `PAYMENT-SIGNATURE`.
+3. A successful settlement returns the JSON result plus `PAYMENT-RESPONSE`.
+
+`X-PAYMENT` and `X-PAYMENT-RESPONSE` are legacy v1 header names. The optional
+`X402-Payer-Address` request header is only an unsigned pricing hint for the
+new-wallet quote; it never authorizes payment.
+
 ## Worked examples (copy-paste)
 
 **Scan EU regulations for your sector** — regulatory-radar, $0.25/call after free tier:

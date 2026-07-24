@@ -20,7 +20,11 @@ from state_store import StateStore                           # noqa: E402
 
 
 TEST_TOOLS = {("regulatory-radar", "scan_regulations"): "scan"}
-TEST_ARGS = {"jurisdiction": "EU", "sector": "energy"}
+TEST_ARGS = {
+    "jurisdiction": "US",
+    "sector": "energy",
+    "query": "45V clean energy tax credit emissions disclosure",
+}
 V1_RAIL_SHA256 = "ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770"
 
 
@@ -173,6 +177,15 @@ def test_X2_2_mainnet_402_shape_and_usd_coin_domain(tmp_path, monkeypatch):
     assert accepted["extra"] == {"name": "USD Coin", "version": "2"}
     assert required["resource"]["url"].endswith(
         "/x402/regulatory-radar/scan_regulations")
+
+
+def test_regulatory_radar_fixture_contract_is_publicly_exact():
+    metadata = x402_http.X402_HTTP_METADATA[
+        ("regulatory-radar", "scan_regulations")]
+    assert metadata["input_example"] == TEST_ARGS
+    assert metadata["input_schema"]["additionalProperties"] is False
+    assert set(metadata["input_schema"]["properties"]) == {
+        "jurisdiction", "sector", "query"}
 
 
 def test_X2_2_sepolia_retains_usdc_domain(monkeypatch):

@@ -26,8 +26,9 @@
   <pre><code>curl -i -X POST \
   https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations \
   -H 'content-type: application/json' \
-  -d '{"jurisdiction":"US","sector":"energy"}'</code></pre>
-  <p>The response is HTTP 402 with a <code>PAYMENT-REQUIRED</code> header containing the exact Base-mainnet USDC amount, asset, receiver, resource, and Bazaar metadata.</p></section>
+  -d '{"jurisdiction":"US","sector":"energy","query":"45V clean energy tax credit emissions disclosure"}'</code></pre>
+  <p>The response is HTTP 402 with a <code>PAYMENT-REQUIRED</code> header containing the exact Base-mainnet USDC amount, asset, receiver, resource, and Bazaar metadata. In the live v2 flow, the buyer retries with <code>PAYMENT-SIGNATURE</code> and a successful settlement returns <code>PAYMENT-RESPONSE</code>. <code>X-PAYMENT</code> and <code>X-PAYMENT-RESPONSE</code> are legacy v1 header names, not the live v2 contract.</p>
+  <p class="note"><code>X402-Payer-Address</code> is only an unsigned quote hint used to show the correct new-wallet price. It never authorizes a payment; the signed v2 payload is authoritative.</p></section>
 
   <section><h2>2 — Pay with the official Python client</h2>
   <pre><code>python3 -m pip install "x402[requests,evm]==2.16.0"
@@ -46,7 +47,11 @@ session = x402_requests(client)
 session.headers["X402-Payer-Address"] = account.address
 result = session.post(
     "https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations",
-    json={"jurisdiction": "US", "sector": "energy"},
+    json={
+        "jurisdiction": "US",
+        "sector": "energy",
+        "query": "45V clean energy tax credit emissions disclosure",
+    },
 )
 result.raise_for_status()
 print(result.json())</code></pre>
