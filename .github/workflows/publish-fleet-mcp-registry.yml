@@ -1,0 +1,69 @@
+name: Publish Fleet MCP Registry Entry
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: Validated fleet manifest to publish
+        required: true
+        type: choice
+        options:
+          - agent-escrow-agent
+          - agent-arbitration-agent
+          - agent-offset-clearinghouse-agent
+          - agent-erc8004-bridge-agent
+          - agent-notary-agent
+          - wavefunction-search-agent
+          - smartscale-agent
+          - verdigraph-brain-agent
+          - viridisos
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-fleet-mcp-registry-${{ inputs.agent }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Resolve allowlisted manifest
+        id: manifest
+        shell: bash
+        run: |
+          case "${{ inputs.agent }}" in
+            agent-escrow-agent|agent-arbitration-agent|agent-offset-clearinghouse-agent|agent-erc8004-bridge-agent|agent-notary-agent|wavefunction-search-agent|smartscale-agent|verdigraph-brain-agent|viridisos)
+              manifest="mcp-publish-github/${{ inputs.agent }}/server.json"
+              ;;
+            *)
+              echo "Unsupported fleet manifest" >&2
+              exit 1
+              ;;
+          esac
+          test -f "$manifest"
+          echo "path=$manifest" >> "$GITHUB_OUTPUT"
+
+      - name: Install pinned MCP publisher
+        shell: bash
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz" \
+            -o /tmp/mcp-publisher.tar.gz
+          echo "ab128162b0616090b47cf245afe0a23f3ef08936fdce19074f5ba0a4469281ac  /tmp/mcp-publisher.tar.gz" \
+            | sha256sum --check --strict
+          tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
+          chmod +x /tmp/mcp-publisher
+
+      - name: Validate manifest
+        run: /tmp/mcp-publisher validate "${{ steps.manifest.outputs.path }}"
+
+      - name: Authenticate to the MCP Registry
+        run: /tmp/mcp-publisher login github-oidc
+
+      - name: Publish manifest
+        run: /tmp/mcp-publisher publish "${{ steps.manifest.outputs.path }}"
