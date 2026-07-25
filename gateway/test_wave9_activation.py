@@ -210,6 +210,7 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
             quickstart = client.get("/quickstart")
             llms = client.get("/llms.txt")
             x402_catalog = client.get("/x402/catalog")
+            x402_well_known = client.get("/.well-known/x402")
             health = client.get("/healthz")
             catalog = client.get("/.well-known/ai-catalog.json")
     finally:
@@ -219,6 +220,7 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert quickstart.status_code == 200
     assert llms.status_code == 200
     assert x402_catalog.status_code == 200
+    assert x402_well_known.status_code == 200
     assert "5 live paid routes" in agents.text
     assert "CDP Bazaar" in agents.text
     assert "First paid call from every new wallet is $0.01" in agents.text
@@ -244,6 +246,7 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "https://mcp.viridisconservation.com/network/mcp" in llms.text
     assert "First paid call from every new wallet is $0.01" in llms.text
     machine = x402_catalog.json()
+    assert x402_well_known.json() == machine
     assert machine["spec_version"] == "viridis-x402-catalog-v1"
     assert machine["intro_pricing"]["enabled"] is True
     assert len(machine["routes"]) == 5

@@ -1,5 +1,24 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-25, x402 discovery compatibility — DEPLOYED/ACTIVE] The
+> previously advertised `/.well-known/x402` address now returns the same
+> five-route Viridis machine catalog as `/x402/catalog`.** This is explicitly
+> a Viridis compatibility alias, not a claim that x402 mandates the path or
+> schema. Both URLs return HTTP 200 with identical JSON after a production
+> restart.
+>
+> Full gates are **1,433 passed / 0 failed / 33/33 suites**; the release suite
+> is **548 passed**; all 27 public MCP mounts initialized and listed 204 tools.
+> Live image
+> `sha256:21f5c2a62006ca993e9d38e3ba6af8cd49d179db124c406dfb6dd7be085c7d8c`
+> is healthy. Rollback
+> `viridis-stable:prev-2026-07-25-x402-discovery` preserves
+> `sha256:211633ab91aa82e45f7bbf4674f2e11d9791f27509bd45b1d9c6f909505fe004`.
+> Post-release backup, off-droplet checksum, integrity, and scratch restore
+> passed. No payment moved; the nine pre-existing registry follow-ups remain
+> blocked from publication. Full receipt:
+> `docs/deployment/X402_DISCOVERY_COMPATIBILITY_RELEASE_2026-07-25.md`.
+
 > **[2026-07-24, x402 validator fixture — DEPLOYED/ACTIVE] Regulatory Radar
 > now publishes one strict, copyable x402 v2 fixture across its live quickstart
 > and Bazaar schema.** The canonical body includes `jurisdiction`, `sector`,

@@ -1937,6 +1937,10 @@ def build_app():
                             Route("/agents", agents_page),
                             Route("/quickstart", quickstart),
                             Route("/llms.txt", llms_txt),
+                            # Compatibility alias for Viridis discovery links
+                            # already published to agent communities. This is
+                            # not an x402 protocol-mandated well-known schema.
+                            Route("/.well-known/x402", x402_catalog),
                             Route("/x402/catalog", x402_catalog),
                             Route("/deck", deck), Route("/stats", stats),
                             Route("/.well-known/ai-catalog.json", ard_catalog),
