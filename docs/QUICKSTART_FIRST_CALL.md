@@ -26,12 +26,14 @@ hermes mcp add viridis-market \
 hermes mcp test viridis-market
 ```
 
-Install the keyless buyer procedure if desired:
+Discover and install the keyless buyer procedure from the Viridis domain:
 
 ```bash
+hermes skills search https://mcp.viridisconservation.com \
+  --source well-known
 hermes skills install \
-  https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/integrations/viridis-paid-tools/SKILL.md \
-  --name viridis-paid-tools
+  well-known:https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools \
+  --now
 ```
 
 The skill stores no credential. Paid calls still use the existing x402 HTTP

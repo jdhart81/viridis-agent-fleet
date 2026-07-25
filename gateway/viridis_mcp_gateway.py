@@ -1590,6 +1590,13 @@ def build_app():
                                  "quickstart": public_base + "/quickstart",
                                  "llms_txt": public_base + "/llms.txt",
                                  "x402_catalog": public_base + "/x402/catalog",
+                                 "agent_skills_index":
+                                     public_base +
+                                     "/.well-known/skills/index.json",
+                                 "buyer_skill":
+                                     public_base +
+                                     "/.well-known/skills/"
+                                     "viridis-paid-tools/SKILL.md",
                                  "seats": public_base + "/seats",
                                  "deck": public_base + "/deck",
                                  "a2a_agent_card": (public_base +
@@ -1860,6 +1867,20 @@ def build_app():
     _llms_path = Path(__file__).resolve().parent / "llms.txt"
     _llms_text = (_llms_path.read_text() if _llms_path.exists() else
                   "# Viridis agents\n\nllms.txt not deployed\n")
+    _paid_skill_candidates = (
+        ROOT / "integrations" / "viridis-paid-tools" / "SKILL.md",
+        Path(__file__).resolve().parents[1] /
+        "integrations" / "viridis-paid-tools" / "SKILL.md",
+    )
+    _paid_skill_path = next(
+        (path for path in _paid_skill_candidates if path.exists()),
+        _paid_skill_candidates[0])
+    _paid_skill_text = (
+        _paid_skill_path.read_text(encoding="utf-8")
+        if _paid_skill_path.exists() else "")
+    _paid_skill_description = (
+        "Discover and safely buy Viridis deterministic carbon and compliance "
+        "tools through x402 v2, or inspect signed Agent Market work listings.")
 
     def _intro_public_line() -> str:
         try:
@@ -1892,6 +1913,33 @@ def build_app():
             headers=dict(_SEAT_PUBLIC_HEADERS),
             media_type="text/plain")
 
+    async def agent_skills_index(request):
+        if not _paid_skill_text:
+            return JSONResponse(
+                {"skills": [],
+                 "error": "viridis-paid-tools skill is not deployed"},
+                status_code=503,
+                headers=dict(_SEAT_PUBLIC_HEADERS))
+        return JSONResponse(
+            {"skills": [{
+                "name": "viridis-paid-tools",
+                "description": _paid_skill_description,
+                "files": ["SKILL.md"],
+            }]},
+            headers=dict(_SEAT_PUBLIC_HEADERS))
+
+    async def buyer_skill(request):
+        from starlette.responses import PlainTextResponse
+        if not _paid_skill_text:
+            return PlainTextResponse(
+                "viridis-paid-tools skill is not deployed\n",
+                status_code=503,
+                headers=dict(_SEAT_PUBLIC_HEADERS))
+        return PlainTextResponse(
+            _paid_skill_text,
+            headers=dict(_SEAT_PUBLIC_HEADERS),
+            media_type="text/markdown")
+
     async def x402_catalog(request):
         from x402_http import discovery_entries, intro_status
         return JSONResponse({
@@ -1901,6 +1949,9 @@ def build_app():
             "routes": discovery_entries(public_base),
             "quickstart": public_base + "/quickstart",
             "llms_txt": public_base + "/llms.txt",
+            "buyer_skill": (
+                public_base +
+                "/.well-known/skills/viridis-paid-tools/SKILL.md"),
         })
 
     @contextlib.asynccontextmanager
@@ -1937,6 +1988,11 @@ def build_app():
                             Route("/agents", agents_page),
                             Route("/quickstart", quickstart),
                             Route("/llms.txt", llms_txt),
+                            Route("/.well-known/skills/index.json",
+                                  agent_skills_index),
+                            Route("/.well-known/skills/"
+                                  "viridis-paid-tools/SKILL.md",
+                                  buyer_skill),
                             # Compatibility alias for Viridis discovery links
                             # already published to agent communities. This is
                             # not an x402 protocol-mandated well-known schema.
