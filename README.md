@@ -80,7 +80,10 @@ session does not reload the installed skill.
 
 The same five paid skills are available as durable A2A HTTP+JSON tasks using
 the official x402 extension. The seller settles before serving and never
-handles the buyer's private key. For agent buyers, the bounded
+handles the buyer's private key. The
+[official A2A Python SDK quickstart](docs/integrations/A2A_PYTHON_SDK_QUICKSTART.md)
+provides a read-only discovery command and an explicit unpaid-quote mode; the
+quote client cannot sign or pay. For agent buyers, the bounded
 [market-router SDK](scripts/viridis_market_router.py) ranks compatible sellers
 under an expiring network/payee/budget mandate and requires a caller-injected
 signer before any paid request.

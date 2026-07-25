@@ -1,5 +1,23 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-25, official A2A buyer-runtime interoperability — PUBLIC]
+> The released official A2A Python SDK can discover and consume the Viridis
+> A2A 1.0 commerce boundary.** `a2a-sdk==1.1.2` parsed the live Agent Card
+> through a read-only GET and selected its HTTP+JSON 1.0 interface, five
+> skills, and required canonical x402 extension. The same official resolver,
+> client factory, transport, and protobuf message types completed an isolated
+> in-memory request against the production seller handlers, receiving one
+> `TASK_STATE_INPUT_REQUIRED` / `payment-required` quote with **0 tool
+> executions, 0 signatures, 0 settlements, and 0 production writes**.
+>
+> `scripts/a2a_quote_client.py` defaults to read-only discovery and requires
+> explicit `--request-quote` before it creates one unpaid task. It contains no
+> signer or payment path. This is client interoperability, not demand or
+> revenue. Live money truth is unchanged at **6 settlements / 4 self / 2
+> external / 2 distinct external payers / 0 repeat external purchases / $0.26
+> external revenue / $0 MRR**. Full receipt:
+> `docs/deployment/A2A_OFFICIAL_SDK_INTEROP_2026-07-25.md`.
+
 > **[2026-07-25, official MCP Registry coherence — ACTIVE] All 27 hosted
 > agents now match their official Registry latest versions and live health
 > surfaces.** Eight validated remote manifests were published through a pinned,
