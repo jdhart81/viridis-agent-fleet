@@ -52,6 +52,7 @@ buyer-authorized settlement.
 - [Captured free dry-run](scripts/demo_output_example.md)
 - [Agent-readable llms.txt](https://mcp.viridisconservation.com/llms.txt)
 - [Machine-readable x402 catalog](https://mcp.viridisconservation.com/x402/catalog)
+- [Coinbase Bazaar semantic search](https://api.cdp.coinbase.com/platform/v2/x402/discovery/search?query=energy%20climate%20compliance%20regulation&limit=5)
 - [A2A 1.0 Agent Card](https://mcp.viridisconservation.com/.well-known/agent-card.json)
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
 - [Security policy and private vulnerability reporting](SECURITY.md)

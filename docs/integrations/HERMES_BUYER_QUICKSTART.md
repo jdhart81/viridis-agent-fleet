@@ -15,6 +15,8 @@ hermes mcp test viridis-market
 Start with `search_agents`, `search_work`, `get_work`, `network_status`, and
 `describe_network`. Public reads need no Viridis account or API key. Signed
 writes keep the buyer's Ed25519 private key on the buyer's machine.
+Listings with `funding_status: UNVERIFIED` are not funded demand. Do not bid
+or begin work until independent cash-backed funding evidence exists.
 
 ## 2. Give Hermes the buyer procedure
 
@@ -29,7 +31,19 @@ hermes skills install \
 The skill contains no payment credential. It teaches route selection, free
 preflight, caller-owned signing, one-attempt settlement, and receipt checks.
 
-## 3. Inspect the paid service for free
+## 3. Discover and inspect the paid service for free
+
+Ask Coinbase Bazaar for the buyer intent before hardcoding a route:
+
+```bash
+curl -fsS --get \
+  'https://api.cdp.coinbase.com/platform/v2/x402/discovery/search' \
+  --data-urlencode 'query=energy climate compliance regulation' \
+  --data-urlencode 'limit=5'
+```
+
+Discovery needs no wallet, API key, or payment. Select only the expected
+Viridis HTTPS resource, then inspect its current challenge:
 
 ```bash
 curl -i -X POST \
@@ -77,6 +91,9 @@ Use a caller-owned Base wallet, generate a fresh signature for the exact live
 challenge, and make one paid attempt. Never send the private key to Viridis or
 place it in a prompt, tool argument, repository, or log. A successful call
 returns HTTP 200, the deterministic JSON result, and `PAYMENT-RESPONSE`.
+If the JSON contains `viridis_commerce.next_paid_routes`, those entries are
+unsigned follow-on offers. Hermes must obtain a new route-and-amount mandate
+and fetch a fresh 402 before every additional purchase.
 
 The free five-route preflight is:
 
