@@ -58,10 +58,15 @@ handles the buyer's private key. For agent buyers, the bounded
 under an expiring network/payee/budget mandate and requires a caller-injected
 signer before any paid request.
 
-Viridis has already received its first external paid call: a $0.25 Regulatory
-Radar scan settled in USDC on Base. The public repository is the callable spec,
-schemas, contracts, and reference gateway for 25 hosted MCP agents plus the
-federated EnergyAI member. The deterministic cores remain private.
+Viridis has received two independently initiated Regulatory Radar payments
+from two external wallets: $0.26 total USDC on Base ($0.25 plus a $0.01
+new-wallet call). No repeat purchase has been confirmed yet; that is the next
+commercial gate. The
+[second-payer receipt](docs/deployment/SECOND_EXTERNAL_PAYER_RECEIPT_2026-07-24.md)
+records the evidence and revenue boundary. The public repository is the
+callable spec, schemas, contracts, and reference gateway for 25 hosted MCP
+agents plus the federated EnergyAI member. The deterministic cores remain
+private.
 
 By [Viridis LLC](https://viridisconservation.com) — conservation technology.
 
@@ -110,8 +115,9 @@ verify the [indexed Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x4
 
 The [demo client](scripts/x402_demo_client.py) supports a ceiling-protected
 single route or the full five-route workflow; `--dry-run` makes no payment.
-Viridis has received its first external paid call: a $0.25 regulatory-radar
-scan settled in USDC on Base.
+Production telemetry confirms two Regulatory Radar settlements from two
+distinct external payers, totaling $0.26 USDC on Base. No repeat purchase or
+MRR has been confirmed.
 
 ## The economy: identity → trust → escrow → settlement → constitution
 
