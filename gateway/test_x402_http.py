@@ -231,6 +231,17 @@ def test_registered_production_allowlist_has_five_priced_front_doors():
     }
 
 
+def test_agent402_has_a_fixed_price_regulatory_radar_alias():
+    assert x402_http.AGENT402_HTTP_TOOLS == {
+        ("regulatory-radar", "scan_regulations_agent402"): "scan",
+    }
+    assert x402_http.AGENT402_FIXED_ROUTE in x402_http.INTRO_EXEMPT_ROUTES
+    assert (
+        x402_http.X402_HTTP_METADATA[
+            x402_http.AGENT402_FIXED_ROUTE]["icon_url"]
+        == "https://mcp.viridisconservation.com/brand/viridis-mark.svg")
+
+
 def test_discovery_inventory_has_exact_prices_and_atomic_math():
     entries = {e["agent"]: e for e in
                x402_http.discovery_entries("https://mcp.test")}
@@ -245,6 +256,41 @@ def test_discovery_inventory_has_exact_prices_and_atomic_math():
     assert entries["disclosure-compiler"]["price_minor"] == 200
     assert entries["disclosure-compiler"]["amount_atomic_usdc"] == "2000000"
     assert all(e["methods"] == ["GET", "POST"] for e in entries.values())
+
+
+def test_well_known_manifest_has_v2_terms_for_all_five_routes(monkeypatch):
+    monkeypatch.setenv("X402_ENABLED", "1")
+    monkeypatch.setenv("X402_V2_ENABLED", "1")
+    monkeypatch.setenv("VIRIDIS_X402_ADDRESS", "0xViridis")
+    monkeypatch.setenv("X402_FACILITATOR_URL", "https://fac.test")
+    manifest = x402_http.discovery_manifest("https://mcp.test/")
+    assert manifest["x402Version"] == 2
+    assert manifest["specVersion"] == "viridis-x402-manifest-v1"
+    assert manifest["provider"]["gateway"] == "https://mcp.test"
+    assert len(manifest["resources"]) == 5
+    assert {item["url"] for item in manifest["resources"]} == {
+        "https://mcp.test/x402/regulatory-radar/scan_regulations",
+        "https://mcp.test/x402/taxcredit-engine/calculate_tax_credit",
+        "https://mcp.test/x402/ghg-ledger/calculate_inventory",
+        "https://mcp.test/x402/quantity-takeoff/calculate_takeoff",
+        "https://mcp.test/x402/disclosure-compiler/compile_disclosure",
+    }
+    assert all(item["method"] == "POST" for item in manifest["resources"])
+    assert all(item["accepts"] for item in manifest["resources"])
+    assert all(item["accepts"][0]["scheme"] == "exact"
+               for item in manifest["resources"])
+    assert all(item["accepts"][0]["network"] == "eip155:8453"
+               for item in manifest["resources"])
+    assert all(item["accepts"][0]["payTo"] == "0xViridis"
+               for item in manifest["resources"])
+    assert all(item["extensions"]["bazaar"]["info"]["input"]["method"]
+               == "POST" for item in manifest["resources"])
+    assert manifest["merchant"] == {
+        "url": (
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/"
+            "merchant?payTo=0xViridis"),
+        "payTo": "0xViridis",
+    }
 
 
 if __name__ == "__main__":
