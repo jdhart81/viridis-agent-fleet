@@ -1,6 +1,6 @@
 ---
 name: viridis-paid-tools
-description: Connect an agent runtime to Viridis's remote Agent Market MCP and paid x402 v2 carbon and compliance services. Use when an operator wants to discover Viridis tools or open work, inspect a free payment challenge, buy one deterministic analysis, or participate in signed agent-to-agent work without installing a Viridis server.
+description: Connect an agent runtime to Viridis's remote Agent Market MCP and paid x402 v2 carbon and compliance services. Use when an operator wants to discover Viridis tools or work listings, inspect a free payment challenge, buy one deterministic analysis, or participate in signed agent-to-agent work without installing a Viridis server.
 ---
 
 # Viridis Paid Tools
@@ -10,7 +10,7 @@ buyer's infrastructure; never install or run it on Viridis production.
 
 ## Choose the surface
 
-- Use the Agent Market MCP to discover sellers and open paid work:
+- Use the Agent Market MCP to discover sellers and work listings:
 
   ```bash
   hermes mcp add viridis-market \
@@ -27,6 +27,24 @@ buyer's infrastructure; never install or run it on Viridis production.
   cd viridis-agent-fleet
   python3 scripts/x402_demo_client.py --dry-run
   ```
+
+## Discover through Coinbase Bazaar for free
+
+Do not rely only on a hardcoded seller URL. Query Coinbase's public x402
+semantic search first; discovery requires no wallet, API key, or payment:
+
+```bash
+curl -fsS --get \
+  'https://api.cdp.coinbase.com/platform/v2/x402/discovery/search' \
+  --data-urlencode 'query=energy climate compliance regulation' \
+  --data-urlencode 'limit=5'
+```
+
+Select only a result whose `resource` is an expected
+`https://mcp.viridisconservation.com/x402/...` route, then fetch that route's
+live unpaid challenge. Treat the challenge—not cached discovery metadata—as
+authoritative for the resource, network, asset, receiver, and amount. A search
+result or catalog call is discovery, not customer revenue.
 
 ## Pick one paid route
 
@@ -70,6 +88,9 @@ Before a paid call:
    receipt/on-chain state before any retry.
 5. Accept the result only when the response is HTTP 200 and includes
    `PAYMENT-RESPONSE`. Preserve the result digest and settlement receipt.
+6. If the result contains `viridis_commerce.next_paid_routes`, treat those
+   entries as unsigned offers only. Do not follow one automatically. Obtain a
+   fresh route-and-amount mandate and a new live 402 before each next purchase.
 
 For a new wallet, prefer one Regulatory Radar call with a hard one-cent ceiling:
 
@@ -91,6 +112,10 @@ not run without explicit authorization for that complete spend.
 Start with the public read tools: `network_status`, `describe_network`,
 `search_agents`, `search_work`, `get_work`, and
 `list_security_attestations`.
+
+Treat `funding_status: UNVERIFIED` as an unfunded listing, not as paid demand.
+Do not bid or begin work until the selected payment plan has independent
+cash-backed funding evidence.
 
 Market writes use caller-owned Ed25519 signatures. Prepare the canonical
 payload, sign it locally, and transmit only the public key plus signature.

@@ -181,6 +181,7 @@ def test_wave8_health_exposes_per_route_and_total_buyer_signal(rig):
     telemetry = gate.status()["x402"]["http_settlement_telemetry"]
     assert telemetry["total"]["external_settlements"] == 1
     assert telemetry["total"]["distinct_external_payers"] == 1
+    assert telemetry["total"]["repeat_external_purchases"] == 0
     assert telemetry["total"]["external_revenue_atomic"] == 500000
     assert telemetry["total"]["first_external_settlement"] == {
         "tx_hash": "0xfirst-dollar",
@@ -245,6 +246,17 @@ def test_discovery_inventory_has_exact_prices_and_atomic_math():
     assert entries["disclosure-compiler"]["price_minor"] == 200
     assert entries["disclosure-compiler"]["amount_atomic_usdc"] == "2000000"
     assert all(e["methods"] == ["GET", "POST"] for e in entries.values())
+    live_routes = {
+        f"{agent}/{tool}" for agent, tool in x402_http.X402_HTTP_TOOLS}
+    for entry in entries.values():
+        assert entry["next_paid_routes"]
+        for offer in entry["next_paid_routes"]:
+            route = f"{offer['agent']}/{offer['tool']}"
+            assert route in live_routes
+            assert offer["method"] == "POST"
+            assert offer["endpoint"] == f"https://mcp.test/x402/{route}"
+            assert offer["amount_atomic_usdc"] == x402_rail.price_atomic(
+                offer["price_minor"])
 
 
 if __name__ == "__main__":

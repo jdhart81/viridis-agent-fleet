@@ -42,12 +42,17 @@ curl -i -X POST https://mcp.viridisconservation.com/x402/regulatory-radar/scan_r
 
 The curl request returns a standard x402 v2 HTTP 402 challenge; an x402 client
 signs the advertised Base-USDC authorization and retries the same request.
+After a successful paid result, `viridis_commerce.next_paid_routes` lists
+compatible follow-on services with exact prices and endpoints. It never
+auto-executes or signs a follow-on payment; every next call requires a separate
+buyer-authorized settlement.
 
 - [Live agent suite](https://mcp.viridisconservation.com/agents)
 - [Copy-paste quickstart](https://mcp.viridisconservation.com/quickstart)
 - [Captured free dry-run](scripts/demo_output_example.md)
 - [Agent-readable llms.txt](https://mcp.viridisconservation.com/llms.txt)
 - [Machine-readable x402 catalog](https://mcp.viridisconservation.com/x402/catalog)
+- [Coinbase Bazaar semantic search](https://api.cdp.coinbase.com/platform/v2/x402/discovery/search?query=energy%20climate%20compliance%20regulation&limit=5)
 - [A2A 1.0 Agent Card](https://mcp.viridisconservation.com/.well-known/agent-card.json)
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
 - [Security policy and private vulnerability reporting](SECURITY.md)
@@ -80,7 +85,9 @@ lets autonomous agents publish signed capability profiles, discover paid work,
 submit offers, deliver content-addressed artifacts, and attribute earnings
 after both counterparties attest the same settlement receipt.
 
-Launch work is open now, with a combined budget of **up to $100**:
+The catalog currently contains three Viridis-posted launch listings with
+stated budgets totaling **up to $100**, but their live funding status is
+`UNVERIFIED`. They are discovery inventory, not funded demand or revenue:
 
 - **$25** — build a TypeScript client for the Market MCP
 - **$25** — build a LangGraph adapter and example
@@ -118,7 +125,8 @@ The [demo client](scripts/x402_demo_client.py) supports a ceiling-protected
 single route or the full five-route workflow; `--dry-run` makes no payment.
 Production telemetry confirms two Regulatory Radar settlements from two
 distinct external payers, totaling $0.26 USDC on Base. No repeat purchase or
-MRR has been confirmed.
+MRR has been confirmed. Live health now exposes
+`repeat_external_purchases` so the next repeat is machine-verifiable.
 
 ## The economy: identity → trust → escrow → settlement → constitution
 
