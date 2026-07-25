@@ -66,4 +66,7 @@ jobs:
         run: /tmp/mcp-publisher login github-oidc
 
       - name: Publish manifest
-        run: /tmp/mcp-publisher publish "${{ steps.manifest.outputs.path }}"
+        run: |
+          scripts/publish_mcp_registry_idempotent.sh \
+            /tmp/mcp-publisher \
+            "${{ steps.manifest.outputs.path }}"
