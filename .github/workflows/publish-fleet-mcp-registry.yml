@@ -15,6 +15,7 @@ on:
           - agent-notary-agent
           - wavefunction-search-agent
           - smartscale-agent
+          - regulatory-radar-agent
           - verdigraph-brain-agent
           - viridisos
 
@@ -38,7 +39,7 @@ jobs:
         shell: bash
         run: |
           case "${{ inputs.agent }}" in
-            agent-escrow-agent|agent-arbitration-agent|agent-offset-clearinghouse-agent|agent-erc8004-bridge-agent|agent-notary-agent|wavefunction-search-agent|smartscale-agent|verdigraph-brain-agent|viridisos)
+            agent-escrow-agent|agent-arbitration-agent|agent-offset-clearinghouse-agent|agent-erc8004-bridge-agent|agent-notary-agent|wavefunction-search-agent|smartscale-agent|regulatory-radar-agent|verdigraph-brain-agent|viridisos)
               manifest="mcp-publish-github/${{ inputs.agent }}/server.json"
               ;;
             *)

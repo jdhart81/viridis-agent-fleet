@@ -4,7 +4,7 @@
   "tools": [
     {
       "name": "scan_regulations",
-      "description": "Scan the regulatory landscape for a jurisdiction (e.g. EU, US), optionally filtered by sector.\n\nReturns regulations with urgency flags and effective dates. Price: $0.25\nper call after 10 free calls/day. Pay at\n/x402/regulatory-radar/scan_regulations with Base USDC, cash-fund payment_ref through\nescrow_checkout + confirm_escrow_funding, or use /seats.",
+      "description": "Scan California, US, and global climate compliance requirements, optionally filtered by sector, including source-linked SB 253 deadlines and current SB 261 enforcement status.\n\nReturns regulations with urgency flags and effective dates. Price: $0.25\nper call after 10 free calls/day. Pay at\n/x402/regulatory-radar/scan_regulations with Base USDC, cash-fund payment_ref through\nescrow_checkout + confirm_escrow_funding, or use /seats. Use california or US-CA for California; CA means Canada.",
       "inputSchema": {
         "properties": {
           "jurisdiction": {

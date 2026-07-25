@@ -63,6 +63,10 @@ Expected: HTTP 402 with `PAYMENT-REQUIRED`. No money moves. The live challenge,
 not this document, is authoritative for amount, network, asset, receiver, and
 resource.
 
+Use `"jurisdiction":"california"` or `"US-CA"` for California SB 253/SB 261
+screening. `CA` remains the Canada code. The result identifies whether each
+entry is global, US-federal, or California-specific.
+
 ## 4. Buy only after an explicit spend mandate
 
 The five live x402 v2 routes are:

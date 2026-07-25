@@ -139,6 +139,22 @@ async def test_job_dispatch_completes_once(service):
     assert len(platform.completed) == 1
 
 
+def test_california_alias_is_canonical_and_ca_remains_canada():
+    california = adapter.validate_brief({
+        "jurisdiction": "US-CA",
+        "sector": "energy",
+        "query": "SB 253 and SB 261",
+    })
+    canada = adapter.validate_brief({
+        "jurisdiction": "CA",
+        "sector": "energy",
+        "query": "Canadian climate rules",
+    })
+
+    assert california["jurisdiction"] == "california"
+    assert canada["jurisdiction"] == "ca"
+
+
 @pytest.mark.asyncio
 async def test_duplicate_event_with_different_body_conflicts(service):
     instance, _, _ = service

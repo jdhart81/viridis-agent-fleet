@@ -98,6 +98,10 @@ The live x402 v2 sequence is:
 `X402-Payer-Address` request header is only an unsigned pricing hint for the
 new-wallet quote; it never authorizes payment.
 
+California-specific scans accept `california` or `US-CA`; `CA` means Canada.
+California results include global, US-federal, and California-specific
+entries and expose the jurisdiction on every returned regulation.
+
 ## Worked examples (copy-paste)
 
 **Scan EU regulations for your sector** — regulatory-radar, $0.25/call after free tier:

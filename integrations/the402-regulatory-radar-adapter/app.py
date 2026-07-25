@@ -43,8 +43,12 @@ CALLBACK_PATH_RE = re.compile(
     r"(?:update|messages)$"
 )
 VALID_JURISDICTIONS = frozenset(
-    {"eu", "uk", "us", "ca", "au", "jp", "sg", "global"}
+    {"eu", "uk", "us", "california", "ca", "au", "jp", "sg", "global"}
 )
+JURISDICTION_ALIASES = {
+    "us-ca": "california",
+    "ca-us": "california",
+}
 VALID_SECTORS = frozenset(
     {
         "agriculture",
@@ -181,6 +185,7 @@ def validate_brief(brief: Any) -> dict[str, str]:
     if not isinstance(brief, dict):
         raise InputError("brief must be an object")
     jurisdiction = str(brief.get("jurisdiction", "")).strip().lower()
+    jurisdiction = JURISDICTION_ALIASES.get(jurisdiction, jurisdiction)
     sector = str(brief.get("sector", "")).strip().lower()
     query = str(brief.get("query", "")).strip()
     if jurisdiction not in VALID_JURISDICTIONS:

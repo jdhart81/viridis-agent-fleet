@@ -75,6 +75,11 @@ Require HTTP 402 and a standard `PAYMENT-REQUIRED` header. Stop if the route,
 network, USDC contract, amount, or receiver differs from the operator's
 mandate.
 
+For California-specific SB 253 and SB 261 screening, use
+`"jurisdiction":"california"` (or `"US-CA"`). `CA` means Canada. California
+results explicitly identify the included global, US-federal, and California
+jurisdictions and preserve current enforcement-status caveats.
+
 ## Pay safely
 
 Before a paid call:
