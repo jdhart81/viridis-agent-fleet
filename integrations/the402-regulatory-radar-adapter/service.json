@@ -1,0 +1,95 @@
+{
+  "name": "Viridis Regulatory Radar",
+  "description": "Deterministic regulatory horizon screening for climate, energy, manufacturing, and sustainability compliance. Returns applicable records, key-date status, source links, and an explicit screening-not-legal-advice boundary.",
+  "price": {
+    "fixed": "$0.25"
+  },
+  "service_type": "data_api",
+  "pricing_model": "fixed",
+  "fulfillment_type": "instant",
+  "estimated_delivery": "30s",
+  "category": "compliance",
+  "tags": [
+    "regulatory-intelligence",
+    "climate-compliance",
+    "energy",
+    "manufacturing",
+    "45v",
+    "csrd",
+    "cbam"
+  ],
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "jurisdiction",
+      "sector",
+      "query"
+    ],
+    "properties": {
+      "jurisdiction": {
+        "type": "string",
+        "enum": [
+          "eu",
+          "uk",
+          "us",
+          "ca",
+          "au",
+          "jp",
+          "sg",
+          "global"
+        ],
+        "description": "Jurisdiction code to screen."
+      },
+      "sector": {
+        "type": "string",
+        "enum": [
+          "agriculture",
+          "energy",
+          "forestry",
+          "fisheries",
+          "manufacturing",
+          "financial_services",
+          "consumer_goods",
+          "technology"
+        ],
+        "description": "Industry sector used to filter applicable records."
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1000,
+        "description": "The regulatory or compliance question to screen."
+      }
+    }
+  },
+  "deliverable_schema": {
+    "type": "object",
+    "required": [
+      "service",
+      "request",
+      "regulatory_scan",
+      "claim_boundary"
+    ],
+    "properties": {
+      "service": {
+        "type": "string"
+      },
+      "request": {
+        "type": "object"
+      },
+      "regulatory_scan": {
+        "type": "object"
+      },
+      "quickstart": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string"
+      },
+      "claim_boundary": {
+        "type": "string"
+      }
+    }
+  }
+}

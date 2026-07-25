@@ -1,0 +1,14 @@
+services:
+  the402-regulatory-radar:
+    image: viridis-the402-regulatory-radar:latest
+    restart: always
+    env_file:
+      - path: .env.the402
+        required: true
+    volumes:
+      - the402_state:/state
+    expose:
+      - "8420"
+
+volumes:
+  the402_state:

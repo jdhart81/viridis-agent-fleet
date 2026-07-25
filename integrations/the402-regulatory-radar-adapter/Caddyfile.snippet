@@ -1,0 +1,10 @@
+handle /integrations/the402/healthz {
+	reverse_proxy the402-regulatory-radar:8420
+}
+
+handle /integrations/the402/webhook {
+	request_body {
+		max_size 256KB
+	}
+	reverse_proxy the402-regulatory-radar:8420
+}
