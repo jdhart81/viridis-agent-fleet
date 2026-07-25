@@ -526,6 +526,7 @@ def test_wave8_self_settlement_is_classified_and_persisted(
     assert metrics["total"] == {
         "settlements_total": 1, "self_settlements": 1,
         "external_settlements": 0, "distinct_external_payers": 0,
+        "repeat_external_purchases": 0,
         "external_revenue_atomic": 0, "first_external_settlement": None}
 
 
@@ -550,12 +551,41 @@ def test_wave8_external_distinct_payers_first_flip_and_empty_allowlist():
     assert total["self_settlements"] == 0
     assert total["external_settlements"] == 3
     assert total["distinct_external_payers"] == 2
+    assert total["repeat_external_purchases"] == 1
     assert total["external_revenue_atomic"] == 1900000
     assert total["first_external_settlement"] == {
         "tx_hash": "0xfirst", "timestamp": "2026-07-20T01:00:00+00:00"}
     assert metrics["per_route"][
         "disclosure-compiler/compile_disclosure"][
             "first_external_settlement"] is None
+    assert metrics["per_route"][
+        "quantity-takeoff/calculate_takeoff"][
+            "repeat_external_purchases"] == 1
+
+
+def test_paid_success_offers_next_paid_routes_without_auto_execution(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    install_fake(monkeypatch, FakeFacilitator())
+    handler, core, _ = build(tmp_path)
+    challenge = go(handler, FakeRequest())
+    paid = go(handler, FakeRequest(headers={
+        "payment-signature": signed_from(challenge)}))
+    assert paid.status_code == 200
+    commerce = body_of(paid)["viridis_commerce"]
+    assert commerce["current_route"] == \
+        "regulatory-radar/scan_regulations"
+    assert commerce["auto_execute"] is False
+    assert commerce["payment_required"] is True
+    assert commerce["buyer_authorization_required"] is True
+    assert {f"{offer['agent']}/{offer['tool']}"
+            for offer in commerce["next_paid_routes"]} == {
+                "disclosure-compiler/compile_disclosure",
+                "taxcredit-engine/calculate_tax_credit",
+            }
+    assert all(offer["method"] == "POST"
+               for offer in commerce["next_paid_routes"])
+    assert len(core.calls) == 1
 
 
 def test_wave8_empty_allowlist_is_fail_safe_external(monkeypatch):

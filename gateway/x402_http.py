@@ -45,6 +45,11 @@ H402-10 INTRO PRICE: when the default-off x402-intro-v1 switch is enabled,
        A caller may send X402-Payer-Address on the unpaid preflight for an
        exact returning-payer quote, but the signed authorization is always the
        authority and prevents hint spoofing.
+H402-11 BUYER CONTINUATION: a successful paid result may advertise compatible
+       next paid routes with exact prices and endpoints. The metadata never
+       signs, initiates, or executes another payment; every next call requires
+       a separate buyer-authorized x402 settlement. Repeat-purchase telemetry
+       counts only versioned external settlements with a known payer wallet.
 """
 from __future__ import annotations
 
@@ -228,6 +233,36 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
     },
 }
 
+# A small deterministic workflow graph for paid buyers. Values are
+# ((target_agent, target_tool), why_that_step_is_compatible). Targets remain
+# ordinary x402 endpoints: this graph is discovery metadata, never execution.
+NEXT_PAID_ROUTES = {
+    ("quantity-takeoff", "calculate_takeoff"): (
+        (("ghg-ledger", "calculate_inventory"),
+         "Use measured material quantities as auditable GHG activity inputs."),
+    ),
+    ("ghg-ledger", "calculate_inventory"): (
+        (("disclosure-compiler", "compile_disclosure"),
+         "Use the verified inventory to populate a sustainability disclosure."),
+    ),
+    ("disclosure-compiler", "compile_disclosure"): (
+        (("regulatory-radar", "scan_regulations"),
+         "Check the draft against relevant climate and energy requirements."),
+        (("taxcredit-engine", "calculate_tax_credit"),
+         "Evaluate a clean-energy tax-credit claim from supplied project facts."),
+    ),
+    ("taxcredit-engine", "calculate_tax_credit"): (
+        (("regulatory-radar", "scan_regulations"),
+         "Check current compliance requirements around the proposed claim."),
+    ),
+    ("regulatory-radar", "scan_regulations"): (
+        (("disclosure-compiler", "compile_disclosure"),
+         "Turn identified disclosure requirements into an auditable draft."),
+        (("taxcredit-engine", "calculate_tax_credit"),
+         "Evaluate an applicable clean-energy tax-credit opportunity."),
+    ),
+}
+
 OUTPUT_SCHEMA = {"type": "object", "additionalProperties": True}
 SETTLEMENT_CLASSIFICATION_VERSION = 1
 INTRO_SEEN_KEY = "x402_intro_seen_payers"
@@ -350,6 +385,7 @@ def _empty_settlement_metrics() -> dict:
         "self_settlements": 0,
         "external_settlements": 0,
         "distinct_external_payers": 0,
+        "repeat_external_purchases": 0,
         "external_revenue_atomic": 0,
         "first_external_settlement": None,
     }
@@ -361,7 +397,9 @@ def settlement_metrics(gate_states: Dict[str, dict]) -> dict:
               for agent, tool in X402_HTTP_TOOLS}
     total = _empty_settlement_metrics()
     payer_sets = {route: set() for route in routes}
+    known_payer_purchases = {route: 0 for route in routes}
     total_payers = set()
+    total_known_payer_purchases = 0
     for gate in gate_states.values():
         if not isinstance(gate, dict):
             continue
@@ -376,6 +414,7 @@ def settlement_metrics(gate_states: Dict[str, dict]) -> dict:
             if route not in routes:
                 routes[route] = _empty_settlement_metrics()
                 payer_sets[route] = set()
+                known_payer_purchases[route] = 0
             route_metrics = routes[route]
             for metrics in (route_metrics, total):
                 metrics["settlements_total"] += 1
@@ -393,6 +432,8 @@ def settlement_metrics(gate_states: Dict[str, dict]) -> dict:
             total["external_revenue_atomic"] += amount
             payer = str(record.get("payer_wallet", "")).strip().lower()
             if payer:
+                known_payer_purchases[route] += 1
+                total_known_payer_purchases += 1
                 payer_sets[route].add(payer)
                 total_payers.add(payer)
             first = {"tx_hash": record.get("tx_hash"),
@@ -404,8 +445,59 @@ def settlement_metrics(gate_states: Dict[str, dict]) -> dict:
                     metrics["first_external_settlement"] = first
     for route, metrics in routes.items():
         metrics["distinct_external_payers"] = len(payer_sets[route])
+        metrics["repeat_external_purchases"] = max(
+            known_payer_purchases[route] - len(payer_sets[route]), 0)
     total["distinct_external_payers"] = len(total_payers)
+    total["repeat_external_purchases"] = max(
+        total_known_payer_purchases - len(total_payers), 0)
     return {"total": total, "per_route": routes}
+
+
+def next_paid_routes(agent: str, tool: str, public_base: str) -> list:
+    """Return exact compatible offers without authorizing or executing them."""
+    from payment_gate import PRICE_MINOR, DEFAULT_PRICE_MINOR
+    import x402_rail
+    base = public_base.rstrip("/")
+    offers = []
+    for (next_agent, next_tool), reason in NEXT_PAID_ROUTES.get(
+            (agent, tool), ()):
+        if (next_agent, next_tool) not in X402_HTTP_TOOLS:
+            continue
+        price = PRICE_MINOR.get(next_agent, DEFAULT_PRICE_MINOR)
+        offers.append({
+            "agent": next_agent,
+            "tool": next_tool,
+            "endpoint": f"{base}/x402/{next_agent}/{next_tool}",
+            "method": "POST",
+            "price_minor": price,
+            "amount_atomic_usdc": x402_rail.price_atomic(price),
+            "reason": reason,
+        })
+    return offers
+
+
+def _with_commerce_metadata(payload: Any, agent: str, tool: str,
+                            public_base: str) -> Any:
+    """Add continuation metadata only to an explicitly successful result."""
+    if not isinstance(payload, dict) or (agent, tool) not in NEXT_PAID_ROUTES:
+        return payload
+    status = str(payload.get("status", "")).strip().lower()
+    if (payload.get("error") or payload.get("error_type")
+            or status in {"error", "failed", "failure"}):
+        return payload
+    enriched = dict(payload)
+    enriched["viridis_commerce"] = {
+        "version": "viridis-commerce-v1",
+        "current_route": f"{agent}/{tool}",
+        "next_paid_routes": next_paid_routes(
+            agent, tool, public_base),
+        "auto_execute": False,
+        "payment_required": True,
+        "buyer_authorization_required": True,
+        "note": ("No follow-on payment was signed, initiated, or executed. "
+                 "Each next route requires a separate x402 settlement."),
+    }
+    return enriched
 
 
 def discovery_entries(public_base: str) -> list:
@@ -434,6 +526,7 @@ def discovery_entries(public_base: str) -> list:
             "amount_atomic_usdc": x402_rail.price_atomic(
                 PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)),
             "description": X402_HTTP_METADATA[(agent, tool)]["description"],
+            "next_paid_routes": next_paid_routes(agent, tool, base),
             "x402_version": v2_status["active_protocol"],
             "v2_enabled": v2_status["enabled"],
             "bazaar_extension_responses":
@@ -628,7 +721,8 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                                       f"{type(exc).__name__} (payment settled; "
                                       "contact support with the transaction)",
                            "tx_hash": result["tx_hash"]}
-                return _resp(out, 200, paid_headers)
+                return _resp(_with_commerce_metadata(
+                    out, agent, tool, public_base), 200, paid_headers)
         except Exception as exc:
             logger.exception("x402 v2 route failed closed")
             return _resp({"error": f"x402 v2 error: {type(exc).__name__}"},
@@ -701,7 +795,9 @@ def make_x402_http_route(cores, store, public_base, tools=None):
         receipt = base64.b64encode(json.dumps(
             result.get("settlement_receipt")
             or {"transaction": result["tx_hash"]}).encode()).decode()
-        return _resp(out, 200, {"X-PAYMENT-RESPONSE": receipt,
-                                "X-Payment-Tx": result["tx_hash"]})
+        return _resp(_with_commerce_metadata(
+            out, agent, tool, public_base), 200, {
+                "X-PAYMENT-RESPONSE": receipt,
+                "X-Payment-Tx": result["tx_hash"]})
 
     return handler

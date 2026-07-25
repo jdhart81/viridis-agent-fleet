@@ -241,6 +241,7 @@ def _x402_http_settlement_metrics(cores: Dict[str, Any]) -> dict:
         empty = {"settlements_total": 0, "self_settlements": 0,
                  "external_settlements": 0,
                  "distinct_external_payers": 0,
+                 "repeat_external_purchases": 0,
                  "external_revenue_atomic": 0,
                  "first_external_settlement": None}
         return {"total": empty, "per_route": {}}
