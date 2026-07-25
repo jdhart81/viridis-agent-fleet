@@ -382,7 +382,10 @@ def make_a2a_handlers(cores, store, public_base):
         if not x402_v2._matches_schema(args,
                                        X402_HTTP_METADATA[(agent, tool)]["input_schema"]):
             return _problem(400, "Invalid skill input",
-                            "input does not match the advertised JSON schema")
+                            X402_HTTP_METADATA[(agent, tool)].get(
+                                "input_error_hint",
+                                "input does not match the advertised JSON "
+                                "schema"))
         list_price = PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)
         payer_hint = str(request.headers.get(INTRO_PAYER_HEADER, "")).strip()
         price = (INTRO_SCHEDULE["price_minor"]

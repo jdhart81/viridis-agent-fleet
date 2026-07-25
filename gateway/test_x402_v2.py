@@ -166,7 +166,7 @@ def test_X2_1_flag_off_keeps_wave6_v1_behavior(tmp_path, monkeypatch):
 def test_X2_2_mainnet_402_shape_and_usd_coin_domain(tmp_path, monkeypatch):
     arm(monkeypatch)
     handler, _, _ = build(tmp_path)
-    response = go(handler, FakeRequest(method="GET"))
+    response = go(handler, FakeRequest(method="GET", query=TEST_ARGS))
     assert response.status_code == 402 and body_of(response) == {
         "error": "PAYMENT-SIGNATURE required"}
     required = decode_header(response, x402_v2.PAYMENT_REQUIRED_HEADER)
@@ -186,6 +186,49 @@ def test_regulatory_radar_fixture_contract_is_publicly_exact():
     assert metadata["input_schema"]["additionalProperties"] is False
     assert set(metadata["input_schema"]["properties"]) == {
         "jurisdiction", "sector", "query"}
+    assert metadata["input_schema"]["properties"]["jurisdiction"]["enum"] == [
+        "AU", "CA", "EU", "GLOBAL", "JP", "SG", "UK", "US",
+        "au", "ca", "eu", "global", "jp", "sg", "uk", "us",
+    ]
+
+
+def test_v2_rejects_invalid_input_before_quote_payment_or_execution(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = FakeFacilitator()
+    install_fake(monkeypatch, fake)
+    handler, core, store = build(tmp_path)
+
+    refused = go(handler, FakeRequest(body={
+        "jurisdiction": "california", "sector": "energy"}))
+
+    assert refused.status_code == 400
+    assert body_of(refused) == {
+        "error": "input does not match advertised schema",
+        "error_type": "input_validation_error",
+        "payment_required": False,
+        "hint": ("jurisdiction must be one of AU, CA, EU, GLOBAL, JP, SG, "
+                 "UK, or US; values are case-insensitive"),
+    }
+    assert x402_v2.PAYMENT_REQUIRED_HEADER not in refused.headers
+    assert fake.calls == []
+    assert core.calls == []
+    assert getattr(core, GATE_ATTR)["consumed_x402"] == {}
+
+    restored = DummyCore()
+    assert store.restore("regulatory-radar", restored) is False
+
+
+def test_v2_valid_advertised_input_still_returns_payment_quote(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    handler, core, _ = build(tmp_path)
+
+    challenge = go(handler, FakeRequest(body=TEST_ARGS))
+
+    assert challenge.status_code == 402
+    assert x402_v2.PAYMENT_REQUIRED_HEADER in challenge.headers
+    assert core.calls == []
 
 
 def test_X2_2_sepolia_retains_usdc_domain(monkeypatch):
@@ -303,9 +346,11 @@ def test_wave9_seen_wallet_is_full_price_across_routes(tmp_path, monkeypatch):
         {"regulatory-radar": radar, "quantity-takeoff": quantity}, store,
         "https://mcp.test", tools={
             ("quantity-takeoff", "calculate_takeoff"): "calculate_takeoff"})
+    args = x402_http.X402_HTTP_METADATA[
+        ("quantity-takeoff", "calculate_takeoff")]["input_example"]
     challenge = go(handler, FakeRequest(
         agent="quantity-takeoff", tool="calculate_takeoff",
-        headers={"x402-payer-address": "0xCrossRoute"}))
+        headers={"x402-payer-address": "0xCrossRoute"}, body=args))
     assert decode_header(challenge, x402_v2.PAYMENT_REQUIRED_HEADER)[
         "accepts"][0]["amount"] == "500000"
 

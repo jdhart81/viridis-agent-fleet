@@ -207,6 +207,30 @@ def test_verify_failure_and_bad_schema_never_execute(tmp_path, monkeypatch):
     assert fake.calls == ["verify"] and core.calls == []
 
 
+def test_unsupported_jurisdiction_fails_before_a2a_task_or_quote(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    _, send, _, core, store, _ = build(tmp_path)
+
+    refused = run(send(Request(request_body(args={
+        "jurisdiction": "california", "sector": "energy"}),
+        extension_headers())))
+
+    assert refused.status_code == 400
+    assert body(refused)["title"] == "Invalid skill input"
+    assert body(refused)["detail"] == (
+        "jurisdiction must be one of AU, CA, EU, GLOBAL, JP, SG, UK, or US; "
+        "values are case-insensitive")
+    assert fake.calls == []
+    assert core.calls == []
+    assert a2a_commerce.TASKS_KEY not in getattr(core, GATE_ATTR)
+
+    restored = Core()
+    assert store.restore("regulatory-radar", restored) is False
+
+
 def test_task_response_echoes_current_and_extension_headers(tmp_path, monkeypatch):
     arm(monkeypatch)
     card, send, _, _, _, _ = build(tmp_path)

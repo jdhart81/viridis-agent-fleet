@@ -85,7 +85,16 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
         "input_schema": {
             "type": "object",
             "properties": {
-                "jurisdiction": {"type": "string", "description": "EU, US, UK, or another supported jurisdiction"},
+                "jurisdiction": {
+                    "type": "string",
+                    "enum": [
+                        "AU", "CA", "EU", "GLOBAL", "JP", "SG", "UK", "US",
+                        "au", "ca", "eu", "global", "jp", "sg", "uk", "us",
+                    ],
+                    "description": (
+                        "Supported country or region code: AU, CA, EU, "
+                        "GLOBAL, JP, SG, UK, or US (case-insensitive)"),
+                },
                 "sector": {"type": ["string", "null"]},
                 "query": {
                     "type": ["string", "null"],
@@ -97,6 +106,9 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
             "required": ["jurisdiction"],
             "additionalProperties": False,
         },
+        "input_error_hint": (
+            "jurisdiction must be one of AU, CA, EU, GLOBAL, JP, SG, UK, "
+            "or US; values are case-insensitive"),
         "input_example": {
             "jurisdiction": "US",
             "sector": "energy",
@@ -599,6 +611,17 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                          and not _payer_seen(cores, payer_hint)
                          else list_price)
                 meta = X402_HTTP_METADATA[(agent, tool)]
+                args = await _request_args(request)
+                if not x402_v2._matches_schema(args, meta["input_schema"]):
+                    return _resp({
+                        "error": "input does not match advertised schema",
+                        "error_type": "input_validation_error",
+                        "payment_required": False,
+                        "hint": meta.get(
+                            "input_error_hint",
+                            "Correct the request to match the advertised "
+                            "input schema."),
+                    }, 400)
                 payment_required = x402_v2.build_payment_required(
                     agent, tool, price, resource,
                     str(getattr(request, "method", "POST")).upper(), meta)
@@ -703,7 +726,6 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                                   "extension_responses":
                                       result.get("extension_responses", {})},
                                  502, paid_headers)
-                args = await _request_args(request)
                 args = {k: v for k, v in args.items() if k != "action"}
                 try:
                     out = inner({"action": action, **args})
