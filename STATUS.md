@@ -1,5 +1,21 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-25, official MCP Registry coherence — ACTIVE] All 27 hosted
+> agents now match their official Registry latest versions and live health
+> surfaces.** Eight validated remote manifests were published through a pinned,
+> allowlisted GitHub OIDC workflow: Escrow 0.1.3, Arbitration 0.2.0, Offset
+> Clearinghouse 0.5.0, ERC-8004 Bridge 0.1.0, Notary 0.1.0, Wavefunction
+> Search 0.1.1, SmartScale 0.9.4, and ViridisOS 1.0.0. Verdigraph remained on
+> its already-active canonical `io.github.jdhart81/verdigraph` 0.1.0 identity;
+> the fleet's mistaken `verdigraph-brain` mapping was repaired without
+> creating a duplicate Registry entry.
+>
+> The final release gate reports **27 agents coherent across local manifests,
+> official Registry latest versions, and live health**. No publication secret
+> or long-lived Registry credential was stored, and no payment moved. This is
+> distribution proof, not revenue. Full receipt:
+> `docs/deployment/MCP_REGISTRY_COHERENCE_RELEASE_2026-07-25.md`.
+
 > **[2026-07-25, x402 discovery compatibility — DEPLOYED/ACTIVE] The
 > previously advertised `/.well-known/x402` address now returns the same
 > five-route Viridis machine catalog as `/x402/catalog`.** This is explicitly
