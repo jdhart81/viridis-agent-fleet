@@ -87,7 +87,10 @@ This is independent client implementation proof, not independent demand. It
 created no purchase, external payer, completed job, repeat purchase, or
 revenue.
 
-Live money truth remains 6 strict settlements, 4 self, 2 external, 2 distinct
-external payers, 0 repeat external purchases, 260,000 atomic USDC ($0.26)
-external revenue, and $0 MRR. The next business gate remains a third
-independent payer or the first genuine repeat external purchase.
+Live money truth later advanced independently of this SDK proof to 7 strict
+settlements, 4 self, 3 external, 3 distinct external payers, 0 repeat
+external purchases, 270,000 atomic USDC ($0.27) external revenue, and $0 MRR.
+The separate third-payer receipt is
+`docs/deployment/THIRD_EXTERNAL_PAYER_RECEIPT_2026-07-25.md`. The next
+business gate is the first genuine repeat external purchase or a fourth
+independent payer.
