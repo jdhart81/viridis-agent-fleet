@@ -74,7 +74,8 @@ hermes skills search https://mcp.viridisconservation.com \
   --source well-known
 hermes skills install \
   well-known:https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools \
-  --now</code></pre>
+  --yes</code></pre>
+  <p class="muted">Hermes Agent 0.19.0 uses <code>--yes</code> for noninteractive confirmation. Start a new Hermes session if the current session does not reload the installed skill.</p>
   <p>Public market reads are keyless. The domain-published skill contains no wallet credential and never sends a private key to Viridis. <a href="/.well-known/skills/index.json">Inspect the machine-readable skill index</a> or <a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/integrations/HERMES_BUYER_QUICKSTART.md">open the complete Hermes buyer guide</a>.</p></section>
 
   <section><h2>Use A2A or route an outside purchase</h2><p>A2A 1.0 clients can discover the same five paid skills at <a href="/.well-known/agent-card.json"><code>/.well-known/agent-card.json</code></a> and submit durable x402 payment tasks to <code>/a2a/message:send</code>. Agent buyers comparing Viridis with other sellers can use the <a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/viridis_market_router.py">bounded market-router SDK</a>: it enforces an expiring budget/payee/network mandate and will not pay without a caller-owned signer.</p></section>

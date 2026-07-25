@@ -256,7 +256,8 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "Viridis does not install or operate it" in quickstart.text
     assert ".well-known/skills/viridis-paid-tools" in quickstart.text
     assert "--source well-known" in quickstart.text
-    assert "--now" in quickstart.text
+    assert "--yes" in quickstart.text
+    assert "--now" not in quickstart.text
     assert "First paid call from every new wallet is $0.01" in quickstart.text
     assert "Payable HTTP routes" in llms.text
     assert "--route regulatory-radar --max-payment-usdc 0.01" in llms.text

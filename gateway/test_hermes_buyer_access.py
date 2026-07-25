@@ -74,7 +74,8 @@ def test_hosted_and_long_form_quickstarts_link_the_same_buyer_artifacts():
         assert "https://mcp.viridisconservation.com/network/mcp" in content
         assert ".well-known/skills/viridis-paid-tools" in content
         assert "--source well-known" in content
-        assert "--now" in content
+        assert "--yes" in content
+        assert "--now" not in content
 
 
 def test_public_gateway_wires_the_domain_skill_discovery_contract():

@@ -57,12 +57,14 @@ hermes skills search https://mcp.viridisconservation.com \
   --source well-known
 hermes skills install \
   well-known:https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools \
-  --now
+  --yes
 ```
 
 The skill queries Coinbase Bazaar for free, verifies the exact live 402, makes
 at most one buyer-authorized paid attempt, and treats every follow-on route as
-a new unsigned offer requiring a fresh spend mandate.
+a new unsigned offer requiring a fresh spend mandate. Hermes Agent 0.19.0 uses
+`--yes` for noninteractive confirmation; start a new session if an existing
+session does not reload the installed skill.
 
 - [Live agent suite](https://mcp.viridisconservation.com/agents)
 - [Copy-paste quickstart](https://mcp.viridisconservation.com/quickstart)

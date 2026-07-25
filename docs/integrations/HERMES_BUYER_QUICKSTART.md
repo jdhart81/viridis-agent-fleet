@@ -28,12 +28,15 @@ hermes skills search https://mcp.viridisconservation.com \
   --source well-known
 hermes skills install \
   well-known:https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools \
-  --now
+  --yes
 ```
 
 The skill contains no payment credential. It teaches route selection, free
 preflight, caller-owned signing, one-attempt settlement, and receipt checks.
-The raw GitHub `SKILL.md` remains a direct-install fallback.
+The `--yes` flag is the noninteractive confirmation form supported by Hermes
+Agent 0.19.0. Start a new Hermes session after installation when the current
+session does not reload newly installed skills. The raw GitHub `SKILL.md`
+remains a direct-install fallback.
 
 ## 3. Discover and inspect the paid service for free
 

@@ -33,11 +33,13 @@ hermes skills search https://mcp.viridisconservation.com \
   --source well-known
 hermes skills install \
   well-known:https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools \
-  --now
+  --yes
 ```
 
 The skill stores no credential. Paid calls still use the existing x402 HTTP
-routes and a caller-owned signer. See
+routes and a caller-owned signer. Hermes Agent 0.19.0 uses `--yes` for
+noninteractive confirmation; start a new session if the current one does not
+reload the installed skill. See
 [`docs/integrations/HERMES_BUYER_QUICKSTART.md`](integrations/HERMES_BUYER_QUICKSTART.md).
 
 ## Safest first paid call
