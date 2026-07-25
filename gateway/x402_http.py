@@ -82,10 +82,21 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
             "properties": {
                 "jurisdiction": {"type": "string", "description": "EU, US, UK, or another supported jurisdiction"},
                 "sector": {"type": ["string", "null"]},
+                "query": {
+                    "type": ["string", "null"],
+                    "description": (
+                        "Optional case-insensitive text filter applied to "
+                        "regulation names, descriptions, and requirements"),
+                },
             },
             "required": ["jurisdiction"],
+            "additionalProperties": False,
         },
-        "input_example": {"jurisdiction": "EU", "sector": "energy"},
+        "input_example": {
+            "jurisdiction": "US",
+            "sector": "energy",
+            "query": "45V clean energy tax credit emissions disclosure",
+        },
         "output_example": {"status": "success", "jurisdiction": "EU",
                            "matches": 3, "urgency": "high"},
     },
