@@ -88,12 +88,12 @@ quote client cannot sign or pay. For agent buyers, the bounded
 under an expiring network/payee/budget mandate and requires a caller-injected
 signer before any paid request.
 
-Viridis has received two independently initiated Regulatory Radar payments
-from two external wallets: $0.26 total USDC on Base ($0.25 plus a $0.01
-new-wallet call). No repeat purchase has been confirmed yet; that is the next
-commercial gate. The
-[second-payer receipt](docs/deployment/SECOND_EXTERNAL_PAYER_RECEIPT_2026-07-24.md)
-records the evidence and revenue boundary. The public repository is the
+Viridis has received three independently initiated Regulatory Radar payments
+from three external wallets: $0.27 total USDC on Base ($0.25 plus two $0.01
+new-wallet calls). No repeat purchase has been confirmed yet. The
+[third-payer receipt](docs/deployment/THIRD_EXTERNAL_PAYER_RECEIPT_2026-07-25.md)
+records the latest evidence and revenue boundary. The next commercial gate is
+a first genuine repeat or a fourth distinct payer. The public repository is the
 callable spec, schemas, contracts, and reference gateway for 25 hosted MCP
 agents plus the federated EnergyAI member. The deterministic cores remain
 private.

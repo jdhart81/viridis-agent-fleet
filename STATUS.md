@@ -1,5 +1,27 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-25, third independent external payer — CONFIRMED] A new
+> Regulatory Radar x402 settlement moved the strict live ledger to 3 external
+> settlements from 3 distinct external payer wallets.** Base mainnet
+> transaction
+> `0x34f5181ac26f2b58488a48e306df4b7d9c32a2bc117b2ccfe7b1a487bfb55586`
+> succeeded at `2026-07-25T21:17:03Z`. Its official Base USDC transfer moved
+> 10,000 atomic units ($0.01) from authorization payer
+> `0x3a0aa040b8785babc28b8436065dd2057c17773e` to the Viridis receiver.
+>
+> Strict live money truth is now **7 settlements / 4 self / 3 external / 3
+> distinct external payers / 0 repeat external purchases / 270,000 atomic
+> USDC ($0.27) external revenue / $0 MRR**. Production A2A task counts remained
+> unchanged at 1 unpaid input-required and 0 completed; the official-SDK proof
+> used one live GET plus an isolated in-memory seller and did not generate
+> this payment. The payer's real-world identity and whether it was a human or
+> autonomous agent remain unknown.
+>
+> The previous third-payer gate is met. The next conversion gate is the first
+> genuine repeat external purchase or a fourth independent payer. Full
+> receipt:
+> `docs/deployment/THIRD_EXTERNAL_PAYER_RECEIPT_2026-07-25.md`.
+
 > **[2026-07-25, official A2A buyer-runtime interoperability — PUBLIC]
 > The released official A2A Python SDK can discover and consume the Viridis
 > A2A 1.0 commerce boundary.** `a2a-sdk==1.1.2` parsed the live Agent Card
@@ -12,10 +34,10 @@
 >
 > `scripts/a2a_quote_client.py` defaults to read-only discovery and requires
 > explicit `--request-quote` before it creates one unpaid task. It contains no
-> signer or payment path. This is client interoperability, not demand or
-> revenue. Live money truth is unchanged at **6 settlements / 4 self / 2
-> external / 2 distinct external payers / 0 repeat external purchases / $0.26
-> external revenue / $0 MRR**. Full receipt:
+> signer or payment path. This client proof itself is not demand or revenue.
+> Subsequent live money truth is **7 settlements / 4 self / 3 external / 3
+> distinct external payers / 0 repeat external purchases / $0.27 external
+> revenue / $0 MRR**. Full receipt:
 > `docs/deployment/A2A_OFFICIAL_SDK_INTEROP_2026-07-25.md`.
 
 > **[2026-07-25, official MCP Registry coherence — ACTIVE] All 27 hosted
