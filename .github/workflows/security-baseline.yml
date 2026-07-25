@@ -20,4 +20,5 @@ jobs:
         run: |
           python3 -m unittest \
             scripts/test_workflow_actions_pinned.py \
-            scripts/test_publish_mcp_registry_idempotent.py
+            scripts/test_publish_mcp_registry_idempotent.py \
+            scripts/test_a2a_quote_client.py

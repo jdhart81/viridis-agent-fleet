@@ -42,6 +42,21 @@ noninteractive confirmation; start a new session if the current one does not
 reload the installed skill. See
 [`docs/integrations/HERMES_BUYER_QUICKSTART.md`](integrations/HERMES_BUYER_QUICKSTART.md).
 
+## Official A2A Python client
+
+Use the released A2A SDK to validate the live Agent Card without creating a
+task or loading a wallet:
+
+```bash
+uv run --no-project --with "a2a-sdk==1.1.2" \
+  python scripts/a2a_quote_client.py
+```
+
+Add `--request-quote` only when you want to create one durable unpaid
+`TASK_STATE_INPUT_REQUIRED` task. The script prints the x402 requirements but
+cannot sign or pay. See the
+[A2A Python SDK quickstart](integrations/A2A_PYTHON_SDK_QUICKSTART.md).
+
 ## Safest first paid call
 
 When the live new-wallet intro is enabled, make exactly one Regulatory Radar
