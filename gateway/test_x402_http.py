@@ -232,6 +232,17 @@ def test_registered_production_allowlist_has_five_priced_front_doors():
     }
 
 
+def test_agent402_has_a_fixed_price_regulatory_radar_alias():
+    assert x402_http.AGENT402_HTTP_TOOLS == {
+        ("regulatory-radar", "scan_regulations_agent402"): "scan",
+    }
+    assert x402_http.AGENT402_FIXED_ROUTE in x402_http.INTRO_EXEMPT_ROUTES
+    assert (
+        x402_http.X402_HTTP_METADATA[
+            x402_http.AGENT402_FIXED_ROUTE]["icon_url"]
+        == "https://mcp.viridisconservation.com/brand/viridis-mark.svg")
+
+
 def test_discovery_inventory_has_exact_prices_and_atomic_math():
     entries = {e["agent"]: e for e in
                x402_http.discovery_entries("https://mcp.test")}
