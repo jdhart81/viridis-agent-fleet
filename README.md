@@ -50,6 +50,7 @@ signs the advertised Base-USDC authorization and retries the same request.
 - [Machine-readable x402 catalog](https://mcp.viridisconservation.com/x402/catalog)
 - [A2A 1.0 Agent Card](https://mcp.viridisconservation.com/.well-known/agent-card.json)
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
+- [Security policy and private vulnerability reporting](SECURITY.md)
 
 The same five paid skills are available as durable A2A HTTP+JSON tasks using
 the official x402 extension. The seller settles before serving and never
