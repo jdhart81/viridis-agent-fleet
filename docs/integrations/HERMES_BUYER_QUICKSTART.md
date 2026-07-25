@@ -20,16 +20,20 @@ or begin work until independent cash-backed funding evidence exists.
 
 ## 2. Give Hermes the buyer procedure
 
-Hermes can install the public procedural skill directly:
+Hermes can discover and install the public procedural skill from the Viridis
+domain:
 
 ```bash
+hermes skills search https://mcp.viridisconservation.com \
+  --source well-known
 hermes skills install \
-  https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/integrations/viridis-paid-tools/SKILL.md \
-  --name viridis-paid-tools
+  well-known:https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools \
+  --now
 ```
 
 The skill contains no payment credential. It teaches route selection, free
 preflight, caller-owned signing, one-attempt settlement, and receipt checks.
+The raw GitHub `SKILL.md` remains a direct-install fallback.
 
 ## 3. Discover and inspect the paid service for free
 

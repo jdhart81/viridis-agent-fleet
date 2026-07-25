@@ -60,6 +60,7 @@ COPY deploy/gateway/seats.html deploy/gateway/
 COPY deploy/gateway/agents.html deploy/gateway/
 COPY deploy/gateway/quickstart.html deploy/gateway/
 COPY deploy/gateway/llms.txt deploy/gateway/
+COPY integrations/viridis-paid-tools/SKILL.md integrations/viridis-paid-tools/
 COPY scripts/genesis_receipts.py scripts/
 COPY scripts/viridis_market_router.py scripts/
 # persistence volume mounts here (compose: gateway_state:/data, STATE_DB env)

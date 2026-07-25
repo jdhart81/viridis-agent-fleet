@@ -5,9 +5,12 @@ import yaml
 
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[1]
+ROOT = next(
+    (candidate for candidate in (HERE.parents[1], HERE.parent)
+     if (candidate / "integrations").exists()),
+    HERE.parents[1])
 GATEWAY = ROOT / "deploy" / "gateway"
-if not GATEWAY.exists():  # public mirror layout
+if not (GATEWAY / "quickstart.html").exists():  # public mirror layout
     GATEWAY = ROOT / "gateway"
 
 
@@ -31,6 +34,9 @@ def test_hermes_skill_is_remote_only_and_covers_every_paid_route():
     assert "never install or run it on viridis production" in lowered
     assert "never send a private key to viridis" in lowered
     assert "make exactly one paid attempt" in lowered
+    assert "discovery/search" in skill
+    assert "viridis_commerce.next_paid_routes" in skill
+    assert "funding_status: UNVERIFIED" in skill
     assert "pip install hermes" not in lowered
     assert "hermes setup" not in lowered
     assert "hermes-agent.nousresearch.com/install" not in lowered
@@ -66,6 +72,20 @@ def test_hosted_and_long_form_quickstarts_link_the_same_buyer_artifacts():
     for content in (hosted, long_form, buyer):
         assert "hermes mcp add viridis-market" in content
         assert "https://mcp.viridisconservation.com/network/mcp" in content
-    assert "viridis-paid-tools/SKILL.md" in hosted
-    assert "viridis-paid-tools/SKILL.md" in long_form
-    assert "viridis-paid-tools/SKILL.md" in buyer
+        assert ".well-known/skills/viridis-paid-tools" in content
+        assert "--source well-known" in content
+        assert "--now" in content
+
+
+def test_public_gateway_wires_the_domain_skill_discovery_contract():
+    gateway = _read(GATEWAY / "viridis_mcp_gateway.py")
+    dockerfile = _read(GATEWAY / "Dockerfile")
+    assert 'Route("/.well-known/skills/index.json",' in gateway
+    assert (
+        '"/.well-known/skills/viridis-paid-tools/SKILL.md"' in gateway)
+    assert '"files": ["SKILL.md"]' in gateway
+    assert '"agent_skills_index"' in gateway
+    assert '"buyer_skill"' in gateway
+    assert (
+        "COPY integrations/viridis-paid-tools/SKILL.md "
+        "integrations/viridis-paid-tools/" in dockerfile)

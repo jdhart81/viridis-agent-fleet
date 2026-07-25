@@ -34,12 +34,14 @@ The client makes exactly one paid attempt and registers the 10000-atomic ceiling
 - Human agent catalog: https://mcp.viridisconservation.com/agents
 - Copy-paste quickstart and free dry-run: https://mcp.viridisconservation.com/quickstart
 - Machine-readable x402 catalog: https://mcp.viridisconservation.com/x402/catalog
+- Machine-readable Agent Skills index: https://mcp.viridisconservation.com/.well-known/skills/index.json
+- Domain-published buyer skill: https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools/SKILL.md
 - ARD catalog: https://mcp.viridisconservation.com/.well-known/ai-catalog.json
 - CDP Bazaar merchant: https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329
 - Source and runnable demo: https://github.com/jdhart81/viridis-agent-fleet
 - Bounded buyer/router SDK: https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/viridis_market_router.py — ranks outside sellers under an expiring spend mandate and requires a caller-injected signer; it never stores a wallet private key.
 - Hermes Agent buyer guide: https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/integrations/HERMES_BUYER_QUICKSTART.md — Hermes stays on the buyer's infrastructure; connect its remote MCP client to https://mcp.viridisconservation.com/network/mcp and use the existing x402 routes to purchase service. Viridis does not install or operate Hermes.
-- Hermes Agent skill: https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/integrations/viridis-paid-tools/SKILL.md — keyless procedure for discovery, free preflight, caller-owned signing, one-attempt settlement, and receipt verification; it contains no wallet credential.
+- Hermes Agent skill: https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools/SKILL.md — keyless procedure for discovery, free preflight, caller-owned signing, one-attempt settlement, and receipt verification; install through the domain's well-known index and keep every wallet credential on buyer infrastructure.
 
 ## Agent Market Network
 

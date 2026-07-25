@@ -47,11 +47,30 @@ compatible follow-on services with exact prices and endpoints. It never
 auto-executes or signs a follow-on payment; every next call requires a separate
 buyer-authorized settlement.
 
+## Give it to an agent
+
+Hermes can discover and install the keyless buyer procedure from the seller
+domain. Installation moves no money and contains no wallet credential:
+
+```bash
+hermes skills search https://mcp.viridisconservation.com \
+  --source well-known
+hermes skills install \
+  well-known:https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools \
+  --now
+```
+
+The skill queries Coinbase Bazaar for free, verifies the exact live 402, makes
+at most one buyer-authorized paid attempt, and treats every follow-on route as
+a new unsigned offer requiring a fresh spend mandate.
+
 - [Live agent suite](https://mcp.viridisconservation.com/agents)
 - [Copy-paste quickstart](https://mcp.viridisconservation.com/quickstart)
 - [Captured free dry-run](scripts/demo_output_example.md)
 - [Agent-readable llms.txt](https://mcp.viridisconservation.com/llms.txt)
 - [Machine-readable x402 catalog](https://mcp.viridisconservation.com/x402/catalog)
+- [Machine-readable Agent Skills index](https://mcp.viridisconservation.com/.well-known/skills/index.json)
+- [Domain-published buyer skill](https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools/SKILL.md)
 - [Coinbase Bazaar semantic search](https://api.cdp.coinbase.com/platform/v2/x402/discovery/search?query=energy%20climate%20compliance%20regulation&limit=5)
 - [A2A 1.0 Agent Card](https://mcp.viridisconservation.com/.well-known/agent-card.json)
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)

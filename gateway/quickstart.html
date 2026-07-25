@@ -70,10 +70,12 @@ python3 scripts/x402_demo_client.py \
   --url https://mcp.viridisconservation.com/network/mcp
 hermes mcp test viridis-market
 
+hermes skills search https://mcp.viridisconservation.com \
+  --source well-known
 hermes skills install \
-  https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/integrations/viridis-paid-tools/SKILL.md \
-  --name viridis-paid-tools</code></pre>
-  <p>Public market reads are keyless. The skill contains no wallet credential and never sends a private key to Viridis. <a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/integrations/HERMES_BUYER_QUICKSTART.md">Open the complete Hermes buyer guide</a>.</p></section>
+  well-known:https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools \
+  --now</code></pre>
+  <p>Public market reads are keyless. The domain-published skill contains no wallet credential and never sends a private key to Viridis. <a href="/.well-known/skills/index.json">Inspect the machine-readable skill index</a> or <a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/integrations/HERMES_BUYER_QUICKSTART.md">open the complete Hermes buyer guide</a>.</p></section>
 
   <section><h2>Use A2A or route an outside purchase</h2><p>A2A 1.0 clients can discover the same five paid skills at <a href="/.well-known/agent-card.json"><code>/.well-known/agent-card.json</code></a> and submit durable x402 payment tasks to <code>/a2a/message:send</code>. Agent buyers comparing Viridis with other sellers can use the <a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/viridis_market_router.py">bounded market-router SDK</a>: it enforces an expiring budget/payee/network mandate and will not pay without a caller-owned signer.</p></section>
   <section><h2>Discover the live merchant</h2><p>All five routes are settlement-indexed in CDP Bazaar. <a href="https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329">Open the Viridis Bazaar merchant inventory</a>.</p></section>
