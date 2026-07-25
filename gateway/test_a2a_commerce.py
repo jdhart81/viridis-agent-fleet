@@ -215,20 +215,40 @@ def test_unsupported_jurisdiction_fails_before_a2a_task_or_quote(
     _, send, _, core, store, _ = build(tmp_path)
 
     refused = run(send(Request(request_body(args={
-        "jurisdiction": "california", "sector": "energy"}),
+        "jurisdiction": "new-york", "sector": "energy"}),
         extension_headers())))
 
     assert refused.status_code == 400
     assert body(refused)["title"] == "Invalid skill input"
     assert body(refused)["detail"] == (
-        "jurisdiction must be one of AU, CA, EU, GLOBAL, JP, SG, UK, or US; "
-        "values are case-insensitive")
+        "jurisdiction must be one of AU, CA (Canada), EU, GLOBAL, JP, SG, UK, "
+        "US, or CALIFORNIA/US-CA")
     assert fake.calls == []
     assert core.calls == []
     assert a2a_commerce.TASKS_KEY not in getattr(core, GATE_ATTR)
 
     restored = Core()
     assert store.restore("regulatory-radar", restored) is False
+
+
+def test_california_alias_creates_unpaid_task_with_canonical_input(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    _, send, _, core, _, _ = build(tmp_path)
+
+    challenge = run(send(Request(request_body(args={
+        "jurisdiction": "US-CA", "sector": "energy"}),
+        extension_headers())))
+
+    assert challenge.status_code == 200
+    task = body(challenge)["task"]
+    assert task["status"]["state"] == "TASK_STATE_INPUT_REQUIRED"
+    assert task["metadata"]["viridis.input"] == {
+        "jurisdiction": "california", "sector": "energy"}
+    assert fake.calls == []
+    assert core.calls == []
 
 
 def test_task_response_echoes_current_and_extension_headers(tmp_path, monkeypatch):

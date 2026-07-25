@@ -59,6 +59,10 @@ The initial message is structured data, not prompt text:
 }
 ```
 
+For a California-specific quote, set `jurisdiction` to `california` or
+`US-CA`. `CA` means Canada. Viridis canonicalizes the California alias before
+creating the unpaid task.
+
 The official SDK activates the payment extension with the standard
 `A2A-Extensions` service parameter. Viridis also accepts the extension's
 legacy `X-A2A-Extensions` form and echoes both forms in the response.

@@ -189,6 +189,7 @@ def test_regulatory_radar_fixture_contract_is_publicly_exact():
     assert metadata["input_schema"]["properties"]["jurisdiction"]["enum"] == [
         "AU", "CA", "EU", "GLOBAL", "JP", "SG", "UK", "US",
         "au", "ca", "eu", "global", "jp", "sg", "uk", "us",
+        "CALIFORNIA", "California", "california", "US-CA", "us-ca",
     ]
 
 
@@ -200,15 +201,15 @@ def test_v2_rejects_invalid_input_before_quote_payment_or_execution(
     handler, core, store = build(tmp_path)
 
     refused = go(handler, FakeRequest(body={
-        "jurisdiction": "california", "sector": "energy"}))
+        "jurisdiction": "new-york", "sector": "energy"}))
 
     assert refused.status_code == 400
     assert body_of(refused) == {
         "error": "input does not match advertised schema",
         "error_type": "input_validation_error",
         "payment_required": False,
-        "hint": ("jurisdiction must be one of AU, CA, EU, GLOBAL, JP, SG, "
-                 "UK, or US; values are case-insensitive"),
+        "hint": ("jurisdiction must be one of AU, CA (Canada), EU, GLOBAL, "
+                 "JP, SG, UK, US, or CALIFORNIA/US-CA"),
     }
     assert x402_v2.PAYMENT_REQUIRED_HEADER not in refused.headers
     assert fake.calls == []
@@ -229,6 +230,39 @@ def test_v2_valid_advertised_input_still_returns_payment_quote(
     assert challenge.status_code == 402
     assert x402_v2.PAYMENT_REQUIRED_HEADER in challenge.headers
     assert core.calls == []
+
+
+@pytest.mark.parametrize("supplied", [
+    "california", "California", "CALIFORNIA", "us-ca", "US-CA",
+])
+def test_v2_california_aliases_quote_canonical_input(
+        tmp_path, monkeypatch, supplied):
+    arm(monkeypatch)
+    handler, core, _ = build(tmp_path)
+
+    challenge = go(handler, FakeRequest(body={
+        "jurisdiction": supplied, "sector": "energy"}))
+
+    assert challenge.status_code == 402
+    assert x402_v2.PAYMENT_REQUIRED_HEADER in challenge.headers
+    assert core.calls == []
+
+
+def test_v2_california_paid_execution_uses_canonical_jurisdiction(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    install_fake(monkeypatch, FakeFacilitator())
+    handler, core, _ = build(tmp_path)
+    request_body = {"jurisdiction": " US-CA ", "sector": "energy"}
+    challenge = go(handler, FakeRequest(body=request_body))
+    signature = signed_from(challenge)
+
+    paid = go(handler, FakeRequest(
+        body=request_body, headers={"payment-signature": signature}))
+
+    assert paid.status_code == 200
+    assert core.calls == [{
+        "action": "scan", "jurisdiction": "california", "sector": "energy"}]
 
 
 def test_X2_2_sepolia_retains_usdc_domain(monkeypatch):

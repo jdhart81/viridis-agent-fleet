@@ -79,7 +79,8 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
     ("regulatory-radar", "scan_regulations"): {
         "description": ("Energy and climate compliance regulation scan across "
                         "a curated 14-regulation database, with jurisdiction, "
-                        "urgency, and effective-date signals. The scan step "
+                        "urgency, and effective-date signals, including "
+                        "California SB 253 and SB 261 status. The scan step "
                         "pairs with Viridis GHG inventory, sustainability "
                         "disclosure, and clean-energy tax-credit engines."),
         "input_schema": {
@@ -90,10 +91,13 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
                     "enum": [
                         "AU", "CA", "EU", "GLOBAL", "JP", "SG", "UK", "US",
                         "au", "ca", "eu", "global", "jp", "sg", "uk", "us",
+                        "CALIFORNIA", "California", "california",
+                        "US-CA", "us-ca",
                     ],
                     "description": (
-                        "Supported country or region code: AU, CA, EU, "
-                        "GLOBAL, JP, SG, UK, or US (case-insensitive)"),
+                        "Supported jurisdiction: AU, CA (Canada), EU, GLOBAL, "
+                        "JP, SG, UK, US, or California. The server normalizes "
+                        "case and accepts US-CA as a California alias"),
                 },
                 "sector": {"type": ["string", "null"]},
                 "query": {
@@ -107,8 +111,8 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
             "additionalProperties": False,
         },
         "input_error_hint": (
-            "jurisdiction must be one of AU, CA, EU, GLOBAL, JP, SG, UK, "
-            "or US; values are case-insensitive"),
+            "jurisdiction must be one of AU, CA (Canada), EU, GLOBAL, JP, "
+            "SG, UK, US, or CALIFORNIA/US-CA"),
         "input_example": {
             "jurisdiction": "US",
             "sector": "energy",
@@ -570,6 +574,22 @@ async def _request_args(request) -> dict:
     return args
 
 
+def _normalize_request_args(agent: str, tool: str, args: dict) -> dict:
+    """Normalize advertised aliases without mutating the caller's object."""
+    if not isinstance(args, dict):
+        return {}
+    normalized = dict(args)
+    if agent == "regulatory-radar":
+        jurisdiction = normalized.get("jurisdiction")
+        if isinstance(jurisdiction, str):
+            jurisdiction = jurisdiction.strip().lower()
+            normalized["jurisdiction"] = {
+                "us-ca": "california",
+                "ca-us": "california",
+            }.get(jurisdiction, jurisdiction)
+    return normalized
+
+
 def _resp(payload, status=200, headers=None):
     from starlette.responses import JSONResponse
     return JSONResponse(payload, status_code=status, headers=headers or {})
@@ -611,7 +631,8 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                          and not _payer_seen(cores, payer_hint)
                          else list_price)
                 meta = X402_HTTP_METADATA[(agent, tool)]
-                args = await _request_args(request)
+                args = _normalize_request_args(
+                    agent, tool, await _request_args(request))
                 if not x402_v2._matches_schema(args, meta["input_schema"]):
                     return _resp({
                         "error": "input does not match advertised schema",

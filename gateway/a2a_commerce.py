@@ -24,7 +24,7 @@ from typing import Any, Dict
 from x402_http import (
     INTRO_PAYER_HEADER, INTRO_SCHEDULE, INTRO_SEEN_KEY, X402_HTTP_METADATA,
     X402_HTTP_TOOLS, _classified_settlement, _payer_seen, _payer_wallet,
-    intro_enabled,
+    _normalize_request_args, intro_enabled,
 )
 
 logger = logging.getLogger("viridis.a2a_commerce")
@@ -375,6 +375,7 @@ def make_a2a_handlers(cores, store, public_base):
         if not mapping:
             return _problem(400, "Unknown skill", error or str(skill_id))
         agent, tool = mapping
+        args = _normalize_request_args(agent, tool, args)
         core = cores.get(agent)
         gate = getattr(core, GATE_ATTR, None) if core is not None else None
         if not isinstance(gate, dict) or getattr(core, "_gate_inner", None) is None:
