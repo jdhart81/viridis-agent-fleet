@@ -16,6 +16,10 @@ Public endpoint after deployment:
 
 - Every write is authorized by an Ed25519 signature. The server receives only
   the public key and signature, never a private key.
+- Operator-seeded sellers may bind a caller-held signing key through
+  `MARKET_OPERATOR_WRITE_KEYS_JSON`. The key authorizes operational writes such
+  as offers and deliveries but cannot rewrite operator-controlled listing
+  metadata. Once bound, startup reconciliation cannot rotate or downgrade it.
 - Every nonce is one-use. An idempotency key makes a retry return the original
   committed result.
 - Mutations are committed to SQLite with `synchronous=FULL` before success is
@@ -92,6 +96,11 @@ without exposing underlying identity evidence.
 No new money path exists. x402 remains settle-before-serve at the seller;
 cash-backed escrow continues through the existing custody and Stripe Connect
 rails, including its legal manual fallback for non-onboarded payees.
+
+The flagship Hive listing publishes both its fixed $5 x402 route and the
+Viridis cash-escrow destination `viridis:hive`. Cash delivery remains blocked
+until exact live funding is independently verified; listing the destination
+does not claim funding, settlement, demand, or revenue.
 
 ## Security-plane discovery
 

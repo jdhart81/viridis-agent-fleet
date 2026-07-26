@@ -45,7 +45,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 logger = logging.getLogger("agent-hive-orchestrator")
 
-VERSION = "0.1.0"
+VERSION = "0.1.2"
 MAX_DEPTH = 3
 MAX_BUDGET_MINOR = 10_000_000  # $100k ceiling per job
 MAX_SUBTASKS = 64

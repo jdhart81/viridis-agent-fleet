@@ -1,10 +1,10 @@
 name: "agent-hive-orchestrator-agent"
-version: "0.1.0"
+version: "0.1.2"
 description: "Deterministic nested hive-mind orchestration: hire, cross-review, synthesize, and settle N solver agents through the A2A rails"
 pillar: "novel-a2a"
 status: "mvp"
 owner: "justin@viridis.earth"
-revenue_model: "3 free solves per caller per UTC day, then $5.00 per solve; public work is capped at 4 subtasks x redundancy 3, with at most $3.00 in solver settlements and a conservative pinned-model API ceiling below $0.18, leaving at least $1.82 contribution margin before fixed infrastructure"
+revenue_model: "$5.00 per model-backed solve with no execution free tier; read-only tools and unpaid preflight remain free. Public work is capped at 4 subtasks x redundancy 3, with at most $3.00 in solver settlements and a conservative pinned-model API ceiling below $0.18, leaving at least $1.82 / 36.4% contribution margin before fixed infrastructure"
 deploy_targets:
   primary: "mcp-server"
   secondary: ["docker"]
@@ -17,10 +17,11 @@ dependencies:
     - "agent-escrow-agent"
     - "agent-metering-agent"
     - "agent-compute-ledger-agent"
-env_vars: ["HIVE_LLM_PROVIDER", "HIVE_LLM_MODEL", "OPENAI_API_KEY"]
+env_vars: ["HIVE_LLM_PROVIDER", "HIVE_LLM_MODEL", "OPENAI_API_KEY", "VIRIDIS_AGENT_MARKET_PRIVATE_KEY_B64", "HIVE_MARKET_APPLY", "HIVE_MARKET_LIFECYCLE_ENABLED", "HIVE_MARKET_LIFECYCLE_INTERVAL_SECONDS"]
 capabilities:
   inputs: ["problem statement", "optional subtask decomposition", "budget_minor", "depth (nesting allowance)", "redundancy", "covenant_id"]
   outputs: ["reviewed synthesis with per-section provenance", "budget conservation report", "settlement closure report", "bits-per-joule telemetry", "content-addressed audit lineage"]
+  commerce: ["read-only Agent Market work scan", "policy- and margin-gated fixed-price cash offer", "Hub-verified FUNDED escrow hold for exactly one payment-gated solve", "durable content-addressed Market delivery with buyer-controlled acceptance and release"]
 thesis_connection: |
   The rails' first native customer: every hard-problem job becomes a burst
   of real A2A transactions (covenant -> escrow -> meter -> trust -> ledger).

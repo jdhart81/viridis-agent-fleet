@@ -70,7 +70,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 
 PROTOCOL = "viridis-agent-market-v1"
-VERSION = "0.7.0"
+VERSION = "0.7.1"
 AUTH_WINDOW_SECONDS = 300
 MAX_TEXT = 8_000
 MAX_PROFILE_DAYS = 365
@@ -625,7 +625,9 @@ class MarketNetworkCore:
                               field="auth.signed_at")
         row = self._profile_row(actor)
         key_b64 = initial_key if row is None else str(row["public_key_b64"])
-        if row is not None and row["auth_mode"] != "signed_ed25519":
+        if (row is not None
+                and row["auth_mode"] not in {
+                    "signed_ed25519", "operator_signed_ed25519"}):
             raise MarketError("operator-managed profiles cannot sign public writes",
                               error_type="AuthenticationError", field="agent_id")
         key = _b64decode(key_b64)
@@ -858,8 +860,17 @@ class MarketNetworkCore:
             return "COMMON_CONTROL_RELATED", buyer_proof, seller_proof
         return "VERIFIED_DISTINCT_OPERATORS", buyer_proof, seller_proof
 
-    def seed_owned_profiles(self, profiles: Iterable[dict]) -> int:
-        """Idempotently seed operator-owned public listings; never grants writes."""
+    def seed_owned_profiles(
+            self, profiles: Iterable[dict],
+            write_public_keys: Optional[dict[str, str]] = None) -> int:
+        """Seed operator listings with optional caller-held write authority.
+
+        Listing metadata remains operator-controlled. A configured Ed25519
+        public key lets the corresponding agent sign operational marketplace
+        writes while its private key stays outside this service. Once bound,
+        startup reconciliation cannot rotate or downgrade the key.
+        """
+        write_public_keys = write_public_keys or {}
         changed = 0
         for raw in profiles:
             agent_id = self._id(raw.get("agent_id"))
@@ -875,53 +886,103 @@ class MarketNetworkCore:
                 "operator_entity", maximum=240)
             now = _iso(self._now())
             expires = _iso(self._now() + timedelta(days=MAX_PROFILE_DAYS))
-            public = {"agent_id": agent_id, "name": name,
-                      "description": description, "capabilities": caps,
-                      "representative_queries": queries, "endpoint": endpoint,
-                      "payment": payment, "provenance": "viridis_operator_seed",
-                      "operator_entity": operator_entity,
-                      "operator_entity_verified": True}
-            profile_sha = _digest(public)
-            did = "did:viridis:operator:" + hashlib.sha256(
-                agent_id.encode()).hexdigest()[:24]
             with self._tx():
                 existing = self._profile_row(agent_id)
+                if (existing and existing["auth_mode"]
+                        not in {"operator_managed",
+                                "operator_signed_ed25519"}):
+                    raise MarketError("seed cannot overwrite signed profile",
+                                      error_type="ConflictError",
+                                      field="agent_id")
+                configured_key = str(write_public_keys.get(agent_id) or "")
+                if configured_key and len(_b64decode(configured_key)) != 32:
+                    raise MarketError(
+                        "operator write public key must be Ed25519 32 bytes",
+                        field="operator_write_keys")
+                if (existing
+                        and existing["auth_mode"] == "operator_signed_ed25519"):
+                    bound_key = str(existing["public_key_b64"])
+                    if configured_key and configured_key != bound_key:
+                        raise MarketError(
+                            "operator write key rotation requires an explicit "
+                            "migration",
+                            error_type="ConflictError",
+                            field="operator_write_keys")
+                    configured_key = bound_key
+                auth_mode = (
+                    "operator_signed_ed25519"
+                    if configured_key else "operator_managed")
+                provenance = (
+                    "viridis_operator_seed_with_agent_signing"
+                    if configured_key else "viridis_operator_seed")
+                key_digest = (
+                    hashlib.sha256(_b64decode(configured_key)).hexdigest()
+                    if configured_key else "")
+                public = {
+                    "agent_id": agent_id, "name": name,
+                    "description": description, "capabilities": caps,
+                    "representative_queries": queries, "endpoint": endpoint,
+                    "payment": payment, "provenance": provenance,
+                    "operator_entity": operator_entity,
+                    "operator_entity_verified": True,
+                }
+                if configured_key:
+                    public["write_auth"] = {
+                        "mode": auth_mode,
+                        "public_key_sha256": key_digest,
+                    }
+                profile_sha = _digest(public)
                 if existing and existing["profile_sha256"] == profile_sha:
                     self._conn.execute(
-                        "UPDATE profiles SET expires_at=?,updated_at=? WHERE agent_id=?",
-                        (expires, now, agent_id))
+                        "UPDATE profiles SET expires_at=?,updated_at=? "
+                        "WHERE agent_id=?", (expires, now, agent_id))
                     continue
-                if existing and existing["auth_mode"] != "operator_managed":
-                    raise MarketError("seed cannot overwrite signed profile",
-                                      error_type="ConflictError", field="agent_id")
+                did_prefix = (
+                    "did:viridis:operator-signed:"
+                    if configured_key else "did:viridis:operator:")
+                did_material = (
+                    _b64decode(configured_key)
+                    if configured_key else agent_id.encode())
+                did = did_prefix + hashlib.sha256(
+                    did_material).hexdigest()[:24]
                 version = int(existing["version"]) + 1 if existing else 1
                 created = existing["created_at"] if existing else now
                 self._conn.execute(
-                    "INSERT INTO profiles(agent_id,did,name,description,capabilities_json,"
-                    "queries_json,endpoint,public_key_b64,payment_json,auth_mode,provenance,"
-                    "operator_entity,operator_entity_verified,status,version,profile_sha256,"
+                    "INSERT INTO profiles(agent_id,did,name,description,"
+                    "capabilities_json,queries_json,endpoint,public_key_b64,"
+                    "payment_json,auth_mode,provenance,operator_entity,"
+                    "operator_entity_verified,status,version,profile_sha256,"
                     "created_at,updated_at,expires_at) "
                     "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
-                    "ON CONFLICT(agent_id) DO UPDATE SET did=excluded.did,name=excluded.name,"
-                    "description=excluded.description,capabilities_json=excluded.capabilities_json,"
-                    "queries_json=excluded.queries_json,endpoint=excluded.endpoint,"
-                    "payment_json=excluded.payment_json,status='ACTIVE',version=excluded.version,"
+                    "ON CONFLICT(agent_id) DO UPDATE SET did=excluded.did,"
+                    "name=excluded.name,description=excluded.description,"
+                    "capabilities_json=excluded.capabilities_json,"
+                    "queries_json=excluded.queries_json,"
+                    "endpoint=excluded.endpoint,"
+                    "public_key_b64=excluded.public_key_b64,"
+                    "payment_json=excluded.payment_json,"
+                    "auth_mode=excluded.auth_mode,"
+                    "provenance=excluded.provenance,status='ACTIVE',"
+                    "version=excluded.version,"
                     "operator_entity=excluded.operator_entity,"
-                    "operator_entity_verified=excluded.operator_entity_verified,"
+                    "operator_entity_verified="
+                    "excluded.operator_entity_verified,"
                     "operator_verification_receipt_id='',"
                     "operator_verification_expires_at='',"
-                    "profile_sha256=excluded.profile_sha256,updated_at=excluded.updated_at,"
+                    "profile_sha256=excluded.profile_sha256,"
+                    "updated_at=excluded.updated_at,"
                     "expires_at=excluded.expires_at",
-                    (agent_id, did, name, description, _stable(caps), _stable(queries),
-                     endpoint, "", _stable(payment), "operator_managed",
-                     "viridis_operator_seed", operator_entity, 1,
-                     "ACTIVE", version, profile_sha,
-                     created, now, expires))
+                    (agent_id, did, name, description, _stable(caps),
+                     _stable(queries), endpoint, configured_key,
+                     _stable(payment), auth_mode, provenance, operator_entity,
+                     1, "ACTIVE", version, profile_sha, created, now, expires))
                 self._conn.execute(
-                    "INSERT INTO events(event_id,event_type,actor_id,object_type,object_id,"
-                    "payload_sha256,payload_json,created_at) VALUES(?,?,?,?,?,?,?,?)",
-                    (str(uuid.uuid4()), "profile.seeded", "viridis-operator",
-                     "profile", agent_id, profile_sha, _stable(public), now))
+                    "INSERT INTO events(event_id,event_type,actor_id,"
+                    "object_type,object_id,payload_sha256,payload_json,"
+                    "created_at) VALUES(?,?,?,?,?,?,?,?)",
+                    (str(uuid.uuid4()), "profile.seeded",
+                     "viridis-operator", "profile", agent_id, profile_sha,
+                     _stable(public), now))
                 changed += 1
         return changed
 
@@ -3072,6 +3133,7 @@ class MarketNetworkCore:
 def build(*, db_path: Optional[str] = None,
           now_fn: Callable[[], datetime] = _utcnow,
           seed_path: Optional[str] = None,
+          operator_write_keys: Optional[dict[str, str]] = None,
           settlement_verifier: Optional[Callable[[dict], dict]] = None,
           hub_required: Optional[bool] = None,
           trusted_security_receipt_keys: Optional[dict[str, str]] = None,
@@ -3124,10 +3186,29 @@ def build(*, db_path: Optional[str] = None,
                              trusted_security_receipt_keys,
                              trusted_operator_verification_keys=
                              trusted_operator_verification_keys)
+    if operator_write_keys is None:
+        raw_write_keys = os.environ.get(
+            "MARKET_OPERATOR_WRITE_KEYS_JSON", "{}").strip()
+        try:
+            parsed_write_keys = json.loads(raw_write_keys or "{}")
+        except json.JSONDecodeError as exc:
+            raise MarketError(
+                "MARKET_OPERATOR_WRITE_KEYS_JSON must be JSON",
+                field="MARKET_OPERATOR_WRITE_KEYS_JSON") from exc
+        if not isinstance(parsed_write_keys, dict) or any(
+                not isinstance(key, str) or not isinstance(value, str)
+                for key, value in parsed_write_keys.items()):
+            raise MarketError(
+                "MARKET_OPERATOR_WRITE_KEYS_JSON must map agent ids to "
+                "Ed25519 public keys",
+                field="MARKET_OPERATOR_WRITE_KEYS_JSON")
+        operator_write_keys = parsed_write_keys
     seeds = seed_path if seed_path is not None else os.environ.get("MARKET_SEED_PROFILES", "")
     if seeds:
         seed_file = Path(seeds)
         if seed_file.exists():
             payload = json.loads(seed_file.read_text())
-            core.seed_owned_profiles(payload.get("profiles", payload))
+            core.seed_owned_profiles(
+                payload.get("profiles", payload),
+                write_public_keys=operator_write_keys)
     return core

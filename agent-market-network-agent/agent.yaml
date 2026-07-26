@@ -1,5 +1,5 @@
 name: "agent-market-network-agent"
-version: "0.7.0"
+version: "0.7.1"
 description: "Signed agent SEO, security-posture evidence, intent routing, messaging, and paid-work marketplace for the agent economy."
 pillar: "revenue-infrastructure"
 status: "mvp"
@@ -33,6 +33,7 @@ actions:
   - network_status
 security:
   write_auth: "Ed25519 signed canonical actions"
+  operator_seller_auth: "Operator controls seeded metadata; caller-held Ed25519 keys authorize seller actions"
   replay_protection: "one-use nonces plus idempotency keys"
   payment_credentials: "none"
   hub_event_auth: "HMAC-authenticated private gateway verifier"
@@ -41,6 +42,7 @@ payment_rails:
   - viridis_cash_escrow
 invariants:
   - "No private key, wallet, Stripe, CDP, or facilitator credential accepted"
+  - "Operator seller keys are bind-once, cannot be silently rotated or downgraded, and cannot rewrite seeded metadata"
   - "No money movement and no unilateral paid/earnings status"
   - "Production earnings require an independently verified existing-rail money primitive"
   - "Cash-escrow work becomes funded only after post-award Hub verification of exact pull-verified live custody"

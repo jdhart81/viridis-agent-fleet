@@ -46,6 +46,7 @@ import argparse
 import asyncio
 import contextlib
 import functools
+import hashlib
 import html
 import importlib.util
 import inspect
@@ -1263,12 +1264,58 @@ def build_app():
         "regulatory-radar", "verified", "verdigraph", "neurogenesis",
         "green-router", "hive",
     )
+    def _verify_market_hive_funding(name: str, binding: dict) -> dict:
+        """Recheck the Hub receipt plus live custody before every held call."""
+        if name != "hive" or not isinstance(binding, dict):
+            return {"verified": False}
+        event_id = str(binding.get("funding_event_id") or "")
+        work_id = str(binding.get("work_id") or "")
+        escrow_id = str(binding.get("escrow_id") or "")
+        receipt = hub.state.funding_receipts.get(event_id)
+        if (not isinstance(receipt, dict)
+                or receipt.get("verified") is not True
+                or receipt.get("work_id") != work_id
+                or receipt.get("event_sha256") != binding.get("event_sha256")
+                or hub.state.funding_references.get(escrow_id.lower())
+                != work_id):
+            return {"verified": False}
+        primitive = receipt.get("money_primitive") or {}
+        if (primitive.get("primitive")
+                != "stripe_checkout_escrow_funding"
+                or primitive.get("escrow_id") != escrow_id
+                or primitive.get("escrow_state") != "FUNDED"
+                or primitive.get("payee") != binding.get("payee")
+                or primitive.get("amount_minor")
+                != binding.get("amount_minor")
+                or primitive.get("currency") != binding.get("currency")):
+            return {"verified": False}
+        funded = getattr(getattr(custody, "state", None), "funded", {}) or {}
+        evidence = funded.get(escrow_id)
+        if (not isinstance(evidence, dict)
+                or evidence.get("livemode") is not True
+                or int(evidence.get("amount_total") or 0)
+                != int(binding.get("amount_minor") or 0)):
+            return {"verified": False}
+        current = cores["escrow"].process_sync(
+            {"action": "status", "escrow_id": escrow_id})
+        escrow = current.get("data") if isinstance(current, dict) else None
+        verified = bool(
+            isinstance(escrow, dict)
+            and escrow.get("state") == "FUNDED"
+            and escrow.get("payee") == binding.get("payee")
+            and escrow.get("currency") == binding.get("currency")
+            and escrow.get("amount_minor") == binding.get("amount_minor"))
+        return {"verified": verified}
+
     if "metering" in cores:
         gate = PaymentGate(
             store, cores["metering"], subscription_core=subscription_core,
             account_key_getter=current_account_key,
             escrow_core=cores.get("escrow"), escrow_persist_key="escrow",
-            custody=(custody if "escrow" in cores else None))
+            custody=(custody if "escrow" in cores else None),
+            market_funding_verifier=(
+                _verify_market_hive_funding
+                if {"hive", "escrow"} <= set(cores) else None))
         for path in gated_mounts:
             if path in cores:
                 gate.attach(path, cores[path])
@@ -1280,6 +1327,22 @@ def build_app():
         for path in gated_mounts:
             servers.pop(path, None)
             cores.pop(path, None)
+
+    # MH1-MH8: the seller-side conversion bridge is present but inert unless
+    # its separate lifecycle flag and caller-held Market signing key are
+    # configured. It cannot accept on the buyer's behalf or release escrow.
+    market_hive_bridge = None
+    if ("hive" in cores and isinstance(gate, PaymentGate)
+            and callable(gate.market_funding_verifier)):
+        try:
+            from market_hive_bridge import MarketHiveBridge
+            market_hive_bridge = MarketHiveBridge(
+                store, cores["hive"], gate, public_base=public_base)
+            store.restore("market_hive_bridge", market_hive_bridge)
+        except Exception as exc:
+            logger.exception("Market Hive bridge failed closed")
+            mount_errors["market-hive-bridge"] = (
+                f"{type(exc).__name__}: {exc}")
 
     # The Weave (WV1-WV8, see weave.py): EnergyAI restoration share, rate
     # schedule weave-B-v1 (ratified 2026-07-16), settled through the fleet's
@@ -1806,6 +1869,14 @@ def build_app():
         # Trust infrastructure fails loud: agents up but state not durable
         # is a degraded gateway, not a healthy one.
         hub_status = hub.status()
+        market_hive_status = (
+            market_hive_bridge.status()
+            if market_hive_bridge is not None else {
+                "enabled": False,
+                "status": "unavailable",
+                "error": mount_errors.get(
+                    "market-hive-bridge", "dependencies unavailable"),
+            })
         ok = (all(c.get("status") == "ok" for c in checks.values())
               and subscription_health.get("status") == "ok"
               and not mount_errors
@@ -1852,6 +1923,7 @@ def build_app():
                              "collateralized_bonds": bonds.status(),
                              "a2a_commerce": a2a_status(),
                              "hub_kernel": hub_status,
+                             "market_hive_bridge": market_hive_status,
                              "subscriptions": subscription_health,
                              "agents": checks,
                              "federated": federated}, status_code=200 if ok else 503)
@@ -2478,15 +2550,61 @@ def build_app():
                 "/.well-known/skills/viridis-paid-tools/SKILL.md"),
         })
 
+    async def market_hive_artifact(request):
+        from starlette.responses import Response
+        digest = str(request.path_params.get("digest") or "").lower()
+        if (market_hive_bridge is None
+                or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+            return Response("not found", status_code=404,
+                            media_type="text/plain")
+        content = market_hive_bridge.artifact_bytes(digest)
+        if content is None or hashlib.sha256(content).hexdigest() != digest:
+            return Response("not found", status_code=404,
+                            media_type="text/plain")
+        return Response(
+            content, media_type="application/json",
+            headers={
+                "cache-control": "public, max-age=31536000, immutable",
+                "x-content-type-options": "nosniff",
+                "etag": f'"{digest}"',
+            })
+
     @contextlib.asynccontextmanager
     async def lifespan(app):
+        lifecycle_task = None
+
+        async def _market_hive_loop():
+            interval = max(
+                60, int(os.environ.get(
+                    "HIVE_MARKET_LIFECYCLE_INTERVAL_SECONDS", "300")))
+            while True:
+                try:
+                    await market_hive_bridge.run_once(apply=True)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    logger.exception("Market Hive lifecycle run failed")
+                await asyncio.sleep(interval)
+
         async with contextlib.AsyncExitStack() as stack:
             for s in servers.values():
                 await stack.enter_async_context(s.session_manager.run())
+            if (market_hive_bridge is not None
+                    and market_hive_bridge.status().get("enabled")):
+                lifecycle_task = asyncio.create_task(_market_hive_loop())
             try:
                 yield
             finally:
-                final_cores = {**cores, "hub_kernel": hub.state}
+                if lifecycle_task is not None:
+                    lifecycle_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await lifecycle_task
+                final_cores = {
+                    **cores,
+                    "hub_kernel": hub.state,
+                    **({"market_hive_bridge": market_hive_bridge}
+                       if market_hive_bridge is not None else {}),
+                }
                 if subscription_core is not None:
                     final_cores["subscriptions"] = subscription_core
                 store.save_all(final_cores)
@@ -2515,6 +2633,9 @@ def build_app():
         logger.warning("x402 HTTP-402 surface not loaded", exc_info=True)
     hub_routes = [Route("/internal/hub/events", make_hub_route(hub),
                         methods=["POST"])]
+    market_hive_routes = [
+        Route("/market-artifacts/{digest}.json", market_hive_artifact,
+              methods=["GET", "HEAD"])]
 
     app = Starlette(routes=[Route("/", directory), Route("/healthz", healthz),
                             Route("/agents", agents_page),
@@ -2547,7 +2668,7 @@ def build_app():
                             Route("/deck", deck), Route("/stats", stats),
                             Route("/.well-known/ai-catalog.json", ard_catalog),
                             *seat_routes, *a2a_routes, *x402_http_routes,
-                            *hub_routes,
+                            *hub_routes, *market_hive_routes,
                             *routes],
                     lifespan=lifespan)
     # CORS for the read-only observability surface (healthz / directory /

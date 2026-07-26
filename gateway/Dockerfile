@@ -50,6 +50,7 @@ COPY deploy/gateway/x402_http.py deploy/gateway/
 COPY deploy/gateway/x402_v2.py deploy/gateway/
 COPY deploy/gateway/a2a_commerce.py deploy/gateway/
 COPY deploy/gateway/hub_kernel.py deploy/gateway/
+COPY deploy/gateway/market_hive_bridge.py deploy/gateway/
 COPY deploy/gateway/escrow_custody.py deploy/gateway/
 COPY deploy/gateway/connect_rail.py deploy/gateway/
 COPY deploy/gateway/weave.py deploy/gateway/

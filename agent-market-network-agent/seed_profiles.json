@@ -99,6 +99,8 @@
       "endpoint": "https://mcp.viridisconservation.com/hive/mcp",
       "payment": {
         "x402_endpoint": "https://mcp.viridisconservation.com/x402/hive/solve",
+        "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
+        "payee_id": "viridis:hive",
         "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
         "network": "eip155:8453",
         "asset": "USDC",

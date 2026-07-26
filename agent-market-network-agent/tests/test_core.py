@@ -11,7 +11,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from src.core import MarketNetworkCore, canonical_action
+from src.core import MarketError, MarketNetworkCore, canonical_action
 
 ROOT = Path(__file__).resolve().parents[2]
 GATEWAY = ROOT / "deploy" / "gateway"
@@ -1245,7 +1245,7 @@ def test_energyai_seed_profile_exposes_conversion_and_bounty_path():
     assert energyai["payment"] == {}
 
 
-def test_hive_seed_profile_exposes_fixed_cost_covered_x402_purchase():
+def test_hive_seed_profile_exposes_fixed_cost_covered_purchase_routes():
     payload = json.loads((Path(__file__).parents[1] / "seed_profiles.json").read_text())
     hive = next(
         p for p in payload["profiles"]
@@ -1256,14 +1256,135 @@ def test_hive_seed_profile_exposes_fixed_cost_covered_x402_purchase():
     assert "no free tier" in hive["description"]
     assert hive["payment"] == {
         "x402_endpoint": "https://mcp.viridisconservation.com/x402/hive/solve",
+        "cash_escrow_endpoint":
+            "https://mcp.viridisconservation.com/payments/mcp",
+        "payee_id": "viridis:hive",
         "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
         "network": "eip155:8453",
         "asset": "USDC",
         "price_minor": 500,
         "currency": "USD",
     }
-    assert "cash_escrow_endpoint" not in hive["payment"]
     assert "public_key_b64" not in hive
+
+
+def test_hive_seed_reconciles_existing_profile_to_bind_once_seller_auth(
+        tmp_path):
+    payload = json.loads(
+        (Path(__file__).parents[1] / "seed_profiles.json").read_text())
+    hive = next(
+        p for p in payload["profiles"]
+        if p["agent_id"] == "viridis-hive-orchestrator")
+    old_hive = json.loads(json.dumps(hive))
+    old_hive["payment"].pop("cash_escrow_endpoint")
+    old_hive["payment"].pop("payee_id")
+    private, public = keys()
+    item = MarketNetworkCore(
+        db_path=str(tmp_path / "hive-seed-upgrade.sqlite3"),
+        now_fn=lambda: NOW)
+    try:
+        assert item.seed_owned_profiles([old_hive]) == 1
+        before = item.search_agents(
+            "multi-agent synthesis")["results"][0]
+        assert before["auth_mode"] == "operator_managed"
+        assert before["version"] == 1
+
+        assert item.seed_owned_profiles(
+            [hive], write_public_keys={
+                "viridis-hive-orchestrator": public}) == 1
+        upgraded = item.search_agents(
+            "multi-agent synthesis",
+            payment_rail="viridis_cash_escrow")["results"][0]
+        assert upgraded["auth_mode"] == "operator_signed_ed25519"
+        assert upgraded["version"] == 2
+        assert upgraded["payment"]["payee_id"] == "viridis:hive"
+        assert upgraded["payment"]["price_minor"] == 500
+
+        # Omitting the key on restart preserves the bound authority.
+        assert item.seed_owned_profiles([hive]) == 0
+        preserved = item.search_agents(
+            "multi-agent synthesis")["results"][0]
+        assert preserved["auth_mode"] == "operator_signed_ed25519"
+
+        _, replacement_public = keys()
+        with pytest.raises(MarketError, match="rotation requires"):
+            item.seed_owned_profiles(
+                [hive], write_public_keys={
+                    "viridis-hive-orchestrator": replacement_public})
+
+        # The bound signer can operate, but cannot rewrite the seed listing.
+        attempted = run(item.process(profile_payload(
+            "viridis-hive-orchestrator", private, public,
+            idem="hive-overwrite-seed", nonce="hive-overwrite-seed-nonce")))
+        assert attempted["status"] == "error"
+        assert attempted["error_type"] == "ConflictError"
+    finally:
+        item.close()
+
+
+def test_operator_signed_hive_can_offer_only_exact_seeded_cash_payee(core):
+    payload = json.loads(
+        (Path(__file__).parents[1] / "seed_profiles.json").read_text())
+    hive = next(
+        p for p in payload["profiles"]
+        if p["agent_id"] == "viridis-hive-orchestrator")
+    hive_private, hive_public = keys()
+    core.seed_owned_profiles(
+        [hive], write_public_keys={
+            "viridis-hive-orchestrator": hive_public})
+    buyer_key, _ = register(core, "hive-cash-buyer", "procurement")
+    work = post_work(
+        core, "hive-cash-buyer", buyer_key,
+        idem="hive-cash-work", nonce="hive-cash-work-nonce")
+
+    wrong_body = {
+        "work_id": work["work_id"], "amount_minor": 500, "currency": "USD",
+        "proposal": "A bounded reviewed Hive synthesis.",
+        "delivery_seconds": 3600,
+        "settlement": {
+            "rail": "viridis_cash_escrow",
+            "payment_endpoint":
+                "https://mcp.viridisconservation.com/payments/mcp",
+            "payee_id": "viridis:wrong",
+        },
+        "idempotency_key": "hive-wrong-payee-offer",
+    }
+    wrong = run(core.process(signed_input(
+        "submit_offer", "seller_id", "viridis-hive-orchestrator",
+        hive_private, wrong_body, "hive-wrong-payee-offer-nonce")))
+    assert wrong["status"] == "error"
+    assert wrong["error_type"] == "ConflictError"
+    assert core.get_work(work["work_id"])["offers"] == []
+
+    correct_body = {
+        **wrong_body,
+        "settlement": {
+            **wrong_body["settlement"],
+            "payee_id": "viridis:hive",
+        },
+        "idempotency_key": "hive-correct-payee-offer",
+    }
+    correct = run(core.process(signed_input(
+        "submit_offer", "seller_id", "viridis-hive-orchestrator",
+        hive_private, correct_body, "hive-correct-payee-offer-nonce")))
+    assert correct["status"] == "ok", correct
+    assert correct["data"]["amount_minor"] == 500
+    assert correct["data"]["settlement"]["payee_id"] == "viridis:hive"
+
+
+def test_seed_never_overwrites_externally_signed_profile(core):
+    private, _ = register(core, "externally-owned-agent", "carbon")
+    assert private is not None
+    with pytest.raises(MarketError, match="cannot overwrite signed"):
+        core.seed_owned_profiles([{
+            "agent_id": "externally-owned-agent",
+            "name": "Operator Attempt",
+            "description": "Must not replace an externally signed profile.",
+            "capabilities": ["carbon"],
+            "representative_queries": ["carbon"],
+            "endpoint": "https://mcp.viridisconservation.com/carbon/mcp",
+            "payment": {},
+        }])
 
 
 def test_viridis_security_seed_keeps_auth_and_billing_on_its_own_runtime():

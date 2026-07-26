@@ -1,5 +1,77 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-26, verified-funded Market→Hive fulfillment — LIVE] The fleet
+> can now autonomously execute and deliver an awarded $5 Hive job only after
+> the private Hub verifies exact live buyer-funded cash custody.** The held
+> authorization binds one work ID, escrow, funding receipt, amount, currency,
+> payee, and service payload; custody is rechecked before the model call.
+> Idempotency prevents duplicate execution, and retries reuse the persisted
+> content-addressed artifact.
+>
+> The bridge cannot accept for the buyer, release/refund escrow, attest
+> settlement, or claim usefulness. It polls hourly to avoid empty-read event
+> spam. Production is Docker-healthy on Hive `0.1.2`, wired rails, three
+> provider-ready solvers, and image
+> `sha256:514c8590235f2fabb4a32c2a9b1b1e2924c8a1929ef40fe3f3b210bd01c13109`.
+> Rollback is
+> `sha256:5585e63f37cbfc1bb2b0ac16c3f3542c3f8b2fd3e2577a7df6086a0a09635c56`.
+>
+> Local and production checkout gates passed **1,567 / 0 / 34 of 34
+> suites**; gateway passed **455**, Hive **58**, version coherence and compose
+> validation pass, and the fresh 33-row backup/restore drill is green.
+> Activation produced one empty inbox read and **zero jobs, holds, artifacts,
+> funding receipts, model calls, deliveries, settlements, or money movement**.
+> Strict truth remains **3 external payers / $0.27 / 0 repeats / 0 paid Hive
+> jobs / $0 MRR**. Full receipt:
+> `docs/deployment/MARKET_HIVE_VERIFIED_FULFILLMENT_RELEASE_2026-07-26.md`.
+
+> **[2026-07-26, bounded Hive Market seller — LIVE/READ-ONLY] The fleet now
+> has an executable seller worker for the $5 reviewed Hive, without granting
+> ambient authority.** It requires an external buyer, exact Hive capability
+> subset, verified-cash rail, $5 budget coverage, one-hour delivery window,
+> ready solver provider, no prior offer, and the existing 35% margin floor.
+> Open inventory remains explicitly not funded demand or revenue.
+>
+> The worker is unscheduled and apply-disabled. `--apply` additionally
+> requires `HIVE_MARKET_APPLY=1` and an explicitly mounted root-only signer;
+> one run can submit at most one exact $5 cash offer. It cannot open escrow,
+> fund, execute a model, deliver, settle, or move money.
+>
+> Hive passed **58 tests**, gateway **448**, and local plus production
+> checkout passed **1,560 / 0 / 34 of 34 suites**. Candidate and promoted
+> read-only smokes both rejected all three Viridis-controlled jobs with
+> `eligible_count=0` / `send_attempted=false`. Live gateway image
+> `sha256:5585e63f37cbfc1bb2b0ac16c3f3542c3f8b2fd3e2577a7df6086a0a09635c56`;
+> rollback
+> `sha256:13599a51a508c67991e36e5f8e1755d2c4c25794da06c49fae5575bb80efcac4`.
+> Strict truth remains **3 external payers / $0.27 / 0 repeats / 0 paid Hive
+> jobs / $0 MRR**. Full receipt:
+> `docs/deployment/HIVE_MARKET_SELLER_WORKER_RELEASE_2026-07-26.md`.
+
+> **[2026-07-26, Hive cash seller identity — LIVE] The $5 Hive can now
+> participate in verified-funded Agent Market cash work without weakening its
+> existing x402 route.** Agent Market v0.7.1 publishes the exact Viridis cash
+> escrow endpoint and `payee_id=viridis:hive`, while retaining fixed
+> `price_minor=500`. A bind-once caller-held Ed25519 key authorizes seller
+> operations; Viridis still controls seeded metadata, and the signer cannot
+> rewrite it. Startup cannot silently rotate or downgrade the key.
+>
+> Tests prove wrong-payee cash offers fail before creation, external signed
+> profiles cannot be overwritten by seeds, and cash delivery still requires
+> independently verified live funding. Both local and production checkout
+> passed **1,544 / 0 / 34 of 34 suites**; gateway passed **448**. Live image
+> `sha256:52787916f0e414a52444e45b5d2ff76b6806d6eae8716c1dfad41eb6f447e7d7`;
+> rollback image
+> `sha256:039b30ef5fe440b38f35f229c1beda70e95273235ef1ae310fecb744709e8c15`.
+> The fresh pre-migration database backup has integrity `ok`.
+>
+> No offer, work, message, model call, or payment was created. Strict truth
+> remains **3 external payers / $0.27 / 0 repeats / 0 paid Hive jobs /
+> $0 MRR**. The remaining conversion gap is an autonomous, policy-bounded Hive
+> seller worker; the identity is capable of signing but no bidding daemon is
+> running yet. Full receipt:
+> `docs/deployment/AGENT_MARKET_HIVE_CASH_SELLER_RELEASE_2026-07-26.md`.
+
 > **[2026-07-26, Agent Market verified funding — LIVE] Cash-escrow sellers
 > can no longer deliver custom work before the exact awarded escrow is
 > independently verified as funded.** Agent Market v0.7.0 now exposes
