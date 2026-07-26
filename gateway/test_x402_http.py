@@ -270,8 +270,23 @@ def test_discovery_inventory_has_exact_prices_and_atomic_math():
             assert route in live_routes
             assert offer["method"] == "POST"
             assert offer["endpoint"] == f"https://mcp.test/x402/{route}"
+            assert offer["mcp_endpoint"] == (
+                f"https://mcp.test/{offer['agent']}/mcp")
             assert offer["amount_atomic_usdc"] == x402_rail.price_atomic(
                 offer["price_minor"])
+            metadata = x402_http.X402_HTTP_METADATA[
+                (offer["agent"], offer["tool"])]
+            assert offer["description"] == metadata["description"]
+            assert offer["input_schema"] == metadata["input_schema"]
+            assert offer["input_example"] == metadata["input_example"]
+            assert offer["required_buyer_inputs"] == list(
+                metadata["input_schema"].get("required", []))
+            assert offer["quote"] == {
+                "preflight_required": True,
+                "authoritative_source": "next_route_unpaid_http_402",
+                "payer_hint_header": "X402-Payer-Address",
+                "advertised_price_posture": "returning_payer_list_price",
+            }
 
 
 if __name__ == "__main__":

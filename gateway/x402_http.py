@@ -50,6 +50,11 @@ H402-11 BUYER CONTINUATION: a successful paid result may advertise compatible
        signs, initiates, or executes another payment; every next call requires
        a separate buyer-authorized x402 settlement. Repeat-purchase telemetry
        counts only versioned external settlements with a known payer wallet.
+H402-12 EXECUTABLE CONTINUATION: each next-route offer includes the target
+       description, input schema, example, required buyer-supplied fields, MCP
+       endpoint, and quote instructions. The offer is preparation metadata,
+       never authorization; the next route's unpaid challenge is the only
+       authoritative price/payment requirement.
 """
 from __future__ import annotations
 
@@ -588,14 +593,27 @@ def next_paid_routes(agent: str, tool: str, public_base: str) -> list:
         if (next_agent, next_tool) not in X402_HTTP_TOOLS:
             continue
         price = PRICE_MINOR.get(next_agent, DEFAULT_PRICE_MINOR)
+        metadata = X402_HTTP_METADATA[(next_agent, next_tool)]
+        input_schema = metadata["input_schema"]
         offers.append({
             "agent": next_agent,
             "tool": next_tool,
             "endpoint": f"{base}/x402/{next_agent}/{next_tool}",
+            "mcp_endpoint": f"{base}/{next_agent}/mcp",
             "method": "POST",
             "price_minor": price,
             "amount_atomic_usdc": x402_rail.price_atomic(price),
             "reason": reason,
+            "description": metadata["description"],
+            "input_schema": input_schema,
+            "input_example": metadata["input_example"],
+            "required_buyer_inputs": list(input_schema.get("required", [])),
+            "quote": {
+                "preflight_required": True,
+                "authoritative_source": "next_route_unpaid_http_402",
+                "payer_hint_header": "X402-Payer-Address",
+                "advertised_price_posture": "returning_payer_list_price",
+            },
         })
     return offers
 

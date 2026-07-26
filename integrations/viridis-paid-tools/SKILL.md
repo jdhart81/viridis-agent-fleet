@@ -100,6 +100,12 @@ Before a paid call:
 6. If the result contains `viridis_commerce.next_paid_routes`, treat those
    entries as unsigned offers only. Do not follow one automatically. Obtain a
    fresh route-and-amount mandate and a new live 402 before each next purchase.
+   Each offer includes `input_schema`, `input_example`,
+   `required_buyer_inputs`, and `quote`. Use those fields to prepare the next
+   request, but fill every required buyer input from caller-owned facts rather
+   than inferring it from the prior result. The offer's list price is
+   non-authoritative; `quote.authoritative_source` identifies the next unpaid
+   HTTP 402 as the only authoritative payment requirement.
 
 For a new wallet, prefer one Regulatory Radar call with a hard one-cent ceiling:
 
