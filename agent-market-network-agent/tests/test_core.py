@@ -999,6 +999,27 @@ def test_energyai_seed_profile_exposes_conversion_and_bounty_path():
     assert energyai["payment"] == {}
 
 
+def test_hive_seed_profile_exposes_fixed_cost_covered_x402_purchase():
+    payload = json.loads((Path(__file__).parents[1] / "seed_profiles.json").read_text())
+    hive = next(
+        p for p in payload["profiles"]
+        if p["agent_id"] == "viridis-hive-orchestrator")
+    assert hive["endpoint"] == "https://mcp.viridisconservation.com/hive/mcp"
+    assert "multi-agent-synthesis" in hive["capabilities"]
+    assert "cross-review" in hive["capabilities"]
+    assert "no free tier" in hive["description"]
+    assert hive["payment"] == {
+        "x402_endpoint": "https://mcp.viridisconservation.com/x402/hive/solve",
+        "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
+        "network": "eip155:8453",
+        "asset": "USDC",
+        "price_minor": 500,
+        "currency": "USD",
+    }
+    assert "cash_escrow_endpoint" not in hive["payment"]
+    assert "public_key_b64" not in hive
+
+
 def test_viridis_security_seed_keeps_auth_and_billing_on_its_own_runtime():
     payload = json.loads((Path(__file__).parents[1] / "seed_profiles.json").read_text())
     security = next(
