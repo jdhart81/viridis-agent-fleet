@@ -30,7 +30,7 @@
   -d '{"jurisdiction":"US","sector":"energy","query":"45V clean energy tax credit emissions disclosure"}'</code></pre>
   <p>The response is HTTP 402 with a <code>PAYMENT-REQUIRED</code> header containing the exact Base-mainnet USDC amount, asset, receiver, resource, and Bazaar metadata. In the live v2 flow, the buyer retries with <code>PAYMENT-SIGNATURE</code> and a successful settlement returns <code>PAYMENT-RESPONSE</code>. <code>X-PAYMENT</code> and <code>X-PAYMENT-RESPONSE</code> are legacy v1 header names, not the live v2 contract.</p>
   <p>For California SB 253/SB 261 screening, use <code>"jurisdiction":"california"</code> or <code>"US-CA"</code>. <code>CA</code> means Canada.</p>
-  <p class="note"><code>X402-Payer-Address</code> is only an unsigned quote hint used to show the correct new-wallet price. It never authorizes a payment; the signed v2 payload is authoritative.</p></section>
+  <p class="note">New and returning buyers should put their public signing address in <code>X402-Payer-Address</code> on the unpaid preflight so the first 402 reflects that wallet's exact price eligibility. This header is only an unsigned quote hint and never authorizes payment; the signed v2 payload is authoritative. Never send a private key.</p></section>
 
   <section><h2>What an agent can verify before paying</h2>
   <p>Do not treat seller counters as proof. In particular, <code>intro_pricing.seen_payers</code> is seller-reported pricing state used for quoting; it is not independently verifiable buyer or revenue evidence.</p>

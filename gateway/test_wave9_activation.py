@@ -264,6 +264,11 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "PAYMENT-RESPONSE" in quickstart.text
     assert "45V clean energy tax credit emissions disclosure" in quickstart.text
     assert "legacy v1 header names" in quickstart.text
+    assert "New and returning buyers should put their public signing address" \
+        in quickstart.text
+    assert "first 402 reflects that wallet's exact price eligibility" \
+        in quickstart.text
+    assert "Never send a private key." in quickstart.text
     assert "Hermes Agent" in quickstart.text
     assert "/compliance-snapshot" in agents.text
     assert "/seats" in agents.text
