@@ -58,11 +58,11 @@ disclosures and never claim completed retirement.
 ## Production evidence
 
 - live image:
-  `sha256:94c22d625c0bb8fa8469bf113f0d21779459c6b69e8a5e3069c297e77283b254`;
+  `sha256:4261247a9094cf1e5d6789cf4122e1ed4e4cf1786a3ed3a2e7610d4e86f5257a`;
 - rollback image:
-  `sha256:d7ff374e482b81cf97faa0943fb7d4783f02f0c281ace6ccda9727ca99e938ec`;
+  `sha256:94c22d625c0bb8fa8469bf113f0d21779459c6b69e8a5e3069c297e77283b254`;
 - backup SHA-256:
-  `9675cc5f437b6c5b603f298b5c9af7bdcd24af9d3bbac5f838d36f3bdd7f98de`;
+  `1b0f8a0ba92b222bdc0e2ccc9190caa665aa9de8aa43e25872d2fa4a09fb352e`;
 - SQLite integrity and scratch restore: passed;
 - copied-state candidate: healthy with 34 namespaces;
 - Hive: wired, three solvers, provider ready;
@@ -72,11 +72,17 @@ disclosures and never claim completed retirement.
 - local and production deployment gates: `589 passed`;
 - live MCP gate: 27 agents plus subscriptions, 210 tools;
 - local + Registry + live coherence: passed; and
-- controlled restart marker `esc_000036`: survived with valid audit chain.
+- controlled restart marker `esc_000037`: survived with valid audit chain.
 
 The exact external-verifier closeout is recorded at:
 
 `https://github.com/smartflowproai-lang/x402-endpoint-validator/pull/14#issuecomment-5084314596`
+
+The drift report and accepted recapture path are recorded at:
+
+`https://github.com/smartflowproai-lang/x402-endpoint-validator/pull/14#issuecomment-5084362469`
+
+`https://github.com/smartflowproai-lang/x402-endpoint-validator/pull/14#issuecomment-5084378709`
 
 ## Commercial boundary
 
