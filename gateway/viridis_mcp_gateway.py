@@ -70,6 +70,7 @@ MOUNTS = {
     "arbitration":      "agent-arbitration-agent",
     "compute-ledger":   "agent-compute-ledger-agent",
     "covenant":         "agent-covenant-agent",
+    "hive":             "agent-hive-orchestrator-agent",
     "provenance":       "agent-provenance-agent",
     "offsets":          "agent-offset-clearinghouse-agent",
     "erc8004":          "agent-erc8004-bridge-agent",
@@ -131,6 +132,15 @@ AGENT_SEO = {
         "queries": ["Grant a scoped authority lease to an agent",
                     "Limit what an autonomous agent is allowed to do",
                     "Issue a revocable permission for an agent action"]},
+    "hive": {
+        "desc": (
+            "Deterministic multi-agent hive orchestration with trust vetting, "
+            "deny-by-default covenants, escrow, cross-review, and carbon accounting."),
+        "queries": [
+            "Hire several AI agents to solve and cross-review a hard problem",
+            "Run an auditable agent hive with escrow and reviewer separation",
+            "Compose nested agent teams with bounded authority and settlement",
+        ]},
     "provenance": {
         "desc": "Genesis certificates, agent lineage tracking, and cascading recalls across derived agents.",
         "queries": ["Issue a genesis certificate for a new agent",
@@ -1014,12 +1024,35 @@ def build_app():
         # them — its pickled classes must (de)serialize against these.
         src_modules[path] = {m: sys.modules[m] for m in list(sys.modules)
                              if m == "src" or m.startswith("src.")}
+
+    # H10 is an honest local fallback, not a production configuration. Bind
+    # the Hive to the exact shared cores already loaded in this gateway.
+    if "hive" in adapters:
+        hive_rail_mounts = {
+            "trust": "trust",
+            "covenant": "covenant",
+            "escrow": "escrow",
+            "metering": "metering",
+            "ledger": "compute-ledger",
+        }
+        missing = [
+            mount for mount in hive_rail_mounts.values()
+            if mount not in adapters
+        ]
+        if missing:
+            raise RuntimeError(
+                "hive missing shared rails: " + ", ".join(sorted(missing)))
+        adapters["hive"].configure_gateway({
+            rail: adapters[mount].agent
+            for rail, mount in hive_rail_mounts.items()
+        })
+
     servers = {path: mod.mcp for path, mod in adapters.items()}
     cores = {path: mod.agent for path, mod in adapters.items()}
 
     # Subscriptions is fleet revenue infrastructure, not a twenty-second leaf
     # agent. It is mounted and persisted separately so /healthz agents remains
-    # the production-coherent count of 26 (green-router mounted 2026-07-18: the restoration function of the Intelligence Bound as a product).
+    # the production-coherent count of 27 (Hive mounted 2026-07-25).
     subscription_adapter = _load_adapter("subscriptions", "subscriptions-agent")
     subscription_src_modules = {
         module: sys.modules[module] for module in list(sys.modules)
@@ -1111,7 +1144,7 @@ def build_app():
     for path in ("smartscale", "protogen", "taxcredit-engine", "ghg-ledger",
                  "quantity-takeoff", "disclosure-compiler",
                  "narrative-engine", "regulatory-radar", "verified",
-                 "verdigraph", "neurogenesis", "green-router"):
+                 "verdigraph", "neurogenesis", "green-router", "hive"):
         if path in cores:
             gate.attach(path, cores[path])
 
@@ -1699,27 +1732,36 @@ def build_app():
             seo = AGENT_SEO.get(path, {})
             x402_item = x402_by_agent.get(path)
             price_minor = PRICE_MINOR.get(path, DEFAULT_PRICE_MINOR)
+            free_limit = (
+                gate.free_calls_for(path)
+                if hasattr(gate, "free_calls_for")
+                else gate.free_calls
+            )
             description = seo.get("desc", f"Viridis {path} agent")
-            if x402_item is not None:
+            if path in PRICE_MINOR:
                 description += (
                     f" Price: {price_minor} USD minor units/call after "
-                    f"{gate.free_calls} free calls/day. Pay via x402, "
-                    "cash-backed escrow_checkout, or /seats.")
+                    f"{free_limit} free calls/day. Pay via prepaid credit "
+                    "or cash-backed escrow_checkout"
+                    + (", x402" if x402_item is not None else "")
+                    + ".")
             metadata = {"a2aRole": str(d.get("a2a_role", "")),
                         "gateway": "viridis-agent-stable"}
-            if x402_item is not None:
+            if path in PRICE_MINOR:
+                payment_routes = {
+                    "cashEscrow": public_base + "/payments/mcp",
+                    "cashEscrowTools": ["escrow_checkout",
+                                        "confirm_escrow_funding"],
+                }
+                if x402_item is not None:
+                    payment_routes["x402"] = x402_item["endpoint"]
                 metadata["pricing"] = {
                     "currency": "USD",
                     "priceMinor": price_minor,
-                    "freeCallsPerDay": gate.free_calls,
-                    "paymentRoutes": {
-                        "x402": x402_item["endpoint"],
-                        "cashEscrow": public_base + "/payments/mcp",
-                        "cashEscrowTools": ["escrow_checkout",
-                                            "confirm_escrow_funding"],
-                        "seats": public_base + "/seats",
-                    },
+                    "freeCallsPerDay": free_limit,
+                    "paymentRoutes": payment_routes,
                 }
+            if x402_item is not None:
                 metadata["x402"] = x402_item
             entries.append({
                 "identifier": f"urn:air:viridis:{path}",

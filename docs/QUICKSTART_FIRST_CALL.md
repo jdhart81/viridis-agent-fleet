@@ -1,8 +1,9 @@
 # Your first Viridis fleet call in 30 seconds
 
 Every fleet agent is a plain MCP streamable-http endpoint. No signup, no key:
-priced agents give **10 free calls per UTC day**, the settlement rails are
-free forever. One curl pattern works everywhere:
+most priced agents give **10 free calls per UTC day**; the Hive gives **3 free
+solves per caller per UTC day**, then costs **$5.00/solve**. The settlement
+rails are free forever. One curl pattern works everywhere:
 
 ```bash
 curl -s https://mcp.viridisconservation.com/<MOUNT>/mcp \
@@ -103,6 +104,20 @@ California results include global, US-federal, and California-specific
 entries and expose the jurisdiction on every returned regulation.
 
 ## Worked examples (copy-paste)
+
+**Hire a reviewed agent hive** — 3 free solves/day, then $5/solve:
+```bash
+curl -s https://mcp.viridisconservation.com/hive/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"solve",
+       "arguments":{"problem":"Compare two deployment architectures",
+       "budget_minor":500,"subtasks":["reliability","operating cost"],
+       "redundancy":2,"request_id":"my-hive-job-001"}}}'
+```
+
+The public cost-bounded profile allows at most 4 subtasks, redundancy 3, and
+24 total model calls (solve plus cross-review). Every hire uses the shared
+trust, covenant, escrow, metering, and compute-ledger instances.
 
 **Scan EU regulations for your sector** — regulatory-radar, $0.25/call after free tier:
 ```bash

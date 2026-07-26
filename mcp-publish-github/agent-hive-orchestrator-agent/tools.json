@@ -1,0 +1,120 @@
+{
+  "server": "agent-hive-orchestrator-agent",
+  "tool_count": 6,
+  "tools": [
+    {
+      "name": "solve",
+      "description": "Open and run a hive job in one call: hire solvers through the rails\n(covenant -> escrow -> meter), force reviewer!=author cross-review,\nsynthesize only what survives review, settle every escrow exactly-once,\nand return a content-addressed audit hash plus bits-per-joule telemetry.\nPrice: $5.00 per solve after 3 free/day; sub-hires settle via escrow at\neach solver's list price.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "problem": {
+            "type": "string"
+          },
+          "budget_minor": {
+            "type": "integer"
+          },
+          "subtasks": {
+            "type": "array"
+          },
+          "depth": {
+            "type": "integer",
+            "default": 0
+          },
+          "redundancy": {
+            "type": "integer",
+            "default": 2
+          },
+          "accept_threshold": {
+            "type": "number",
+            "default": 0.6
+          },
+          "seed": {
+            "type": "integer",
+            "default": 0
+          },
+          "fee_bps": {
+            "type": "integer",
+            "default": 0
+          },
+          "covenant_id": {
+            "type": "string"
+          },
+          "payment_ref": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "problem",
+          "budget_minor"
+        ]
+      }
+    },
+    {
+      "name": "job_status",
+      "description": "Return job state, plan hash, and live budget conservation books.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ]
+      }
+    },
+    {
+      "name": "audit_job",
+      "description": "Return the full content-addressed lineage of a completed job: plan,\nhires (including refused ones with reasons), contributions, reviews,\nsettlements, rail calls (with simulated flags), and synthesis.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_audit",
+      "description": "Recompute the audit digest from a presented lineage (never trusts the\nembedded hash) and report whether it matches a job this hive ran.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "audit_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_json"
+        ]
+      }
+    },
+    {
+      "name": "list_solvers",
+      "description": "List the registered solver pool: id, kind (worker|hive), price,\ncapabilities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return fleet-standard capabilities, actions, invariants, and pricing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

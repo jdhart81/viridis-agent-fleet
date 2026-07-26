@@ -1,0 +1,5 @@
+# Core is stdlib-only (fleet rail convention).
+# MCP serving only:
+# mcp>=1.0
+# Optional LLM solver adapter transport (provider-swappable, OpenAI default):
+# httpx>=0.27

@@ -174,8 +174,12 @@ PRICE_MINOR = {          # per-call list price once the free tier is exhausted
     "neurogenesis": 25,       # $0.25 / developmental evolution call
     "green-router": 50,       # $0.50 / carbon certificate (covers capped
                               # clearinghouse retirement + margin, GR9)
+    "hive": 500,              # $5.00 / cost-bounded multi-solver hive solve
 }
 DEFAULT_PRICE_MINOR = 100
+FREE_CALLS_BY_AGENT = {
+    "hive": 3,
+}
 GATE_ATTR = "_payment_gate_state"   # lives on the core -> StateStore persists
 # PG18: anonymous/fingerprint identities share a bounded aggregate free pool
 # (multiplier x free_calls per agent-day) and a bounded identity table.
@@ -303,13 +307,14 @@ class PaymentGate:
                           a2a_refusal: Optional[dict] = None,
                           caller_refusals: int = 0) -> dict:
         price = PRICE_MINOR.get(name, DEFAULT_PRICE_MINOR)
+        free_limit = self.free_calls_for(name)
         if subscription_overage:
             message = (f"The active subscription's included monthly quota for "
                        f"{name} is exhausted. Overage is {price} minor units "
                        "per call; redeem prepaid credits, then retry.")
         else:
             message = (f"Free tier exhausted for {name} today "
-                       f"({used}/{self.free_calls} free calls used, UTC day {day}). "
+                       f"({used}/{free_limit} free calls used, UTC day {day}). "
                        "Pay per call to continue.")
         envelope = {
             "status": "error",
@@ -549,7 +554,10 @@ class PaymentGate:
         return self._billing_locks[name]
 
     # ---------------- PG18: per-caller free tier ----------------------- #
-    def _try_grant_free_call(self, gate: dict) -> bool:
+    def free_calls_for(self, name: str) -> int:
+        return FREE_CALLS_BY_AGENT.get(name, self.free_calls)
+
+    def _try_grant_free_call(self, name: str, gate: dict) -> bool:
         """Grant one free call to the current transport-derived caller
         identity (PG12/PG18). True = counted and allowed; False = this
         caller's allowance (or the bounded anonymous pool) is exhausted and
@@ -559,12 +567,13 @@ class PaymentGate:
         key = ctx.get("caller") or "unknown"
         by_caller = gate.setdefault("used_by_caller", {})
         used = by_caller.get(key, 0)
-        if used >= self.free_calls:                       # own allowance spent
+        free_limit = self.free_calls_for(name)
+        if used >= free_limit:                            # own allowance spent
             return False
         if _is_anon_key(key):
             anon_total = sum(v for k, v in by_caller.items()
                              if _is_anon_key(k))
-            if anon_total >= self.free_calls * ANON_POOL_MULTIPLIER:
+            if anon_total >= free_limit * ANON_POOL_MULTIPLIER:
                 return False                              # rotation bound
             if key not in by_caller and len(by_caller) >= CALLER_TABLE_MAX:
                 return False                              # table bound
@@ -1141,7 +1150,7 @@ class PaymentGate:
                         # interpreted pessimistically as ordinary freemium.
                         self._rollback_subscription(
                             name, subscription, "entitlement: invalid_decision")
-                if not self._try_grant_free_call(gate):         # PG1/PG2/PG18
+                if not self._try_grant_free_call(name, gate):   # PG1/PG2/PG18
                     a2a_refusal = None
                     if payment_ref is not None:                 # PG13-PG16
                         a2a_refusal = self._try_consume_escrow(
@@ -1214,7 +1223,7 @@ class PaymentGate:
                     elif subscription.get("reservation_token"):
                         self._rollback_subscription(
                             name, subscription, "entitlement: invalid_decision")
-                if not self._try_grant_free_call(gate):         # PG1/PG2/PG18
+                if not self._try_grant_free_call(name, gate):   # PG1/PG2/PG18
                     a2a_refusal = None
                     if payment_ref is not None:                 # PG13-PG16
                         a2a_refusal = self._try_consume_escrow(
@@ -1303,6 +1312,10 @@ class PaymentGate:
     def status(self) -> Dict[str, Any]:
         return {"gated_agents": list(self.attached),
                 "free_calls_per_day": self.free_calls,
+                "free_calls_per_day_by_agent": {
+                    name: self.free_calls_for(name)
+                    for name in self.attached
+                },
                 "free_tier_policy": {                          # PG18
                     "per_caller": True,
                     "anon_pool_multiplier": ANON_POOL_MULTIPLIER,
