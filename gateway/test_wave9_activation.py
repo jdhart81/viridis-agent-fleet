@@ -274,6 +274,13 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "--yes" in quickstart.text
     assert "--now" not in quickstart.text
     assert "First paid call from every new wallet on eligible" in quickstart.text
+    assert "What an agent can verify before paying" in quickstart.text
+    assert "seller-reported pricing state" in quickstart.text
+    assert "settled Regulatory Radar" in quickstart.text
+    assert "unpaid GHG Ledger" in quickstart.text
+    assert "seller-published pointer index" in quickstart.text
+    assert "immutable merge commit and SHA-256" in quickstart.text
+    assert "a seller-reported count is not" in quickstart.text
     assert "Payable HTTP routes" in llms.text
     assert "--route regulatory-radar --max-payment-usdc 0.01" in llms.text
     assert "10000-atomic ceiling" in llms.text
@@ -287,6 +294,29 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert x402_well_known.json() == machine
     assert machine["spec_version"] == "viridis-x402-catalog-v1"
     assert machine["intro_pricing"]["enabled"] is True
+    assert machine["intro_pricing"]["seen_payers_evidence"] == {
+        "classification": "seller_reported_pricing_eligibility_state",
+        "independently_verifiable": False,
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+    }
+    evidence = machine["independent_evidence"]
+    assert evidence["classification"] == "external_fixture_pointer_index"
+    assert evidence["index_posture"] == "seller_published_pointer_only"
+    assert evidence["authoritative_for_payment"] is False
+    assert evidence["revenue_signal"] is False
+    assert evidence["verification_required"] is True
+    assert {item["route"] for item in evidence["fixtures"]} == {
+        "regulatory-radar/scan_regulations",
+        "ghg-ledger/calculate_inventory",
+    }
+    assert all(
+        len(item["merge_commit"]) == 40
+        and len(item["sha256"]) == 64
+        and "/blob/" + item["merge_commit"] + "/" in item["immutable_url"]
+        for item in evidence["fixtures"])
+    assert "not independent buyer or revenue proof" in (
+        machine["intro_pricing"]["note"])
     assert len(machine["routes"]) == 6
     assert machine["buyer_skill"].endswith(
         "/.well-known/skills/viridis-paid-tools/SKILL.md")
@@ -328,6 +358,23 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert (
         "COPY integrations/viridis-paid-tools/SKILL.md "
         "integrations/viridis-paid-tools/" in dockerfile)
+
+
+def test_zero_conservation_allocation_is_not_advertised_as_a_pledge():
+    from decimal import Decimal
+    import viridis_mcp_gateway as gateway
+
+    zero = gateway._seat_conservation_line(Decimal("0"))
+    positive = gateway._seat_conservation_line(Decimal("7"))
+
+    assert zero == (
+        "Conservation allocation is not active yet. Any future pledge will be "
+        "published before checkout and will remain separate from verified "
+        "retirement evidence.")
+    assert "0%" not in zero
+    assert "pledged" not in zero
+    assert positive.startswith(
+        "7% of your subscription funds are pledged for verified conservation")
 
 
 def test_activation_copy_tracks_intro_kill_switch(tmp_path, monkeypatch):

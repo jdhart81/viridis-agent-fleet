@@ -32,6 +32,16 @@
   <p>For California SB 253/SB 261 screening, use <code>"jurisdiction":"california"</code> or <code>"US-CA"</code>. <code>CA</code> means Canada.</p>
   <p class="note"><code>X402-Payer-Address</code> is only an unsigned quote hint used to show the correct new-wallet price. It never authorizes a payment; the signed v2 payload is authoritative.</p></section>
 
+  <section><h2>What an agent can verify before paying</h2>
+  <p>Do not treat seller counters as proof. In particular, <code>intro_pricing.seen_payers</code> is seller-reported pricing state used for quoting; it is not independently verifiable buyer or revenue evidence.</p>
+  <p>Machine clients can read <code>independent_evidence</code> in <a href="/.well-known/x402"><code>/.well-known/x402</code></a>. That block is a seller-published pointer index, not proof by itself: verify each external file against its immutable merge commit and SHA-256.</p>
+  <ul>
+    <li>Send the intended request without a payment signature and verify the returned method, resource URL, x402 version, <code>exact</code> scheme, <code>eip155:8453</code> network, official Base USDC asset, receiver, and maximum amount.</li>
+    <li>Verify the input schema and required fields before signing. Each paid result also carries executable same-route and downstream contracts, but every later purchase requires a fresh unpaid quote and caller-owned authorization.</li>
+    <li>Compare the route contract with independent fixtures: <a href="https://github.com/smartflowproai-lang/x402-endpoint-validator/pull/12">settled Regulatory Radar</a> and <a href="https://github.com/smartflowproai-lang/x402-endpoint-validator/pull/14">unpaid GHG Ledger</a>.</li>
+    <li>After payment, require <code>PAYMENT-RESPONSE</code> and independently verify the referenced Base transaction. The transaction is settlement evidence; a seller-reported count is not.</li>
+  </ul></section>
+
   <section><h2>2 — Pay with the official Python client</h2>
   <pre><code>python3 -m pip install "x402[requests,evm]==2.16.0"
 

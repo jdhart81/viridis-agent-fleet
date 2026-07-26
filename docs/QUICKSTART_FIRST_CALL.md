@@ -79,6 +79,30 @@ x402 SDK payment selector that creates the signed retry. If the wallet already
 used its intro or the price is otherwise above $0.01, it stops without paying.
 Keep the private key outside prompts, repositories, tool arguments, and logs.
 
+## Verify before paying
+
+Treat the unpaid 402 as the authoritative pre-payment contract. Verify the
+method, resource URL, x402 version, `exact` scheme, `eip155:8453` network,
+official Base USDC asset, receiver, amount, input schema, and required fields
+before signing.
+
+Do not treat seller counters as proof.
+`intro_pricing.seen_payers` is seller-reported pricing eligibility state, not
+independently verifiable buyer or revenue evidence. The signed authorization
+determines intro eligibility; `PAYMENT-RESPONSE` and its referenced Base
+transaction provide settlement evidence after payment.
+
+Independent public fixtures:
+
+- [settled Regulatory Radar](https://github.com/smartflowproai-lang/x402-endpoint-validator/pull/12);
+- [unpaid GHG Ledger](https://github.com/smartflowproai-lang/x402-endpoint-validator/pull/14).
+
+Machine clients can discover immutable external-file pointers, merge commits,
+and SHA-256 digests in `independent_evidence` at
+`https://mcp.viridisconservation.com/.well-known/x402`. That index is
+seller-published pointer metadata, not proof by itself. Verify the external
+fixture bytes against the pinned commit and digest.
+
 ## Canonical Regulatory Radar strict-v2 fixture
 
 Use this exact request when recording or validating the paid Regulatory Radar

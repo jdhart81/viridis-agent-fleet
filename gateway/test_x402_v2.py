@@ -430,6 +430,82 @@ def test_wave9_intro_settle_marks_seen_then_quotes_full_price(
         "accepts"][0]["amount"] == "250000"
 
 
+def test_intro_status_labels_seen_payers_as_non_authoritative_seller_state(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "true")
+    _, core, _ = build(tmp_path)
+    gate = getattr(core, GATE_ATTR)
+    gate[x402_http.INTRO_SEEN_KEY] = {
+        "0xbuyer": {"pricing_schedule_version": "x402-intro-v1"}}
+
+    status = x402_http.intro_status({"regulatory-radar": core})
+
+    assert status["seen_payers"] == 1
+    assert status["seen_payers_evidence"] == {
+        "classification": "seller_reported_pricing_eligibility_state",
+        "independently_verifiable": False,
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+    }
+    assert "not independent buyer or revenue proof" in status["note"]
+
+
+def test_independent_evidence_index_pins_external_fixture_bytes():
+    evidence = x402_http.independent_evidence_index()
+
+    assert evidence == {
+        "classification": "external_fixture_pointer_index",
+        "index_posture": "seller_published_pointer_only",
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+        "verification_required": True,
+        "repository": (
+            "https://github.com/smartflowproai-lang/"
+            "x402-endpoint-validator"),
+        "fixtures": [
+            {
+                "route": "regulatory-radar/scan_regulations",
+                "evidence_posture": "settled_flow_confirmed",
+                "pull_request": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/pull/12"),
+                "merge_commit": (
+                    "0920d50db53cbf59f20052c6c656f17f881c4b41"),
+                "fixture_path": (
+                    "tests/fixtures/viridis_regulatory_radar.json"),
+                "immutable_url": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/blob/"
+                    "0920d50db53cbf59f20052c6c656f17f881c4b41/"
+                    "tests/fixtures/viridis_regulatory_radar.json"),
+                "sha256": (
+                    "0dbd36a0cb2cfa3ebf7a3575acc5550bfe2208d640fa2508574454365a7834fe"),
+            },
+            {
+                "route": "ghg-ledger/calculate_inventory",
+                "evidence_posture": "unpaid_preflight_only",
+                "pull_request": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/pull/14"),
+                "merge_commit": (
+                    "45b006b42a60562101a43ffc293447793900d095"),
+                "fixture_path": "tests/fixtures/viridis_ghg_ledger.json",
+                "immutable_url": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/blob/"
+                    "45b006b42a60562101a43ffc293447793900d095/"
+                    "tests/fixtures/viridis_ghg_ledger.json"),
+                "sha256": (
+                    "8cd884c016b19c2131207365e523677a9384b8463fb45eb0ca826a89497b7d40"),
+            },
+        ],
+    }
+    evidence["fixtures"][0]["sha256"] = "forged"
+    assert x402_http.independent_evidence_index()[
+        "fixtures"][0]["sha256"].startswith("0dbd36a0")
+
+
 def test_wave9_intro_external_flips_first_dollar_metrics(
         tmp_path, monkeypatch):
     arm(monkeypatch)

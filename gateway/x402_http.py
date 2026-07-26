@@ -55,6 +55,10 @@ H402-12 EXECUTABLE CONTINUATION: each next-route offer includes the target
        endpoint, and quote instructions. The offer is preparation metadata,
        never authorization; the next route's unpaid challenge is the only
        authoritative price/payment requirement.
+H402-13 EXTERNAL EVIDENCE POINTERS: the catalog may point to immutable fixture
+       files in an external verifier's repository. The index is explicitly a
+       seller-published pointer, never payment authority or independent proof
+       by itself; buyers verify the external file, commit, and SHA-256.
 """
 from __future__ import annotations
 
@@ -69,6 +73,51 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Tuple
 
 logger = logging.getLogger("viridis.x402_http")
+
+EXTERNAL_EVIDENCE_REPOSITORY = (
+    "https://github.com/smartflowproai-lang/x402-endpoint-validator")
+EXTERNAL_EVIDENCE_FIXTURES = (
+    {
+        "route": "regulatory-radar/scan_regulations",
+        "evidence_posture": "settled_flow_confirmed",
+        "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/12",
+        "merge_commit": "0920d50db53cbf59f20052c6c656f17f881c4b41",
+        "fixture_path": "tests/fixtures/viridis_regulatory_radar.json",
+        "immutable_url": (
+            EXTERNAL_EVIDENCE_REPOSITORY
+            + "/blob/0920d50db53cbf59f20052c6c656f17f881c4b41/"
+              "tests/fixtures/viridis_regulatory_radar.json"),
+        "sha256": (
+            "0dbd36a0cb2cfa3ebf7a3575acc5550bfe2208d640fa2508574454365a7834fe"),
+    },
+    {
+        "route": "ghg-ledger/calculate_inventory",
+        "evidence_posture": "unpaid_preflight_only",
+        "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/14",
+        "merge_commit": "45b006b42a60562101a43ffc293447793900d095",
+        "fixture_path": "tests/fixtures/viridis_ghg_ledger.json",
+        "immutable_url": (
+            EXTERNAL_EVIDENCE_REPOSITORY
+            + "/blob/45b006b42a60562101a43ffc293447793900d095/"
+              "tests/fixtures/viridis_ghg_ledger.json"),
+        "sha256": (
+            "8cd884c016b19c2131207365e523677a9384b8463fb45eb0ca826a89497b7d40"),
+    },
+)
+
+
+def independent_evidence_index() -> dict:
+    """Return verifiable pointers without promoting seller metadata to proof."""
+    return {
+        "classification": "external_fixture_pointer_index",
+        "index_posture": "seller_published_pointer_only",
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+        "verification_required": True,
+        "repository": EXTERNAL_EVIDENCE_REPOSITORY,
+        "fixtures": [dict(fixture) for fixture in EXTERNAL_EVIDENCE_FIXTURES],
+    }
+
 
 # (agent_path, http_tool_name) -> core action. Extend as tools are exposed.
 # Verified mappings only — an entry here makes a real paid endpoint.
@@ -443,9 +492,17 @@ def intro_status(cores: Dict[str, Any]) -> dict:
         "enabled": intro_enabled(),
         "schedule": dict(INTRO_SCHEDULE),
         "seen_payers": len(_seen_payers(cores)),
+        "seen_payers_evidence": {
+            "classification": "seller_reported_pricing_eligibility_state",
+            "independently_verifiable": False,
+            "authoritative_for_payment": False,
+            "revenue_signal": False,
+        },
         "payer_hint_header": "X402-Payer-Address",
-        "note": ("The hint improves preflight quoting only; signed payment "
-                 "authorization determines eligibility."),
+        "note": ("seen_payers is a seller-reported pricing-state count, not "
+                 "independent buyer or revenue proof. The hint improves "
+                 "preflight quoting only; signed payment authorization "
+                 "determines eligibility."),
     }
 
 

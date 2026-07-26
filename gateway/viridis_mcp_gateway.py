@@ -820,6 +820,10 @@ def _seat_percent_text(value: Decimal) -> str:
 
 
 def _seat_conservation_line(value: Decimal) -> str:
+    if value == 0:
+        return ("Conservation allocation is not active yet. Any future pledge "
+                "will be published before checkout and will remain separate "
+                "from verified retirement evidence.")
     percent = _seat_percent_text(value)
     return (f"{percent}% of your subscription funds are pledged for verified "
             "conservation. Offset routing is not yet active, so this is a "
@@ -2537,11 +2541,16 @@ def build_app():
                         media_type="image/svg+xml")
 
     async def x402_catalog(request):
-        from x402_http import discovery_entries, intro_status
+        from x402_http import (
+            discovery_entries,
+            independent_evidence_index,
+            intro_status,
+        )
         return JSONResponse({
             "spec_version": "viridis-x402-catalog-v1",
             "gateway": "viridis-agent-stable",
             "intro_pricing": intro_status(cores),
+            "independent_evidence": independent_evidence_index(),
             "routes": discovery_entries(public_base),
             "quickstart": public_base + "/quickstart",
             "llms_txt": public_base + "/llms.txt",
