@@ -1677,8 +1677,8 @@ def build_app():
                 },
                 "quickstart": {
                     "endpoint": "/quickstart",
-                    "description": ("x402 buyer quickstart and five-route "
-                                    "workflow demo"),
+                    "description": ("x402 buyer quickstart for the five-route "
+                                    "workflow and reviewed Hive solve"),
                 },
                 "llms_txt": {
                     "endpoint": "/llms.txt",
@@ -1822,16 +1822,18 @@ def build_app():
                     "displayName": "Viridis autonomous agent suite",
                     "type": "text/html",
                     "url": public_base + "/agents",
-                    "description": ("Five pay-per-call carbon and compliance "
-                                    "agents, payable with x402 Base USDC."),
+                    "description": ("Six pay-per-call routes: five carbon and "
+                                    "compliance agents plus reviewed Hive "
+                                    "orchestration, payable with x402 Base "
+                                    "USDC."),
                 },
                 {
                     "identifier": "urn:air:viridis:x402-quickstart",
                     "displayName": "Viridis x402 quickstart",
                     "type": "text/html",
                     "url": public_base + "/quickstart",
-                    "description": ("Copy-paste buyer setup and a chainable "
-                                    "five-route workflow demo."),
+                    "description": ("Copy-paste buyer setup for the chainable "
+                                    "five-route workflow and reviewed Hive."),
                 },
                 {
                     "identifier": "urn:air:viridis:llms-txt",
@@ -1846,7 +1848,7 @@ def build_app():
                     "displayName": "Viridis x402 route catalog",
                     "type": "application/json",
                     "url": public_base + "/x402/catalog",
-                    "description": ("Machine-readable five-route inventory "
+                    "description": ("Machine-readable six-route inventory "
                                     "with live protocol and Bazaar status."),
                 },
                 {
@@ -1931,8 +1933,10 @@ def build_app():
         except Exception:
             active = False
         if active:
-            return ("First paid call from every new wallet is $0.01 USDC; "
-                    "subsequent calls use the unchanged list price.")
+            return ("First paid call from every new wallet on eligible "
+                    "carbon/compliance routes is $0.01 USDC; Hive stays at "
+                    "its fixed $5.00 price and subsequent eligible calls use "
+                    "the unchanged list price.")
         return "Intro pricing is currently disabled; list prices apply."
 
     async def agents_page(request):

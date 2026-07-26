@@ -60,12 +60,13 @@ def arm(monkeypatch):
     monkeypatch.delenv("X402_INTRO_ENABLED", raising=False)
 
 
-def request_body(task_id="", payload=None, args=None):
+def request_body(task_id="", payload=None, args=None,
+                 skill_id="regulatory-radar.scan_regulations"):
     message = {
         "messageId": "msg-1" if not task_id else "msg-2",
         "role": "ROLE_USER",
         "parts": [{"data": {
-            "skillId": "regulatory-radar.scan_regulations",
+            "skillId": skill_id,
             "input": args or {"jurisdiction": "EU", "sector": "energy"},
         }}],
     }
@@ -139,8 +140,87 @@ def test_agent_card_is_a2a_1_and_declares_required_x402():
         "uri": a2a_commerce.EXTENSION_URI,
         "description": "x402 v2 exact settlement on Base mainnet USDC; settle before serve.",
         "required": True, "params": {"x402Version": 2}}
-    assert len(card["skills"]) == 5
+    assert len(card["skills"]) == 6
     assert all(skill["metadata"]["amountAtomicUsdc"] for skill in card["skills"])
+
+
+def test_hive_a2a_is_full_price_and_preflights_before_task(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "1")
+    core = Core()
+    preflights = []
+    core._paid_preflight = (
+        lambda payload: preflights.append(payload) or None)
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-state.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+    args = {"problem": "Choose a reviewed energy strategy.",
+            "budget_minor": 500, "depth": 0, "redundancy": 2,
+            "fee_bps": 0}
+
+    challenge = run(send(Request(request_body(
+        args=args, skill_id="hive.solve"), extension_headers())))
+
+    assert challenge.status_code == 200
+    task = body(challenge)["task"]
+    required = task["metadata"]["x402.payment.required"]
+    assert required["accepts"][0]["amount"] == "5000000"
+    assert preflights == [{"action": "solve", **args}]
+    assert core.calls == []
+
+
+def test_hive_a2a_provider_unavailable_before_task_or_payment(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    core = Core()
+    core._paid_preflight = lambda _payload: {
+        "status": "error", "error_type": "ServiceUnavailable",
+        "message": "hive solver provider is not configured"}
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-unavailable.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+
+    refused = run(send(Request(request_body(
+        args={"problem": "p", "budget_minor": 500},
+        skill_id="hive.solve"), extension_headers())))
+
+    assert refused.status_code == 503
+    assert core.calls == []
+    assert a2a_commerce.TASKS_KEY not in getattr(core, GATE_ATTR)
+
+
+def test_hive_a2a_rechecks_provider_before_settlement(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    core = Core()
+    decisions = [None, {
+        "status": "error", "error_type": "ServiceUnavailable",
+        "message": "provider became unavailable"}]
+    core._paid_preflight = lambda _payload: decisions.pop(0)
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-recheck.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+    args = {"problem": "Choose a reviewed energy strategy.",
+            "budget_minor": 500}
+    challenge = run(send(Request(request_body(
+        args=args, skill_id="hive.solve"), extension_headers())))
+    task = body(challenge)["task"]
+    required = task["metadata"]["x402.payment.required"]
+
+    refused = run(send(Request(request_body(
+        task["id"], signed(required), skill_id="hive.solve"),
+        extension_headers())))
+
+    assert refused.status_code == 503
+    assert fake.calls == []
+    assert core.calls == []
+    assert getattr(core, GATE_ATTR)["consumed_x402"] == {}
 
 
 def test_missing_extension_and_kill_switch_fail_before_task(tmp_path, monkeypatch):

@@ -18,9 +18,10 @@ buyer's infrastructure; never install or run it on Viridis production.
   hermes mcp test viridis-market
   ```
 
-- Use the x402 HTTP routes to buy deterministic carbon and compliance work.
-- Use the free dry-run to inspect every live challenge without signing or
-  settling:
+- Use the x402 HTTP routes to buy deterministic carbon/compliance work or a
+  reviewed multi-agent Hive solve.
+- Use the free dry-run to inspect the five deterministic workflow challenges
+  without signing or settling:
 
   ```bash
   git clone https://github.com/jdhart81/viridis-agent-fleet.git
@@ -55,10 +56,13 @@ result or catalog call is discovery, not customer revenue.
 | CSRD / IFRS S2 disclosure evidence | `POST /x402/disclosure-compiler/compile_disclosure` | $2.00 |
 | 45Q/45V/45Y/48E/45X scenario | `POST /x402/taxcredit-engine/calculate_tax_credit` | $2.00 |
 | Energy and climate requirement scan | `POST /x402/regulatory-radar/scan_regulations` | $0.25 |
+| Reviewed multi-agent solve and audit | `POST /x402/hive/solve` | $5.00 fixed |
 
 Prefix every route with `https://mcp.viridisconservation.com`. Treat the
 live HTTP 402 challenge as authoritative for amount, network, asset, receiver,
 and resource. Do not hardcode those settlement fields from this table.
+The Hive route is excluded from one-cent introductory pricing because its
+three-worker model and solver settlements carry real per-call costs.
 
 ## Inspect before paying
 

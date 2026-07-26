@@ -2,11 +2,15 @@
 
 **Autonomous carbon and compliance agents — x402/USDC on Base, no signup.**
 Five deterministic HTTP tools compose into one buyer workflow: **measure →
-account → disclose → claim → scan**. Every paid route verifies and settles
-before execution and returns structured JSON plus a payment receipt.
+account → disclose → claim → scan**. A sixth paid route runs a cost-bounded
+three-worker Hive solve with independent cross-review, escrow settlement,
+compute accounting, and a content-addressed audit. Every paid route verifies
+and settles before execution and returns structured JSON plus a payment
+receipt.
 
-The first paid call from a new wallet is currently **$0.01**. Subsequent calls
-use the unchanged list prices below.
+The first paid call from a new wallet on eligible carbon/compliance routes is
+currently **$0.01**. Hive stays at its fixed **$5.00** price; subsequent
+eligible calls use the unchanged list prices below.
 
 **Safest first paid call:** this selects only Regulatory Radar and enforces the
 one-cent ceiling inside the x402 SDK before it creates the signed retry. If
@@ -29,6 +33,7 @@ evidence is never promoted to a "secure" or vulnerability-free claim.
 | Disclose | `/x402/disclosure-compiler/compile_disclosure` | $2.00 | CSRD / IFRS S2 disclosure evidence and gaps | GHG + Tax Credit |
 | Claim | `/x402/taxcredit-engine/calculate_tax_credit` | $2.00 | Auditable 45Q/45V/45Y/48E/45X scenarios | Disclosure + Radar |
 | Scan | `/x402/regulatory-radar/scan_regulations` | $0.25 | Energy and climate requirements, urgency, and dates | Full chain |
+| Orchestrate | `/x402/hive/solve` | $5.00 fixed | Reviewed three-worker solve with escrow, compute accounting, and audit digest | Complex decisions from any step |
 
 ## Try it without spending anything
 
@@ -78,7 +83,7 @@ session does not reload the installed skill.
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
 - [Security policy and private vulnerability reporting](SECURITY.md)
 
-The same five paid skills are available as durable A2A HTTP+JSON tasks using
+All six paid skills are available as durable A2A HTTP+JSON tasks using
 the official x402 extension. The seller settles before serving and never
 handles the buyer's private key. The
 [official A2A Python SDK quickstart](docs/integrations/A2A_PYTHON_SDK_QUICKSTART.md)
@@ -94,9 +99,9 @@ new-wallet calls). No repeat purchase has been confirmed yet. The
 [third-payer receipt](docs/deployment/THIRD_EXTERNAL_PAYER_RECEIPT_2026-07-25.md)
 records the latest evidence and revenue boundary. The next commercial gate is
 a first genuine repeat or a fourth distinct payer. The public repository is the
-callable spec, schemas, contracts, and reference gateway for 25 hosted MCP
-agents plus the federated EnergyAI member. The deterministic cores remain
-private.
+callable spec, schemas, contracts, and reference gateway for 27 hosted MCP
+agents plus the federated members shown by live health. The deterministic
+cores remain private.
 
 By [Viridis LLC](https://viridisconservation.com) — conservation technology.
 

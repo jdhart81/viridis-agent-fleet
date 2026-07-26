@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -112,17 +113,34 @@ def configure_gateway(rails: Dict[str, Any], *,
     })
     agent._solver_provider_ready = lambda: bool(
         os.getenv("OPENAI_API_KEY", "").strip())
+    agent._paid_preflight = _paid_preflight
     return agent
 
 
-def _public_validation(problem: str, subtasks: Optional[List[str]],
-                       redundancy: int) -> Optional[Dict[str, Any]]:
+def _public_validation(problem: Any, subtasks: Any,
+                       redundancy: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(problem, str) or not problem.strip():
+        return {
+            "status": "error", "error_type": "ValidationError",
+            "field": "problem", "constraint": "non-empty string",
+            "message": "problem must be a non-empty string",
+        }
     if len(problem) > MAX_PUBLIC_PROBLEM_CHARS:
         return {
             "status": "error", "error_type": "ValidationError",
             "field": "problem",
             "constraint": f"<= {MAX_PUBLIC_PROBLEM_CHARS} characters",
             "message": "problem exceeds the public cost-bounded limit",
+        }
+    if subtasks is not None and (
+            not isinstance(subtasks, list) or not subtasks
+            or not all(isinstance(item, str) and item.strip()
+                       for item in subtasks)):
+        return {
+            "status": "error", "error_type": "ValidationError",
+            "field": "subtasks",
+            "constraint": f"1..{MAX_PUBLIC_SUBTASKS} non-empty strings",
+            "message": "subtasks must be non-empty strings",
         }
     effective = subtasks or [problem]
     if len(effective) > MAX_PUBLIC_SUBTASKS:
@@ -140,7 +158,8 @@ def _public_validation(problem: str, subtasks: Optional[List[str]],
                 f"each item <= {MAX_PUBLIC_SUBTASK_CHARS} characters"),
             "message": "subtask exceeds the public cost-bounded limit",
         }
-    if redundancy > MAX_PUBLIC_REDUNDANCY:
+    if (isinstance(redundancy, bool) or not isinstance(redundancy, int)
+            or not 1 <= redundancy <= MAX_PUBLIC_REDUNDANCY):
         return {
             "status": "error", "error_type": "ValidationError",
             "field": "redundancy",
@@ -154,6 +173,66 @@ def _public_validation(problem: str, subtasks: Optional[List[str]],
             "field": "problem",
             "constraint": f"composed prompt <= {MAX_PROMPT_CHARS} characters",
             "message": "problem and subtask exceed the solver prompt cap",
+        }
+    return None
+
+
+def _paid_preflight(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Fail closed before an x402/A2A quote can become a settlement.
+
+    The public paid lane is one fixed, margin-bounded product.  Keeping this
+    hook on the core lets every gateway commerce surface enforce the same
+    provider-readiness and cost policy before it accepts money.
+    """
+    validation = _public_validation(
+        payload.get("problem"), payload.get("subtasks"),
+        payload.get("redundancy", 2))
+    if validation is not None:
+        return validation
+    if payload.get("budget_minor") != SERVICE_PRICE_MINOR:
+        return {
+            "status": "error", "error_type": "ValidationError",
+            "field": "budget_minor",
+            "constraint": f"exactly {SERVICE_PRICE_MINOR}",
+            "message": "paid Hive solves use the fixed public budget profile",
+        }
+    depth = payload.get("depth", 0)
+    if isinstance(depth, bool) or depth != 0:
+        return {
+            "status": "error", "error_type": "ValidationError",
+            "field": "depth", "constraint": "exactly 0",
+            "message": "public paid Hive solves cannot delegate to child hives",
+        }
+    fee_bps = payload.get("fee_bps", 0)
+    if isinstance(fee_bps, bool) or fee_bps != 0:
+        return {
+            "status": "error", "error_type": "ValidationError",
+            "field": "fee_bps", "constraint": "exactly 0",
+            "message": "public paid Hive solver fees are fixed",
+        }
+    threshold = payload.get("accept_threshold", 0.6)
+    if (isinstance(threshold, bool)
+            or not isinstance(threshold, (int, float))
+            or not math.isfinite(float(threshold))
+            or not 0.0 < float(threshold) <= 1.0):
+        return {
+            "status": "error", "error_type": "ValidationError",
+            "field": "accept_threshold", "constraint": "number in (0,1]",
+            "message": "accept_threshold must be a finite number in (0,1]",
+        }
+    seed = payload.get("seed", 0)
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        return {
+            "status": "error", "error_type": "ValidationError",
+            "field": "seed", "constraint": "integer",
+            "message": "seed must be an integer",
+        }
+    provider_probe = getattr(agent, "_solver_provider_ready", None)
+    if not callable(provider_probe) or not provider_probe():
+        return {
+            "status": "error",
+            "error_type": "ServiceUnavailable",
+            "message": "hive solver provider is not configured",
         }
     return None
 

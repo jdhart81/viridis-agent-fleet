@@ -1,7 +1,8 @@
 # Official A2A Python SDK quickstart
 
-Viridis exposes five paid carbon and compliance skills through A2A 1.0
-HTTP+JSON. The public Agent Card requires the canonical A2A x402 extension:
+Viridis exposes six paid skills through A2A 1.0 HTTP+JSON: five deterministic
+carbon/compliance tools plus the reviewed Agent Hive Orchestrator. The public
+Agent Card requires the canonical A2A x402 extension:
 
 - Agent Card:
   `https://mcp.viridisconservation.com/.well-known/agent-card.json`
@@ -28,7 +29,7 @@ The command fails closed unless the card advertises:
 
 - an `HTTP+JSON` interface;
 - protocol version `1.0`;
-- five discoverable skills; and
+- six discoverable skills; and
 - the required canonical x402 extension.
 
 ## Request one unpaid A2A quote
@@ -83,13 +84,21 @@ the existing ceiling-protected HTTP buyer path, see
 Every payment is an independent buyer authorization. There is no automatic
 follow-on purchase.
 
+The Hive skill is `hive.solve`, fixed at $5.00, and excluded from one-cent
+introductory pricing because its three-worker provider and solver-settlement
+costs are real. Its advertised fixed profile requires `budget_minor=500`,
+`depth=0`, `fee_bps=0`, no more than four subtasks, and redundancy no greater
+than three. Viridis rechecks these bounds and provider readiness before
+settlement.
+
 ## Compatibility receipt
 
 On 2026-07-25, `a2a-sdk==1.1.2` completed an isolated in-memory interoperability
 run against the production Viridis A2A seller code:
 
 - Agent Card parsed successfully;
-- five skills discovered;
+- five skills discovered (the compatibility receipt predates the sixth Hive
+  commerce route);
 - `HTTP+JSON` interface selected;
 - canonical x402 extension activated;
 - structured message accepted;
