@@ -12,6 +12,21 @@ class Store:
         return True
 
 
+class FailingCompletionStore(Store):
+    def __init__(self):
+        super().__init__()
+        self.hive_saves = 0
+
+    def save(self, name, core):
+        self.saves.append(name)
+        if name == "hive":
+            self.hive_saves += 1
+            # reservation, idempotency reservation, and EXECUTING are durable;
+            # only the final result+COMPLETED snapshot fails.
+            return self.hive_saves != 4
+        return True
+
+
 class Meter:
     def __init__(self):
         self.events = []
@@ -134,3 +149,35 @@ def test_work_and_escrow_bindings_cannot_be_reused_or_mutated():
         payload())
     assert reused["status"] == "error"
     assert reused["reason"] == "escrow_already_bound"
+
+
+def test_completion_save_failure_never_acknowledges_or_reexecutes_paid_work():
+    store, hive = FailingCompletionStore(), Hive()
+    gate = PaymentGate(
+        store, Meter(), free_calls_per_day=0,
+        market_funding_verifier=lambda _name, _item: {"verified": True})
+    gate.attach("hive", hive)
+    held = gate.reserve_market_payment("hive", binding(), payload())
+    assert held["status"] == "ok"
+
+    request = {
+        **payload(),
+        "request_id": "market-hive-durability-failure",
+        "_market_payment_token": held["token"],
+    }
+    failed = asyncio.run(hive.process(request))
+    assert failed["status"] == "error"
+    assert failed["error_type"] == "durable_completion_failed"
+    assert "manual reconciliation" in failed["message"]
+    state = getattr(hive, GATE_ATTR)
+    assert state["market_holds"]["work_external_123"]["state"] == "EXECUTING"
+    retry_entries = list(state["idempotent_requests"].values())
+    assert len(retry_entries) == 1
+    assert retry_entries[0]["request_id"] == "market-hive-durability-failure"
+    assert retry_entries[0]["state"] == "pending"
+    assert hive.calls == 1
+
+    replay = asyncio.run(hive.process(request))
+    assert replay["status"] == "error"
+    assert replay["error_type"] == "idempotency_incomplete"
+    assert hive.calls == 1

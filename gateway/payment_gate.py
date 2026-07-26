@@ -1242,6 +1242,8 @@ class PaymentGate:
         gate: dict,
         idempotency: dict,
         result: Any,
+        *,
+        market_token: Optional[str] = None,
     ) -> Any:
         """Persist the original completed result before acknowledging it."""
         if idempotency.get("enabled"):
@@ -1265,7 +1267,45 @@ class PaymentGate:
                         "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
                     ),
                 }
-        self.store.save(name, core)
+        if self.store.save(name, core):
+            return result
+        if idempotency.get("enabled") or market_token is not None:
+            # The service may already have run, so a failed completion write
+            # must never be acknowledged as success. Restore the in-memory
+            # view to the last durable states: pending idempotency and an
+            # executing Market hold. A retry therefore fails closed for
+            # manual reconciliation instead of running paid work twice.
+            with self._billing_lock(name):
+                if idempotency.get("enabled"):
+                    gate.setdefault("idempotent_requests", {})[
+                        idempotency["cache_key"]] = {
+                            "request_id": idempotency["request_id"],
+                            "input_hash": idempotency["input_hash"],
+                            "state": "pending",
+                            "created_at": time.strftime(
+                                "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+                            ),
+                        }
+                if market_token is not None:
+                    matched = next(
+                        (item for item in gate.setdefault(
+                            "market_holds", {}).values()
+                         if item.get("token") == market_token),
+                        None,
+                    )
+                    if matched is not None and matched.get("state") == "COMPLETED":
+                        matched["state"] = "EXECUTING"
+                        matched.pop("result_sha256", None)
+                        matched.pop("completed_at", None)
+            return {
+                "status": "error",
+                "error_type": "durable_completion_failed",
+                "message": (
+                    "The service may have completed, but its result could not "
+                    "be durably recorded. No automatic retry will run the "
+                    "billable work again; manual reconciliation is required."
+                ),
+            }
         return result
 
     def _abort_idempotent_call(
@@ -1546,7 +1586,8 @@ class PaymentGate:
                     self._complete_market_hold(
                         name, core, gate, market_token, result)
                     return self._finish_idempotent_call(
-                        name, core, gate, idempotency, result)
+                        name, core, gate, idempotency, result,
+                        market_token=market_token)
                 subscription = self._subscription_decision(name)
                 if self._is_included_waiver(subscription):
                     if self._persist_subscription(name, subscription):
@@ -1663,7 +1704,8 @@ class PaymentGate:
                     self._complete_market_hold(
                         name, core, gate, market_token, result)
                     return self._finish_idempotent_call(
-                        name, core, gate, idempotency, result)
+                        name, core, gate, idempotency, result,
+                        market_token=market_token)
                 subscription = self._subscription_decision(name)
                 if self._is_included_waiver(subscription):
                     if self._persist_subscription(name, subscription):
