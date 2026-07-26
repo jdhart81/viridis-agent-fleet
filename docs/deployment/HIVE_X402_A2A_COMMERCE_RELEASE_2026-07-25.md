@@ -64,6 +64,8 @@ The previously released cost envelope is unchanged:
 - conservative provider API ceiling: below $0.18;
 - minimum contribution margin: at least $1.82, or 36.4%, before fixed
   infrastructure, taxes, refunds, and payment fees.
+- model-backed execution free tier: zero; read-only tools and unpaid
+  quote/preflight remain free.
 
 No live model request or paid smoke was used for this release.
 

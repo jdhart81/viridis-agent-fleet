@@ -40,7 +40,7 @@ from adapters.llm_solver import (
 from src.core import build
 
 SERVICE_PRICE_MINOR = 500
-FREE_SOLVES_PER_DAY = 3
+FREE_SOLVES_PER_DAY = 0
 SOLVER_PRICE_MINOR = 25
 SOLVER_IDS = ("hive-reasoner-a", "hive-reasoner-b", "hive-reasoner-c")
 MAX_PUBLIC_SUBTASKS = 4
@@ -62,6 +62,12 @@ MIN_CONTRIBUTION_MARGIN_MINOR = (
     - MAX_SOLVER_SETTLEMENT_MINOR
     - int(MAX_API_COST_USD * 100 + 0.999999)
 )
+MIN_REQUIRED_CONTRIBUTION_MARGIN_BPS = 3_500
+CONTRIBUTION_MARGIN_BPS = (
+    MIN_CONTRIBUTION_MARGIN_MINOR * 10_000 // SERVICE_PRICE_MINOR)
+if CONTRIBUTION_MARGIN_BPS < MIN_REQUIRED_CONTRIBUTION_MARGIN_BPS:
+    raise RuntimeError(
+        "Hive commercial profile violates the minimum contribution margin")
 
 
 def _server(name: str, description: str):
@@ -253,8 +259,9 @@ async def solve(problem: str, budget_minor: int,
     (covenant -> escrow -> meter), force reviewer!=author cross-review,
     synthesize only what survives review, settle every escrow exactly-once,
     and return a content-addressed audit hash plus bits-per-joule telemetry.
-    Price: $5.00 per solve after 3 free/day; sub-hires settle via escrow at
-    each solver's list price."""
+    Price: $5.00 per solve; model-backed solves have no free tier because
+    provider cost must be covered. Sub-hires settle via escrow at each
+    solver's list price."""
     validation = _public_validation(problem, subtasks, redundancy)
     if validation is not None:
         return json.dumps(validation, indent=2)
@@ -325,6 +332,10 @@ async def describe_agent() -> str:
         "max_solver_settlement_minor": MAX_SOLVER_SETTLEMENT_MINOR,
         "max_provider_api_cost_usd": MAX_API_COST_USD,
         "minimum_contribution_margin_minor": MIN_CONTRIBUTION_MARGIN_MINOR,
+        "contribution_margin_bps": CONTRIBUTION_MARGIN_BPS,
+        "minimum_required_contribution_margin_bps":
+            MIN_REQUIRED_CONTRIBUTION_MARGIN_BPS,
+        "provider_backed_free_solves_per_day": FREE_SOLVES_PER_DAY,
     })
     described["public_limits"] = {
         "max_subtasks": MAX_PUBLIC_SUBTASKS,

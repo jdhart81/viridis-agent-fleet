@@ -178,7 +178,9 @@ PRICE_MINOR = {          # per-call list price once the free tier is exhausted
 }
 DEFAULT_PRICE_MINOR = 100
 FREE_CALLS_BY_AGENT = {
-    "hive": 3,
+    # Provider-backed multi-agent solves incur real API cost. Read-only Hive
+    # tools and unpaid preflight remain free, but execution requires backing.
+    "hive": 0,
 }
 GATE_ATTR = "_payment_gate_state"   # lives on the core -> StateStore persists
 # PG18: anonymous/fingerprint identities share a bounded aggregate free pool
