@@ -47,6 +47,7 @@ ROLE = {
     "arbitration": "deterministic dispute rulings",
     "compute-ledger": "compute-is-carbon energy/carbon ledger",
     "covenant": "deny-by-default authority leases",
+    "hive": "auditable multi-solver orchestration over shared settlement rails",
     "provenance": "genesis certificates, lineage, recalls",
     "offsets": "verified-credit carbon offset clearinghouse",
     "erc8004": "MCP-native bridge to ERC-8004 on-chain identity",
@@ -66,6 +67,7 @@ ROLE = {
     "verdigraph": "verifiable cognition: deterministic content-addressed brain_id for any agent file",
     "neurogenesis": "developmental agents: genome -> evaluation-driven growth with safety axioms + audit ledger",
     "green-router": "carbon-accounted agent compute: free footprint quotes + carbon routing; certificates = real verified offset retirement",
+    "viridisos": "ViridisOS — theorem-backed conservation certification. Certify a parcel against a gate-passed canon theorem and receive a 'Certified by ViridisOS' mark; bind did:viridis identities; price the unified protocol toll. Staging preview; non-authoritative until the K3 swap.",
 }
 
 

@@ -13,6 +13,7 @@ COPY agent-metering-agent/ agent-metering-agent/
 COPY agent-arbitration-agent/ agent-arbitration-agent/
 COPY agent-compute-ledger-agent/ agent-compute-ledger-agent/
 COPY agent-covenant-agent/ agent-covenant-agent/
+COPY agent-hive-orchestrator-agent/ agent-hive-orchestrator-agent/
 COPY agent-provenance-agent/ agent-provenance-agent/
 COPY agent-offset-clearinghouse-agent/ agent-offset-clearinghouse-agent/
 COPY agent-erc8004-bridge-agent/ agent-erc8004-bridge-agent/

@@ -16,7 +16,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+HERE = Path(__file__).resolve().parent
+# The private fleet keeps this script under deploy/mcp-publish; the public
+# source receipt flattens that directory to mcp-publish at repository root.
+ROOT = HERE.parent if HERE.parent.name != "deploy" else HERE.parents[1]
 
 # agent dir -> list of (tool, kwargs, expected substrings in output)
 CASES = {
@@ -64,6 +67,13 @@ CASES = {
         ("grant_covenant", {"principal": "j", "agent_id": "w", "scopes": ["x.*"],
                             "budget_minor": 100,
                             "expires_at": "2099-01-01T00:00:00+00:00"}, ["cov-"]),
+    ],
+    "agent-hive-orchestrator-agent": [
+        ("describe_agent", {}, [
+            "agent-hive-orchestrator-agent",
+            '"usd_per_solve": 5.0',
+            '"free_per_day": 3',
+        ]),
     ],
     "agent-provenance-agent": [
         ("register_genesis", {"agent_id": "smoke-agent"},

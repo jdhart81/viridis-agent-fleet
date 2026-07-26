@@ -4707,5 +4707,250 @@
         "type": "object"
       }
     }
+  ],
+  "hive": [
+    {
+      "name": "solve",
+      "description": "Open and run a hive job in one call: hire solvers through the rails\n(covenant -> escrow -> meter), force reviewer!=author cross-review,\nsynthesize only what survives review, settle every escrow exactly-once,\nand return a content-addressed audit hash plus bits-per-joule telemetry.\nPrice: $5.00 per solve after 3 free/day; sub-hires settle via escrow at\neach solver's list price.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "problem": {
+            "type": "string"
+          },
+          "budget_minor": {
+            "type": "integer"
+          },
+          "subtasks": {
+            "type": "array"
+          },
+          "depth": {
+            "type": "integer",
+            "default": 0
+          },
+          "redundancy": {
+            "type": "integer",
+            "default": 2
+          },
+          "accept_threshold": {
+            "type": "number",
+            "default": 0.6
+          },
+          "seed": {
+            "type": "integer",
+            "default": 0
+          },
+          "fee_bps": {
+            "type": "integer",
+            "default": 0
+          },
+          "covenant_id": {
+            "type": "string"
+          },
+          "payment_ref": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "problem",
+          "budget_minor"
+        ]
+      }
+    },
+    {
+      "name": "job_status",
+      "description": "Return job state, plan hash, and live budget conservation books.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ]
+      }
+    },
+    {
+      "name": "audit_job",
+      "description": "Return the full content-addressed lineage of a completed job: plan,\nhires (including refused ones with reasons), contributions, reviews,\nsettlements, rail calls (with simulated flags), and synthesis.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_audit",
+      "description": "Recompute the audit digest from a presented lineage (never trusts the\nembedded hash) and report whether it matches a job this hive ran.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "audit_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_json"
+        ]
+      }
+    },
+    {
+      "name": "list_solvers",
+      "description": "List the registered solver pool: id, kind (worker|hive), price,\ncapabilities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return fleet-standard capabilities, actions, invariants, and pricing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ],
+  "viridisos": [
+    {
+      "name": "viridis_list_modules",
+      "description": "List ViridisOS modules and their LIVE/BLOCKED state (A-1 against the live canon).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "viridis_certify",
+      "description": "Certify a subject (parcel/portfolio) with a module -> a certificate. Errors if the module's\nbacking theorem is not gate-passed (BLOCKED).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "module_id": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "module_id",
+          "subject",
+          "inputs"
+        ]
+      }
+    },
+    {
+      "name": "viridis_certify_envelope",
+      "description": "Certify then return a 'Certified by ViridisOS' mark envelope (profile conservation-claim).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "module_id": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "module_id",
+          "subject",
+          "inputs"
+        ]
+      }
+    },
+    {
+      "name": "viridis_verify_mark",
+      "description": "Verify a 'Certified by ViridisOS' envelope against the shared trust root.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "envelope": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "envelope"
+        ]
+      }
+    },
+    {
+      "name": "viridis_bind_did",
+      "description": "Derive the canonical did:viridis identity for an agent (fleet R1 formula) under the shared root.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "pubkey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "pubkey"
+        ]
+      }
+    },
+    {
+      "name": "viridis_agent_attestation",
+      "description": "Issue a mark-stamped agent-attestation envelope under the shared trust root.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      }
+    },
+    {
+      "name": "viridis_compute_toll",
+      "description": "Compute the unified Viridis protocol margin (the take) + pass-through card cost for a settlement.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "amount_minor": {
+            "type": "string"
+          },
+          "payee_tier": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_minor",
+          "payee_tier"
+        ]
+      }
+    }
   ]
 }
