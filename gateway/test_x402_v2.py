@@ -467,6 +467,14 @@ def test_independent_evidence_index_pins_external_fixture_bytes():
             {
                 "route": "regulatory-radar/scan_regulations",
                 "evidence_posture": "settled_flow_confirmed",
+                "fixture_state": "historical_capture_drift_detected",
+                "captured_on": "2026-07-24",
+                "last_compared_on": "2026-07-26",
+                "matched_on_last_comparison": False,
+                "payment_terms_changed": False,
+                "drift_summary": (
+                    "Additive jurisdiction schema widening; replacement "
+                    "fixture requested."),
                 "pull_request": (
                     "https://github.com/smartflowproai-lang/"
                     "x402-endpoint-validator/pull/12"),
@@ -485,6 +493,11 @@ def test_independent_evidence_index_pins_external_fixture_bytes():
             {
                 "route": "ghg-ledger/calculate_inventory",
                 "evidence_posture": "unpaid_preflight_only",
+                "fixture_state": "matched_on_last_comparison",
+                "captured_on": "2026-07-26",
+                "last_compared_on": "2026-07-26",
+                "matched_on_last_comparison": True,
+                "payment_terms_changed": False,
                 "pull_request": (
                     "https://github.com/smartflowproai-lang/"
                     "x402-endpoint-validator/pull/14"),

@@ -80,6 +80,14 @@ EXTERNAL_EVIDENCE_FIXTURES = (
     {
         "route": "regulatory-radar/scan_regulations",
         "evidence_posture": "settled_flow_confirmed",
+        "fixture_state": "historical_capture_drift_detected",
+        "captured_on": "2026-07-24",
+        "last_compared_on": "2026-07-26",
+        "matched_on_last_comparison": False,
+        "payment_terms_changed": False,
+        "drift_summary": (
+            "Additive jurisdiction schema widening; replacement fixture "
+            "requested."),
         "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/12",
         "merge_commit": "0920d50db53cbf59f20052c6c656f17f881c4b41",
         "fixture_path": "tests/fixtures/viridis_regulatory_radar.json",
@@ -93,6 +101,11 @@ EXTERNAL_EVIDENCE_FIXTURES = (
     {
         "route": "ghg-ledger/calculate_inventory",
         "evidence_posture": "unpaid_preflight_only",
+        "fixture_state": "matched_on_last_comparison",
+        "captured_on": "2026-07-26",
+        "last_compared_on": "2026-07-26",
+        "matched_on_last_comparison": True,
+        "payment_terms_changed": False,
         "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/14",
         "merge_commit": "45b006b42a60562101a43ffc293447793900d095",
         "fixture_path": "tests/fixtures/viridis_ghg_ledger.json",

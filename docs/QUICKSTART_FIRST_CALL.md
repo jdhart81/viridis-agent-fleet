@@ -101,7 +101,14 @@ Machine clients can discover immutable external-file pointers, merge commits,
 and SHA-256 digests in `independent_evidence` at
 `https://mcp.viridisconservation.com/.well-known/x402`. That index is
 seller-published pointer metadata, not proof by itself. Verify the external
-fixture bytes against the pinned commit and digest.
+fixture bytes against the pinned commit and digest. Also inspect each
+fixture's dated comparison fields. A
+`fixture_state: historical_capture_drift_detected` entry is an archive, not a
+claim that the live challenge still matches it.
+
+The Regulatory Radar fixture captured on 2026-07-24 is currently historical:
+an additive jurisdiction-schema widening was detected on 2026-07-26 while its
+payment terms remained unchanged. A replacement fixture has been requested.
 
 ## Canonical Regulatory Radar strict-v2 fixture
 

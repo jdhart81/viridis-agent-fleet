@@ -280,6 +280,8 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "unpaid GHG Ledger" in quickstart.text
     assert "seller-published pointer index" in quickstart.text
     assert "immutable merge commit and SHA-256" in quickstart.text
+    assert "historical_capture_drift_detected" in quickstart.text
+    assert "payment terms were unchanged" in quickstart.text
     assert "a seller-reported count is not" in quickstart.text
     assert "Payable HTTP routes" in llms.text
     assert "--route regulatory-radar --max-payment-usdc 0.01" in llms.text
@@ -310,6 +312,15 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
         "regulatory-radar/scan_regulations",
         "ghg-ledger/calculate_inventory",
     }
+    fixtures = {item["route"]: item for item in evidence["fixtures"]}
+    assert fixtures["regulatory-radar/scan_regulations"][
+        "fixture_state"] == "historical_capture_drift_detected"
+    assert fixtures["regulatory-radar/scan_regulations"][
+        "matched_on_last_comparison"] is False
+    assert fixtures["regulatory-radar/scan_regulations"][
+        "payment_terms_changed"] is False
+    assert fixtures["ghg-ledger/calculate_inventory"][
+        "matched_on_last_comparison"] is True
     assert all(
         len(item["merge_commit"]) == 40
         and len(item["sha256"]) == 64

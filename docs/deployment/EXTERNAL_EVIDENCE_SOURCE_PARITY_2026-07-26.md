@@ -36,6 +36,18 @@ The index pins:
 | `regulatory-radar/scan_regulations` | settled flow confirmed | `0920d50db53cbf59f20052c6c656f17f881c4b41` | `0dbd36a0cb2cfa3ebf7a3575acc5550bfe2208d640fa2508574454365a7834fe` |
 | `ghg-ledger/calculate_inventory` | unpaid preflight only | `45b006b42a60562101a43ffc293447793900d095` | `8cd884c016b19c2131207365e523677a9384b8463fb45eb0ca826a89497b7d40` |
 
+### Drift disclosure
+
+The Regulatory Radar row is now explicitly
+`fixture_state: historical_capture_drift_detected`. Tom Smart's first daily
+comparison found an additive jurisdiction-schema widening on 2026-07-26
+against the 2026-07-24 capture. Payment terms were unchanged. A fresh external
+capture and merge were requested; the dated fixture must not be interpreted as
+current-state evidence while that replacement is pending.
+
+GHG Ledger remained byte-identical on its 2026-07-26 comparison. These are
+dated observations, not perpetual freshness claims.
+
 The quickstart now explains what an agent can verify before payment and why
 seller counters are not buyer, settlement, or revenue proof.
 
