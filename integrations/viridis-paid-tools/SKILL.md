@@ -110,7 +110,13 @@ Before a paid call:
    input from caller-owned facts rather than inferring it from the prior
    result. The offer's list price is non-authoritative;
    `quote.authoritative_source` identifies the next unpaid HTTP 402 as the only
-   authoritative payment requirement.
+   authoritative payment requirement. When
+   `quote.payer_hint_required_for_exact_quote` is `true`, include the header
+   named by `quote.payer_hint_header` on that unpaid preflight and set it to
+   the caller's public signing address, as directed by
+   `quote.payer_hint_value_source`. This avoids an ineligible intro quote for
+   returning wallets. The public address is only a pricing hint and never
+   authorizes payment; never send the private key.
 
 For a new wallet, prefer one Regulatory Radar call with a hard one-cent ceiling:
 

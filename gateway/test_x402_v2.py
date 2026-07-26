@@ -430,6 +430,104 @@ def test_wave9_intro_settle_marks_seen_then_quotes_full_price(
         "accepts"][0]["amount"] == "250000"
 
 
+def test_intro_status_labels_seen_payers_as_non_authoritative_seller_state(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "true")
+    _, core, _ = build(tmp_path)
+    gate = getattr(core, GATE_ATTR)
+    gate[x402_http.INTRO_SEEN_KEY] = {
+        "0xbuyer": {"pricing_schedule_version": "x402-intro-v1"}}
+
+    status = x402_http.intro_status({"regulatory-radar": core})
+
+    assert status["seen_payers"] == 1
+    assert status["seen_payers_evidence"] == {
+        "classification": "seller_reported_pricing_eligibility_state",
+        "independently_verifiable": False,
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+    }
+    assert "not independent buyer or revenue proof" in status["note"]
+
+
+def test_independent_evidence_index_pins_external_fixture_bytes():
+    evidence = x402_http.independent_evidence_index()
+
+    assert evidence == {
+        "classification": "external_fixture_pointer_index",
+        "index_posture": "seller_published_pointer_only",
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+        "verification_required": True,
+        "repository": (
+            "https://github.com/smartflowproai-lang/"
+            "x402-endpoint-validator"),
+        "fixtures": [
+            {
+                "route": "regulatory-radar/scan_regulations",
+                "evidence_posture": (
+                    "unpaid_preflight_current_with_dated_settlement_reference"),
+                "fixture_state": "matched_on_last_comparison",
+                "capture_method": "unpaid_preflight",
+                "captured_at": "2026-07-26T16:47:37+00:00",
+                "supersedes_capture": "2026-07-24",
+                "last_compared_on": "2026-07-26",
+                "matched_on_last_comparison": True,
+                "payment_terms_changed": False,
+                "settled_flow_provenance": {
+                    "current_fixture_is_settlement_receipt": False,
+                    "confirmed_at_merge": (
+                        "0920d50db53cbf59f20052c6c656f17f881c4b41"),
+                    "pull_request": (
+                        "https://github.com/smartflowproai-lang/"
+                        "x402-endpoint-validator/pull/12"),
+                    "payment_terms_byte_identical": True,
+                },
+                "pull_request": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/pull/15"),
+                "merge_commit": (
+                    "811fef6b037cfeb71a890cac97bb822f0efcf03a"),
+                "fixture_path": (
+                    "tests/fixtures/viridis_regulatory_radar.json"),
+                "immutable_url": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/blob/"
+                    "811fef6b037cfeb71a890cac97bb822f0efcf03a/"
+                    "tests/fixtures/viridis_regulatory_radar.json"),
+                "sha256": (
+                    "f667444013029bc98e229b0d3021426d8bf18d13afe3007db419a213d0e290b5"),
+            },
+            {
+                "route": "ghg-ledger/calculate_inventory",
+                "evidence_posture": "unpaid_preflight_only",
+                "fixture_state": "matched_on_last_comparison",
+                "captured_on": "2026-07-26",
+                "last_compared_on": "2026-07-26",
+                "matched_on_last_comparison": True,
+                "payment_terms_changed": False,
+                "pull_request": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/pull/14"),
+                "merge_commit": (
+                    "45b006b42a60562101a43ffc293447793900d095"),
+                "fixture_path": "tests/fixtures/viridis_ghg_ledger.json",
+                "immutable_url": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/blob/"
+                    "45b006b42a60562101a43ffc293447793900d095/"
+                    "tests/fixtures/viridis_ghg_ledger.json"),
+                "sha256": (
+                    "8cd884c016b19c2131207365e523677a9384b8463fb45eb0ca826a89497b7d40"),
+            },
+        ],
+    }
+    evidence["fixtures"][0]["sha256"] = "forged"
+    assert x402_http.independent_evidence_index()[
+        "fixtures"][0]["sha256"].startswith("f6674440")
+
+
 def test_wave9_intro_external_flips_first_dollar_metrics(
         tmp_path, monkeypatch):
     arm(monkeypatch)
@@ -776,6 +874,10 @@ def test_paid_success_offers_next_paid_routes_without_auto_execution(
     assert repeat["quote"]["preflight_required"] is True
     assert repeat["quote"]["authoritative_source"] == (
         "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_value_source"] == (
+        "caller_public_signing_address")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is True
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
     assert repeat["quote"]["advertised_price_posture"] == (
         "returning_payer_list_price")
     assert {f"{offer['agent']}/{offer['tool']}"
@@ -796,6 +898,10 @@ def test_paid_success_offers_next_paid_routes_without_auto_execution(
         assert offer["quote"]["preflight_required"] is True
         assert offer["quote"]["authoritative_source"] == (
             "next_route_unpaid_http_402")
+        assert offer["quote"]["payer_hint_value_source"] == (
+            "caller_public_signing_address")
+        assert offer["quote"]["payer_hint_required_for_exact_quote"] is True
+        assert offer["quote"]["payer_hint_authorizes_payment"] is False
         assert offer["quote"]["advertised_price_posture"] == (
             "returning_payer_list_price")
     assert len(core.calls) == 1
@@ -831,6 +937,8 @@ def test_repeat_purchase_contract_is_available_for_fixed_price_hive(
     assert repeat["amount_atomic_usdc"] == "5000000"
     assert repeat["quote"]["authoritative_source"] == (
         "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is False
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
     assert core.calls == [{
         "action": "solve",
         "problem": "Compare two deployment options.",

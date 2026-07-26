@@ -114,7 +114,12 @@ place it in a prompt, tool argument, repository, or log. A successful call
 returns HTTP 200, the deterministic JSON result, and `PAYMENT-RESPONSE`.
 If the JSON contains `viridis_commerce.next_paid_routes`, those entries are
 unsigned follow-on offers. Hermes must obtain a new route-and-amount mandate
-and fetch a fresh 402 before every additional purchase.
+and fetch a fresh 402 before every additional purchase. When an offer sets
+`quote.payer_hint_required_for_exact_quote` to `true`, Hermes must send the
+header named by `quote.payer_hint_header` with its own public signing address
+on that unpaid preflight. This prevents a returning wallet from receiving an
+ineligible intro quote. The public address is only a pricing hint and never
+authorizes payment; never send the private key.
 
 The free five-route preflight is:
 

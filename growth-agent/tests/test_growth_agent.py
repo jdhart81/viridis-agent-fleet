@@ -20,6 +20,7 @@ from growth_agent import (
     LiveFleetClient,
     ModelUsage,
     OutboundLog,
+    REPEAT_BUYER_CTA,
     SmitheryMetadataAdapter,
     render_content,
     validate_generated_content,
@@ -236,6 +237,9 @@ def test_live_snapshot_drives_prices_and_intro_copy():
     assert "regulatory-radar — $0.25" in content
     assert "First paid call from a new wallet is $0.01." in content
     assert "2 settlement(s) from 2 distinct payer(s)" in content
+    assert REPEAT_BUYER_CTA in content
+    assert "X402-Payer-Address" in content
+    assert "never send a private key" in content
     assert "https://example.test/quickstart" in content
 
 
@@ -448,6 +452,15 @@ def test_generated_copy_validator_refuses_price_or_claim_drift():
         validate_generated_content(content.replace("$0.50", "$0.40"), live)
     with pytest.raises(GrowthError, match="prohibited claim"):
         validate_generated_content(content + "\nGuaranteed compliance.", live)
+    with pytest.raises(GrowthError, match="omitted repeat-buyer guidance"):
+        validate_generated_content(content.replace(REPEAT_BUYER_CTA, ""), live)
+
+
+def test_repeat_buyer_guidance_requires_live_external_proof():
+    content = render_content(snapshot(external=0, payers=0))
+    assert REPEAT_BUYER_CTA not in content
+    assert validate_generated_content(content, snapshot(
+        external=0, payers=0)) == content
 
 
 def test_live_snapshot_refuses_incomplete_or_unhealthy_health():
@@ -477,6 +490,31 @@ def test_dry_run_generates_and_selects_without_logging_or_send(tmp_path):
     assert result["send_attempted"] is False
     assert "First paid call" not in result["content"]
     assert client.calls == 1
+    assert adapter.calls == []
+    assert log.entries() == []
+
+
+def test_dry_run_never_calls_paid_copywriter_when_openai_flag_drifts(tmp_path):
+    copywriter = RecordingHarness(fail=True)
+    worker, log, adapter = agent(
+        tmp_path,
+        copywriter=copywriter,
+        environ={
+            "GROWTH_AGENT_ENABLED": "1",
+            "GROWTH_OPENAI_ENABLED": "1",
+            "GROWTH_OPENAI_API_KEY": "must-not-be-used",
+        },
+    )
+
+    result = worker.run_once(dry_run=True)
+
+    assert result["status"] == "dry_run"
+    assert result["model"] == {
+        "mode": "deterministic",
+        "reason": "dry_run_no_api",
+    }
+    assert result["send_attempted"] is False
+    assert copywriter.calls == []
     assert adapter.calls == []
     assert log.entries() == []
 

@@ -55,6 +55,10 @@ H402-12 EXECUTABLE CONTINUATION: each next-route offer includes the target
        endpoint, and quote instructions. The offer is preparation metadata,
        never authorization; the next route's unpaid challenge is the only
        authoritative price/payment requirement.
+H402-13 EXTERNAL EVIDENCE POINTERS: the catalog may point to immutable fixture
+       files in an external verifier's repository. The index is explicitly a
+       seller-published pointer, never payment authority or independent proof
+       by itself; buyers verify the external file, commit, and SHA-256.
 """
 from __future__ import annotations
 
@@ -69,6 +73,71 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Tuple
 
 logger = logging.getLogger("viridis.x402_http")
+
+EXTERNAL_EVIDENCE_REPOSITORY = (
+    "https://github.com/smartflowproai-lang/x402-endpoint-validator")
+EXTERNAL_EVIDENCE_FIXTURES = (
+    {
+        "route": "regulatory-radar/scan_regulations",
+        "evidence_posture": (
+            "unpaid_preflight_current_with_dated_settlement_reference"),
+        "fixture_state": "matched_on_last_comparison",
+        "capture_method": "unpaid_preflight",
+        "captured_at": "2026-07-26T16:47:37+00:00",
+        "supersedes_capture": "2026-07-24",
+        "last_compared_on": "2026-07-26",
+        "matched_on_last_comparison": True,
+        "payment_terms_changed": False,
+        "settled_flow_provenance": {
+            "current_fixture_is_settlement_receipt": False,
+            "confirmed_at_merge": (
+                "0920d50db53cbf59f20052c6c656f17f881c4b41"),
+            "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/12",
+            "payment_terms_byte_identical": True,
+        },
+        "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/15",
+        "merge_commit": "811fef6b037cfeb71a890cac97bb822f0efcf03a",
+        "fixture_path": "tests/fixtures/viridis_regulatory_radar.json",
+        "immutable_url": (
+            EXTERNAL_EVIDENCE_REPOSITORY
+            + "/blob/811fef6b037cfeb71a890cac97bb822f0efcf03a/"
+              "tests/fixtures/viridis_regulatory_radar.json"),
+        "sha256": (
+            "f667444013029bc98e229b0d3021426d8bf18d13afe3007db419a213d0e290b5"),
+    },
+    {
+        "route": "ghg-ledger/calculate_inventory",
+        "evidence_posture": "unpaid_preflight_only",
+        "fixture_state": "matched_on_last_comparison",
+        "captured_on": "2026-07-26",
+        "last_compared_on": "2026-07-26",
+        "matched_on_last_comparison": True,
+        "payment_terms_changed": False,
+        "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/14",
+        "merge_commit": "45b006b42a60562101a43ffc293447793900d095",
+        "fixture_path": "tests/fixtures/viridis_ghg_ledger.json",
+        "immutable_url": (
+            EXTERNAL_EVIDENCE_REPOSITORY
+            + "/blob/45b006b42a60562101a43ffc293447793900d095/"
+              "tests/fixtures/viridis_ghg_ledger.json"),
+        "sha256": (
+            "8cd884c016b19c2131207365e523677a9384b8463fb45eb0ca826a89497b7d40"),
+    },
+)
+
+
+def independent_evidence_index() -> dict:
+    """Return verifiable pointers without promoting seller metadata to proof."""
+    return {
+        "classification": "external_fixture_pointer_index",
+        "index_posture": "seller_published_pointer_only",
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+        "verification_required": True,
+        "repository": EXTERNAL_EVIDENCE_REPOSITORY,
+        "fixtures": [dict(fixture) for fixture in EXTERNAL_EVIDENCE_FIXTURES],
+    }
+
 
 # (agent_path, http_tool_name) -> core action. Extend as tools are exposed.
 # Verified mappings only — an entry here makes a real paid endpoint.
@@ -443,9 +512,17 @@ def intro_status(cores: Dict[str, Any]) -> dict:
         "enabled": intro_enabled(),
         "schedule": dict(INTRO_SCHEDULE),
         "seen_payers": len(_seen_payers(cores)),
+        "seen_payers_evidence": {
+            "classification": "seller_reported_pricing_eligibility_state",
+            "independently_verifiable": False,
+            "authoritative_for_payment": False,
+            "revenue_signal": False,
+        },
         "payer_hint_header": "X402-Payer-Address",
-        "note": ("The hint improves preflight quoting only; signed payment "
-                 "authorization determines eligibility."),
+        "note": ("seen_payers is a seller-reported pricing-state count, not "
+                 "independent buyer or revenue proof. The hint improves "
+                 "preflight quoting only; signed payment authorization "
+                 "determines eligibility."),
     }
 
 
@@ -612,6 +689,11 @@ def next_paid_routes(agent: str, tool: str, public_base: str) -> list:
                 "preflight_required": True,
                 "authoritative_source": "next_route_unpaid_http_402",
                 "payer_hint_header": "X402-Payer-Address",
+                "payer_hint_value_source":
+                    "caller_public_signing_address",
+                "payer_hint_required_for_exact_quote":
+                    (next_agent, next_tool) not in INTRO_EXEMPT_ROUTES,
+                "payer_hint_authorizes_payment": False,
                 "advertised_price_posture": "returning_payer_list_price",
             },
         })
@@ -645,6 +727,10 @@ def repeat_paid_route(agent: str, tool: str, public_base: str) -> dict:
             "preflight_required": True,
             "authoritative_source": "repeat_route_unpaid_http_402",
             "payer_hint_header": "X402-Payer-Address",
+            "payer_hint_value_source": "caller_public_signing_address",
+            "payer_hint_required_for_exact_quote":
+                (agent, tool) not in INTRO_EXEMPT_ROUTES,
+            "payer_hint_authorizes_payment": False,
             "advertised_price_posture": "returning_payer_list_price",
         },
     }

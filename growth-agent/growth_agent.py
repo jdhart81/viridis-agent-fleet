@@ -74,6 +74,13 @@ CHAIN_ORDER = (
     "regulatory-radar/scan_regulations",
 )
 
+REPEAT_BUYER_CTA = (
+    "Returning buyer? Put your public signing address in "
+    "X402-Payer-Address on the unpaid preflight to receive the exact "
+    "returning-wallet quote the first time. The hint never authorizes "
+    "payment—never send a private key."
+)
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -405,6 +412,7 @@ def render_content(snapshot: FleetSnapshot) -> str:
         if external:
             lines.append(f"Live external proof: {external} settlement(s) from "
                          f"{payers} distinct payer(s).")
+            lines.append(REPEAT_BUYER_CTA)
         if snapshot.open_work and snapshot.market_url:
             lines.extend(["",
                           "Independently funded work for outside agents:"])
@@ -508,6 +516,8 @@ def validate_generated_content(content: str, snapshot: FleetSnapshot) -> str:
                  f"{payers} distinct payer(s).")
         if proof not in candidate:
             raise GrowthError("model copy altered live conversion proof")
+        if REPEAT_BUYER_CTA not in candidate:
+            raise GrowthError("model copy omitted repeat-buyer guidance")
     found_prices = set(re.findall(r"\$[0-9]+\.[0-9]{2}", candidate))
     if found_prices != required_prices:
         raise GrowthError("model copy introduced or omitted a dollar amount")
@@ -580,7 +590,7 @@ class OpenAIGrowthHarness:
             "framing of the supplied required_factual_copy for the supplied "
             "policy-cleared target. Preserve every route name, exact dollar "
             "amount, open-job ID and budget, live proof sentence, URL, "
-            "x402/Base/USDC claim, and intro "
+            "x402/Base/USDC claim, repeat-buyer guidance, and intro "
             "offer exactly. Do not invent results, customers, certifications, "
             "discounts, deadlines, compliance guarantees, or legal claims. "
             "Return one concise post plus a short strategy note. You have no "
@@ -1128,7 +1138,15 @@ class GrowthAgent:
         preview_target = selected or (plan[0] if plan else None)
         target_for_content = preview_target or {
             "id": "no-target", "channel": "no eligible target"}
-        if selected is None and not dry_run:
+        if dry_run:
+            # A preview can never earn revenue, so it must never create paid
+            # model usage even if GROWTH_OPENAI_ENABLED drifts on.
+            content = render_content(snapshot)
+            model_result = {
+                "mode": "deterministic",
+                "reason": "dry_run_no_api",
+            }
+        elif selected is None:
             content = render_content(snapshot)
             model_result = {"mode": "deterministic",
                             "reason": "no_eligible_target"}

@@ -268,6 +268,10 @@ def test_payment_task_persists_then_settles_before_one_execution(
     assert repeat["required_buyer_inputs"] == ["jurisdiction"]
     assert repeat["quote"]["authoritative_source"] == (
         "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_value_source"] == (
+        "caller_public_signing_address")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is True
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
     assert fake.calls == ["verify", "settle"] and len(core.calls) == 1
     record = next(iter(getattr(core, GATE_ATTR)["consumed_x402"].values()))
     assert record["surface"] == "a2a-x402-v2"
@@ -335,6 +339,8 @@ def test_hive_completed_a2a_artifact_preserves_fixed_price_repeat_contract(
         "type": "integer", "const": 500}
     assert repeat["quote"]["authoritative_source"] == (
         "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is False
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
     assert commerce["auto_execute"] is False
     assert commerce["payment_required"] is True
     assert commerce["buyer_authorization_required"] is True
