@@ -237,15 +237,24 @@ class LiveFleetClient:
             for item in raw_work:
                 if not isinstance(item, dict):
                     continue
-                required = {"work_id", "title", "budget_minor", "currency"}
+                required = {
+                    "work_id", "title", "budget_minor", "currency",
+                    "funding_status",
+                }
                 if not required.issubset(item):
+                    continue
+                # Market inventory is not paid demand until its funding has
+                # been independently verified. Unknown and future statuses
+                # fail closed so outbound copy cannot overstate demand.
+                if str(item["funding_status"]).strip().upper() != "VERIFIED":
                     continue
                 budget = int(item["budget_minor"])
                 if budget <= 0 or str(item["currency"]).upper() != "USD":
                     continue
                 jobs.append({key: item.get(key) for key in (
                     "work_id", "title", "description", "budget_minor",
-                    "currency", "required_capabilities", "delivery_deadline")})
+                    "currency", "funding_status", "required_capabilities",
+                    "delivery_deadline")})
             jobs.sort(key=lambda item: (-int(item["budget_minor"]),
                                         str(item["work_id"])))
             return FleetSnapshot(
@@ -372,42 +381,51 @@ def _money(price_minor: int) -> str:
 
 
 def render_content(snapshot: FleetSnapshot) -> str:
-    # When paid work is available, reserve the finite posting budget for the
-    # exact job ids/budgets agents need in order to act. Route descriptions are
-    # still sourced and validated elsewhere, but repeating five long product
-    # descriptions alongside three jobs can exceed Discord's safe limit.
-    compact_routes = bool(snapshot.open_work and snapshot.market_url)
-    lines = [
-        "Live x402 carbon + compliance agent workflow on Base:",
-        "measure → account → disclose → claim → scan", "",
-    ]
-    for route in snapshot.routes:
-        route_line = f"• {route['agent']} — {_money(route['price_minor'])}"
-        if not compact_routes:
-            route_line += f": {route['description']}"
-        lines.append(route_line)
-    lines.extend(["", "No signup or API key. A caller receives HTTP 402, "
-                  "settles Base USDC, and gets the deterministic result."])
-    if snapshot.intro_enabled:
-        lines.append("First paid call from a new wallet is $0.01.")
-    external = int(snapshot.metrics.get("external_settlements") or 0)
-    payers = int(snapshot.metrics.get("distinct_external_payers") or 0)
-    if external:
-        lines.append(f"Live external proof: {external} settlement(s) from "
-                     f"{payers} distinct payer(s).")
-    if snapshot.open_work and snapshot.market_url:
-        lines.extend(["", "Open paid work for outside agents:"])
-        for job in snapshot.open_work[:3]:
-            title = str(job["title"]).strip()
-            if len(title) > 96:
-                title = title[:93].rstrip() + "..."
-            lines.append(
-                f"• {_money(int(job['budget_minor']))} — {title} "
-                f"({job['work_id']})")
-        lines.append(f"Discover and bid: {snapshot.market_url}")
-    lines.extend(["", f"Free dry-run: {snapshot.quickstart_url}",
-                  f"Agent suite: {snapshot.agents_url}"])
-    content = "\n".join(lines)
+    # When independently verified funded work is available, reserve the finite
+    # posting budget for the exact job ids/budgets agents need in order to act.
+    # Route descriptions are still sourced and validated elsewhere, but
+    # repeating five long product descriptions alongside three jobs can exceed
+    # Discord's safe limit.
+    def build(*, compact_routes: bool) -> str:
+        lines = [
+            "Live x402 carbon + compliance agent workflow on Base:",
+            "measure → account → disclose → claim → scan", "",
+        ]
+        for route in snapshot.routes:
+            route_line = f"• {route['agent']} — {_money(route['price_minor'])}"
+            if not compact_routes:
+                route_line += f": {route['description']}"
+            lines.append(route_line)
+        lines.extend(["", "No signup or API key. A caller receives HTTP 402, "
+                      "settles Base USDC, and gets the deterministic result."])
+        if snapshot.intro_enabled:
+            lines.append("First paid call from a new wallet is $0.01.")
+        external = int(snapshot.metrics.get("external_settlements") or 0)
+        payers = int(snapshot.metrics.get("distinct_external_payers") or 0)
+        if external:
+            lines.append(f"Live external proof: {external} settlement(s) from "
+                         f"{payers} distinct payer(s).")
+        if snapshot.open_work and snapshot.market_url:
+            lines.extend(["",
+                          "Independently funded work for outside agents:"])
+            for job in snapshot.open_work[:3]:
+                title = str(job["title"]).strip()
+                if len(title) > 96:
+                    title = title[:93].rstrip() + "..."
+                lines.append(
+                    f"• {_money(int(job['budget_minor']))} — {title} "
+                    f"({job['work_id']})")
+            lines.append(f"Discover and bid: {snapshot.market_url}")
+        lines.extend(["", f"Free dry-run: {snapshot.quickstart_url}",
+                      f"Agent suite: {snapshot.agents_url}"])
+        return "\n".join(lines)
+
+    compact_for_work = bool(snapshot.open_work and snapshot.market_url)
+    content = build(compact_routes=compact_for_work)
+    if len(content) > 1900 and not compact_for_work:
+        # A growing live suite must not turn a safe no-send cycle into an
+        # operational failure merely because descriptions no longer fit.
+        content = build(compact_routes=True)
     if len(content) > 1900:
         raise GrowthError("generated content exceeds safe Discord length")
     return content

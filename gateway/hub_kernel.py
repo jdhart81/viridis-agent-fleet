@@ -13,6 +13,11 @@ HK5 trust outcomes are recorded only after HK3/HK4 succeeds and exactly once.
 HK6 delivery proofs and compute evidence are never inferred or fabricated.
 HK7 every accepted event is durable before the verification receipt is returned.
 HK8 failures are fail-closed and retryable; they never execute a market job.
+HK9 post-award work funding is a distinct receipt: only a pull-verified live
+    cash escrow in FUNDED state whose payer, payee, amount, and currency match
+    the awarded terms can be marked VERIFIED before delivery.
+HK10 funding verification creates no trust, earnings, compute, or settlement
+     outcome. The same escrow may later settle only the same work order.
 """
 from __future__ import annotations
 
@@ -37,6 +42,7 @@ TRANSFER_TOPIC = (
 TX_RE = re.compile(r"^0x[0-9a-fA-F]{64}$")
 ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 EVENT_RE = re.compile(r"^hub_[0-9a-f]{64}$")
+FUNDING_EVENT_RE = re.compile(r"^funding_[0-9a-f]{64}$")
 MAX_BODY = 1_000_000
 
 
@@ -62,6 +68,8 @@ class HubError(RuntimeError):
 class HubState:
     receipts: Dict[str, dict] = field(default_factory=dict)
     references: Dict[str, str] = field(default_factory=dict)
+    funding_receipts: Dict[str, dict] = field(default_factory=dict)
+    funding_references: Dict[str, str] = field(default_factory=dict)
     identity_profiles: Dict[str, str] = field(default_factory=dict)
     errors: Dict[str, str] = field(default_factory=dict)
 
@@ -154,6 +162,43 @@ class HubKernel:
         if event_id != expected or not work_id or amount_minor <= 0:
             raise HubError("event binding is invalid", error_type="bad_event",
                            status_code=400)
+        return event_id, reference, amount_minor
+
+    def _validate_funding_event(self, payload: dict) -> tuple[str, str, int]:
+        if (not isinstance(payload, dict)
+                or payload.get("spec_version")
+                != "viridis-hub-funding-event-v1"):
+            raise HubError("unsupported Hub funding event",
+                           error_type="bad_event", status_code=400)
+        event_id = str(payload.get("event_id") or "")
+        if not FUNDING_EVENT_RE.fullmatch(event_id):
+            raise HubError("invalid funding event_id",
+                           error_type="bad_event", status_code=400)
+        work = self._required_dict(payload, "work")
+        offer = self._required_dict(payload, "offer")
+        funding = self._required_dict(payload, "funding")
+        self._required_dict(payload, "buyer_profile")
+        self._required_dict(payload, "seller_profile")
+        work_id = str(work.get("work_id") or "")
+        reference = str(funding.get("reference") or "")
+        try:
+            amount_minor = int(funding.get("amount_minor"))
+        except (TypeError, ValueError) as exc:
+            raise HubError("invalid funding amount", error_type="bad_event",
+                           status_code=400) from exc
+        expected = "funding_" + hashlib.sha256(
+            f"{work_id}|{reference}".encode()).hexdigest()
+        if (event_id != expected or not work_id or not reference
+                or amount_minor <= 0):
+            raise HubError("funding event binding is invalid",
+                           error_type="bad_event", status_code=400)
+        if (str(funding.get("rail") or "") != "viridis_cash_escrow"
+                or str(offer.get("work_id") or "") != work_id
+                or int(offer.get("amount_minor") or 0) != amount_minor
+                or str(offer.get("currency") or "")
+                != str(funding.get("currency") or "")):
+            raise HubError("funding does not match the awarded offer",
+                           error_type="bad_event", status_code=400)
         return event_id, reference, amount_minor
 
     def _local_x402(self, payload: dict, tx_hash: str,
@@ -294,6 +339,52 @@ class HubKernel:
             return primitive
         raise HubError("manual payout lacks independently verifiable licensed-rail evidence")
 
+    def _verify_cash_funding(self, payload: dict, amount_minor: int) -> dict:
+        funding = payload["funding"]
+        escrow_id = str(funding.get("reference") or "")
+        funded = getattr(getattr(self.custody, "state", None), "funded", {}) or {}
+        evidence = funded.get(escrow_id)
+        if not isinstance(evidence, dict):
+            raise HubError(
+                "cash escrow has no pull-verified funding evidence")
+        if not self.allow_test_settlements and evidence.get("livemode") is not True:
+            raise HubError(
+                "test-mode escrow cannot count as verified work funding")
+        status = self.custody.escrow.process_sync(
+            {"action": "status", "escrow_id": escrow_id})
+        escrow = status.get("data") if isinstance(status, dict) else None
+        offer = payload["offer"]
+        awarded = offer.get("settlement") or {}
+        work = payload["work"]
+        seller_payment = payload["seller_profile"].get("payment") or {}
+        if not isinstance(escrow, dict) or escrow.get("state") != "FUNDED":
+            raise HubError("cash escrow is not FUNDED")
+        if (int(escrow.get("amount_minor") or 0) != amount_minor
+                or str(escrow.get("currency") or "").upper()
+                != str(funding.get("currency") or "").upper()
+                or str(escrow.get("payer") or "") != str(work.get("buyer_id") or "")
+                or str(escrow.get("payee") or "")
+                != str(awarded.get("payee_id") or "")
+                or str(awarded.get("payee_id") or "")
+                != str(seller_payment.get("payee_id") or "")):
+            raise HubError(
+                "cash escrow terms do not match the awarded work")
+        if int(evidence.get("amount_total") or 0) != amount_minor:
+            raise HubError(
+                "cash funding evidence amount does not match the award")
+        return {
+            "primitive": "stripe_checkout_escrow_funding",
+            "source": "escrow_custody",
+            "escrow_id": escrow_id,
+            "session_id": evidence.get("session_id"),
+            "livemode": bool(evidence.get("livemode")),
+            "amount_minor": amount_minor,
+            "currency": str(funding.get("currency") or "").upper(),
+            "payer": escrow.get("payer"),
+            "payee": escrow.get("payee"),
+            "escrow_state": "FUNDED",
+        }
+
     async def _verify_delivery_proofs(self, payload: dict) -> dict:
         delivery = payload["delivery"]
         proofs = delivery.get("proofs") or {}
@@ -410,6 +501,10 @@ class HubKernel:
         return {**receipt["data"], "evidence_source": evidence.get("source")}
 
     async def handle_event(self, payload: dict) -> dict:
+        if (isinstance(payload, dict)
+                and payload.get("spec_version")
+                == "viridis-hub-funding-event-v1"):
+            return await self.handle_funding_event(payload)
         event_id, reference, amount_minor = self._validate_event(payload)
         payload_sha = hashlib.sha256(_stable(payload).encode()).hexdigest()
         prior = self.state.receipts.get(event_id)
@@ -461,8 +556,54 @@ class HubKernel:
                            status_code=503, retryable=True)
         return receipt
 
+    async def handle_funding_event(self, payload: dict) -> dict:
+        event_id, reference, amount_minor = self._validate_funding_event(payload)
+        payload_sha = hashlib.sha256(_stable(payload).encode()).hexdigest()
+        prior = self.state.funding_receipts.get(event_id)
+        if prior:
+            if prior.get("event_sha256") != payload_sha:
+                raise HubError("funding event_id reused with different content")
+            return {**prior, "duplicate": True}
+        work_id = str(payload["work"]["work_id"])
+        other_work = self.state.funding_references.get(reference.lower())
+        if other_work and other_work != work_id:
+            raise HubError(
+                "funding reference already used by another work order")
+        primitive = self._verify_cash_funding(payload, amount_minor)
+        receipt = {
+            "verified": True,
+            "funding_status": "VERIFIED",
+            "duplicate": False,
+            "event_id": event_id,
+            "event_sha256": payload_sha,
+            "work_id": work_id,
+            "verified_at": _now(),
+            "money_primitive": primitive,
+            "claim_boundary": (
+                "proves exact live cash escrow custody in FUNDED state for "
+                "the awarded buyer, seller, amount, and currency; does not "
+                "prove delivery, acceptance, settlement, earnings, or "
+                "usefulness"),
+        }
+        self.state.funding_receipts[event_id] = receipt
+        self.state.funding_references[reference.lower()] = work_id
+        try:
+            saved = bool(self.store.save(self.persist_key, self.state))
+        except Exception:
+            saved = False
+        if not saved:
+            self.state.funding_receipts.pop(event_id, None)
+            if self.state.funding_references.get(reference.lower()) == work_id:
+                self.state.funding_references.pop(reference.lower(), None)
+            raise HubError(
+                "Hub funding receipt was not durable",
+                error_type="persist_failed", status_code=503,
+                retryable=True)
+        return receipt
+
     def status(self) -> dict:
         receipts = list(self.state.receipts.values())
+        funding_receipts = list(self.state.funding_receipts.values())
         return {
             "enabled": self.enabled,
             "spec_version": "viridis-hub-kernel-v1",
@@ -471,6 +612,10 @@ class HubKernel:
                 item.get("money_primitive", {}).get("amount_minor")
                 or int(item.get("money_primitive", {}).get("amount_atomic", 0)) // 10_000)
                 for item in receipts),
+            "verified_work_fundings": len(funding_receipts),
+            "verified_work_funding_minor": sum(
+                int(item.get("money_primitive", {}).get("amount_minor") or 0)
+                for item in funding_receipts),
             "x402c_receipts": sum(item.get("x402c") is not None for item in receipts),
             "identity_bindings": len(self.state.identity_profiles),
             "errors": dict(self.state.errors),

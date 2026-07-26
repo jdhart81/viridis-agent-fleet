@@ -208,7 +208,9 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
         with TestClient(gateway.build_app()) as client:
             agents = client.get("/agents")
             quickstart = client.get("/quickstart")
+            snapshot = client.get("/compliance-snapshot")
             llms = client.get("/llms.txt")
+            brand_mark = client.get("/brand/viridis-mark.svg")
             x402_catalog = client.get("/x402/catalog")
             x402_well_known = client.get("/.well-known/x402")
             skills_index = client.get("/.well-known/skills/index.json")
@@ -221,7 +223,11 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
 
     assert agents.status_code == 200
     assert quickstart.status_code == 200
+    assert snapshot.status_code == 200
     assert llms.status_code == 200
+    assert brand_mark.status_code == 200
+    assert brand_mark.headers["content-type"].startswith("image/svg+xml")
+    assert "Viridis connected land mark" in brand_mark.text
     assert x402_catalog.status_code == 200
     assert x402_well_known.status_code == 200
     assert skills_index.status_code == 200
@@ -237,10 +243,15 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     }]}
     assert "name: viridis-paid-tools" in buyer_skill.text
     assert "viridis_commerce.next_paid_routes" in buyer_skill.text
+    assert "viridis_commerce.repeat_purchase" in buyer_skill.text
+    assert "`input_schema`, `input_example`" in buyer_skill.text
+    assert "`required_buyer_inputs`, and `quote`" in buyer_skill.text
+    assert "quote.authoritative_source" in buyer_skill.text
     assert "funding_status: UNVERIFIED" in buyer_skill.text
-    assert "5 live paid routes" in agents.text
+    assert "6 live paid routes" in agents.text
     assert "CDP Bazaar" in agents.text
-    assert "First paid call from every new wallet is $0.01" in agents.text
+    assert "First paid call from every new wallet on eligible" in agents.text
+    assert "Hive stays at its fixed $5.00 price" in agents.text
     assert "quantity-takeoff" in quickstart.text
     assert "x402_demo_client.py" in quickstart.text
     assert "--dry-run" in quickstart.text
@@ -252,13 +263,17 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "45V clean energy tax credit emissions disclosure" in quickstart.text
     assert "legacy v1 header names" in quickstart.text
     assert "Hermes Agent" in quickstart.text
+    assert "/compliance-snapshot" in agents.text
+    assert "/seats" in agents.text
+    assert "$49 reviewed Compliance Snapshot" in quickstart.text
+    assert "Continue to Stripe — $49" in snapshot.text
     assert "hermes mcp add viridis-market" in quickstart.text
     assert "Viridis does not install or operate it" in quickstart.text
     assert ".well-known/skills/viridis-paid-tools" in quickstart.text
     assert "--source well-known" in quickstart.text
     assert "--yes" in quickstart.text
     assert "--now" not in quickstart.text
-    assert "First paid call from every new wallet is $0.01" in quickstart.text
+    assert "First paid call from every new wallet on eligible" in quickstart.text
     assert "Payable HTTP routes" in llms.text
     assert "--route regulatory-radar --max-payment-usdc 0.01" in llms.text
     assert "10000-atomic ceiling" in llms.text
@@ -267,23 +282,25 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert (
         "https://mcp.viridisconservation.com/.well-known/skills/index.json"
         in llms.text)
-    assert "First paid call from every new wallet is $0.01" in llms.text
+    assert "First paid call from every new wallet on eligible" in llms.text
     machine = x402_catalog.json()
     assert x402_well_known.json() == machine
     assert machine["spec_version"] == "viridis-x402-catalog-v1"
     assert machine["intro_pricing"]["enabled"] is True
-    assert len(machine["routes"]) == 5
+    assert len(machine["routes"]) == 6
     assert machine["buyer_skill"].endswith(
         "/.well-known/skills/viridis-paid-tools/SKILL.md")
     assert {route["agent"] for route in machine["routes"]} == {
         "quantity-takeoff", "ghg-ledger", "disclosure-compiler",
-        "taxcredit-engine", "regulatory-radar"}
+        "taxcredit-engine", "regulatory-radar", "hive"}
     assert agents.headers["x-frame-options"] == "DENY"
     assert "x-robots-tag" not in agents.headers
     assert health.status_code == 200
     assert health.json()["human_surfaces"]["agents"].endswith("/agents")
     assert health.json()["human_surfaces"]["quickstart"].endswith(
         "/quickstart")
+    assert health.json()["human_surfaces"]["compliance_snapshot"].endswith(
+        "/compliance-snapshot")
     assert health.json()["human_surfaces"]["llms_txt"].endswith(
         "/llms.txt")
     assert health.json()["human_surfaces"]["x402_catalog"].endswith(
@@ -295,12 +312,19 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     surfaces = {item["url"] for item in catalog.json()["humanSurfaces"]}
     assert "https://mcp.viridisconservation.com/agents" in surfaces
     assert "https://mcp.viridisconservation.com/quickstart" in surfaces
+    assert (
+        "https://mcp.viridisconservation.com/compliance-snapshot"
+        in surfaces)
     assert "https://mcp.viridisconservation.com/llms.txt" in surfaces
     assert "https://mcp.viridisconservation.com/x402/catalog" in surfaces
     dockerfile = (HERE / "Dockerfile").read_text()
     assert "COPY deploy/gateway/agents.html deploy/gateway/" in dockerfile
     assert "COPY deploy/gateway/quickstart.html deploy/gateway/" in dockerfile
+    assert (
+        "COPY deploy/gateway/compliance_snapshot.html deploy/gateway/"
+        in dockerfile)
     assert "COPY deploy/gateway/llms.txt deploy/gateway/" in dockerfile
+    assert "COPY deploy/gateway/viridis-mark.svg deploy/gateway/" in dockerfile
     assert (
         "COPY integrations/viridis-paid-tools/SKILL.md "
         "integrations/viridis-paid-tools/" in dockerfile)

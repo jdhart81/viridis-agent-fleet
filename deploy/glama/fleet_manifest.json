@@ -4711,7 +4711,7 @@
   "hive": [
     {
       "name": "solve",
-      "description": "Open and run a hive job in one call: hire solvers through the rails\n(covenant -> escrow -> meter), force reviewer!=author cross-review,\nsynthesize only what survives review, settle every escrow exactly-once,\nand return a content-addressed audit hash plus bits-per-joule telemetry.\nPrice: $5.00 per solve after 3 free/day; sub-hires settle via escrow at\neach solver's list price.",
+      "description": "Open and run a hive job in one call: hire solvers through the rails\n(covenant -> escrow -> meter), force reviewer!=author cross-review,\nsynthesize only what survives review, settle every escrow exactly-once,\nand return a content-addressed audit hash plus bits-per-joule telemetry.\nPrice: $5.00 per solve; model-backed solves have no free tier because\nprovider cost must be covered. Sub-hires settle via escrow at each\nsolver's list price.",
       "inputSchema": {
         "type": "object",
         "properties": {

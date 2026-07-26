@@ -1,5 +1,7 @@
-# Viridis Agent Stable gateway — deployment round 1
-mcp>=1.0
-uvicorn>=0.29
-starlette>=0.37
-cryptography>=42.0   # x402/CDP request-bound Ed25519 JWT auth (PRX)
+# Viridis Agent Stable gateway direct dependencies.
+# Exact transitive production resolution lives in requirements.lock and is
+# the only file installed by the production Dockerfile.
+mcp==1.28.1
+uvicorn==0.51.0
+starlette==1.3.1
+cryptography==49.0.0

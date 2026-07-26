@@ -23,6 +23,14 @@ from typing import Any
 DEFAULT_BASE_URL = "https://mcp.viridisconservation.com"
 EXTENSION_URI = "https://github.com/google-a2a/a2a-x402/v0.1"
 DEFAULT_SKILL = "regulatory-radar.scan_regulations"
+REQUIRED_SKILL_IDS = frozenset({
+    "quantity-takeoff.calculate_takeoff",
+    "ghg-ledger.calculate_inventory",
+    "disclosure-compiler.compile_disclosure",
+    "taxcredit-engine.calculate_tax_credit",
+    "regulatory-radar.scan_regulations",
+    "hive.solve",
+})
 DEFAULT_INPUT = {
     "jurisdiction": "US",
     "sector": "energy",
@@ -47,6 +55,14 @@ def _interface(card: Any) -> Any:
         if getattr(interface, "protocol_binding", "") == "HTTP+JSON":
             return interface
     return None
+
+
+def _skill_ids(card: Any) -> set[str]:
+    return {
+        skill_id
+        for skill in getattr(card, "skills", ())
+        if (skill_id := getattr(skill, "id", ""))
+    }
 
 
 def _quote_summary(event: dict) -> dict:
@@ -100,12 +116,14 @@ async def _run(args: argparse.Namespace) -> int:
             raise RuntimeError("Agent Card does not advertise A2A 1.0")
         if extension is None or not getattr(extension, "required", False):
             raise RuntimeError("Agent Card does not require the canonical x402 extension")
-        skills = list(getattr(card, "skills", ()))
-        if len(skills) != 5:
-            raise RuntimeError(f"expected five advertised skills, received {len(skills)}")
-        if args.request_quote and args.skill not in {
-            getattr(skill, "id", "") for skill in skills
-        }:
+        skill_ids = _skill_ids(card)
+        missing_skills = REQUIRED_SKILL_IDS - skill_ids
+        if missing_skills:
+            raise RuntimeError(
+                "Agent Card is missing required Viridis skills: "
+                + ", ".join(sorted(missing_skills))
+            )
+        if args.request_quote and args.skill not in skill_ids:
             raise RuntimeError(f"requested skill is not advertised: {args.skill}")
 
         discovery = {
@@ -113,7 +131,7 @@ async def _run(args: argparse.Namespace) -> int:
             "interface": getattr(interface, "url", ""),
             "protocol": getattr(interface, "protocol_binding", ""),
             "protocol_version": getattr(interface, "protocol_version", ""),
-            "skills": len(skills),
+            "skills": len(skill_ids),
             "required_extension": getattr(extension, "uri", ""),
             "mode": "discovery_only" if not args.request_quote else "unpaid_quote",
         }

@@ -1,9 +1,11 @@
 # Your first Viridis fleet call in 30 seconds
 
-Every fleet agent is a plain MCP streamable-http endpoint. No signup, no key:
-most priced agents give **10 free calls per UTC day**; the Hive gives **3 free
-solves per caller per UTC day**, then costs **$5.00/solve**. The settlement
-rails are free forever. One curl pattern works everywhere:
+Every fleet agent is a plain MCP streamable-http endpoint. No signup or API key
+is needed for discovery. Most priced agents give **10 free calls per UTC day**.
+The provider-backed Hive has **no execution free tier** and costs
+**$5.00/solve** so its solver and model costs remain covered; its read-only
+tools and unpaid x402 preflight remain free. The settlement rails are free
+forever. One curl pattern works everywhere:
 
 ```bash
 curl -s https://mcp.viridisconservation.com/<MOUNT>/mcp \
@@ -105,7 +107,7 @@ entries and expose the jurisdiction on every returned regulation.
 
 ## Worked examples (copy-paste)
 
-**Hire a reviewed agent hive** — 3 free solves/day, then $5/solve:
+**Hire a reviewed agent hive** — $5/solve; read-only tools and unpaid preflight are free:
 ```bash
 curl -s https://mcp.viridisconservation.com/hive/mcp \
   -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \

@@ -38,10 +38,11 @@ async def main():
         with urllib.request.urlopen(f"{BASE}/healthz", timeout=20) as response:
             return json.load(response)
     health = await asyncio.to_thread(get_health)
-    check(f"gateway: 21 hosted agents healthy ({len(health.get('agents', {}))})",
-          health.get("status") == "ok" and len(health.get("agents", {})) == 21
+    check(f"gateway: 26 hosted agents healthy ({len(health.get('agents', {}))})",
+          health.get("status") == "ok" and len(health.get("agents", {})) == 26
           and health.get("persistence", {}).get("available") is True
           and not health.get("persistence", {}).get("errors", {})
+          and health["agents"].get("smartscale", {}).get("version") == "0.9.4"
           and health["agents"].get("taxcredit-engine", {}).get("version") == "0.1.0"
           and health["agents"].get("ghg-ledger", {}).get("version") == "0.1.0"
           and health["agents"].get("quantity-takeoff", {}).get("version") == "0.1.0"
@@ -97,7 +98,8 @@ async def main():
     m = await call("smartscale", "scale_objects_from_credit_card",
                    {"image_id": "i", "credit_card_pixel_width": 856.0,
                     "objects": [{"name": "box", "pixel_width": 1712.0,
-                                 "pixel_height": 856.0}]})
+                                 "pixel_height": 856.0}],
+                    "request_id": "gateway-smoke-smartscale-0.9.4"})
     smartscale_ok = "171.2" in m
     try:
         smartscale_payload = json.loads(m)
@@ -117,6 +119,49 @@ async def main():
         if smartscale_ok else
         "smartscale: exact $0.50 402 after free-tier exhaustion")
     check(smartscale_label, smartscale_ok or smartscale_quota_402)
+    if smartscale_ok:
+        replay = await call(
+            "smartscale", "scale_objects_from_credit_card",
+            {"image_id": "i", "credit_card_pixel_width": 856.0,
+             "objects": [{"name": "box", "pixel_width": 1712.0,
+                          "pixel_height": 856.0}],
+             "request_id": "gateway-smoke-smartscale-0.9.4"})
+        check("smartscale: request_id replay returns identical result",
+              replay == m)
+
+    malformed = json.loads(await call(
+        "smartscale", "scale_objects_from_credit_card",
+        {"image_id": "oversized", "credit_card_pixel_width": 856.0,
+         "objects": [
+             {"label": f"object-{i}", "pixel_width": 10.0,
+              "pixel_height": 10.0}
+             for i in range(201)
+         ],
+         "request_id": "gateway-smoke-smartscale-oversized"}))
+    malformed_ok = (
+        malformed.get("status") == "error"
+        and malformed.get("error_type") == "ValidationError"
+        and malformed.get("field") == "objects"
+    )
+    malformed_quota_402 = (
+        not STRICT_GATED_CALCS
+        and malformed.get("error_type") == "payment_required"
+        and malformed.get("amount_minor") == 50
+    )
+    check("smartscale: oversized object list fails closed",
+          malformed_ok or malformed_quota_402)
+
+    def smartscale_usage():
+        return get_health().get("payment_gate", {}).get(
+            "usage_today", {}).get("smartscale")
+    usage_before_reads = await asyncio.to_thread(smartscale_usage)
+    for _ in range(20):
+        await call("smartscale", "describe", {})
+        await call("smartscale", "health", {})
+    usage_after_reads = await asyncio.to_thread(smartscale_usage)
+    check("smartscale: describe+health x20 consume zero quota",
+          usage_before_reads is not None
+          and usage_after_reads == usage_before_reads)
     led = json.loads(await call("compute-ledger", "record_work",
                                 {"agent_id": "live-worker", "entry_id": "e1",
                                  "power_w": 200.0, "duration_s": 3600.0, "bit_ops": 1e19}))

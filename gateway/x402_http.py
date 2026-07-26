@@ -50,6 +50,11 @@ H402-11 BUYER CONTINUATION: a successful paid result may advertise compatible
        signs, initiates, or executes another payment; every next call requires
        a separate buyer-authorized x402 settlement. Repeat-purchase telemetry
        counts only versioned external settlements with a known payer wallet.
+H402-12 EXECUTABLE CONTINUATION: each next-route offer includes the target
+       description, input schema, example, required buyer-supplied fields, MCP
+       endpoint, and quote instructions. The offer is preparation metadata,
+       never authorization; the next route's unpaid challenge is the only
+       authoritative price/payment requirement.
 """
 from __future__ import annotations
 
@@ -73,6 +78,7 @@ X402_HTTP_TOOLS: Dict[Tuple[str, str], str] = {
     ("ghg-ledger", "calculate_inventory"): "calculate_inventory",
     ("quantity-takeoff", "calculate_takeoff"): "calculate_takeoff",
     ("disclosure-compiler", "compile_disclosure"): "compile_disclosure",
+    ("hive", "solve"): "solve",
 }
 
 AGENT402_FIXED_ROUTE = ("regulatory-radar", "scan_regulations_agent402")
@@ -252,6 +258,72 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
                      "audit_sha256": "content-addressed-draft-digest"},
         },
     },
+    ("hive", "solve"): {
+        "description": (
+            "Cost-bounded multi-agent solve with three independent workers, "
+            "reviewer-not-author cross-review, escrow settlement, trust "
+            "outcomes, compute accounting, and a content-addressed audit. "
+            "The fixed $5 profile supports at most four subtasks and "
+            "redundancy three."),
+        "service_name": "Viridis Agent Hive",
+        "category": "AI Services",
+        "tags": ["agents", "orchestration", "audit", "escrow", "reasoning"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "problem": {
+                    "type": "string", "minLength": 1,
+                    "maxLength": 12000,
+                },
+                "budget_minor": {"type": "integer", "const": 500},
+                "subtasks": {
+                    "type": ["array", "null"], "minItems": 1, "maxItems": 4,
+                    "items": {
+                        "type": "string", "minLength": 1, "maxLength": 4000,
+                    },
+                },
+                "depth": {"type": "integer", "const": 0},
+                "redundancy": {
+                    "type": "integer", "minimum": 1, "maximum": 3,
+                },
+                "accept_threshold": {
+                    "type": "number", "exclusiveMinimum": 0,
+                    "maximum": 1,
+                },
+                "seed": {"type": "integer"},
+                "fee_bps": {"type": "integer", "const": 0},
+            },
+            "required": ["problem", "budget_minor"],
+            "additionalProperties": False,
+        },
+        "input_error_hint": (
+            "Use the fixed $5 profile: non-empty problem, budget_minor=500, "
+            "depth=0, fee_bps=0, at most four subtasks, redundancy 1..3."),
+        "input_example": {
+            "problem": (
+                "Compare two approaches to reducing industrial energy cost "
+                "and return a reviewed recommendation with key risks."),
+            "budget_minor": 500,
+            "subtasks": [
+                "Assess technical feasibility.",
+                "Assess economics and implementation risk.",
+            ],
+            "depth": 0,
+            "redundancy": 2,
+            "accept_threshold": 0.6,
+            "seed": 0,
+            "fee_bps": 0,
+        },
+        "output_example": {
+            "status": "ok",
+            "data": {
+                "job_id": "job-content-addressed-id",
+                "state": "COMPLETED",
+                "synthesis": "review-surviving answer",
+                "audit_sha256": "content-addressed-audit-digest",
+            },
+        },
+    },
 }
 
 # Agent402 native listings advertise one static per-call price.  Keep this
@@ -266,7 +338,8 @@ X402_HTTP_METADATA[AGENT402_FIXED_ROUTE] = {
         "https://mcp.viridisconservation.com/brand/viridis-mark.svg"),
     "tags": ["climate", "energy", "compliance", "regulation", "CSRD"],
 }
-INTRO_EXEMPT_ROUTES = frozenset({AGENT402_FIXED_ROUTE})
+HIVE_FIXED_ROUTE = ("hive", "solve")
+INTRO_EXEMPT_ROUTES = frozenset({AGENT402_FIXED_ROUTE, HIVE_FIXED_ROUTE})
 
 # A small deterministic workflow graph for paid buyers. Values are
 # ((target_agent, target_tool), why_that_step_is_compatible). Targets remain
@@ -301,6 +374,12 @@ NEXT_PAID_ROUTES = {
          "Turn identified disclosure requirements into an auditable draft."),
         (("taxcredit-engine", "calculate_tax_credit"),
          "Evaluate an applicable clean-energy tax-credit opportunity."),
+    ),
+    HIVE_FIXED_ROUTE: (
+        (("regulatory-radar", "scan_regulations"),
+         "Check the reviewed recommendation against applicable requirements."),
+        (("disclosure-compiler", "compile_disclosure"),
+         "Turn review-surviving conclusions into an auditable disclosure."),
     ),
 }
 
@@ -368,6 +447,15 @@ def intro_status(cores: Dict[str, Any]) -> dict:
         "note": ("The hint improves preflight quoting only; signed payment "
                  "authorization determines eligibility."),
     }
+
+
+def price_for_payer(cores: Dict[str, Any], route: Tuple[str, str],
+                    list_price: int, payer: str = "") -> int:
+    """Return the exact public price, honoring fixed-price exclusions."""
+    if (intro_enabled() and route not in INTRO_EXEMPT_ROUTES
+            and not _payer_seen(cores, payer)):
+        return INTRO_SCHEDULE["price_minor"]
+    return list_price
 
 
 def _payer_wallet(payload: dict) -> str:
@@ -505,16 +593,61 @@ def next_paid_routes(agent: str, tool: str, public_base: str) -> list:
         if (next_agent, next_tool) not in X402_HTTP_TOOLS:
             continue
         price = PRICE_MINOR.get(next_agent, DEFAULT_PRICE_MINOR)
+        metadata = X402_HTTP_METADATA[(next_agent, next_tool)]
+        input_schema = metadata["input_schema"]
         offers.append({
             "agent": next_agent,
             "tool": next_tool,
             "endpoint": f"{base}/x402/{next_agent}/{next_tool}",
+            "mcp_endpoint": f"{base}/{next_agent}/mcp",
             "method": "POST",
             "price_minor": price,
             "amount_atomic_usdc": x402_rail.price_atomic(price),
             "reason": reason,
+            "description": metadata["description"],
+            "input_schema": input_schema,
+            "input_example": metadata["input_example"],
+            "required_buyer_inputs": list(input_schema.get("required", [])),
+            "quote": {
+                "preflight_required": True,
+                "authoritative_source": "next_route_unpaid_http_402",
+                "payer_hint_header": "X402-Payer-Address",
+                "advertised_price_posture": "returning_payer_list_price",
+            },
         })
     return offers
+
+
+def repeat_paid_route(agent: str, tool: str, public_base: str) -> dict:
+    """Return a same-service repurchase contract without authorizing it."""
+    from payment_gate import PRICE_MINOR, DEFAULT_PRICE_MINOR
+    import x402_rail
+    base = public_base.rstrip("/")
+    price = PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)
+    metadata = X402_HTTP_METADATA[(agent, tool)]
+    input_schema = metadata["input_schema"]
+    return {
+        "agent": agent,
+        "tool": tool,
+        "endpoint": f"{base}/x402/{agent}/{tool}",
+        "mcp_endpoint": f"{base}/{agent}/mcp",
+        "method": "POST",
+        "price_minor": price,
+        "amount_atomic_usdc": x402_rail.price_atomic(price),
+        "description": metadata["description"],
+        "input_schema": input_schema,
+        "input_example": metadata["input_example"],
+        "required_buyer_inputs": list(input_schema.get("required", [])),
+        "input_policy": (
+            "Supply a new caller-owned request. Never reuse prior inputs or "
+            "infer missing facts from the previous result."),
+        "quote": {
+            "preflight_required": True,
+            "authoritative_source": "repeat_route_unpaid_http_402",
+            "payer_hint_header": "X402-Payer-Address",
+            "advertised_price_posture": "returning_payer_list_price",
+        },
+    }
 
 
 def _with_commerce_metadata(payload: Any, agent: str, tool: str,
@@ -530,13 +663,16 @@ def _with_commerce_metadata(payload: Any, agent: str, tool: str,
     enriched["viridis_commerce"] = {
         "version": "viridis-commerce-v1",
         "current_route": f"{agent}/{tool}",
+        "repeat_purchase": repeat_paid_route(
+            agent, tool, public_base),
         "next_paid_routes": next_paid_routes(
             agent, tool, public_base),
         "auto_execute": False,
         "payment_required": True,
         "buyer_authorization_required": True,
-        "note": ("No follow-on payment was signed, initiated, or executed. "
-                 "Each next route requires a separate x402 settlement."),
+        "note": ("No repeat or follow-on payment was signed, initiated, or "
+                 "executed. Every purchase requires new caller-owned inputs, "
+                 "a fresh unpaid quote, and a separate x402 settlement."),
     }
     return enriched
 
@@ -599,6 +735,40 @@ async def _request_args(request) -> dict:
     return args
 
 
+async def _paid_preflight(core: Any, action: str,
+                          args: Dict[str, Any]) -> Dict[str, Any] | None:
+    """Run an agent-owned, side-effect-free paid-lane admission check."""
+    hook = getattr(core, "_paid_preflight", None)
+    if not callable(hook):
+        return None
+    try:
+        result = hook({"action": action, **args})
+        if asyncio.iscoroutine(result):
+            result = await result
+    except Exception as exc:
+        logger.exception("paid preflight failed closed")
+        return {
+            "status": "error", "error_type": "ServiceUnavailable",
+            "message": f"paid preflight unavailable: {type(exc).__name__}",
+        }
+    if result is None:
+        return None
+    if isinstance(result, dict) and result.get("status") == "error":
+        return result
+    return {
+        "status": "error", "error_type": "ServiceUnavailable",
+        "message": "paid preflight returned an invalid decision",
+    }
+
+
+def _preflight_http_response(error: Dict[str, Any]):
+    unavailable = error.get("error_type") == "ServiceUnavailable"
+    return _resp({
+        **error,
+        "payment_required": False,
+    }, 503 if unavailable else 400)
+
+
 def _normalize_request_args(agent: str, tool: str, args: dict) -> dict:
     """Normalize advertised aliases without mutating the caller's object."""
     if not isinstance(args, dict):
@@ -641,11 +811,37 @@ def make_x402_http_route(cores, store, public_base, tools=None):
         if not x402_rail.is_enabled():                         # H402-6
             return _resp({"error": "x402 rail disabled"}, 503)
         list_price = PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)
-        intro_for_route = (intro_enabled()
-                           and (agent, tool) not in INTRO_EXEMPT_ROUTES)
         payer_hint = str(request.headers.get(INTRO_PAYER_HEADER, "")).strip()
-        price = list_price
+        route = (agent, tool)
+        intro_for_route = intro_enabled() and route not in INTRO_EXEMPT_ROUTES
+        price = price_for_payer(cores, route, list_price, payer_hint)
         resource = f"{public_base}/x402/{agent}/{tool}"
+        meta = X402_HTTP_METADATA.get(route, {
+            "description": f"Viridis {agent} {tool} tool call",
+            "input_schema": {"type": "object", "additionalProperties": True},
+            "input_example": {},
+        })
+        args = _normalize_request_args(
+            agent, tool, await _request_args(request))
+        try:
+            import x402_v2
+            schema_matches = x402_v2._matches_schema(
+                args, meta["input_schema"])
+        except Exception:
+            schema_matches = True
+        if not schema_matches:
+            return _resp({
+                "error": "input does not match advertised schema",
+                "error_type": "input_validation_error",
+                "payment_required": False,
+                "hint": meta.get(
+                    "input_error_hint",
+                    "Correct the request to match the advertised JSON "
+                    "input schema."),
+            }, 400)
+        preflight_error = await _paid_preflight(core, action, args)
+        if preflight_error is not None:
+            return _preflight_http_response(preflight_error)
         # X2-1/X2-7: a separate, default-off v2 lane.  Flag off continues at
         # the byte-stable Wave-6 v1 behavior below; flag on never falls back.
         try:
@@ -654,23 +850,6 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                 if not x402_v2.is_enabled():
                     return _resp({"error": "x402 v2 rail disabled or "
                                            "incompletely configured"}, 503)
-                price = (INTRO_SCHEDULE["price_minor"]
-                         if intro_for_route
-                         and not _payer_seen(cores, payer_hint)
-                         else list_price)
-                meta = X402_HTTP_METADATA[(agent, tool)]
-                args = _normalize_request_args(
-                    agent, tool, await _request_args(request))
-                if not x402_v2._matches_schema(args, meta["input_schema"]):
-                    return _resp({
-                        "error": "input does not match advertised schema",
-                        "error_type": "input_validation_error",
-                        "payment_required": False,
-                        "hint": meta.get(
-                            "input_error_hint",
-                            "Correct the request to match the advertised "
-                            "input schema."),
-                    }, 400)
                 payment_required = x402_v2.build_payment_required(
                     agent, tool, price, resource,
                     str(getattr(request, "method", "POST")).upper(), meta)
@@ -691,8 +870,8 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                         return _resp({"error": "signed payer address required "
                                               "for intro-price eligibility"},
                                      402, required_headers)
-                    expected_price = (list_price if _payer_seen(cores, payer)
-                                      else INTRO_SCHEDULE["price_minor"])
+                    expected_price = price_for_payer(
+                        cores, route, list_price, payer)
                     if expected_price != price:
                         payment_required = x402_v2.build_payment_required(
                             agent, tool, expected_price, resource,
@@ -801,11 +980,6 @@ def make_x402_http_route(cores, store, public_base, tools=None):
             return _resp({"error": f"x402 v2 error: {type(exc).__name__}"},
                          500)
         reqs = dict(x402_rail.build_accepts(agent, price, resource))
-        meta = X402_HTTP_METADATA.get((agent, tool), {
-            "description": f"Viridis {agent} {tool} tool call",
-            "input_schema": {"type": "object", "additionalProperties": True},
-            "input_example": {},
-        })
         reqs["description"] = (f"{meta['description']} MCP pointer: "
                                f"{public_base}/{agent}/mcp tool={tool}")
         # CDP Bazaar's backwards-compatible v1 discovery hook. It indexes
@@ -848,7 +1022,6 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                             result["tx_hash"])
 
         # H402-4: execute via the ungated inner (payment already made).
-        args = await _request_args(request)
         args = {k: v for k, v in args.items() if k != "action"}
         try:
             out = inner({"action": action, **args})

@@ -38,6 +38,30 @@ def test_sp1_security_provider_is_federated_without_credentials():
     assert "private_key" not in serialized
     assert "api_key=" not in serialized
     assert "vulnerability-free guarantee" in member["metadata"]["claimBoundary"]
+    assert member["metadata"]["operatorEntity"] == "ViridisNorth LLC"
+    assert "related-party" in member["metadata"]["ownershipDisclosure"]
+
+
+def test_sp1b_security_plane_lists_three_isolated_commercial_services():
+    security = [member for member in gateway.EXTERNAL_MEMBERS
+                if member.get("category") == "security-plane"]
+    assert {member["identifier"] for member in security} == {
+        "urn:air:viridis:security-injection-detector",
+        "urn:air:viridis:security-canon-scanner",
+        "urn:air:viridis:security-maxwell",
+    }
+    assert all(member["url"].startswith("https://mcp.viridis-security.com/")
+               for member in security)
+    assert all(member["signup"] == "https://mcp.viridis-security.com/signup"
+               for member in security)
+    assert all(member["metadata"]["operatorEntity"] == "ViridisNorth LLC"
+               for member in security)
+    assert all("related-party" in member["metadata"]["ownershipDisclosure"]
+               for member in security)
+    rest = [member for member in security
+            if member["identifier"] !=
+            "urn:air:viridis:security-injection-detector"]
+    assert all(member["probe"] == "authenticated-rest" for member in rest)
 
 
 def test_sp2_directory_and_ard_publish_the_security_plane(tmp_path):

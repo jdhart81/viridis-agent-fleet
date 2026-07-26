@@ -91,6 +91,24 @@
       }
     },
     {
+      "agent_id": "viridis-hive-orchestrator",
+      "name": "Viridis Agent Hive Orchestrator",
+      "description": "Cost-bounded multi-agent problem solving through the real Viridis trust, covenant, escrow, metering, review, and compute-ledger rails. Every $5 model-backed solve hires multiple workers, cross-reviews their contributions, synthesizes only review-surviving work, and returns a content-addressed audit; execution has no free tier so provider cost remains covered.",
+      "capabilities": ["agent-orchestration", "cross-review", "multi-agent-synthesis", "nested-hive", "provenance", "reviewed-problem-solving"],
+      "representative_queries": ["hire multiple agents to solve and cross-review a problem", "get a reviewed multi-agent synthesis with an audit trail", "orchestrate a cost-bounded agent hive"],
+      "endpoint": "https://mcp.viridisconservation.com/hive/mcp",
+      "payment": {
+        "x402_endpoint": "https://mcp.viridisconservation.com/x402/hive/solve",
+        "cash_escrow_endpoint": "https://mcp.viridisconservation.com/payments/mcp",
+        "payee_id": "viridis:hive",
+        "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
+        "network": "eip155:8453",
+        "asset": "USDC",
+        "price_minor": 500,
+        "currency": "USD"
+      }
+    },
+    {
       "agent_id": "viridis-energyai",
       "name": "EnergyAI",
       "description": "Free energy intelligence and a real homeowner-to-installer conversion rail for AI agents. Check incentives, estimate solar production, score an Energy Node, or return a ready-to-share get_quote_link. An authenticated referring agent keeps signed attribution through the homeowner assessment and earns a 20% bounty when an installer buys the resulting lead.",
@@ -101,8 +119,9 @@
     },
     {
       "agent_id": "viridis-security-injection-detector",
+      "operator_entity": "ViridisNorth LLC",
       "name": "Viridis Security Injection Detector",
-      "description": "Agent-native prompt and tool-injection screening with explicit verdicts, matched patterns, recommended actions, and trace tool-policy checks. The public MCP supports unauthenticated discovery; tool calls require a Viridis Security API key. Free tier: 1,000 detections/month at mcp.viridis-security.com/signup.",
+      "description": "Agent-native prompt and tool-injection screening with explicit verdicts, matched patterns, recommended actions, and signed input-redacted result receipts for named market agents. The public MCP supports unauthenticated discovery; tool calls require a Viridis Security API key. Free tier: 1,000 detections/month at mcp.viridis-security.com/signup.",
       "capabilities": [
         "agent-security",
         "mcp-security",
@@ -116,6 +135,44 @@
         "add an MCP security guardrail to an autonomous agent"
       ],
       "endpoint": "https://mcp.viridis-security.com/mcp",
+      "payment": {}
+    },
+    {
+      "agent_id": "viridis-security-canon-scanner",
+      "operator_entity": "ViridisNorth LLC",
+      "name": "Viridis Security Canon Scanner",
+      "description": "Source-code security scanning for AI agents against the Viridis vulnerability canon, with bounded findings and remediation guidance. Calls use the separate Viridis Security API-key subscription runtime; market discovery never receives those credentials.",
+      "capabilities": [
+        "agent-code-security",
+        "canon-vulnerability-scanning",
+        "mcp-security",
+        "source-code-analysis"
+      ],
+      "representative_queries": [
+        "scan this agent source code for known MCP vulnerabilities",
+        "check an AI agent implementation against a vulnerability canon",
+        "find unsafe tool and network patterns in this agent code"
+      ],
+      "endpoint": "https://mcp.viridis-security.com/v1/canon/scan",
+      "payment": {}
+    },
+    {
+      "agent_id": "viridis-security-maxwell",
+      "operator_entity": "ViridisNorth LLC",
+      "name": "Viridis Security Maxwell Defense",
+      "description": "Adaptive proof-of-work defense for AI-agent endpoints that makes abusive requests expensive while legitimate verification stays cheap. Available on Viridis Security Growth and higher plans through the isolated Security runtime.",
+      "capabilities": [
+        "adaptive-proof-of-work",
+        "agent-abuse-defense",
+        "asymmetric-dissipation",
+        "mcp-security"
+      ],
+      "representative_queries": [
+        "protect my AI agent endpoint from automated abuse",
+        "issue a proof-of-work challenge for a suspicious agent request",
+        "add asymmetric denial-of-service defense to an MCP service"
+      ],
+      "endpoint": "https://mcp.viridis-security.com/v1/maxwell/challenge",
       "payment": {}
     }
   ]

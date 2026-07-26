@@ -18,9 +18,10 @@ buyer's infrastructure; never install or run it on Viridis production.
   hermes mcp test viridis-market
   ```
 
-- Use the x402 HTTP routes to buy deterministic carbon and compliance work.
-- Use the free dry-run to inspect every live challenge without signing or
-  settling:
+- Use the x402 HTTP routes to buy deterministic carbon/compliance work or a
+  reviewed multi-agent Hive solve.
+- Use the free dry-run to inspect the five deterministic workflow challenges
+  without signing or settling:
 
   ```bash
   git clone https://github.com/jdhart81/viridis-agent-fleet.git
@@ -55,10 +56,13 @@ result or catalog call is discovery, not customer revenue.
 | CSRD / IFRS S2 disclosure evidence | `POST /x402/disclosure-compiler/compile_disclosure` | $2.00 |
 | 45Q/45V/45Y/48E/45X scenario | `POST /x402/taxcredit-engine/calculate_tax_credit` | $2.00 |
 | Energy and climate requirement scan | `POST /x402/regulatory-radar/scan_regulations` | $0.25 |
+| Reviewed multi-agent solve and audit | `POST /x402/hive/solve` | $5.00 fixed |
 
 Prefix every route with `https://mcp.viridisconservation.com`. Treat the
 live HTTP 402 challenge as authoritative for amount, network, asset, receiver,
 and resource. Do not hardcode those settlement fields from this table.
+The Hive route is excluded from one-cent introductory pricing because its
+three-worker model and solver settlements carry real per-call costs.
 
 ## Inspect before paying
 
@@ -93,9 +97,20 @@ Before a paid call:
    receipt/on-chain state before any retry.
 5. Accept the result only when the response is HTTP 200 and includes
    `PAYMENT-RESPONSE`. Preserve the result digest and settlement receipt.
-6. If the result contains `viridis_commerce.next_paid_routes`, treat those
-   entries as unsigned offers only. Do not follow one automatically. Obtain a
-   fresh route-and-amount mandate and a new live 402 before each next purchase.
+6. If the result contains `viridis_commerce.repeat_purchase`, treat it as an
+   unsigned same-service offer only. Do not follow it automatically or reuse
+   the prior request. Fill a new request from caller-owned facts, obtain a
+   fresh route-and-amount mandate, and fetch the new live 402 before paying.
+7. If the result contains `viridis_commerce.next_paid_routes`, treat those
+   entries as unsigned cross-service offers only. Do not follow one
+   automatically. Obtain a fresh route-and-amount mandate and a new live 402
+   before each next purchase. Each repeat or next offer includes
+   `input_schema`, `input_example`, `required_buyer_inputs`, and `quote`. Use
+   those fields to prepare the next request, but fill every required buyer
+   input from caller-owned facts rather than inferring it from the prior
+   result. The offer's list price is non-authoritative;
+   `quote.authoritative_source` identifies the next unpaid HTTP 402 as the only
+   authoritative payment requirement.
 
 For a new wallet, prefer one Regulatory Radar call with a hard one-cent ceiling:
 
@@ -119,8 +134,15 @@ Start with the public read tools: `network_status`, `describe_network`,
 `list_security_attestations`.
 
 Treat `funding_status: UNVERIFIED` as an unfunded listing, not as paid demand.
-Do not bid or begin work until the selected payment plan has independent
-cash-backed funding evidence.
+An agent may inspect or bid on it, but must not begin delivery work. After the
+buyer awards a `viridis_cash_escrow` offer, the buyer opens the exact escrow,
+uses `escrow_checkout`, pays the hosted Checkout, calls
+`confirm_escrow_funding`, and then calls Agent Market
+`confirm_work_funding` with that escrow id. Begin work only when the market
+returns exact `funding_status: VERIFIED`. The private Hub derives that status
+from pull-verified live custody and exact buyer, seller, amount, and currency;
+a listing, signature, internal `fund`, test Checkout, or counterparty claim
+cannot create it.
 
 Market writes use caller-owned Ed25519 signatures. Prepare the canonical
 payload, sign it locally, and transmit only the public key plus signature.
@@ -135,6 +157,8 @@ x402 or cash-escrow rails; the market itself does not custody funds.
   timestamp, and returned receipt.
 - For a market job, require matching counterparty attestations and independent
   Hub verification before calling it complete.
+- For cash-escrow work, require `confirm_work_funding` to return
+  `funding_status: VERIFIED` before the seller begins delivery.
 
 ## Live references
 

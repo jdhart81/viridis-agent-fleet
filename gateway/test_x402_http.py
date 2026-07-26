@@ -222,13 +222,14 @@ def test_H402_7_malformed_header_402(rig):
     assert r.status_code == 402 and "malformed" in body_of(r)["error"]
 
 
-def test_registered_production_allowlist_has_five_priced_front_doors():
+def test_registered_production_allowlist_has_six_priced_front_doors():
     assert x402_http.X402_HTTP_TOOLS == {
         ("regulatory-radar", "scan_regulations"): "scan",
         ("taxcredit-engine", "calculate_tax_credit"): "calculate",
         ("ghg-ledger", "calculate_inventory"): "calculate_inventory",
         ("quantity-takeoff", "calculate_takeoff"): "calculate_takeoff",
         ("disclosure-compiler", "compile_disclosure"): "compile_disclosure",
+        ("hive", "solve"): "solve",
     }
 
 
@@ -237,6 +238,7 @@ def test_agent402_has_a_fixed_price_regulatory_radar_alias():
         ("regulatory-radar", "scan_regulations_agent402"): "scan",
     }
     assert x402_http.AGENT402_FIXED_ROUTE in x402_http.INTRO_EXEMPT_ROUTES
+    assert x402_http.HIVE_FIXED_ROUTE in x402_http.INTRO_EXEMPT_ROUTES
     assert (
         x402_http.X402_HTTP_METADATA[
             x402_http.AGENT402_FIXED_ROUTE]["icon_url"]
@@ -256,6 +258,8 @@ def test_discovery_inventory_has_exact_prices_and_atomic_math():
     assert entries["quantity-takeoff"]["amount_atomic_usdc"] == "500000"
     assert entries["disclosure-compiler"]["price_minor"] == 200
     assert entries["disclosure-compiler"]["amount_atomic_usdc"] == "2000000"
+    assert entries["hive"]["price_minor"] == 500
+    assert entries["hive"]["amount_atomic_usdc"] == "5000000"
     assert all(e["methods"] == ["GET", "POST"] for e in entries.values())
     live_routes = {
         f"{agent}/{tool}" for agent, tool in x402_http.X402_HTTP_TOOLS}
@@ -266,8 +270,23 @@ def test_discovery_inventory_has_exact_prices_and_atomic_math():
             assert route in live_routes
             assert offer["method"] == "POST"
             assert offer["endpoint"] == f"https://mcp.test/x402/{route}"
+            assert offer["mcp_endpoint"] == (
+                f"https://mcp.test/{offer['agent']}/mcp")
             assert offer["amount_atomic_usdc"] == x402_rail.price_atomic(
                 offer["price_minor"])
+            metadata = x402_http.X402_HTTP_METADATA[
+                (offer["agent"], offer["tool"])]
+            assert offer["description"] == metadata["description"]
+            assert offer["input_schema"] == metadata["input_schema"]
+            assert offer["input_example"] == metadata["input_example"]
+            assert offer["required_buyer_inputs"] == list(
+                metadata["input_schema"].get("required", []))
+            assert offer["quote"] == {
+                "preflight_required": True,
+                "authoritative_source": "next_route_unpaid_http_402",
+                "payer_hint_header": "X402-Payer-Address",
+                "advertised_price_posture": "returning_payer_list_price",
+            }
 
 
 if __name__ == "__main__":
