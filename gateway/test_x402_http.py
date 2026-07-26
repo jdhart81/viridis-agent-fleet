@@ -222,13 +222,14 @@ def test_H402_7_malformed_header_402(rig):
     assert r.status_code == 402 and "malformed" in body_of(r)["error"]
 
 
-def test_registered_production_allowlist_has_five_priced_front_doors():
+def test_registered_production_allowlist_has_six_priced_front_doors():
     assert x402_http.X402_HTTP_TOOLS == {
         ("regulatory-radar", "scan_regulations"): "scan",
         ("taxcredit-engine", "calculate_tax_credit"): "calculate",
         ("ghg-ledger", "calculate_inventory"): "calculate_inventory",
         ("quantity-takeoff", "calculate_takeoff"): "calculate_takeoff",
         ("disclosure-compiler", "compile_disclosure"): "compile_disclosure",
+        ("hive", "solve"): "solve",
     }
 
 
@@ -237,6 +238,7 @@ def test_agent402_has_a_fixed_price_regulatory_radar_alias():
         ("regulatory-radar", "scan_regulations_agent402"): "scan",
     }
     assert x402_http.AGENT402_FIXED_ROUTE in x402_http.INTRO_EXEMPT_ROUTES
+    assert x402_http.HIVE_FIXED_ROUTE in x402_http.INTRO_EXEMPT_ROUTES
     assert (
         x402_http.X402_HTTP_METADATA[
             x402_http.AGENT402_FIXED_ROUTE]["icon_url"]
@@ -256,6 +258,8 @@ def test_discovery_inventory_has_exact_prices_and_atomic_math():
     assert entries["quantity-takeoff"]["amount_atomic_usdc"] == "500000"
     assert entries["disclosure-compiler"]["price_minor"] == 200
     assert entries["disclosure-compiler"]["amount_atomic_usdc"] == "2000000"
+    assert entries["hive"]["price_minor"] == 500
+    assert entries["hive"]["amount_atomic_usdc"] == "5000000"
     assert all(e["methods"] == ["GET", "POST"] for e in entries.values())
     live_routes = {
         f"{agent}/{tool}" for agent, tool in x402_http.X402_HTTP_TOOLS}

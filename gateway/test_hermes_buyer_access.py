@@ -28,6 +28,7 @@ def test_hermes_skill_is_remote_only_and_covers_every_paid_route():
         "disclosure-compiler": "compile_disclosure",
         "taxcredit-engine": "calculate_tax_credit",
         "regulatory-radar": "scan_regulations",
+        "hive": "solve",
     }.items():
         assert f"/x402/{agent}/{tool}" in skill
     lowered = skill.lower()

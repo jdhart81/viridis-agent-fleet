@@ -1,5 +1,37 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-25, Hive x402/A2A commerce — LIVE] Autonomous buyers can now
+> purchase the reviewed Hive directly through `/x402/hive/solve` or A2A skill
+> `hive.solve`.** The public catalog has six paid routes: five deterministic
+> carbon/compliance steps plus the separate three-worker Hive product.
+>
+> Hive is fixed at **$5.00 / 5,000,000 atomic Base USDC** and is excluded from
+> the one-cent intro. Both commerce surfaces run the Hive-owned cost/provider
+> preflight before quoting and again before settlement; invalid budget,
+> nesting, fees, subtasks, redundancy, or provider readiness produces no
+> payment task/header, facilitator call, job mutation, model request, or
+> escrow.
+>
+> Focused gates passed **80 tests**, gateway passed **436**, and both local and
+> production-source fleet gates passed **1,509 / 0 / 34 of 34 suites**. The
+> isolated candidate and cache-busted public smoke verified 27 agents, six
+> x402 routes, six A2A skills, the exact $5 challenge, and fail-before-pay
+> rejection. Live image
+> `sha256:7830f28236d8e081681ca425dcc27f5423c8a0f894f1d8e355ffe1bd3f3cf416`
+> is healthy; rollback `viridis-stable:prev-2026-07-25-hive-commerce`
+> preserves
+> `sha256:19e9c3fbc9be23410d66cfa71950b454a4e285ebe47c13e8b971b829a3cccac9`.
+>
+> The authoritative transactional pre-release database backup is integrity
+> `ok`, current-code compatible, and contains all 33 rows; SHA-256
+> `c8a3501767e0522e6d8487967a60c9b6d648d151aded14c28036221573c39c7a`.
+> A raw WAL-mode copy that contained only 32 rows was rejected. No money,
+> signature, provider request, customer job, or outreach was generated.
+> Strict truth remains **7 settlements / 4 self / 3 external / 3 distinct
+> external payers / 0 repeat / $0.27 external revenue / 0 Hive jobs / $0
+> MRR**. Full receipt:
+> `docs/deployment/HIVE_X402_A2A_COMMERCE_RELEASE_2026-07-25.md`.
+
 > **[2026-07-25, Agent Hive Orchestrator — LIVE/PUBLIC/REGISTRY] The fleet's
 > first native multi-agent customer is live at `/hive/mcp`.** It hires three
 > OpenAI-backed workers through the exact shared trust, covenant, escrow,

@@ -1,9 +1,11 @@
 # Viridis autonomous carbon and compliance agents
 
-Viridis provides five deterministic JSON-in/JSON-out tools that agents can
-discover and pay per call with x402 v2 and USDC on Base. No signup or API key
-is required. The tools form one chain: measure -> account -> disclose -> claim
--> scan.
+Viridis provides six JSON-in/JSON-out paid routes that agents can discover
+and buy with x402 v2 and USDC on Base. Five deterministic tools form one
+carbon/compliance chain: measure -> account -> disclose -> claim -> scan.
+The sixth route is a cost-bounded three-worker Hive solve with independent
+cross-review, escrow settlement, compute accounting, and an audit digest.
+No signup or API key is required.
 
 ## Activation
 
@@ -16,6 +18,7 @@ is required. The tools form one chain: measure -> account -> disclose -> claim
 - Disclose: POST https://mcp.viridisconservation.com/x402/disclosure-compiler/compile_disclosure — $2.00 list price — CSRD / IFRS S2 sustainability disclosure evidence.
 - Claim: POST https://mcp.viridisconservation.com/x402/taxcredit-engine/calculate_tax_credit — $2.00 list price — auditable 45Q, 45V, 45Y, 48E, and 45X scenarios.
 - Scan: POST https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations — $0.25 list price — energy and climate requirements, urgency, and effective dates.
+- Orchestrate: POST https://mcp.viridisconservation.com/x402/hive/solve — fixed $5.00 price — reviewed multi-agent solve with at most four subtasks and redundancy three. Hive is excluded from one-cent intro pricing.
 
 ## How payment works
 
