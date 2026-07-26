@@ -285,6 +285,12 @@ def test_discovery_inventory_has_exact_prices_and_atomic_math():
                 "preflight_required": True,
                 "authoritative_source": "next_route_unpaid_http_402",
                 "payer_hint_header": "X402-Payer-Address",
+                "payer_hint_value_source":
+                    "caller_public_signing_address",
+                "payer_hint_required_for_exact_quote":
+                    (offer["agent"], offer["tool"])
+                    not in x402_http.INTRO_EXEMPT_ROUTES,
+                "payer_hint_authorizes_payment": False,
                 "advertised_price_posture": "returning_payer_list_price",
             }
 

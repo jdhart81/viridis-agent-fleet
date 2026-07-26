@@ -689,6 +689,11 @@ def next_paid_routes(agent: str, tool: str, public_base: str) -> list:
                 "preflight_required": True,
                 "authoritative_source": "next_route_unpaid_http_402",
                 "payer_hint_header": "X402-Payer-Address",
+                "payer_hint_value_source":
+                    "caller_public_signing_address",
+                "payer_hint_required_for_exact_quote":
+                    (next_agent, next_tool) not in INTRO_EXEMPT_ROUTES,
+                "payer_hint_authorizes_payment": False,
                 "advertised_price_posture": "returning_payer_list_price",
             },
         })
@@ -722,6 +727,10 @@ def repeat_paid_route(agent: str, tool: str, public_base: str) -> dict:
             "preflight_required": True,
             "authoritative_source": "repeat_route_unpaid_http_402",
             "payer_hint_header": "X402-Payer-Address",
+            "payer_hint_value_source": "caller_public_signing_address",
+            "payer_hint_required_for_exact_quote":
+                (agent, tool) not in INTRO_EXEMPT_ROUTES,
+            "payer_hint_authorizes_payment": False,
             "advertised_price_posture": "returning_payer_list_price",
         },
     }

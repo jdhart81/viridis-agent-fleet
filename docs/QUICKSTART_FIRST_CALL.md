@@ -130,7 +130,10 @@ The live x402 v2 sequence is:
 
 `X-PAYMENT` and `X-PAYMENT-RESPONSE` are legacy v1 header names. The optional
 `X402-Payer-Address` request header is only an unsigned pricing hint for the
-new-wallet quote; it never authorizes payment.
+new-wallet quote; it never authorizes payment. Returning buyers should include
+their public signing address in that header on the unpaid preflight so the
+first quote is the exact returning-wallet price. Never put a private key in
+this header.
 
 California-specific scans accept `california` or `US-CA`; `CA` means Canada.
 California results include global, US-federal, and California-specific

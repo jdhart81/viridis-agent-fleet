@@ -874,6 +874,10 @@ def test_paid_success_offers_next_paid_routes_without_auto_execution(
     assert repeat["quote"]["preflight_required"] is True
     assert repeat["quote"]["authoritative_source"] == (
         "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_value_source"] == (
+        "caller_public_signing_address")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is True
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
     assert repeat["quote"]["advertised_price_posture"] == (
         "returning_payer_list_price")
     assert {f"{offer['agent']}/{offer['tool']}"
@@ -894,6 +898,10 @@ def test_paid_success_offers_next_paid_routes_without_auto_execution(
         assert offer["quote"]["preflight_required"] is True
         assert offer["quote"]["authoritative_source"] == (
             "next_route_unpaid_http_402")
+        assert offer["quote"]["payer_hint_value_source"] == (
+            "caller_public_signing_address")
+        assert offer["quote"]["payer_hint_required_for_exact_quote"] is True
+        assert offer["quote"]["payer_hint_authorizes_payment"] is False
         assert offer["quote"]["advertised_price_posture"] == (
             "returning_payer_list_price")
     assert len(core.calls) == 1
@@ -929,6 +937,8 @@ def test_repeat_purchase_contract_is_available_for_fixed_price_hive(
     assert repeat["amount_atomic_usdc"] == "5000000"
     assert repeat["quote"]["authoritative_source"] == (
         "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is False
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
     assert core.calls == [{
         "action": "solve",
         "problem": "Compare two deployment options.",

@@ -247,6 +247,8 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "`input_schema`, `input_example`" in buyer_skill.text
     assert "`required_buyer_inputs`, and `quote`" in buyer_skill.text
     assert "quote.authoritative_source" in buyer_skill.text
+    assert "quote.payer_hint_required_for_exact_quote" in buyer_skill.text
+    assert "caller's public signing address" in buyer_skill.text
     assert "funding_status: UNVERIFIED" in buyer_skill.text
     assert "6 live paid routes" in agents.text
     assert "CDP Bazaar" in agents.text
