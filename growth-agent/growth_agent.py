@@ -1138,7 +1138,15 @@ class GrowthAgent:
         preview_target = selected or (plan[0] if plan else None)
         target_for_content = preview_target or {
             "id": "no-target", "channel": "no eligible target"}
-        if selected is None and not dry_run:
+        if dry_run:
+            # A preview can never earn revenue, so it must never create paid
+            # model usage even if GROWTH_OPENAI_ENABLED drifts on.
+            content = render_content(snapshot)
+            model_result = {
+                "mode": "deterministic",
+                "reason": "dry_run_no_api",
+            }
+        elif selected is None:
             content = render_content(snapshot)
             model_result = {"mode": "deterministic",
                             "reason": "no_eligible_target"}

@@ -494,6 +494,31 @@ def test_dry_run_generates_and_selects_without_logging_or_send(tmp_path):
     assert log.entries() == []
 
 
+def test_dry_run_never_calls_paid_copywriter_when_openai_flag_drifts(tmp_path):
+    copywriter = RecordingHarness(fail=True)
+    worker, log, adapter = agent(
+        tmp_path,
+        copywriter=copywriter,
+        environ={
+            "GROWTH_AGENT_ENABLED": "1",
+            "GROWTH_OPENAI_ENABLED": "1",
+            "GROWTH_OPENAI_API_KEY": "must-not-be-used",
+        },
+    )
+
+    result = worker.run_once(dry_run=True)
+
+    assert result["status"] == "dry_run"
+    assert result["model"] == {
+        "mode": "deterministic",
+        "reason": "dry_run_no_api",
+    }
+    assert result["send_attempted"] is False
+    assert copywriter.calls == []
+    assert adapter.calls == []
+    assert log.entries() == []
+
+
 def test_write_before_send_survives_mocked_api_failure(tmp_path):
     log = OutboundLog(str(tmp_path / "growth.sqlite3"))
     adapter = RecordingAdapter(log, fail=True)
