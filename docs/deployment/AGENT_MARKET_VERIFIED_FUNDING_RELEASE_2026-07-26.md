@@ -48,9 +48,9 @@ proof of funding.
 
 | Gate | Result |
 |---|---:|
-| Agent Market focused suite | 42 passed |
+| Agent Market focused suite | 43 passed |
 | Gateway/Hermes focused suite | 24 passed |
-| Production-checkout full fleet | 1,540 passed, 0 failed, 34/34 suites |
+| Production-checkout full fleet | 1,541 passed, 0 failed, 34/34 suites |
 | Public Agent Market health | `ok`, version `0.7.0` |
 | Public manifest | 23 tools; `confirm_work_funding` present |
 | Private Hub | required and configured |

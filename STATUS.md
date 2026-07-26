@@ -14,7 +14,7 @@
 > isolated candidate and production refused an authenticated but unbacked
 > funding claim without persisting a receipt or settlement.
 >
-> The reconciled production checkout passed **1,540 / 0 / 34 of 34 suites**.
+> The reconciled production checkout passed **1,541 / 0 / 34 of 34 suites**.
 > Gateway image
 > `sha256:13599a51a508c67991e36e5f8e1755d2c4c25794da06c49fae5575bb80efcac4`;
 > Agent Market image
