@@ -41,6 +41,10 @@ until a real evidence-review process and verifier public key are separately
 approved. No database flag, self-declared DID, related-party statement, or
 unsigned identity claim can substitute for a valid receipt.
 
+The admission, key-custody, revocation, and minimum 40% contribution-margin
+gates are defined in
+`docs/security/OPERATOR_VERIFIER_ONBOARDING.md`.
+
 ## Verification
 
 - Agent Market focused suite: 36 passed.
