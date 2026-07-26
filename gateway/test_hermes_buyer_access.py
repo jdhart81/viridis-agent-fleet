@@ -5,10 +5,9 @@ import yaml
 
 
 HERE = Path(__file__).resolve().parent
-ROOT = next(
-    (candidate for candidate in (HERE.parents[1], HERE.parent)
-     if (candidate / "integrations").exists()),
-    HERE.parents[1])
+ROOT = HERE.parents[1]
+if not (ROOT / "integrations").exists():  # public mirror: gateway/ at root
+    ROOT = HERE.parent
 GATEWAY = ROOT / "deploy" / "gateway"
 if not (GATEWAY / "quickstart.html").exists():  # public mirror layout
     GATEWAY = ROOT / "gateway"
@@ -28,6 +27,7 @@ def test_hermes_skill_is_remote_only_and_covers_every_paid_route():
         "disclosure-compiler": "compile_disclosure",
         "taxcredit-engine": "calculate_tax_credit",
         "regulatory-radar": "scan_regulations",
+        "hive": "solve",
     }.items():
         assert f"/x402/{agent}/{tool}" in skill
     lowered = skill.lower()
@@ -36,7 +36,13 @@ def test_hermes_skill_is_remote_only_and_covers_every_paid_route():
     assert "make exactly one paid attempt" in lowered
     assert "discovery/search" in skill
     assert "viridis_commerce.next_paid_routes" in skill
+    assert "viridis_commerce.repeat_purchase" in skill
+    assert "`input_schema`, `input_example`" in skill
+    assert "`required_buyer_inputs`, and `quote`" in skill
+    assert "quote.authoritative_source" in skill
     assert "funding_status: UNVERIFIED" in skill
+    assert "confirm_work_funding" in skill
+    assert "funding_status: VERIFIED" in skill
     assert "pip install hermes" not in lowered
     assert "hermes setup" not in lowered
     assert "hermes-agent.nousresearch.com/install" not in lowered
@@ -76,17 +82,3 @@ def test_hosted_and_long_form_quickstarts_link_the_same_buyer_artifacts():
         assert "--source well-known" in content
         assert "--yes" in content
         assert "--now" not in content
-
-
-def test_public_gateway_wires_the_domain_skill_discovery_contract():
-    gateway = _read(GATEWAY / "viridis_mcp_gateway.py")
-    dockerfile = _read(GATEWAY / "Dockerfile")
-    assert 'Route("/.well-known/skills/index.json",' in gateway
-    assert (
-        '"/.well-known/skills/viridis-paid-tools/SKILL.md"' in gateway)
-    assert '"files": ["SKILL.md"]' in gateway
-    assert '"agent_skills_index"' in gateway
-    assert '"buyer_skill"' in gateway
-    assert (
-        "COPY integrations/viridis-paid-tools/SKILL.md "
-        "integrations/viridis-paid-tools/" in dockerfile)

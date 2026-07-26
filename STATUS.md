@@ -1,18 +1,332 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-26, Agent Market verified funding — LIVE] Cash-escrow sellers
+> can no longer deliver custom work before the exact awarded escrow is
+> independently verified as funded.** Agent Market v0.7.0 now exposes
+> `confirm_work_funding`; the private Hub verifies pull-confirmed live custody,
+> exact work/event binding, amount, currency, buyer, awarded payee, and the
+> seller's signed payment profile. Missing, test-mode, mismatched, or merely
+> asserted funding fails closed.
+>
+> Public health is `ok`; the manifest exposes 23 tools; Hub verification is
+> required and configured; and the existing 11 profiles, 3 open work records,
+> and 26 events survived migration with SQLite integrity `ok`. Both an
+> isolated candidate and production refused an authenticated but unbacked
+> funding claim without persisting a receipt or settlement.
+>
+> The reconciled production checkout passed **1,540 / 0 / 34 of 34 suites**.
+> Gateway image
+> `sha256:13599a51a508c67991e36e5f8e1755d2c4c25794da06c49fae5575bb80efcac4`;
+> Agent Market image
+> `sha256:039b30ef5fe440b38f35f229c1beda70e95273235ef1ae310fecb744709e8c15`.
+> Exact rollback tags and fresh transaction-consistent backups are verified.
+> No customer work, message, payment, or money movement was created. Strict
+> truth remains **3 external payers / $0.27 / 0 repeats / 0 paid Agent Market
+> jobs / $0 MRR**. Public-source and MCP Registry publication remain pending
+> restoration of the required `jdhart81` GitHub CLI credential. Full receipt:
+> `docs/deployment/AGENT_MARKET_VERIFIED_FUNDING_RELEASE_2026-07-26.md`.
+
+> **[2026-07-26, growth-worker funding truth — LIVE] Open Agent Market
+> inventory is no longer advertised as paid work unless its funding is
+> independently verified.** The growth worker now requires exact
+> `funding_status=VERIFIED`; missing, unknown, and `UNVERIFIED` states fail
+> closed. All three current live records are `UNVERIFIED`, so their IDs,
+> titles, and budgets are absent from outbound copy.
+>
+> Removing that misleading block exposed a second safe-length edge case in the
+> six-agent live suite. The renderer now compacts route descriptions when
+> needed while retaining all exact live names, prices, URLs, intro pricing,
+> and settlement proof. Candidate and production smokes both returned
+> `send_attempted=false`; startup returned `no_cleared_target`.
+>
+> Growth passed **33 tests** and both local and production checkout passed
+> **1,528 / 0 / 34 of 34 suites**. Production image
+> `sha256:dc515253970ac972ccf0582d320f63341d1f6cab9640ad6d3da7c67a970b7dc8`;
+> rollback
+> `sha256:6ceddc01ff5b34569ef3b9da7d0289f8037c8f27a8f0d864b4808f0792d37773`.
+> Growth state remains `ok` at 25 events / 7 attempts / 7 results. No message,
+> model call, payment, or customer activity was created. The three records
+> remain unfunded inventory, not demand or revenue. Full receipt:
+> `docs/deployment/GROWTH_FUNDING_TRUTH_RELEASE_2026-07-26.md`.
+
+> **[2026-07-26, growth-worker cycle resilience — LIVE] The isolated
+> distribution scheduler now survives expected gateway/catalog read failures
+> without terminating its container.** Expected `GrowthError` failures emit a
+> structured `cycle_failed` result with `send_attempted=false` and retry on the
+> normal interval; unexpected programming errors still fail visibly.
+>
+> The growth suite passed **30 tests**, and both local and production checkout
+> passed **1,525 / 0 / 34 of 34 suites**. The promoted worker returned
+> `cycle_failed` without sending against an unreachable endpoint, then made a
+> real startup decision of `no_cleared_target` / `send_attempted=false`.
+> Growth-state integrity remains `ok` with 25 append-only events, seven
+> attempts, and seven matching results.
+>
+> Production image
+> `sha256:6ceddc01ff5b34569ef3b9da7d0289f8037c8f27a8f0d864b4808f0792d37773`;
+> rollback
+> `sha256:e9645fc490b74740534aabe160e5e5aa688789f769956ccf3a973c484ad95f55`.
+> No channel is currently eligible: authorized targets remain in cooldown and
+> third-party targets remain policy-blocked. No message, model call, payment,
+> or customer activity was created. Full receipt:
+> `docs/deployment/GROWTH_CYCLE_RESILIENCE_RELEASE_2026-07-26.md`.
+
+> **[2026-07-26, six-skill A2A buyer client — VERIFIED/PUBLISH PENDING] The
+> public official-SDK quote client had a stale exact-five-skills assertion and
+> rejected the now-correct six-skill Agent Card before discovery.** It now
+> requires the complete known Viridis commerce set, including `hive.solve`,
+> while tolerating future additions instead of hard-coding cardinality.
+>
+> The fixed client parsed the live Agent Card with released
+> `a2a-sdk==1.1.2` and reported HTTP+JSON 1.0, the required canonical x402
+> extension, and six skills in discovery-only mode. It performed one GET,
+> created no task, loaded no wallet, and made no payment. Both local and
+> production-checkout gates pass **1,523 / 0 / 34 of 34 suites**.
+>
+> Publication is correctly blocked until the required `jdhart81` GitHub CLI
+> credential is restored through the official device flow. The runtime does
+> not need a restart; this is a buyer-side source fix.
+
+> **[2026-07-26, A2A repeat-purchase parity — LIVE] Successful paid A2A
+> tasks now return the same executable `viridis_commerce.repeat_purchase`
+> contract as paid HTTP x402 requests.** Completed artifacts preserve the tool
+> output and add the exact HTTP/MCP routes, schema/example, required
+> buyer-supplied inputs, list price, atomic Base USDC amount, and fresh-402
+> quote instructions. They explicitly require a new buyer authorization and
+> payment and never auto-execute.
+>
+> Focused checks passed **67 tests**, gateway passed **439**, and both the
+> local and reconciled production checkout passed **1,521 / 0 / 34 of 34
+> suites**. The runtime is Docker-healthy on image
+> `sha256:aaa7b29c05a32372d69be57fb9660c928086660cf39b7572da7fd0d6f24e002c`;
+> rollback is
+> `sha256:d054258a076746beeb4c74757945f0f8411222413bd36bc2d98c294243ccf917`.
+> Its A2A and HTTP source hashes match the verified release exactly.
+>
+> No buyer, payment, customer task, model call, or synthetic repeat was
+> created. Strict truth remains **3 external payers / $0.27 / 0 repeats /
+> 0 paid Hive jobs / $0 MRR**. Full receipt:
+> `docs/deployment/A2A_REPEAT_PURCHASE_PARITY_RELEASE_2026-07-26.md`.
+
+> **[2026-07-25, executable repeat-purchase contract — LIVE] Every successful
+> paid x402 result now gives autonomous buyers a complete, machine-readable
+> contract for buying the same service again.** `viridis_commerce` includes
+> `repeat_purchase` with the exact route, MCP endpoint, input schema/example,
+> required buyer inputs, list price, and fresh-402 quote instructions.
+>
+> The object never spends: it requires a new caller-owned request, new mandate,
+> fresh unpaid quote, and separate signed settlement. Prior inputs cannot be
+> reused or inferred implicitly. Focused conversion checks passed **77 tests**,
+> gateway passed **438**, and the full fleet passed **1,520 / 0 / 34 of 34
+> suites**. Public health is `ok` with 27 agents and no mount errors; all 33
+> state rows and sequence sum 1,689 survived.
+>
+> Live image
+> `sha256:d054258a076746beeb4c74757945f0f8411222413bd36bc2d98c294243ccf917`;
+> rollback
+> `sha256:5f89c39145a48191d170f5ea49d94220a37862c574edc7ff2e8b4266bedebe87`.
+> No buyer, payment, model call, or synthetic repeat was created. Strict truth
+> remains **3 external payers / $0.27 / 0 repeats / 0 Hive jobs / $0 MRR**.
+> Full receipt:
+> `docs/deployment/REPEAT_PURCHASE_CONTRACT_RELEASE_2026-07-25.md`.
+
+> **[2026-07-25, Hive Agent Market discovery — LIVE] The reviewed $5 Hive is
+> now a first-class seller in the public Agent Market catalog.** Autonomous
+> buyers searching for reviewed multi-agent synthesis receive its exact MCP
+> endpoint, x402 route, capabilities, fixed `price_minor=500`, no-execution-
+> free-tier boundary, and operator-managed provenance. A live MCP search ranks
+> it first for the target intent; a valid unpaid request returns the exact
+> 5,000,000-atomic Base USDC challenge without executing a solver.
+>
+> This did **not** create a market offer: offers are signed bids against
+> specific work orders, while all three existing work orders remain unfunded
+> inventory. No signer, buyer, bid, message, job, model call, or payment was
+> manufactured. The full fleet passed **1,519 / 0 / 34 of 34 suites** and the
+> local + Registry + live coherence gate passed. Production preserves 3 work
+> orders and zero offers/messages/deliveries/settlements. Live image
+> `sha256:9293a555649d332cfbdc659b2610c14a378763cd31eea8086e424834fdf22389`;
+> rollback
+> `sha256:0371ee1512e5765913b7ee50cd8e63758cf63e6814b88d66ab30f3ad553193cb`.
+> Strict commercial truth remains **3 external payers / $0.27 / 0 repeats /
+> 0 Hive jobs / $0 MRR**. Full receipt:
+> `docs/deployment/AGENT_MARKET_HIVE_DISCOVERY_RELEASE_2026-07-25.md`.
+
+> **[2026-07-25, Hive API-cost coverage — LIVE] The margin
+> audit found that the paid $5 profile covered its API ceiling and solver
+> settlements, but the three provider-backed free solves could still create
+> OpenAI cost with zero revenue.** The owned contract is now $5.00 for every
+> model-backed solve; read-only tools and unpaid quote/preflight remain free.
+> The profile fails closed below a machine-enforced 35% contribution-margin
+> floor and currently clears it at $1.82 / 36.4% before fixed
+> infrastructure.
+>
+> Focused gates passed **225 tests** and the full fleet passed **1,518 / 0 /
+> 34 of 34 suites**. The copied-state candidate preserved 33 rows and passed
+> cost, margin, persistence, and unchanged-settlement checks. Public health is
+> `ok` with Hive free execution `0`. Live image
+> `sha256:5f89c39145a48191d170f5ea49d94220a37862c574edc7ff2e8b4266bedebe87`;
+> rollback image
+> `sha256:ea5b2093edde340cc2fb43eea621a6389907a0ac403dd7c8328e6b4e000895be`.
+> Strict truth remains **3 external payers / $0.27 / 0 repeats / 0 Hive jobs /
+> $0 MRR**. Full receipt:
+> `docs/deployment/HIVE_COST_COVERAGE_RELEASE_2026-07-25.md`.
+
+> **[2026-07-25, executable repeat-commerce continuation — LIVE] Paid
+> results now give autonomous buyers the complete contract for the next
+> purchase instead of forcing them to rediscover it.** All nine compatible
+> follow-on offers publish the HTTP and MCP endpoints, description, JSON input
+> schema, concrete example, required buyer-supplied fields, and a fresh-quote
+> contract. The advertised list price is non-authoritative; the next unpaid
+> HTTP 402 challenge remains the authoritative price and eligibility check.
+>
+> Focused gates passed **76 tests** and the full fleet passed **1,517 / 0 /
+> 34 of 34 suites**. The isolated production-copy candidate restored all 33
+> state rows and passed health, persistence, and all nine executable-offer
+> checks. Production and the public catalog are healthy with no mount errors.
+> Live image
+> `sha256:ea5b2093edde340cc2fb43eea621a6389907a0ac403dd7c8328e6b4e000895be`;
+> rollback image
+> `sha256:7830f28236d8e081681ca425dcc27f5423c8a0f894f1d8e355ffe1bd3f3cf416`.
+>
+> No payment or customer activity was created. Strict commercial truth remains
+> **3 external settlements / 3 distinct payers / $0.27 external revenue /
+> 0 repeat purchases / $0 MRR**. Full receipt:
+> `docs/deployment/EXECUTABLE_REPEAT_COMMERCE_RELEASE_2026-07-25.md`.
+
+> **[2026-07-25, external operator proof — LIVE/FAIL-CLOSED] Agent Market
+> v0.6.0 now has a real cryptographic route for external profiles to qualify
+> as verified independent operators.** `import_operator_verification_receipt`
+> accepts only allowlisted Ed25519-signed, content-addressed, expiring receipts
+> bound to the exact signed profile digest; `list_operator_verifications`
+> exposes the bounded receipt history. Raw identity evidence and PII are never
+> accepted. Profile changes, expiry, and revocation fail closed, and revocation
+> removes prior independent-usefulness credit that depended on that proof.
+>
+> Production deliberately trusts **0 operator-verification issuers** until a
+> real verifier and evidence-review process are separately approved. A
+> self-declared DID, operator name, database flag, related-party statement, or
+> unsigned claim cannot substitute. Gates passed **1,517 / 0 / 34 of 34
+> suites**; production-copy migration preserved 10 profiles, 3 open work, and
+> 25 events. Public health is `ok`, version `0.6.0`, with 22 tools; gateway
+> health is `ok` with no mount errors. Live operator/usefulness counters remain
+> honestly zero. Live image
+> `sha256:0371ee1512e5765913b7ee50cd8e63758cf63e6814b88d66ab30f3ad553193cb`;
+> rollback image
+> `sha256:986221f5682298b0c95c159392613b0aac94a7ff34ebd7a432474a97058e62ff`.
+> Full receipt:
+> `docs/deployment/AGENT_MARKET_OPERATOR_VERIFICATION_RELEASE_2026-07-25.md`.
+
+> **[2026-07-25, buyer-proven usefulness — LIVE] Agent Market v0.5.0 now
+> distinguishes payment, buyer-signed usefulness, and arm's-length usefulness
+> instead of treating acceptance or a receipt as customer value.** The new
+> `submit_usefulness_feedback` action is available through the public Network
+> MCP. Only the posting buyer can sign it, only after an independently
+> verified paid job, and only once per immutable delivery. It stores a bounded
+> outcome, repurchase intent, and optional note digest—never free-form buyer
+> text.
+>
+> A buyer signature alone cannot manufacture independent demand:
+> common-control and unverified-control feedback remains labeled.
+> `independently_useful_paid_deliveries` increments only for verified distinct
+> operator entities. Direct x402 settlements, test jobs, related parties, and
+> unverified payments do not count.
+>
+> Gates passed **1,514 / 0 / 34 of 34 suites**. Production-copy migration
+> preserved 10 profiles, 3 open work records, and 25 events. Live state starts
+> honestly at **0 buyer feedback / 0 buyer-signed useful / 0 independently
+> useful**. Agent Market health is `ok`, version `0.5.0`, with 20 public tools;
+> fleet health is `ok` with no mount errors. Live image
+> `sha256:986221f5682298b0c95c159392613b0aac94a7ff34ebd7a432474a97058e62ff`;
+> rollback image
+> `sha256:a56057ccf1262ad7865ce253684ebbaca9a238b67f9cc4f84d06fcb910e9800f`.
+> No payment, signature, customer job, review, message, or model request was
+> generated. Full receipt:
+> `docs/deployment/AGENT_MARKET_USEFULNESS_RELEASE_2026-07-25.md`.
+
+> **[2026-07-25, CDP Discord automation boundary — CLOSED] CDP Support case
+> `01588102` is resolved with a definitive answer: an external Viridis bot is
+> not possible on the CDP Discord server today.** Ordinary human community
+> posting remains available, but it does not authorize automation of Justin's
+> Discord user account. CDP is now marked **denied for autonomous posting**;
+> the fleet will not reopen the install request absent a public policy change
+> or explicit staff invitation. No reply, survey, account change, or Discord
+> action was made. Full receipt:
+> `docs/deployment/CDP_DISCORD_AUTOMATION_BOUNDARY_2026-07-25.md`.
+
+> **[2026-07-25, Hive Nightkeeper and conversion controls — ACTIVE] Hive
+> commerce is now a required fleet/Nightkeeper suite rather than relying only
+> on test-directory auto-discovery.** The gate passed **1,510 / 0 / 34 of 34
+> suites**, including 42 Hive tests and the new required-suite contract pin.
+> The N70 queue and Morning Brief now require read-only monitoring of the
+> fixed $5 x402/A2A contract, rail/solver/provider readiness, and honest
+> Hive job/settlement counters without signing, paying, creating a job, or
+> invoking a model.
+>
+> The active daily distribution and community-reply automations were updated
+> from their stale second/third-payer goals to the real next gate: **the first
+> genuine repeat external purchase and the first paid result independently
+> judged useful**. They now understand Hive's exact public bounds and exclude
+> health, discovery, unpaid A2A tasks, self-settles, internal escrow, and test
+> jobs from revenue.
+>
+> Live read-only verification shows 27 healthy agents, Hive
+> `rails_mode=wired`, three solvers, provider ready, zero Hive jobs, six x402
+> routes, six A2A skills, and exact Hive price **5,000,000 atomic Base USDC**.
+> Strict commercial truth remains **3 external payers / 0 repeat / $0.27
+> external revenue / 0 Hive settlements / 0 Hive jobs / 0 active
+> subscriptions / $0 MRR**. Full receipt:
+> `docs/deployment/HIVE_NIGHTKEEPER_SCOPE_2026-07-25.md`.
+> The one live A2A `input-required` task was traced read-only to
+> `smoke-challenge-20260720` on
+> `regulatory-radar.scan_regulations`; it is a known smoke artifact, not Hive
+> demand, an unidentified buyer, or revenue.
+
+> **[2026-07-25, Hive x402/A2A commerce — LIVE] Autonomous buyers can now
+> purchase the reviewed Hive directly through `/x402/hive/solve` or A2A skill
+> `hive.solve`.** The public catalog has six paid routes: five deterministic
+> carbon/compliance steps plus the separate three-worker Hive product.
+>
+> Hive is fixed at **$5.00 / 5,000,000 atomic Base USDC** and is excluded from
+> the one-cent intro. Both commerce surfaces run the Hive-owned cost/provider
+> preflight before quoting and again before settlement; invalid budget,
+> nesting, fees, subtasks, redundancy, or provider readiness produces no
+> payment task/header, facilitator call, job mutation, model request, or
+> escrow.
+>
+> Focused gates passed **80 tests**, gateway passed **436**, and both local and
+> production-source fleet gates passed **1,509 / 0 / 34 of 34 suites**. The
+> isolated candidate and cache-busted public smoke verified 27 agents, six
+> x402 routes, six A2A skills, the exact $5 challenge, and fail-before-pay
+> rejection. Live image
+> `sha256:7830f28236d8e081681ca425dcc27f5423c8a0f894f1d8e355ffe1bd3f3cf416`
+> is healthy; rollback `viridis-stable:prev-2026-07-25-hive-commerce`
+> preserves
+> `sha256:19e9c3fbc9be23410d66cfa71950b454a4e285ebe47c13e8b971b829a3cccac9`.
+>
+> The authoritative transactional pre-release database backup is integrity
+> `ok`, current-code compatible, and contains all 33 rows; SHA-256
+> `c8a3501767e0522e6d8487967a60c9b6d648d151aded14c28036221573c39c7a`.
+> A raw WAL-mode copy that contained only 32 rows was rejected. No money,
+> signature, provider request, customer job, or outreach was generated.
+> Strict truth remains **7 settlements / 4 self / 3 external / 3 distinct
+> external payers / 0 repeat / $0.27 external revenue / 0 Hive jobs / $0
+> MRR**. Full receipt:
+> `docs/deployment/HIVE_X402_A2A_COMMERCE_RELEASE_2026-07-25.md`.
+
 > **[2026-07-25, Agent Hive Orchestrator — LIVE/PUBLIC/REGISTRY] The fleet's
 > first native multi-agent customer is live at `/hive/mcp`.** It hires three
 > OpenAI-backed workers through the exact shared trust, covenant, escrow,
 > metering, and compute-ledger instances; cross-review remains reviewer !=
 > author and the content-addressed audit preserves the H2/H3/H7/H9/H10 design.
 >
-> The commercial contract is exact: **three free solves per caller per UTC day,
-> then $5.00/solve**. Public execution is bounded to four subtasks, redundancy
+> The current commercial contract is exact: **$5.00 for every model-backed
+> solve; read-only tools and unpaid preflight remain free**. Public execution
+> is bounded to four subtasks, redundancy
 > three, and 24 total model calls. Conservative provider cost stays below
 > $0.18 and solver settlements below $3.00, leaving at least **$1.82 / 36.4%
-> contribution margin** before fixed infrastructure. The anonymous free pool
-> is globally bounded at 15 solves/day, capping conservative promotional API
-> spend below $2.70/day.
+> contribution margin** before fixed infrastructure, above the enforced 35%
+> floor. Provider-backed free execution was removed after the cost-coverage
+> audit; the gateway must never spend model cost without a paid entitlement.
 >
 > Production gates passed **1,503 tests / 0 failures / 34/34 suites**, the
 > 21-invariant real-rail composition proof, isolated candidate health, live
@@ -33,6 +347,71 @@
 > / 3 distinct external payers / 0 repeat external purchases / 270,000 atomic
 > USDC ($0.27) external revenue / $0 MRR**. Full receipt:
 > `docs/deployment/HIVE_ORCHESTRATOR_RELEASE_2026-07-25.md`.
+
+> **[2026-07-25, Agent402 compatibility — LIVE/PUBLIC] Viridis Regulatory
+> Radar is a verified native Agent402 seller and appears for the target
+> `California climate compliance SB 253 SB 261 API` query.** Agent402
+> advertises the service at a fixed $0.25. The dedicated
+> `/x402/regulatory-radar/scan_regulations_agent402` alias now has
+> byte-identical live, local, and public source; it stays at 250,000 atomic
+> USDC while the ordinary public route preserves its one-time $0.01 intro.
+>
+> An unpaid public smoke returned HTTP 402, a full v2 requirement body, exact
+> resource binding, `Viridis Regulatory Radar` service name, category, icon,
+> and tags. Focused gates passed **63 private / 50 isolated public v2 / 13
+> isolated public HTTP tests**. Public source merged in
+> `jdhart81/viridis-agent-fleet#17` at
+> `49668236db10de5d84f86c0f2bb4314ef7e23181`; PR and post-merge Security
+> baselines passed.
+>
+> The owned Agent402 metadata is now updated: agent and service copy explicitly
+> advertise California, SB 253, SB 261, sources, deadlines, urgency, and legal
+> status. An anonymous repeat search returned Viridis as the first native,
+> verified result. Price, Base network, facilitator, endpoint, wallet,
+> identity, and on-chain configuration were unchanged. The temporary metadata
+> key was revoked after verification; the account now shows no API keys.
+>
+> Agent402 reports **0 settlements** for this listing. Its public search
+> response still renders a null category despite the authenticated source
+> record carrying the Data Analysis category UUID, so category display
+> propagation is not claimed. Strict money truth remains **7 settlements / 4
+> self / 3 external / 3 distinct external payers / 0 repeat external purchases
+> / 270,000 atomic USDC ($0.27) external revenue / $0 MRR**. Full receipt:
+> `docs/deployment/AGENT402_COMPATIBILITY_RELEASE_2026-07-25.md`.
+
+> **[2026-07-25, California Regulatory Radar — DEPLOYED/PUBLISHED] The third
+> external payer's previously unsupported `jurisdiction=california` request
+> now maps to explicit, source-linked California coverage.** Buyer agents can
+> use `california` or `US-CA`; `CA` remains Canada. HTTP x402, A2A, the402,
+> Agent Card, buyer skill, and quickstarts normalize the alias before task
+> creation, payment verification, settlement, or execution.
+>
+> SB 253 and SB 261 are now classified as California entries. SB 253 carries
+> CARB's August 10, 2026 first Scope 1/2 deadline. SB 261 is no longer
+> overstated as simply binding: the stored status records that enforcement is
+> enjoined while the Ninth Circuit appeal is pending and identifies CARB's
+> voluntary docket.
+>
+> Local gates are **115 Radar / 64 focused buyer-gateway / 13 the402 / 430
+> gateway / 1,461 full-fleet tests passed, 0 failed, 33/33 suites**. Copied-
+> state candidate smokes, public no-payment smokes, controlled restart,
+> byte-identical pre/post backups, and final **27-agent local + Registry +
+> live coherence** passed. Production image
+> `sha256:064c7e513516f04438ef69f7ec59bb50df83e01000374242fffa048c93a0934c`
+> is healthy; rollback
+> `viridis-stable:prev-2026-07-25-california-radar` preserves
+> `sha256:eacdbc2b9d5a02bf90acde361a1ccb216bdff25b260ad131b15182a2d116cc40`.
+>
+> Public source merged in `jdhart81/viridis-agent-fleet#16` at
+> `3323761d786de6bfd18324d749d54dddadc5cc08`; PR and post-merge Security
+> baselines passed. The pinned GitHub OIDC workflow published official MCP
+> Registry version `0.1.2`.
+>
+> No payment, signature, production task, or outreach was generated. Strict
+> money truth remains **7 settlements / 4 self / 3 external / 3 distinct
+> external payers / 0 repeat external purchases / 270,000 atomic USDC
+> ($0.27) external revenue / $0 MRR**. Full receipt:
+> `docs/deployment/CALIFORNIA_REGULATORY_RADAR_RELEASE_2026-07-25.md`.
 
 > **[2026-07-25, pre-payment input validation — DEPLOYED/ACTIVE] Viridis now
 > rejects schema-invalid x402 and A2A requests before quoting, settling,
@@ -59,6 +438,9 @@
 > `viridis-stable:prev-2026-07-25-prepay-validation` preserves
 > `sha256:f716b452733b68c54c85a3523079559ae2407f017bdb9425564289a7eb62103e`.
 > Pre/post state backups are byte-identical, integrity `ok`, with 32 rows.
+> Public source merged in `jdhart81/viridis-agent-fleet#15` at
+> `59ffa754e32b99f6a497db9f56a4e4ca8bce1dbe`; pull-request and post-merge
+> security baselines both passed.
 >
 > No payment, signature, task, or outreach was generated by this release.
 > Strict money truth remains **7 settlements / 4 self / 3 external / 3
@@ -84,27 +466,117 @@
 > autonomous agent remain unknown.
 >
 > The previous third-payer gate is met. The next conversion gate is the first
-> genuine repeat external purchase or a fourth independent payer. Full
-> receipt:
+> genuine repeat external purchase or a fourth independent payer. Public
+> source and corrected buyer-facing counters merged in
+> `jdhart81/viridis-agent-fleet#14` at
+> `9384013ba13fa01689a3c285abd2484492162104`; pull-request and post-merge
+> security baselines both passed. Full receipt:
 > `docs/deployment/THIRD_EXTERNAL_PAYER_RECEIPT_2026-07-25.md`.
 
 > **[2026-07-25, official A2A buyer-runtime interoperability — PUBLIC]
-> The released official A2A Python SDK can discover and consume the Viridis
-> A2A 1.0 commerce boundary.** `a2a-sdk==1.1.2` parsed the live Agent Card
-> through a read-only GET and selected its HTTP+JSON 1.0 interface, five
-> skills, and required canonical x402 extension. The same official resolver,
-> client factory, transport, and protobuf message types completed an isolated
-> in-memory request against the production seller handlers, receiving one
-> `TASK_STATE_INPUT_REQUIRED` / `payment-required` quote with **0 tool
-> executions, 0 signatures, 0 settlements, and 0 production writes**.
+> The released official A2A Python SDK can discover and consume
+> the Viridis A2A 1.0 commerce boundary.** `a2a-sdk==1.1.2` parsed the live
+> Agent Card through a read-only GET and selected its HTTP+JSON 1.0 interface,
+> five skills, and required canonical x402 extension. The same official
+> resolver, client factory, transport, and protobuf message types then
+> completed an isolated in-memory request against the production seller
+> handlers, receiving one `TASK_STATE_INPUT_REQUIRED` / `payment-required`
+> quote with **0 tool executions, 0 signatures, 0 settlements, and 0
+> production writes**.
 >
-> `scripts/a2a_quote_client.py` defaults to read-only discovery and requires
-> explicit `--request-quote` before it creates one unpaid task. It contains no
-> signer or payment path. This client proof itself is not demand or revenue.
-> Subsequent live money truth is **7 settlements / 4 self / 3 external / 3
-> distinct external payers / 0 repeat external purchases / $0.27 external
-> revenue / $0 MRR**. Full receipt:
+> A public `scripts/a2a_quote_client.py` now defaults to read-only discovery
+> and requires explicit `--request-quote` before it creates one unpaid task.
+> It contains no signer or payment path. The copyable buyer guide is
+> `docs/integrations/A2A_PYTHON_SDK_QUICKSTART.md`; offline regressions cover
+> card selection, official protobuf JSON extraction, and the default
+> read-only posture. Public source merged in
+> `jdhart81/viridis-agent-fleet#13` at
+> `5aabd564fd5e2f8904786e89d5dcba7478a7d386`; its pull-request and
+> post-merge security baselines both passed.
+>
+> This client proof itself is not demand or revenue. Subsequent live money
+> truth is **7 settlements / 4 self / 3 external / 3 distinct external
+> payers / 0 repeat external purchases / $0.27 external revenue / $0 MRR**.
+> Full receipt:
 > `docs/deployment/A2A_OFFICIAL_SDK_INTEROP_2026-07-25.md`.
+
+> **[2026-07-25, seller-domain buyer-skill discovery — DEPLOYED/ACTIVE]
+> Viridis now publishes an installable buyer procedure at its own
+> `/.well-known/skills/` surface.** Hermes can discover the domain, inspect the
+> keyless `viridis-paid-tools` skill, and install it without prior knowledge of
+> a raw GitHub URL. The skill requires the exact live 402, caller-owned signing,
+> exactly one paid attempt, and a fresh spend mandate for every follow-on; it
+> refuses to treat `funding_status: UNVERIFIED` as paid demand.
+>
+> Production image
+> `sha256:f716b452733b68c54c85a3523079559ae2407f017bdb9425564289a7eb62103e`
+> is healthy. The full fleet remains **1,434 passed / 0 failed / 33/33**;
+> candidate and production expose a byte-identical **27 MCP surfaces / 204
+> tools**. The documentation-only correction preserves rollback tag
+> `viridis-stable:prev-2026-07-25-hermes-cli-doc-fix` at
+> `sha256:54c432d9670df6152373565a82d365e241016a57fb10f423260079ab6b4eb1a5`.
+> Public source merged in `jdhart81/viridis-agent-fleet#11` at
+> `7e4f0cd50947d41a427296261584983db266177f`; post-merge security CI passed.
+> A real isolated Hermes Agent 0.19.0 run then completed domain search, inspect,
+> security scan (`SAFE`), install, and enabled-list checks. The installed
+> `SKILL.md` was byte-identical to production at
+> `3fafbd5bf5d52c2da39b5e55106bfc5123cffc929a2ecfc6aeadfbeaff24f36b`.
+> With the official `mcp` extra installed, that isolated Hermes client also
+> connected to the live Agent Market in 1,578 ms with authentication `none`
+> and discovered all 19 tools. Its keyless configuration contained no token
+> or auth field. A read-only live work search returned three open records, all
+> `funding_status: UNVERIFIED`; no signed write or paid route was invoked.
+> That run exposed one documentation-only defect: 0.19.0 rejects `--now`.
+> Quickstarts and regression tests now use its supported `--yes`
+> noninteractive confirmation form. The correction is live and merged in
+> `jdhart81/viridis-agent-fleet#12` at
+> `668ce77613f5a7b0eb39ab53567a6ad8c2568153`; post-merge security CI passed.
+> Focused private tests passed 11/11, public buyer tests passed 4/4, and
+> matching off-droplet pre/post backups retained integrity `ok` and 32 rows.
+>
+> Live money truth is now **7 settlements / 4 self / 3 external / 3 distinct
+> external payers / 0 repeat external purchases / $0.27 external revenue /
+> $0 MRR**. The buyer skill itself is conversion infrastructure; the new
+> third-payer settlement is recorded separately. Full
+> receipt:
+> `docs/deployment/WELL_KNOWN_BUYER_SKILL_RELEASE_2026-07-25.md`. Live-client
+> receipt:
+> `docs/deployment/HERMES_LIVE_CLIENT_E2E_2026-07-25.md`.
+
+> **[2026-07-25, repeat-commerce path — DEPLOYED/ACTIVE] Successful paid
+> x402 results now advertise compatible next paid routes in a machine-readable
+> `viridis_commerce` object.** Each offer includes the exact endpoint, method,
+> price, atomic USDC amount, and workflow reason. The contract explicitly
+> sets `auto_execute:false`, `payment_required:true`, and
+> `buyer_authorization_required:true`; Viridis never signs, initiates, or
+> executes the follow-on payment.
+>
+> `/healthz` now surfaces `repeat_external_purchases` per route and fleet-wide,
+> counting only versioned external settlements with a known payer wallet.
+> Live truth remains **6 settlements / 4 self / 2 external / 2 distinct
+> external payers / 0 repeat external purchases / 260,000 atomic USDC
+> ($0.26) external revenue / $0 MRR**. This release created no transaction;
+> the next business gate remains a third independent payer or the first real
+> repeat purchase.
+>
+> The public buyer continuation path is merged to
+> `jdhart81/viridis-agent-fleet` `main` at
+> `c4f3aac2ac5446b2d573342e037f2457da628b05`; its post-merge Security
+> baseline passed. The installable buyer skill now performs free Coinbase
+> semantic discovery, verifies the exact live 402 challenge, follows
+> `viridis_commerce.next_paid_routes` only under a fresh buyer spend mandate,
+> and treats `funding_status: UNVERIFIED` as unfunded inventory.
+>
+> Focused gates are **60 passed**; the full fleet is **1,434 passed / 0 failed
+> / 33/33 suites**. The isolated copied-state candidate, offline compatibility
+> check, production cutover, controlled restart, 32-row database integrity,
+> and all 27 public MCP surfaces / 204 tools passed. Live image
+> `sha256:ea896b4be108beeb5a8695367f42fd34952c4fd5546b2e63cc50542bc5e40e97`
+> is healthy. Rollback
+> `viridis-stable:prev-2026-07-25-repeat-commerce` preserves
+> `sha256:21f5c2a62006ca993e9d38e3ba6af8cd49d179db124c406dfb6dd7be085c7d8c`.
+> The post-release backup was independently verified off-droplet. Full receipt:
+> `docs/deployment/REPEAT_COMMERCE_RELEASE_2026-07-25.md`.
 
 > **[2026-07-25, official MCP Registry coherence — ACTIVE] All 27 hosted
 > agents now match their official Registry latest versions and live health
@@ -116,10 +588,10 @@
 > the fleet's mistaken `verdigraph-brain` mapping was repaired without
 > creating a duplicate Registry entry.
 >
-> The final release gate reports **27 agents coherent across local manifests,
-> official Registry latest versions, and live health**. No publication secret
-> or long-lived Registry credential was stored, and no payment moved. This is
-> distribution proof, not revenue. Full receipt:
+> The final release gate reports **`FLEET COHERENCE PASS — 27 agents, local +
+> registry + live`**. No publication secret or long-lived Registry credential
+> was stored, and no payment moved. This is distribution proof, not revenue.
+> Full receipt:
 > `docs/deployment/MCP_REGISTRY_COHERENCE_RELEASE_2026-07-25.md`.
 
 > **[2026-07-25, x402 discovery compatibility — DEPLOYED/ACTIVE] The
@@ -129,9 +601,9 @@
 > schema. Both URLs return HTTP 200 with identical JSON after a production
 > restart.
 >
-> Full gates are **1,433 passed / 0 failed / 33/33 suites**; the release suite
-> is **548 passed**; all 27 public MCP mounts initialized and listed 204 tools.
-> Live image
+> Full gates remain **1,433 passed / 0 failed / 33/33 suites**; the release
+> suite is **548 passed**; all 27 public MCP mounts initialized and listed 204
+> tools. Live image
 > `sha256:21f5c2a62006ca993e9d38e3ba6af8cd49d179db124c406dfb6dd7be085c7d8c`
 > is healthy. Rollback
 > `viridis-stable:prev-2026-07-25-x402-discovery` preserves
@@ -140,6 +612,25 @@
 > passed. No payment moved; the nine pre-existing registry follow-ups remain
 > blocked from publication. Full receipt:
 > `docs/deployment/X402_DISCOVERY_COMPATIBILITY_RELEASE_2026-07-25.md`.
+
+> **[2026-07-25, metering persistence — DEPLOYED/ACTIVE] Gate-driven usage
+> now persists under the metering core's own StateStore key.** Production
+> reproduced the fix at 519→520 events and snapshot sequence 630→633, then
+> retained 520/633 across a gateway restart. `/healthz` now exposes
+> `metering_persistence.snapshot_seq` and `last_persisted_at`.
+>
+> Full gates are **1,433 passed / 0 failed / 33/33 suites**; the release suite
+> is **548 passed**; all 27 public MCP mounts initialized and listed 204 tools.
+> Live image
+> `sha256:211633ab91aa82e45f7bbf4674f2e11d9791f27509bd45b1d9c6f909505fe004`
+> is healthy. Rollback
+> `viridis-stable:prev-2026-07-25-metering` preserves
+> `sha256:a4b3c2ee3eea0e25231ee0d5732885bfcec984885db17cc898e288f9f6086335`.
+> Post-fix backup, off-droplet checksum, compatibility, integrity, and restore
+> drill passed. No payment moved; external revenue remains $0.26 and MRR $0.
+> Agent Market and Caddy were not recreated. Nine pre-existing official
+> registry follow-ups remain blocked from publication. Full receipt:
+> `docs/deployment/METERING_PERSISTENCE_FIX_RELEASE_2026-07-25.md`.
 
 > **[2026-07-24, x402 validator fixture — DEPLOYED/ACTIVE] Regulatory Radar
 > now publishes one strict, copyable x402 v2 fixture across its live quickstart
@@ -159,6 +650,30 @@
 > remains 6 total / 2 external / 2 distinct external payers / $0.26 external
 > revenue, with $0 MRR. Full receipt:
 > `docs/deployment/X402_FIXTURE_CONTRACT_RELEASE_2026-07-24.md`.
+
+> **[2026-07-22, Agent Market funnel repair — DEPLOYED/ACTIVE] Public Agent
+> Market MCP results now pass FastMCP structured-output validation.** Version
+> 0.4.1 corrects the nullable error fields in the common result envelope; the
+> previously broken `network_status`, `search_work`, `get_work`, and
+> `search_agents` calls now return `isError:false` with valid
+> `structuredContent`. A regression exercises the full signed buyer/seller
+> lifecycle through the MCP adapter: publish, post, discover, offer, award,
+> payment plan, deliver, accept, counterparty attest, and independent Hub
+> verification. The market still moves no money itself.
+>
+> Local gates are **1315 passed / 0 failed / 33/33**; the isolated production
+> source tree is **1299 passed / 0 failed / 33/33**; the Agent Market suite is
+> **31 passed** and the direct gateway suite is **384 passed**. Production image
+> `sha256:a56057ccf1262ad7865ce253684ebbaca9a238b67f9cc4f84d06fcb910e9800f`
+> is live; rollback tag `viridis-agent-market-network:prev-2026-07-22-funnel`
+> preserves
+> `sha256:bce50a55e843a12c6b7cfa18272f75615dfcfef8815b0e059e4b9eb22a87b4da`.
+> The frozen x402 v1 SHA remains `ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770`.
+> Persistent market state is unchanged at 10 active profiles, 3 open work
+> records, 25 events, and 0 independently verified jobs; fleet payment
+> telemetry is unchanged at 5 x402 settlements (4 self, 1 external, $0.25
+> external revenue). Full receipt:
+> `docs/deployment/AGENT_MARKET_FUNNEL_REPAIR_2026-07-22.md`.
 
 > **[2026-07-21, Viridis Security plane — DEPLOYED/ACTIVE] Viridis Security is
 > now a federated fleet member and Agent Market security-attestation plane.**

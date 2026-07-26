@@ -3,8 +3,9 @@
 FROM python:3.12-slim
 WORKDIR /fleet
 COPY deploy/gateway/requirements.txt /fleet/deploy/gateway/requirements.txt
-RUN pip install --no-cache-dir -r deploy/gateway/requirements.txt
-# copy only what the gateway serves: 22 leaf agents, subscription/payment
+COPY deploy/gateway/requirements.lock /fleet/deploy/gateway/requirements.lock
+RUN pip install --no-cache-dir -r deploy/gateway/requirements.lock
+# copy only what the gateway serves: hosted leaf agents, subscription/payment
 # infrastructure, and the gateway itself
 COPY agent-identity-registry-agent/ agent-identity-registry-agent/
 COPY agent-trust-oracle-agent/ agent-trust-oracle-agent/
@@ -34,6 +35,7 @@ COPY verdigraph-brain-agent/ verdigraph-brain-agent/
 COPY neurogenesis-agent/ neurogenesis-agent/
 COPY green-router-agent/ green-router-agent/
 COPY viridisos/ viridisos/
+COPY fleet_utils/ fleet_utils/
 ENV VIRIDISOS_CANON_INDEX=/fleet/viridisos/_canon/canon_fingerprint_index.json
 COPY deploy/gateway/viridis_mcp_gateway.py deploy/gateway/
 COPY deploy/gateway/stripe_payments.py deploy/gateway/
@@ -41,6 +43,7 @@ COPY deploy/gateway/state_store.py deploy/gateway/
 COPY deploy/gateway/payment_gate.py deploy/gateway/
 COPY deploy/gateway/account_auth.py deploy/gateway/
 COPY deploy/gateway/request_context.py deploy/gateway/
+COPY deploy/gateway/request_limits.py deploy/gateway/
 COPY deploy/gateway/reconciliation.py deploy/gateway/
 COPY deploy/gateway/x402_rail.py deploy/gateway/
 COPY deploy/gateway/x402_http.py deploy/gateway/
@@ -55,12 +58,18 @@ COPY deploy/gateway/bond_bridge.py deploy/gateway/
 COPY deploy/gateway/underwriting_bridge.py deploy/gateway/
 COPY deploy/gateway/insured_job_bridge.py deploy/gateway/
 COPY deploy/gateway/persistence_probe.py deploy/gateway/
+COPY deploy/gateway/check_snapshot_compatibility.py deploy/gateway/
+COPY deploy/droplet/gateway_state_backup.py deploy/gateway/
 COPY deploy/gateway/deck.html deploy/gateway/
 COPY deploy/gateway/stats.html deploy/gateway/
 COPY deploy/gateway/seats.html deploy/gateway/
 COPY deploy/gateway/agents.html deploy/gateway/
 COPY deploy/gateway/quickstart.html deploy/gateway/
+COPY deploy/gateway/compliance_snapshot.html deploy/gateway/
+COPY deploy/gateway/compliance_snapshot_example.html deploy/gateway/
+COPY deploy/gateway/compliance-snapshot-example-og.png deploy/gateway/
 COPY deploy/gateway/llms.txt deploy/gateway/
+COPY deploy/gateway/viridis-mark.svg deploy/gateway/
 COPY integrations/viridis-paid-tools/SKILL.md integrations/viridis-paid-tools/
 COPY scripts/genesis_receipts.py scripts/
 COPY scripts/viridis_market_router.py scripts/

@@ -1,5 +1,5 @@
 name: "agent-market-network-agent"
-version: "0.3.0"
+version: "0.7.0"
 description: "Signed agent SEO, security-posture evidence, intent routing, messaging, and paid-work marketplace for the agent economy."
 pillar: "revenue-infrastructure"
 status: "mvp"
@@ -13,16 +13,21 @@ actions:
   - publish_agent_profile
   - search_agents
   - publish_security_attestation
+  - import_security_receipt
   - list_security_attestations
+  - import_operator_verification_receipt
+  - list_operator_verifications
   - subscribe_to_work
   - post_work
   - search_work
   - get_work
   - submit_offer
   - award_offer
+  - confirm_work_funding
   - submit_delivery
   - accept_delivery
   - attest_settlement
+  - submit_usefulness_feedback
   - send_agent_message
   - read_agent_inbox
   - network_status
@@ -38,6 +43,16 @@ invariants:
   - "No private key, wallet, Stripe, CDP, or facilitator credential accepted"
   - "No money movement and no unilateral paid/earnings status"
   - "Production earnings require an independently verified existing-rail money primitive"
+  - "Cash-escrow work becomes funded only after post-award Hub verification of exact pull-verified live custody"
+  - "Production cash-escrow delivery is refused until independently verified funding exists"
+  - "Usefulness requires a buyer-signed outcome on an independently verified paid job"
+  - "Feedback stores bounded outcomes and optional note digests, never free-form buyer text"
+  - "Independent usefulness requires verified distinct operator entities; related and unverified control stay labeled"
+  - "External operator proof requires an allowlisted signed receipt bound to the exact profile digest"
+  - "Operator receipt expiry, profile changes, and revocation fail closed"
+  - "Operator evidence is stored only as a digest and bounded claim, never raw identity documents or PII"
   - "Optional delivery compute evidence produces an x402-C receipt; evidence is never inferred"
   - "Security posture is signed, expiring coverage evidence; never a secure or vulnerability-free guarantee"
+  - "Allowlisted Security result receipts are Ed25519-verified and imported exactly once"
+  - "Common-control security evidence is labeled related-party, never independent third-party verification"
   - "Durable-before-ack SQLite writes and append-only event journal"

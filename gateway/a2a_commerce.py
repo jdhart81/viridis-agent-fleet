@@ -10,6 +10,8 @@ AC3 a payment-required task persists its original request and requirements.
 AC4 settlement succeeds before the ungated core can execute.
 AC5 payment/task replays are idempotent and never execute twice.
 AC6 every error path fails closed; neither private keys nor signing occur here.
+AC7 completed artifacts preserve the same unsigned repeat/follow-on commerce
+    contract as the HTTP x402 surface; no continuation auto-executes.
 """
 from __future__ import annotations
 
@@ -22,9 +24,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict
 
 from x402_http import (
-    INTRO_PAYER_HEADER, INTRO_SCHEDULE, INTRO_SEEN_KEY, X402_HTTP_METADATA,
-    X402_HTTP_TOOLS, _classified_settlement, _payer_seen, _payer_wallet,
-    _normalize_request_args, intro_enabled,
+    INTRO_PAYER_HEADER, INTRO_SCHEDULE, INTRO_SEEN_KEY, INTRO_EXEMPT_ROUTES,
+    X402_HTTP_METADATA, X402_HTTP_TOOLS, _classified_settlement,
+    _normalize_request_args, _paid_preflight, _payer_wallet,
+    _with_commerce_metadata, intro_enabled, price_for_payer,
 )
 
 logger = logging.getLogger("viridis.a2a_commerce")
@@ -62,7 +65,8 @@ def agent_card(public_base: str) -> dict:
             "id": _skill_id(agent, tool),
             "name": f"{agent}: {tool}",
             "description": meta["description"],
-            "tags": ["x402", "Base", "USDC", "climate", "compliance"],
+            "tags": ["x402", "Base", "USDC", *meta.get(
+                "tags", ["climate", "compliance"])][:8],
             "examples": [json.dumps(meta["input_example"],
                                     separators=(",", ":"))],
             "inputModes": ["application/json"],
@@ -76,9 +80,9 @@ def agent_card(public_base: str) -> dict:
         })
     return {
         "name": "Viridis Carbon and Compliance Commerce Agent",
-        "description": ("Five deterministic paid skills that chain measure, "
-                        "account, disclose, claim, and scan for autonomous "
-                        "agent buyers."),
+        "description": ("Six paid skills that let autonomous agent buyers "
+                        "measure, account, disclose, claim, scan, and run a "
+                        "reviewed multi-agent solve."),
         "supportedInterfaces": [{
             "url": f"{base}/a2a",
             "protocolBinding": "HTTP+JSON",
@@ -259,14 +263,14 @@ def make_a2a_handlers(cores, store, public_base):
                 return _problem(400, "Payment payload required",
                                 "Submit x402.payment.payload for this task")
             tool = str(task["metadata"]["viridis.tool"])
+            route = (agent, tool)
             requirement = task["metadata"]["x402.payment.required"]
             header_value = json.dumps(payload, sort_keys=True,
                                       separators=(",", ":"))
             payer = _payer_wallet(payload)
             list_price = PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)
-            expected_price = (INTRO_SCHEDULE["price_minor"]
-                              if intro_enabled() and not _payer_seen(cores, payer)
-                              else list_price)
+            expected_price = price_for_payer(
+                cores, route, list_price, payer)
             if str(requirement["accepts"][0]["amount"]) != str(
                     x402_rail.price_atomic(expected_price)):
                 refreshed = x402_v2.build_payment_required(
@@ -289,6 +293,16 @@ def make_a2a_handlers(cores, store, public_base):
                     return _response({"task": task})
                 return _problem(409, "Payment already consumed",
                                 "This authorization belongs to another call")
+            preflight_error = await _paid_preflight(
+                core, X402_HTTP_TOOLS[route],
+                task["metadata"]["viridis.input"])
+            if preflight_error is not None:
+                status_code = (503 if preflight_error.get("error_type")
+                               == "ServiceUnavailable" else 400)
+                return _problem(
+                    status_code, "Skill unavailable",
+                    str(preflight_error.get("message")
+                        or "paid preflight refused the request"))
             result = x402_v2.verify_and_settle(
                 payload, requirement, agent, tool)
             if not result.get("settled"):
@@ -297,11 +311,13 @@ def make_a2a_handlers(cores, store, public_base):
             prior_task = task
             consumed[key] = _classified_settlement(
                 payload, agent, tool, result, identifier,
-                intro_applied=(intro_enabled() and
+                intro_applied=(route not in INTRO_EXEMPT_ROUTES
+                               and intro_enabled() and
                                expected_price == INTRO_SCHEDULE["price_minor"]),
                 list_price_minor=list_price,
                 surface="a2a-x402-v2")
-            if intro_enabled() and payer:
+            if (intro_enabled() and route not in INTRO_EXEMPT_ROUTES
+                    and payer):
                 gate.setdefault(INTRO_SEEN_KEY, {})[payer.lower()] = {
                     "at": _now(), "route": f"{agent}/{tool}",
                     "tx_hash": result["tx_hash"],
@@ -353,6 +369,9 @@ def make_a2a_handlers(cores, store, public_base):
                        "message": type(exc).__name__,
                        "tx_hash": result["tx_hash"]}
                 final_state = "TASK_STATE_FAILED"
+            if final_state == "TASK_STATE_COMPLETED":
+                out = _with_commerce_metadata(
+                    out, agent, tool, public_base)
             final_message = _task_message(
                 task_id, task["contextId"], "payment-completed",
                 "Paid skill completed." if final_state.endswith("COMPLETED")
@@ -387,11 +406,19 @@ def make_a2a_handlers(cores, store, public_base):
                                 "input_error_hint",
                                 "input does not match the advertised JSON "
                                 "schema"))
+        preflight_error = await _paid_preflight(
+            core, X402_HTTP_TOOLS[(agent, tool)], args)
+        if preflight_error is not None:
+            status_code = (503 if preflight_error.get("error_type")
+                           == "ServiceUnavailable" else 400)
+            return _problem(
+                status_code, "Skill unavailable",
+                str(preflight_error.get("message")
+                    or "paid preflight refused the request"))
         list_price = PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)
         payer_hint = str(request.headers.get(INTRO_PAYER_HEADER, "")).strip()
-        price = (INTRO_SCHEDULE["price_minor"]
-                 if intro_enabled() and not _payer_seen(cores, payer_hint)
-                 else list_price)
+        price = price_for_payer(
+            cores, (agent, tool), list_price, payer_hint)
         requirement = x402_v2.build_payment_required(
             agent, tool, price, f"{public_base}/x402/{agent}/{tool}",
             "POST", X402_HTTP_METADATA[(agent, tool)])

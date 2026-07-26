@@ -35,6 +35,32 @@ class A2AQuoteClientTests(unittest.TestCase):
         self.assertIs(client._interface(card), interface)
         self.assertIs(client._extension(card), extension)
 
+    def test_required_skill_set_includes_hive_and_all_paid_routes(self):
+        self.assertEqual(
+            client.REQUIRED_SKILL_IDS,
+            {
+                "quantity-takeoff.calculate_takeoff",
+                "ghg-ledger.calculate_inventory",
+                "disclosure-compiler.compile_disclosure",
+                "taxcredit-engine.calculate_tax_credit",
+                "regulatory-radar.scan_regulations",
+                "hive.solve",
+            },
+        )
+
+    def test_skill_discovery_tolerates_future_additions(self):
+        card = Obj(skills=[
+            *(Obj(id=skill_id) for skill_id in client.REQUIRED_SKILL_IDS),
+            Obj(id="future-agent.future_tool"),
+            Obj(id=""),
+        ])
+
+        skill_ids = client._skill_ids(card)
+
+        self.assertFalse(client.REQUIRED_SKILL_IDS - skill_ids)
+        self.assertIn("future-agent.future_tool", skill_ids)
+        self.assertNotIn("", skill_ids)
+
     def test_quote_summary_extracts_official_protobuf_json_shape(self):
         event = {
             "task": {

@@ -17,9 +17,11 @@ PG1  The first N state-changing calls per UTC day succeed free
 PG2  Beyond N, process() returns {status:"error",
      error_type:"payment_required", ...} including amount_minor, currency,
      and both payment instructions — never raises, never silently drops.
-PG3  Read-only actions (ungateable vocabulary: describe/health handled
-     upstream; per-payload actions in READ_ACTIONS) are never gated and
-     never counted.
+PG3  Read-only actions are declared by each gated core in its own
+     READ_ACTIONS attribute.  The gate snapshots that declaration at attach
+     time, verifies it is a subset of the core's KNOWN_ACTIONS declaration,
+     and never uses a fleet-global action vocabulary.  Reads are never gated
+     or counted.
 PG4  Every gated-agent call (allowed AND refused) is recorded on the
      fleet's own metering core, idempotent on event_id.
 PG5  Gate counters live on the gated core (attribute) so the StateStore
@@ -120,13 +122,28 @@ PG22 REAL-BACKING GATE: when custody is wired, payment_ref credits are
      gateway always wires custody. Already-consumed pre-PG22 grants remain
      replay-safe and are never clawed back. Participant earnings spend is a
      separate service-backed path and is intentionally unaffected.
+PG23 RETRY-SAFE CALLS: an optional request_id is scoped to the
+     transport-derived caller identity and durably reserved before any
+     billable mutation, then persisted with the completed result. A replay
+     with the same logical input returns the original result without consuming
+     quota, credit, subscription usage, escrow, x402, or a second metering
+     event. Reusing a key for different input fails closed. If execution is
+     interrupted after billing starts, the durable pending reservation also
+     fails closed instead of risking a second charge.
+PG24 METER DURABILITY: every gate-driven metering mutation is explicitly
+     persisted under the metering core's own StateStore key. Persistence never
+     depends on the gated agent's later save or on whether another wrapper was
+     attached to the metering core. A restart therefore cannot roll usage
+     telemetry back to an older metering snapshot.
 """
 from __future__ import annotations
 
 import asyncio
+import copy
 import functools
 import hashlib
 import inspect
+import json
 import logging
 import os
 import threading
@@ -135,26 +152,6 @@ import uuid
 from typing import Any, Callable, Dict, Optional
 
 logger = logging.getLogger("viridis.payment_gate")
-
-# actions that are never gated/counted (introspection & read surface)
-READ_ACTIONS = frozenset({
-    "status", "list", "verify_audit", "describe", "health",
-    "list_capabilities", "get", "usage_summary", "sla_report",
-    "get_report", "list_reports", "get_stats",          # smartscale reads
-    "get_plan", "list_plans", "get_design", "list_designs",  # protogen reads
-    "list_rule_packs", "get_rule_pack", "verify_result",      # audit-engine reads
-    "list_factor_packs", "get_factor_pack", "classify_activity",  # GHG reads
-    "list_assemblies", "get_assembly",                         # takeoff reads
-    "list_material_pack", "get_material_pack", "describe_agent",
-    "list_frameworks", "get_framework",                        # disclosure reads
-    "get_receipt", "verify_receipts", "list_services",
-    "service_stats",                                           # verified-relay reads
-    "detect_format", "verify",                                 # verdigraph reads
-    "list_agents", "get_agent", "get_ledger", "best_next_steps",
-    "export_state", "compute_efficiency_report",               # neurogenesis reads
-    "quote_footprint", "green_route", "verify_certificate",
-    "list_certificates",                                       # green-router (GR5)
-})
 
 # Network-effect pricing 2026-07-12 (Energy AI /PRICING-NETWORK-EFFECT-2026-07-12.md):
 # per-call prices sized to fit inside an agent's default budget covenant --
@@ -178,7 +175,9 @@ PRICE_MINOR = {          # per-call list price once the free tier is exhausted
 }
 DEFAULT_PRICE_MINOR = 100
 FREE_CALLS_BY_AGENT = {
-    "hive": 3,
+    # Provider-backed multi-agent solves incur real API cost. Read-only Hive
+    # tools and unpaid preflight remain free, but execution requires backing.
+    "hive": 0,
 }
 GATE_ATTR = "_payment_gate_state"   # lives on the core -> StateStore persists
 # PG18: anonymous/fingerprint identities share a bounded aggregate free pool
@@ -188,6 +187,8 @@ CALLER_TABLE_MAX = 500
 # PG21: a caller refused this many times in one day gets the seat upsell.
 SEAT_HINT_REFUSALS = 3
 SEATS_URL = "https://mcp.viridisconservation.com/seats"
+REQUEST_ID_MAX = 128
+IDEMPOTENCY_CACHE_MAX = 1000
 # PG21b (seat upsell, agent-specific, 2026-07-19): cheapest seat plan that
 # covers each gated agent, sourced from
 # subscriptions-agent/data/plan_catalog.v0.3.0.json (schema_version 1.0,
@@ -912,6 +913,177 @@ class PaymentGate:
             return {"consumer_class": "unknown", "channel": "unknown",
                     "caller": None, "is_test": False}
 
+    @staticmethod
+    def _canonical_payload_hash(input_data: dict) -> str:
+        """Stable hash for request-id conflict detection.
+
+        Billing metadata is excluded because a caller may add payment_ref only
+        after a 402 while retrying the same logical service request.
+        """
+        logical = dict(input_data)
+        logical.pop("payment_ref", None)
+        encoded = json.dumps(
+            logical,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            default=lambda value: repr(value),
+        ).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _prepare_idempotency(
+        self,
+        name: str,
+        core: Any,
+        gate: dict,
+        input_data: Any,
+    ) -> dict:
+        """Strip, resolve, and durably reserve request_id before billing."""
+        if not isinstance(input_data, dict):
+            return {"enabled": False}
+        request_id = input_data.pop("request_id", None)
+        if request_id is None:
+            return {"enabled": False}
+        if (not isinstance(request_id, str)
+                or not request_id.strip()
+                or len(request_id.strip()) > REQUEST_ID_MAX):
+            return {
+                "error": {
+                    "status": "error",
+                    "error_type": "invalid_request_id",
+                    "message": (
+                        f"request_id must be a non-empty string of at most "
+                        f"{REQUEST_ID_MAX} characters"
+                    ),
+                }
+            }
+        request_id = request_id.strip()
+        caller = self._caller_context().get("caller") or "unknown"
+        cache_key = hashlib.sha256(
+            f"{caller}\0{request_id}".encode("utf-8")
+        ).hexdigest()
+        payload_hash = self._canonical_payload_hash(input_data)
+        with self._billing_lock(name):
+            cache = gate.setdefault("idempotent_requests", {})
+            prior = cache.get(cache_key)
+            if prior is not None:
+                if prior.get("input_hash") != payload_hash:
+                    return {
+                        "error": {
+                            "status": "error",
+                            "error_type": "idempotency_conflict",
+                            "message": (
+                                "request_id was already used for a different "
+                                "logical input by this caller"
+                            ),
+                        }
+                    }
+                if prior.get("state") == "pending" or "result" not in prior:
+                    return {
+                        "error": {
+                            "status": "error",
+                            "error_type": "idempotency_incomplete",
+                            "message": (
+                                "The original request did not reach a durable "
+                                "completion. It will not be billed again; "
+                                "manual reconciliation is required."
+                            ),
+                        }
+                    }
+                return {
+                    "replay": True,
+                    "result": copy.deepcopy(prior["result"]),
+                }
+            if len(cache) >= IDEMPOTENCY_CACHE_MAX:
+                return {
+                    "error": {
+                        "status": "error",
+                        "error_type": "idempotency_capacity",
+                        "message": (
+                            "The retry-safety ledger is at capacity. No "
+                            "billable work was started."
+                        ),
+                    }
+                }
+            cache[cache_key] = {
+                "request_id": request_id,
+                "input_hash": payload_hash,
+                "state": "pending",
+                "created_at": time.strftime(
+                    "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+                ),
+            }
+            if not self.store.save(name, core):
+                cache.pop(cache_key, None)
+                return {
+                    "error": {
+                        "status": "error",
+                        "error_type": "idempotency_unavailable",
+                        "message": (
+                            "Retry safety could not be durably reserved. No "
+                            "billable work was started."
+                        ),
+                    }
+                }
+        return {
+            "enabled": True,
+            "cache_key": cache_key,
+            "request_id": request_id,
+            "input_hash": payload_hash,
+        }
+
+    def _finish_idempotent_call(
+        self,
+        name: str,
+        core: Any,
+        gate: dict,
+        idempotency: dict,
+        result: Any,
+    ) -> Any:
+        """Persist the original completed result before acknowledging it."""
+        if idempotency.get("enabled"):
+            with self._billing_lock(name):
+                cache = gate.setdefault("idempotent_requests", {})
+                cached_result = copy.deepcopy(result)
+                result_bytes = json.dumps(
+                    cached_result,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                    default=lambda value: repr(value),
+                ).encode("utf-8")
+                cache[idempotency["cache_key"]] = {
+                    "request_id": idempotency["request_id"],
+                    "input_hash": idempotency["input_hash"],
+                    "state": "completed",
+                    "result_hash": hashlib.sha256(result_bytes).hexdigest(),
+                    "result": cached_result,
+                    "completed_at": time.strftime(
+                        "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+                    ),
+                }
+        self.store.save(name, core)
+        return result
+
+    def _abort_idempotent_call(
+        self,
+        name: str,
+        core: Any,
+        gate: dict,
+        idempotency: dict,
+    ) -> None:
+        """Release a reservation when the gate refused before billing."""
+        if not idempotency.get("enabled"):
+            return
+        with self._billing_lock(name):
+            cache = gate.setdefault("idempotent_requests", {})
+            prior = cache.get(idempotency["cache_key"])
+            if (prior is not None
+                    and prior.get("state") == "pending"
+                    and prior.get("input_hash") == idempotency["input_hash"]):
+                cache.pop(idempotency["cache_key"], None)
+                self.store.save(name, core)
+
     async def _meter(self, name: str, gate: dict, event_suffix: str,
                      outcome: str, core: Any = None) -> None:
         """PG4/PG7/PG8: record on the fleet's own metering core. `core` is
@@ -939,6 +1111,11 @@ class PaymentGate:
                         "channel": ctx.get("channel", "unknown"),
                         "caller": ctx.get("caller"),
                         "is_test": bool(ctx.get("is_test", False))})
+                # PG24: the mutation belongs to the metering core, not to the
+                # gated agent. StateStore.attach normally persists this too,
+                # but the gate owns the durability invariant and must not rely
+                # on wrapper composition or call ordering.
+                self.store.save("metering", self.metering)
                 self._errors.pop(name, None)
             if core is not None:
                 self.store.save(name, core)
@@ -980,6 +1157,8 @@ class PaymentGate:
                         "channel": ctx.get("channel", "unknown"),
                         "caller": ctx.get("caller"),
                         "is_test": bool(ctx.get("is_test", False))})
+                # PG24 applies equally to zero-price subscription usage.
+                self.store.save("metering", self.metering)
                 self._errors.pop(name, None)
             if core is not None:
                 self.store.save(name, core)
@@ -1010,6 +1189,10 @@ class PaymentGate:
                     gate["invoices"] = gate["invoices"][-90:]  # bounded
             except Exception as e:  # PG8
                 self._errors[name] = f"rollover: {type(e).__name__}: {e}"
+        # close_period mutates the metering core by freezing an invoice.
+        # Persist that mutation under the metering key before resetting the
+        # gated agent's daily counters.
+        self.store.save("metering", self.metering)              # PG24
         gate["day"] = today
         gate["used"] = 0
         gate["used_by_caller"] = {}                    # PG18
@@ -1053,6 +1236,16 @@ class PaymentGate:
         allowed calls persist their own state). The wrapper matches the
         core's calling convention (sync cores like smartscale keep a sync
         process — their adapters call it without await)."""
+        read_actions = getattr(core, "READ_ACTIONS", None)
+        known_actions = getattr(core, "KNOWN_ACTIONS", None)
+        if not isinstance(read_actions, (set, frozenset)):
+            raise ValueError(
+                f"{name} must declare READ_ACTIONS as a set/frozenset")
+        if (not isinstance(known_actions, (set, frozenset))
+                or not read_actions.issubset(known_actions)):
+            raise ValueError(
+                f"{name} READ_ACTIONS must be a subset of KNOWN_ACTIONS")
+        read_actions = frozenset(read_actions)
         if not hasattr(core, GATE_ATTR):                       # PG5
             setattr(core, GATE_ATTR, {"day": _utc_day(), "used": 0,
                                       "refused": 0, "meter_id": None,
@@ -1064,7 +1257,8 @@ class PaymentGate:
                                       "consumed_escrows": {},
                                       "consumed_x402": {},       # PRX4
                                       "used_by_caller": {},
-                                      "refused_by_caller": {}})
+                                      "refused_by_caller": {},
+                                      "idempotent_requests": {}})
         else:
             # Backward-compatible restore of snapshots written before seats.
             persisted = getattr(core, GATE_ATTR)
@@ -1075,6 +1269,7 @@ class PaymentGate:
             persisted.setdefault("consumed_x402", {})      # pre-PRX snapshots
             persisted.setdefault("used_by_caller", {})     # pre-PG18 snapshots
             persisted.setdefault("refused_by_caller", {})  # pre-PG20 snapshots
+            persisted.setdefault("idempotent_requests", {})  # pre-PG23 snapshots
         self._cores[name] = core
         inner = core.process
         # PRX/HTTP-402 surface: the ungated inner process (StateStore-wrapped,
@@ -1086,7 +1281,7 @@ class PaymentGate:
         def _is_read(input_data) -> bool:
             action = (input_data or {}).get("action") \
                 if isinstance(input_data, dict) else None
-            return action in READ_ACTIONS                       # PG3
+            return action in read_actions                       # PG3
 
         def _try_spend_credit(gate: dict) -> bool:
             """PG9: past the free tier, prepaid credits are consumed 1/call."""
@@ -1101,7 +1296,15 @@ class PaymentGate:
             async def process(input_data):
                 if _is_read(input_data):
                     return await inner(input_data)
+                if isinstance(input_data, dict):
+                    input_data = dict(input_data)
                 gate = getattr(core, GATE_ATTR)
+                idempotency = self._prepare_idempotency(
+                    name, core, gate, input_data)
+                if idempotency.get("error"):
+                    return idempotency["error"]
+                if idempotency.get("replay"):
+                    return idempotency["result"]
                 # PG16: payment_ref is billing metadata for THIS gate — it
                 # never reaches the wrapped core, whatever path serves the call.
                 payment_ref = (input_data.pop("payment_ref", None)
@@ -1116,8 +1319,8 @@ class PaymentGate:
                         await self._meter_subscription_waiver(
                             name, gate, subscription, "ok")
                         result = await inner(input_data)
-                        self.store.save(name, core)
-                        return result
+                        return self._finish_idempotent_call(
+                            name, core, gate, idempotency, result)
                     subscription = None
                 if self._is_direct_overage(
                         subscription, PRICE_MINOR.get(name, DEFAULT_PRICE_MINOR)):
@@ -1131,6 +1334,8 @@ class PaymentGate:
                             name, gate,
                             f"overage-refused-{gate['refused']}",
                             "error")
+                        self._abort_idempotent_call(
+                            name, core, gate, idempotency)
                         self.store.save(name, core)
                         return self._payment_required(
                             name, today, gate["used"], subscription_overage=True)
@@ -1138,8 +1343,8 @@ class PaymentGate:
                         name, gate, f"overage-ok-{gate['subscription_overage']}",
                         "ok")
                     result = await inner(input_data)
-                    self.store.save(name, core)
-                    return result
+                    return self._finish_idempotent_call(
+                        name, core, gate, idempotency, result)
                 if isinstance(subscription, dict):
                     if subscription.get("path") == "per_call_fallback":
                         # A pull-refresh may have mutated lifecycle state and
@@ -1150,7 +1355,8 @@ class PaymentGate:
                         # interpreted pessimistically as ordinary freemium.
                         self._rollback_subscription(
                             name, subscription, "entitlement: invalid_decision")
-                if not self._try_grant_free_call(name, gate):   # PG1/PG2/PG18
+                if not self._try_grant_free_call(
+                        name, gate):                             # PG1/PG2/PG18
                     a2a_refusal = None
                     if payment_ref is not None:                 # PG13-PG16
                         a2a_refusal = self._try_consume_escrow(
@@ -1161,6 +1367,8 @@ class PaymentGate:
                         n_ref = self._record_refused_caller(gate)  # PG20
                         await self._meter(name, gate,
                                           f"refused-{gate['refused']}", "error")
+                        self._abort_idempotent_call(
+                            name, core, gate, idempotency)
                         self.store.save(name, core)             # PG5
                         return self._payment_required(
                             name, today, gate["used"],
@@ -1169,14 +1377,22 @@ class PaymentGate:
                 gate["used"] += 1
                 await self._meter(name, gate, f"ok-{gate['used']}", "ok")  # PG4
                 result = await inner(input_data)
-                self.store.save(name, core)                     # PG5
-                return result
+                return self._finish_idempotent_call(
+                    name, core, gate, idempotency, result)      # PG5/PG23
         else:
             @functools.wraps(inner)
             def process(input_data):
                 if _is_read(input_data):
                     return inner(input_data)
+                if isinstance(input_data, dict):
+                    input_data = dict(input_data)
                 gate = getattr(core, GATE_ATTR)
+                idempotency = self._prepare_idempotency(
+                    name, core, gate, input_data)
+                if idempotency.get("error"):
+                    return idempotency["error"]
+                if idempotency.get("replay"):
+                    return idempotency["result"]
                 # PG16: payment_ref never reaches the wrapped core.
                 payment_ref = (input_data.pop("payment_ref", None)
                                if isinstance(input_data, dict) else None)
@@ -1192,8 +1408,8 @@ class PaymentGate:
                             name, self._meter_subscription_waiver(
                                 name, gate, subscription, "ok", core=core))
                         result = inner(input_data)
-                        self.store.save(name, core)
-                        return result
+                        return self._finish_idempotent_call(
+                            name, core, gate, idempotency, result)
                     subscription = None
                 if self._is_direct_overage(
                         subscription, PRICE_MINOR.get(name, DEFAULT_PRICE_MINOR)):
@@ -1206,6 +1422,8 @@ class PaymentGate:
                                 name, gate,
                                 f"overage-refused-{gate['refused']}",
                                 "error", core=core))
+                        self._abort_idempotent_call(
+                            name, core, gate, idempotency)
                         self.store.save(name, core)
                         return self._payment_required(
                             name, today, gate["used"], subscription_overage=True)
@@ -1215,15 +1433,16 @@ class PaymentGate:
                             f"overage-ok-{gate['subscription_overage']}",
                             "ok", core=core))
                     result = inner(input_data)
-                    self.store.save(name, core)
-                    return result
+                    return self._finish_idempotent_call(
+                        name, core, gate, idempotency, result)
                 if isinstance(subscription, dict):
                     if subscription.get("path") == "per_call_fallback":
                         self._persist_subscription(name, subscription)
                     elif subscription.get("reservation_token"):
                         self._rollback_subscription(
                             name, subscription, "entitlement: invalid_decision")
-                if not self._try_grant_free_call(name, gate):   # PG1/PG2/PG18
+                if not self._try_grant_free_call(
+                        name, gate):                             # PG1/PG2/PG18
                     a2a_refusal = None
                     if payment_ref is not None:                 # PG13-PG16
                         a2a_refusal = self._try_consume_escrow(
@@ -1236,6 +1455,8 @@ class PaymentGate:
                             name, self._meter(name, gate,
                                               f"refused-{gate['refused']}", "error",
                                               core=core))
+                        self._abort_idempotent_call(
+                            name, core, gate, idempotency)
                         self.store.save(name, core)             # PG5
                         return self._payment_required(
                             name, today, gate["used"],
@@ -1246,8 +1467,8 @@ class PaymentGate:
                     name, self._meter(name, gate, f"ok-{gate['used']}", "ok",
                                       core=core))
                 result = inner(input_data)
-                self.store.save(name, core)                     # PG5
-                return result
+                return self._finish_idempotent_call(
+                    name, core, gate, idempotency, result)      # PG5/PG23
 
         core.process = process
         self.attached.append(name)
@@ -1329,6 +1550,21 @@ class PaymentGate:
                 },
                 "credits": {n: getattr(c, GATE_ATTR).get("credits", 0)
                             for n, c in self._cores.items()},
+                "usage_today": {
+                    n: getattr(c, GATE_ATTR).get("used", 0)
+                    for n, c in self._cores.items()},
+                "idempotency": {
+                    n: {
+                        "cached_results": len(
+                            getattr(c, GATE_ATTR).get(
+                                "idempotent_requests", {})),
+                        "cache_limit": IDEMPOTENCY_CACHE_MAX,
+                        "request_id_max_chars": REQUEST_ID_MAX,
+                    }
+                    for n, c in self._cores.items()},
+                "read_actions": {
+                    n: sorted(getattr(c, "READ_ACTIONS", ()))
+                    for n, c in self._cores.items()},
                 "subscription_entitlements": {
                     "enabled": self.subscriptions is not None,
                     "errors": dict(self._subscription_errors),

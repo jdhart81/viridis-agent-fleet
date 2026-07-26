@@ -60,7 +60,9 @@ STRIPE_REFUNDS_API = "https://api.stripe.com/v1/refunds"
 STRIPE_TRANSFERS_API = "https://api.stripe.com/v1/transfers"
 STRIPE_ACCOUNTS_API = "https://api.stripe.com/v1/accounts"
 STRIPE_ACCOUNT_LINKS_API = "https://api.stripe.com/v1/account_links"
-STRIPE_VERSION = "2026-02-25.clover"
+STRIPE_VERSION = "2026-06-24.dahlia"
+ONE_TIME_INTEGRATION_ID = "viridis_human_qjnvaxkp"
+SUBSCRIPTION_INTEGRATION_ID = "viridis_seats_vgkmrpta"
 
 _CHECKOUT_ID_RE = re.compile(r"^cs_(?:test_|live_)?[A-Za-z0-9]+$")
 _SUBSCRIPTION_ID_RE = re.compile(r"^sub_[A-Za-z0-9]+$")
@@ -72,6 +74,7 @@ _TRANSFER_ID_RE = re.compile(r"^tr_[A-Za-z0-9]+$")
 _ACCOUNT_ID_RE = re.compile(r"^acct_[A-Za-z0-9]+$")
 _PAYMENT_INTENT_ID_RE = re.compile(r"^pi_[A-Za-z0-9]+$")
 _IDEMPOTENCY_KEY_RE = re.compile(r"^[A-Za-z0-9_.:-]{8,255}$")
+_EMAIL_RE = re.compile(r"^[^@\s]{1,100}@[^@\s]{1,100}\.[^@\s]{2,63}$")
 _LIVE_KEY_PREFIXES = ("sk_live_", "rk_live_")
 
 
@@ -133,6 +136,10 @@ def verify_session(session_id: str, *, api_key: str | None = None,
         "payment_status": resp.get("payment_status"),
         "amount_total": resp.get("amount_total"),
         "currency": resp.get("currency"),
+        "mode": resp.get("mode"),
+        "offer_id": (
+            resp.get("metadata", {}).get("offer_id")
+            if isinstance(resp.get("metadata"), dict) else None),
         "livemode": bool(resp.get("livemode")),
         "timestamp": _now(),
     }
@@ -185,6 +192,7 @@ def create_checkout(
     success_url: str = "https://mcp.viridisconservation.com/pay/success",
     cancel_url: str = "https://mcp.viridisconservation.com/pay/cancel",
     metadata: dict | None = None,
+    customer_email: str | None = None,
     api_key: str | None = None,
     _transport=_default_transport,
 ) -> dict:
@@ -202,6 +210,11 @@ def create_checkout(
                     field="currency", value=currency)
     if not (isinstance(product_name, str) and product_name.strip()):
         return _err("bad_product", "product_name is required", field="product_name")
+    if (customer_email is not None
+            and (not isinstance(customer_email, str)
+                 or not _EMAIL_RE.fullmatch(customer_email.strip()))):
+        return _err("bad_email", "customer_email must be a valid email address",
+                    field="customer_email")
 
     key = api_key or os.environ.get("STRIPE_API_KEY")
     # P3
@@ -218,7 +231,10 @@ def create_checkout(
         "line_items[0][price_data][currency]": currency.lower(),
         "line_items[0][price_data][unit_amount]": str(amount_cents),
         "line_items[0][price_data][product_data][name]": product_name.strip(),
+        "integration_identifier": ONE_TIME_INTEGRATION_ID,
     }
+    if customer_email is not None:
+        form["customer_email"] = customer_email.strip()
     for k, v in (metadata or {}).items():
         form[f"metadata[{k}]"] = str(v)
 
@@ -305,6 +321,7 @@ def create_subscription_checkout(
         "subscription_data[metadata][account_ref]": account_ref.strip(),
         "subscription_data[metadata][catalog_version]": catalog_version.strip(),
         "subscription_data[metadata][catalog_sha256]": catalog_sha256,
+        "integration_identifier": SUBSCRIPTION_INTEGRATION_ID,
     }
     data = urllib.parse.urlencode(form).encode()
     headers = {"Authorization": f"Bearer {key}",

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import main as scheduler
 from growth_agent import (
     ALLOWED_CREDENTIAL_ENV,
     FleetSnapshot,
@@ -16,6 +17,7 @@ from growth_agent import (
     GitHubOwnedContentAdapter,
     GrowthAgent,
     GrowthError,
+    LiveFleetClient,
     ModelUsage,
     OutboundLog,
     SmitheryMetadataAdapter,
@@ -97,6 +99,22 @@ class FakeClient:
         return self.value
 
 
+class JsonResponse:
+    def __init__(self, payload, status=200):
+        self.payload = json.dumps(payload).encode()
+        self.status = status
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def read(self, limit):
+        assert len(self.payload) <= limit
+        return self.payload
+
+
 class NeverClient:
     def fetch(self, *, now):
         raise AssertionError("kill switch must stop before any network read")
@@ -148,6 +166,38 @@ class FakeGitHubTokenProvider:
         return self.value
 
 
+class FailingCycleAgent:
+    def __init__(self, exc):
+        self.exc = exc
+        self.calls = []
+
+    def run_once(self, *, dry_run):
+        self.calls.append(dry_run)
+        raise self.exc
+
+
+def test_scheduler_survives_expected_live_read_failure():
+    agent = FailingCycleAgent(GrowthError(
+        "live fleet health read failed: HTTPError"))
+
+    result = scheduler.run_cycle(agent, dry_run=False)
+
+    assert agent.calls == [False]
+    assert result == {
+        "status": "cycle_failed",
+        "error_type": "GrowthError",
+        "message": "live fleet health read failed: HTTPError",
+        "send_attempted": False,
+    }
+
+
+def test_scheduler_does_not_hide_unexpected_programming_errors():
+    agent = FailingCycleAgent(RuntimeError("bug"))
+
+    with pytest.raises(RuntimeError, match="bug"):
+        scheduler.run_cycle(agent, dry_run=True)
+
+
 def target(**updates):
     item = {
         "id": "cleared-discord",
@@ -189,6 +239,118 @@ def test_live_snapshot_drives_prices_and_intro_copy():
     assert "https://example.test/quickstart" in content
 
 
+def test_live_market_only_promotes_independently_verified_funding():
+    base = snapshot(external=1)
+    health = {
+        "status": "ok",
+        "payment_gate": {
+            "x402": {
+                "enabled": True,
+                "http_front_door": list(base.routes),
+                "http_settlement_telemetry": {
+                    "total": base.metrics,
+                    "per_route": base.route_metrics,
+                },
+                "intro_pricing": {"enabled": False},
+            },
+        },
+        "human_surfaces": {
+            "agents": base.agents_url,
+            "quickstart": base.quickstart_url,
+        },
+    }
+    catalog = {
+        "open_work": [
+            {
+                "work_id": "work_unverified",
+                "title": "Unverified listing",
+                "budget_minor": 5000,
+                "currency": "USD",
+                "funding_status": "UNVERIFIED",
+            },
+            {
+                "work_id": "work_missing_status",
+                "title": "Unknown funding listing",
+                "budget_minor": 4000,
+                "currency": "USD",
+            },
+            {
+                "work_id": "work_verified",
+                "title": "Verified funded listing",
+                "budget_minor": 2500,
+                "currency": "USD",
+                "funding_status": "VERIFIED",
+            },
+        ],
+    }
+
+    def opener(request, timeout):
+        assert timeout == 10
+        if request.full_url.startswith("https://example.test/health?"):
+            return JsonResponse(health)
+        if request.full_url.startswith("https://example.test/catalog?"):
+            return JsonResponse(catalog)
+        raise AssertionError(f"unexpected URL: {request.full_url}")
+
+    live = LiveFleetClient(
+        health_url="https://example.test/health",
+        market_catalog_url="https://example.test/catalog",
+        opener=opener,
+    ).fetch(now=NOW)
+
+    assert [job["work_id"] for job in live.open_work] == ["work_verified"]
+    assert live.open_work[0]["funding_status"] == "VERIFIED"
+    content = render_content(live)
+    assert "Independently funded work for outside agents:" in content
+    assert "work_verified" in content
+    assert "work_unverified" not in content
+    assert "work_missing_status" not in content
+
+
+def test_live_market_with_only_unverified_inventory_claims_no_paid_work():
+    base = snapshot(external=1)
+    health = {
+        "status": "ok",
+        "payment_gate": {
+            "x402": {
+                "enabled": True,
+                "http_front_door": list(base.routes),
+                "http_settlement_telemetry": {
+                    "total": base.metrics,
+                    "per_route": base.route_metrics,
+                },
+                "intro_pricing": {"enabled": False},
+            },
+        },
+    }
+    catalog = {
+        "open_work": [{
+            "work_id": "work_unverified",
+            "title": "Unverified listing",
+            "budget_minor": 5000,
+            "currency": "USD",
+            "funding_status": "UNVERIFIED",
+        }],
+    }
+
+    def opener(request, timeout):
+        del timeout
+        payload = (health if "/health?" in request.full_url else catalog)
+        return JsonResponse(payload)
+
+    live = LiveFleetClient(
+        health_url="https://example.test/health",
+        market_catalog_url="https://example.test/catalog",
+        opener=opener,
+    ).fetch(now=NOW)
+    content = render_content(live)
+
+    assert live.open_work == ()
+    assert "paid work" not in content.lower()
+    assert "work_unverified" not in content
+    assert "$50.00" not in content
+
+
 def test_open_market_work_is_promoted_with_exact_live_budget_and_id():
     base = snapshot(external=1)
     live = FleetSnapshot(
@@ -201,6 +363,7 @@ def test_open_market_work_is_promoted_with_exact_live_budget_and_id():
                     "title": "Build a LangGraph adapter",
                     "budget_minor": 2500, "currency": "USD"},))
     content = render_content(live)
+    assert "Independently funded work for outside agents:" in content
     assert "$25.00 — Build a LangGraph adapter (work_abc12345)" in content
     assert live.market_url in content
     assert validate_generated_content(content, live) == content
@@ -242,6 +405,38 @@ def test_full_live_market_content_stays_within_posting_limit():
     for job in jobs:
         assert job["work_id"] in content
         assert f"${job['budget_minor'] / 100:.2f}" in content
+    assert validate_generated_content(content, live) == content
+
+
+def test_large_live_suite_without_verified_work_compacts_to_posting_limit():
+    base = snapshot(external=1)
+    routes = tuple(
+        {
+            "agent": f"agent-{index}",
+            "tool": f"tool-{index}",
+            "endpoint": f"/x402/agent-{index}/tool-{index}",
+            "price_minor": 25 + index,
+            "amount_atomic_usdc": (25 + index) * 10_000,
+            "description": "Detailed deterministic climate workflow " * 20,
+        }
+        for index in range(6)
+    )
+    live = FleetSnapshot(
+        routes=routes, metrics=base.metrics,
+        route_metrics=base.route_metrics, intro_enabled=False,
+        agents_url=base.agents_url, quickstart_url=base.quickstart_url,
+        captured_at=base.captured_at,
+        market_url="https://mcp.viridisconservation.com/network/catalog",
+        open_work=())
+
+    content = render_content(live)
+
+    assert len(content) <= 1900
+    assert "Detailed deterministic climate workflow" not in content
+    for route in routes:
+        assert route["agent"] in content
+        assert f"${route['price_minor'] / 100:.2f}" in content
+    assert "paid work" not in content.lower()
     assert validate_generated_content(content, live) == content
 
 

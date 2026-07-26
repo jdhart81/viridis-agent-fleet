@@ -166,6 +166,9 @@ function subscriptionMetrics(d){
     planMix: mix,
     pageViews: num(funnel.page_views),
     checkoutsStarted: num(funnel.checkouts_started ?? funnel.checkout_starts),
+    snapshotPageViews: num(funnel.snapshot_page_views),
+    snapshotCheckoutsStarted: num(funnel.snapshot_checkouts_started),
+    snapshotPaid: num(funnel.snapshot_paid),
     checkoutReadyPlans: num(checks.checkout_ready_plans),
     catalogVersion: checks.plan_catalog_version || (summary.catalog||{}).version || "",
     catalogSha: checks.plan_catalog_sha256 || (summary.catalog||{}).sha256 || ""
@@ -231,7 +234,7 @@ let leaderRef = null;
 // Weights favor settlement-of-record events (money & risk) over registrations.
 const ROLE = { energyai:"federated \u00b7 energy", identity:"rails", trust:"rails", escrow:"settlement",
   metering:"settlement", arbitration:"settlement", "compute-ledger":"physics",
-  covenant:"safety", hive:"revenue \u00b7 orchestration",
+  covenant:"safety", hive:"revenue · orchestration",
   provenance:"safety", offsets:"conservation",
   erc8004:"interop", surety:"risk-transfer", notary:"delivery-proof",
   wavefunction:"discovery", smartscale:"revenue service", protogen:"revenue service",
@@ -241,7 +244,8 @@ const ROLE = { energyai:"federated \u00b7 energy", identity:"rails", trust:"rail
   "disclosure-compiler":"revenue · compliance",
   "verified":"delivery-receipts · revenue",
   "verdigraph":"cognition-certifier", "neurogenesis":"developmental-engine",
-  "green-router":"entropy-settlement · conservation" };
+  "green-router":"entropy-settlement · conservation",
+  "viridisos":"ViridisOS — theorem-backed conservation certification. Certify a parcel or portfolio against a gate-passed canon theorem and receive a 'Certified by ViridisOS' mark that recomputes bit-for-bit; bind did:viridis identities; price the unified protocol toll. Staging preview (dev signer — mark is non-authoritative until the K3 swap)." };
 const W = {   // per-counter weights
   escrows_total:5, escrows_active:2, slashed_minor:0.05, bonds_total:5,
   bonds_active:2, ruled:5, cases:2, events:2, meters:1, commitments:4,
@@ -250,7 +254,7 @@ const W = {   // per-counter weights
   entries:2, accounts:1, reports_processed:3, plans_generated:2,
   cad_workspaces:1, cad_designs:2, regulations_in_db:0.1,
   wavefunctions:2, collectives:2 };
-const PRICE_L = { smartscale:50, protogen:100, "taxcredit-engine":200, "ghg-ledger":100, "narrative-engine":50, "regulatory-radar":25, "quantity-takeoff":50, "disclosure-compiler":200, verdigraph:25, neurogenesis:25, "green-router":50, hive:500 };
+const PRICE_L = { smartscale:50, protogen:100, "taxcredit-engine":200, "ghg-ledger":100, "narrative-engine":50, "regulatory-radar":25, "quantity-takeoff":50, "disclosure-compiler":200, verdigraph:25, neurogenesis:25, "green-router":50 };
 // counter -> value category (Revenue is computed from prepaid credits, not counters)
 const CATEGORY = {
   events:"demand", meters:"demand", reports_processed:"demand", plans_generated:"demand",
@@ -363,6 +367,9 @@ function render(d, mode){
     erc8004: num(c("erc8004").registrations),
     genesis: num(c("provenance").registered),
     credits: Object.values(gate.credits||{}).reduce((s,v)=>s+num(v),0),
+    snapshot_page_views: subs.snapshotPageViews,
+    snapshot_checkouts_started: subs.snapshotCheckoutsStarted,
+    snapshot_paid: subs.snapshotPaid,
     seat_page_views: subs.pageViews,
     seat_checkouts_started: subs.checkoutsStarted,
     active_subscriptions: subs.active,
@@ -388,12 +395,15 @@ function render(d, mode){
     kpi("ERC-8004 bridged", m.erc8004, dl.erc8004) +
     kpi("Genesis certificates", m.genesis, dl.genesis) +
     kpi("Prepaid credits outstanding", m.credits, dl.credits) +
+    kpi("Snapshot page views", m.snapshot_page_views, dl.snapshot_page_views) +
+    kpi("Snapshot checkouts started", m.snapshot_checkouts_started, dl.snapshot_checkouts_started) +
+    kpi("Snapshots paid", m.snapshot_paid, dl.snapshot_paid) +
     kpi("Seat page views", m.seat_page_views, dl.seat_page_views) +
     kpi("Seat checkouts started", m.seat_checkouts_started, dl.seat_checkouts_started) +
     kpi("Active B2B subscriptions", m.active_subscriptions, dl.active_subscriptions) +
     kpi("Recurring MRR", `$${(m.subscription_mrr_minor/100).toFixed(2)}`, null);
 
-  const PRICE = { smartscale: 50, protogen: 100, "taxcredit-engine": 200, "ghg-ledger": 100, "quantity-takeoff": 50, "disclosure-compiler": 200, "narrative-engine": 50, "regulatory-radar": 25, hive:500 };
+  const PRICE = { smartscale: 50, protogen: 100, "taxcredit-engine": 200, "ghg-ledger": 100, "quantity-takeoff": 50, "disclosure-compiler": 200, "narrative-engine": 50, "regulatory-radar": 25 };
   const BURN_MONTHLY_CENTS = 725;
   const prepaidCents = Object.entries(gate.credits||{})
       .reduce((s,[k,v]) => s + num(v) * (PRICE[k]||50), 0);
@@ -430,7 +440,7 @@ function render(d, mode){
     </div>
     <div class="card"><b>Payment gate</b>
       <div style="margin-top:6px"><span class="pill ${gOk?"ok":"warn"}">${(gate.gated_agents||[]).join(", ")||"none"}</span></div>
-      <div class="sub" style="margin-top:6px">${gate.free_calls_per_day??"?"} default free calls/day \u00b7 hive ${((gate.free_calls_per_day_by_agent||{}).hive)??3}/day \u2192 credits \u2192 402 (Stripe packs + x402 where advertised)</div>
+      <div class="sub" style="margin-top:6px">${gate.free_calls_per_day??"?"} default free calls/day · hive ${((gate.free_calls_per_day_by_agent||{}).hive)??3}/day \u2192 credits \u2192 402 (Stripe packs + x402 where advertised)</div>
       <div class="mono" style="margin-top:4px">credits: ${Object.entries(gate.credits||{}).map(([k,v])=>k+":"+v).join("  ")||"\u2014"} \u00b7 smartscale 50\u00a2 \u00b7 protogen $1 \u00b7 taxcredit-engine $2 \u00b7 ghg-ledger $1 \u00b7 quantity-takeoff 50\u00a2 \u00b7 disclosure-compiler $2 \u00b7 hive $5</div>
       <div class="mono" style="margin-top:4px">402 funnel today (PG20): ${Object.entries(((gate.conversion||{}).per_agent)||{})
         .filter(([k,v])=>num(v.refusals_today)>0)
@@ -446,6 +456,13 @@ function render(d, mode){
       <div class="mono" style="margin-top:4px">${safeText(subs.currency)} · checkout-ready plans: ${subs.checkoutReadyPlans}
         ${subs.catalogVersion?` · catalog ${safeText(subs.catalogVersion)}`:""}
         ${subs.catalogSha?` · sha ${safeText(subs.catalogSha).slice(0,12)}…`:""}</div>
+      <div class="funnel-strip" aria-label="Compliance snapshot conversion funnel">
+        <div class="funnel-step"><b>${subs.snapshotPageViews}</b><span>snapshot views</span></div>
+        <div class="funnel-arrow" aria-hidden="true">→</div>
+        <div class="funnel-step"><b>${subs.snapshotCheckoutsStarted}</b><span>snapshot checkout starts</span></div>
+        <div class="funnel-arrow" aria-hidden="true">→</div>
+        <div class="funnel-step"><b>${subs.snapshotPaid}</b><span>snapshots paid</span></div>
+      </div>
       <div class="funnel-strip" aria-label="Seat conversion funnel">
         <div class="funnel-step"><b>${subs.pageViews}</b><span>page views</span></div>
         <div class="funnel-arrow" aria-hidden="true">→</div>

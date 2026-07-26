@@ -24,6 +24,27 @@ AM11 optional compute/notary/relay evidence is signed with the delivery and is
 AM12 security posture is evidence-bounded: signed, expiring attestations describe
      tested coverage and claim boundaries; they never assert that an agent is
      "secure" or independently verified merely because an attestation exists.
+AM13 security-result receipts are issuer-signed, allowlisted, durable, and
+     imported exactly once; the market never receives a scanner private key.
+AM14 common-control security statements are labeled as related-party evidence,
+     never as independent third-party verification.
+AM15 usefulness is counted only from a signed buyer outcome attached to an
+     independently verified paid job. Feedback stores bounded outcome fields
+     and an optional caller-computed note digest, never free-form buyer text.
+AM16 independently useful requires verified distinct buyer and seller operator
+     entities; common-control and unverified-control feedback stays labeled and
+     cannot inflate independent demand evidence.
+AM17 external operator verification is accepted only as an allowlisted
+     Ed25519-signed, content-addressed, expiring receipt bound to the exact
+     signed profile digest. Profile changes, expiry, and revocation fail closed.
+AM18 verification evidence is represented only by a digest, method, and bounded
+     claim; identity documents and other raw PII never enter the market.
+AM19 a cash-escrow work order becomes VERIFIED funded only after an offer fixes
+     buyer, seller, amount, and rail and the private Hub confirms pull-verified
+     live custody evidence for the exact still-FUNDED escrow.
+AM20 in production, an awarded cash-escrow seller cannot submit delivery before
+     AM19 succeeds. A listing, buyer signature, internal `fund`, test Checkout,
+     or mismatched escrow never substitutes for verified funding.
 """
 from __future__ import annotations
 
@@ -49,7 +70,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 
 PROTOCOL = "viridis-agent-market-v1"
-VERSION = "0.3.0"
+VERSION = "0.7.0"
 AUTH_WINDOW_SECONDS = 300
 MAX_TEXT = 8_000
 MAX_PROFILE_DAYS = 365
@@ -60,10 +81,19 @@ MAX_MESSAGES_PER_DAY = 100
 MAX_OFFERS_PER_WORK = 100
 MAX_BUDGET_MINOR = 10_000_000
 MAX_SECURITY_ATTESTATION_DAYS = 90
+MAX_OPERATOR_VERIFICATION_DAYS = 365
 ALLOWED_RAILS = frozenset({"x402", "viridis_cash_escrow"})
 ALLOWED_CURRENCIES = frozenset({"USD", "USDC"})
 SECURITY_POSTURES = frozenset({
     "SCANNED", "RUNTIME_GUARDED", "INCIDENT_EVIDENCE_AVAILABLE",
+})
+USEFULNESS_OUTCOMES = frozenset({
+    "USEFUL", "PARTIALLY_USEFUL", "NOT_USEFUL",
+})
+OPERATOR_VERIFICATION_METHODS = frozenset({
+    "LEGAL_ENTITY_DOCUMENT_REVIEW",
+    "REGULATED_KYC",
+    "GOVERNMENT_REGISTRY_AND_DOMAIN_CONTROL",
 })
 SECURITY_RESULT_FIELDS = frozenset({
     "checks", "passed", "warnings", "findings", "errors",
@@ -152,6 +182,10 @@ CREATE TABLE IF NOT EXISTS profiles (
     payment_json TEXT NOT NULL,
     auth_mode TEXT NOT NULL,
     provenance TEXT NOT NULL,
+    operator_entity TEXT NOT NULL DEFAULT '',
+    operator_entity_verified INTEGER NOT NULL DEFAULT 0,
+    operator_verification_receipt_id TEXT NOT NULL DEFAULT '',
+    operator_verification_expires_at TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL,
     version INTEGER NOT NULL,
     profile_sha256 TEXT NOT NULL,
@@ -170,6 +204,8 @@ CREATE TABLE IF NOT EXISTS security_attestations (
     claim_boundary TEXT NOT NULL,
     evidence_url TEXT NOT NULL,
     evidence_sha256 TEXT NOT NULL,
+    receipt_id TEXT NOT NULL DEFAULT '',
+    receipt_signature_b64 TEXT NOT NULL DEFAULT '',
     relation TEXT NOT NULL,
     status TEXT NOT NULL,
     issued_at TEXT NOT NULL,
@@ -177,6 +213,38 @@ CREATE TABLE IF NOT EXISTS security_attestations (
     created_at TEXT NOT NULL,
     FOREIGN KEY(attester_id) REFERENCES profiles(agent_id),
     FOREIGN KEY(target_agent_id) REFERENCES profiles(agent_id)
+);
+CREATE TABLE IF NOT EXISTS security_receipts (
+    receipt_id TEXT PRIMARY KEY,
+    issuer_id TEXT NOT NULL,
+    target_agent_id TEXT NOT NULL,
+    receipt_sha256 TEXT NOT NULL,
+    receipt_json TEXT NOT NULL,
+    signature_b64 TEXT NOT NULL,
+    attestation_id TEXT NOT NULL UNIQUE,
+    imported_at TEXT NOT NULL,
+    FOREIGN KEY(issuer_id) REFERENCES profiles(agent_id),
+    FOREIGN KEY(target_agent_id) REFERENCES profiles(agent_id),
+    FOREIGN KEY(attestation_id) REFERENCES security_attestations(attestation_id)
+);
+CREATE TABLE IF NOT EXISTS operator_verification_receipts (
+    receipt_id TEXT PRIMARY KEY,
+    issuer_id TEXT NOT NULL,
+    subject_agent_id TEXT NOT NULL,
+    subject_profile_sha256 TEXT NOT NULL,
+    operator_entity TEXT NOT NULL,
+    verification_method TEXT NOT NULL,
+    evidence_sha256 TEXT NOT NULL,
+    claim_boundary TEXT NOT NULL,
+    status TEXT NOT NULL,
+    effective_status TEXT NOT NULL,
+    supersedes_receipt_id TEXT NOT NULL DEFAULT '',
+    receipt_sha256 TEXT NOT NULL,
+    receipt_json TEXT NOT NULL,
+    signature_b64 TEXT NOT NULL,
+    issued_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    imported_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS subscriptions (
     subscription_id TEXT PRIMARY KEY,
@@ -258,6 +326,33 @@ CREATE TABLE IF NOT EXISTS hub_receipts (
     verified_at TEXT NOT NULL,
     FOREIGN KEY(work_id) REFERENCES work_orders(work_id)
 );
+CREATE TABLE IF NOT EXISTS funding_receipts (
+    work_id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL UNIQUE,
+    reference TEXT NOT NULL UNIQUE,
+    rail TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL,
+    currency TEXT NOT NULL,
+    receipt_json TEXT NOT NULL,
+    verified_at TEXT NOT NULL,
+    FOREIGN KEY(work_id) REFERENCES work_orders(work_id)
+);
+CREATE TABLE IF NOT EXISTS usefulness_feedback (
+    feedback_id TEXT PRIMARY KEY,
+    work_id TEXT NOT NULL UNIQUE,
+    buyer_id TEXT NOT NULL,
+    seller_id TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    would_buy_again INTEGER NOT NULL,
+    note_sha256 TEXT NOT NULL DEFAULT '',
+    buyer_seller_relation TEXT NOT NULL,
+    buyer_operator_proof TEXT NOT NULL DEFAULT '',
+    seller_operator_proof TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(work_id) REFERENCES work_orders(work_id),
+    FOREIGN KEY(buyer_id) REFERENCES profiles(agent_id),
+    FOREIGN KEY(seller_id) REFERENCES profiles(agent_id)
+);
 CREATE TABLE IF NOT EXISTS messages (
     message_id TEXT PRIMARY KEY,
     sender_id TEXT NOT NULL,
@@ -302,6 +397,12 @@ CREATE INDEX IF NOT EXISTS idx_security_target_live
     ON security_attestations(target_agent_id, status, expires_at);
 CREATE INDEX IF NOT EXISTS idx_security_attester_live
     ON security_attestations(attester_id, status, expires_at);
+CREATE INDEX IF NOT EXISTS idx_security_receipts_target
+    ON security_receipts(target_agent_id, imported_at);
+CREATE INDEX IF NOT EXISTS idx_operator_verifications_subject
+    ON operator_verification_receipts(subject_agent_id, issued_at);
+CREATE INDEX IF NOT EXISTS idx_usefulness_feedback_seller
+    ON usefulness_feedback(seller_id, outcome, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_events_actor ON events(actor_id, created_at);
 """
@@ -312,12 +413,19 @@ class MarketNetworkCore:
                  db_path: str = ":memory:",
                  now_fn: Callable[[], datetime] = _utcnow,
                  settlement_verifier: Optional[Callable[[dict], dict]] = None,
-                 hub_required: bool = False):
+                 hub_required: bool = False,
+                 trusted_security_receipt_keys: Optional[dict[str, str]] = None,
+                 trusted_operator_verification_keys:
+                 Optional[dict[str, str]] = None):
         self.config = config or AgentConfig()
         self.db_path = str(db_path)
         self._now_fn = now_fn
         self._settlement_verifier = settlement_verifier
         self.hub_required = bool(hub_required)
+        self._trusted_security_receipt_keys = dict(
+            trusted_security_receipt_keys or {})
+        self._trusted_operator_verification_keys = dict(
+            trusted_operator_verification_keys or {})
         self._lock = threading.RLock()
         if self.db_path != ":memory:":
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -340,6 +448,51 @@ class MarketNetworkCore:
         if "proofs_json" not in columns:
             self._conn.execute(
                 "ALTER TABLE deliveries ADD COLUMN proofs_json TEXT NOT NULL DEFAULT '{}'")
+        profile_columns = {row["name"] for row in
+                           self._conn.execute("PRAGMA table_info(profiles)").fetchall()}
+        if "operator_entity" not in profile_columns:
+            self._conn.execute(
+                "ALTER TABLE profiles ADD COLUMN operator_entity TEXT NOT NULL DEFAULT ''")
+        if "operator_entity_verified" not in profile_columns:
+            self._conn.execute(
+                "ALTER TABLE profiles ADD COLUMN operator_entity_verified INTEGER NOT NULL DEFAULT 0")
+        if "operator_verification_receipt_id" not in profile_columns:
+            self._conn.execute(
+                "ALTER TABLE profiles ADD COLUMN "
+                "operator_verification_receipt_id TEXT NOT NULL DEFAULT ''")
+        if "operator_verification_expires_at" not in profile_columns:
+            self._conn.execute(
+                "ALTER TABLE profiles ADD COLUMN "
+                "operator_verification_expires_at TEXT NOT NULL DEFAULT ''")
+        attestation_columns = {row["name"] for row in self._conn.execute(
+            "PRAGMA table_info(security_attestations)").fetchall()}
+        if "receipt_id" not in attestation_columns:
+            self._conn.execute(
+                "ALTER TABLE security_attestations ADD COLUMN receipt_id TEXT NOT NULL DEFAULT ''")
+        if "receipt_signature_b64" not in attestation_columns:
+            self._conn.execute(
+                "ALTER TABLE security_attestations ADD COLUMN receipt_signature_b64 TEXT NOT NULL DEFAULT ''")
+        feedback_columns = {row["name"] for row in self._conn.execute(
+            "PRAGMA table_info(usefulness_feedback)").fetchall()}
+        if "buyer_seller_relation" not in feedback_columns:
+            self._conn.execute(
+                "ALTER TABLE usefulness_feedback ADD COLUMN "
+                "buyer_seller_relation TEXT NOT NULL "
+                "DEFAULT 'CONTROL_RELATION_UNVERIFIED'")
+        if "buyer_operator_proof" not in feedback_columns:
+            self._conn.execute(
+                "ALTER TABLE usefulness_feedback ADD COLUMN "
+                "buyer_operator_proof TEXT NOT NULL DEFAULT ''")
+        if "seller_operator_proof" not in feedback_columns:
+            self._conn.execute(
+                "ALTER TABLE usefulness_feedback ADD COLUMN "
+                "seller_operator_proof TEXT NOT NULL DEFAULT ''")
+        operator_receipt_columns = {row["name"] for row in self._conn.execute(
+            "PRAGMA table_info(operator_verification_receipts)").fetchall()}
+        if "effective_status" not in operator_receipt_columns:
+            self._conn.execute(
+                "ALTER TABLE operator_verification_receipts ADD COLUMN "
+                "effective_status TEXT NOT NULL DEFAULT 'REVOKED'")
 
     def _now(self) -> datetime:
         value = self._now_fn()
@@ -539,8 +692,35 @@ class MarketNetworkCore:
                               field="agent_id")
         return row
 
-    @staticmethod
-    def _profile_public(row: sqlite3.Row) -> dict:
+    def _operator_proof(self, row: sqlite3.Row) -> str:
+        """Return a currently valid operator proof reference, or fail closed."""
+        if (row["auth_mode"] == "operator_managed"
+                and bool(row["operator_entity_verified"])
+                and str(row["operator_entity"]).strip()):
+            return "operator-seed:" + row["agent_id"]
+        receipt_id = str(row["operator_verification_receipt_id"] or "")
+        expires_at = str(row["operator_verification_expires_at"] or "")
+        if (not bool(row["operator_entity_verified"]) or not receipt_id
+                or not expires_at or expires_at <= _iso(self._now())):
+            return ""
+        receipt = self._conn.execute(
+            "SELECT * FROM operator_verification_receipts WHERE receipt_id=?",
+            (receipt_id,)).fetchone()
+        if (not receipt or receipt["effective_status"] != "VERIFIED"
+                or receipt["expires_at"] <= _iso(self._now())
+                or receipt["subject_agent_id"] != row["agent_id"]
+                or receipt["subject_profile_sha256"] != row["profile_sha256"]
+                or receipt["operator_entity"].strip().casefold()
+                != str(row["operator_entity"]).strip().casefold()):
+            return ""
+        return receipt_id
+
+    def _proof_is_current(self, proof: str, agent_id: str) -> bool:
+        row = self._profile_row(agent_id)
+        return bool(row and proof and self._operator_proof(row) == proof)
+
+    def _profile_public(self, row: sqlite3.Row) -> dict:
+        operator_proof = self._operator_proof(row)
         return {
             "agent_id": row["agent_id"], "did": row["did"],
             "name": row["name"], "description": row["description"],
@@ -548,6 +728,11 @@ class MarketNetworkCore:
             "representative_queries": json.loads(row["queries_json"]),
             "endpoint": row["endpoint"], "payment": json.loads(row["payment_json"]),
             "auth_mode": row["auth_mode"], "provenance": row["provenance"],
+            "operator_entity": row["operator_entity"],
+            "operator_entity_verified": bool(operator_proof),
+            "operator_verification_proof": operator_proof or None,
+            "operator_verification_expires_at": (
+                row["operator_verification_expires_at"] or None),
             "status": row["status"], "version": row["version"],
             "profile_sha256": row["profile_sha256"],
             "created_at": row["created_at"], "updated_at": row["updated_at"],
@@ -556,6 +741,9 @@ class MarketNetworkCore:
 
     @staticmethod
     def _security_attestation_public(row: sqlite3.Row) -> dict:
+        receipt_id = row["receipt_id"] if "receipt_id" in row.keys() else ""
+        receipt_signature = (row["receipt_signature_b64"]
+                             if "receipt_signature_b64" in row.keys() else "")
         return {
             "attestation_id": row["attestation_id"],
             "attester_id": row["attester_id"],
@@ -567,11 +755,14 @@ class MarketNetworkCore:
             "claim_boundary": row["claim_boundary"],
             "evidence_url": row["evidence_url"],
             "evidence_sha256": row["evidence_sha256"],
+            "receipt_id": receipt_id or None,
+            "receipt_signature_b64": receipt_signature or None,
             "relation": row["relation"],
             "status": row["status"],
             "issued_at": row["issued_at"],
             "expires_at": row["expires_at"],
-            "provenance": "signed_attester_statement",
+            "provenance": ("signed_security_result_receipt" if receipt_id
+                           else "signed_attester_statement"),
             "market_verdict": (
                 "coverage evidence only; not a guarantee of security or "
                 "independent verification"),
@@ -622,12 +813,15 @@ class MarketNetworkCore:
         attesters = sorted({item["attester_id"] for item in items})
         third_party = sorted({item["attester_id"] for item in items
                               if item["relation"] == "THIRD_PARTY_ATTESTER"})
+        related_party = sorted({item["attester_id"] for item in items
+                                if item["relation"] == "COMMON_CONTROL_RELATED"})
         return {
             "status": "COVERAGE_REPORTED" if items else "UNASSESSED",
             "current_attestations": len(items),
             "postures": postures,
             "attesters": attesters,
             "third_party_attesters": third_party,
+            "related_party_attesters": related_party,
             "coverage_score": max(
                 (SECURITY_POSTURE_WEIGHT[item["posture"]] for item in items),
                 default=0),
@@ -637,6 +831,32 @@ class MarketNetworkCore:
                 "Coverage evidence only; no vulnerability-free or independent-"
                 "verification claim is inferred by the market."),
         }
+
+    def _security_relation(self, attester: sqlite3.Row,
+                           target: sqlite3.Row) -> str:
+        if attester["agent_id"] == target["agent_id"]:
+            return "SELF_ATTESTED"
+        attester_entity = str(attester["operator_entity"] or "").strip()
+        target_entity = str(target["operator_entity"] or "").strip()
+        if (attester_entity and target_entity
+                and bool(self._operator_proof(attester))
+                and bool(self._operator_proof(target))
+                and attester_entity.casefold() == target_entity.casefold()):
+            return "COMMON_CONTROL_RELATED"
+        return "THIRD_PARTY_ATTESTER"
+
+    def _operator_relation(self, buyer: sqlite3.Row,
+                           seller: sqlite3.Row) -> tuple[str, str, str]:
+        if buyer["agent_id"] == seller["agent_id"]:
+            return "SELF", "", ""
+        buyer_proof = self._operator_proof(buyer)
+        seller_proof = self._operator_proof(seller)
+        if not buyer_proof or not seller_proof:
+            return "CONTROL_RELATION_UNVERIFIED", buyer_proof, seller_proof
+        if (str(buyer["operator_entity"]).strip().casefold()
+                == str(seller["operator_entity"]).strip().casefold()):
+            return "COMMON_CONTROL_RELATED", buyer_proof, seller_proof
+        return "VERIFIED_DISTINCT_OPERATORS", buyer_proof, seller_proof
 
     def seed_owned_profiles(self, profiles: Iterable[dict]) -> int:
         """Idempotently seed operator-owned public listings; never grants writes."""
@@ -650,12 +870,17 @@ class MarketNetworkCore:
                                  "representative_queries", required=False)
             endpoint = self._public_https(raw.get("endpoint", ""), "endpoint")
             payment = self._validate_payment(raw.get("payment") or {})
+            operator_entity = self._text(
+                raw.get("operator_entity") or "ViridisNorth LLC",
+                "operator_entity", maximum=240)
             now = _iso(self._now())
             expires = _iso(self._now() + timedelta(days=MAX_PROFILE_DAYS))
             public = {"agent_id": agent_id, "name": name,
                       "description": description, "capabilities": caps,
                       "representative_queries": queries, "endpoint": endpoint,
-                      "payment": payment, "provenance": "viridis_operator_seed"}
+                      "payment": payment, "provenance": "viridis_operator_seed",
+                      "operator_entity": operator_entity,
+                      "operator_entity_verified": True}
             profile_sha = _digest(public)
             did = "did:viridis:operator:" + hashlib.sha256(
                 agent_id.encode()).hexdigest()[:24]
@@ -674,17 +899,23 @@ class MarketNetworkCore:
                 self._conn.execute(
                     "INSERT INTO profiles(agent_id,did,name,description,capabilities_json,"
                     "queries_json,endpoint,public_key_b64,payment_json,auth_mode,provenance,"
-                    "status,version,profile_sha256,created_at,updated_at,expires_at) "
-                    "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+                    "operator_entity,operator_entity_verified,status,version,profile_sha256,"
+                    "created_at,updated_at,expires_at) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
                     "ON CONFLICT(agent_id) DO UPDATE SET did=excluded.did,name=excluded.name,"
                     "description=excluded.description,capabilities_json=excluded.capabilities_json,"
                     "queries_json=excluded.queries_json,endpoint=excluded.endpoint,"
                     "payment_json=excluded.payment_json,status='ACTIVE',version=excluded.version,"
+                    "operator_entity=excluded.operator_entity,"
+                    "operator_entity_verified=excluded.operator_entity_verified,"
+                    "operator_verification_receipt_id='',"
+                    "operator_verification_expires_at='',"
                     "profile_sha256=excluded.profile_sha256,updated_at=excluded.updated_at,"
                     "expires_at=excluded.expires_at",
                     (agent_id, did, name, description, _stable(caps), _stable(queries),
                      endpoint, "", _stable(payment), "operator_managed",
-                     "viridis_operator_seed", "ACTIVE", version, profile_sha,
+                     "viridis_operator_seed", operator_entity, 1,
+                     "ACTIVE", version, profile_sha,
                      created, now, expires))
                 self._conn.execute(
                     "INSERT INTO events(event_id,event_type,actor_id,object_type,object_id,"
@@ -864,8 +1095,8 @@ class MarketNetworkCore:
         idem = self._id(body["idempotency_key"], "idempotency_key")
         auth = data.get("auth") or {}
         with self._tx():
-            self._ensure_active(attester_id)
-            self._ensure_active(target_agent_id)
+            attester = self._ensure_active(attester_id)
+            target = self._ensure_active(target_agent_id)
             _, replay = self._begin_write(
                 "publish_security_attestation", attester_id, body, auth, idem)
             if replay is not None:
@@ -873,8 +1104,7 @@ class MarketNetworkCore:
             issued_at = _iso(self._now())
             expires_at = _iso(
                 self._now() + timedelta(days=ttl_days))
-            relation = ("SELF_ATTESTED" if attester_id == target_agent_id
-                        else "THIRD_PARTY_ATTESTER")
+            relation = self._security_relation(attester, target)
             attestation_id = "sec-" + _digest({
                 "attester_id": attester_id,
                 "body": body,
@@ -883,11 +1113,11 @@ class MarketNetworkCore:
                 "INSERT INTO security_attestations(attestation_id,attester_id,"
                 "target_agent_id,posture,coverage_json,scanner_json,"
                 "result_counts_json,claim_boundary,evidence_url,evidence_sha256,"
-                "relation,status,issued_at,expires_at,created_at) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "receipt_id,receipt_signature_b64,relation,status,issued_at,expires_at,"
+                "created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (attestation_id, attester_id, target_agent_id, posture,
                  _stable(coverage), _stable(scanner), _stable(result_counts),
-                 claim_boundary, evidence_url, evidence_sha256, relation,
+                 claim_boundary, evidence_url, evidence_sha256, "", "", relation,
                  "ACTIVE", issued_at, expires_at, issued_at))
             row = self._conn.execute(
                 "SELECT * FROM security_attestations WHERE attestation_id=?",
@@ -907,6 +1137,452 @@ class MarketNetworkCore:
                 })
             return result
 
+    def _import_security_receipt(self, data: dict) -> dict:
+        """Verify and durably import one allowlisted Security result receipt."""
+        receipt = data.get("receipt")
+        signature_b64 = str(data.get("signature_b64") or "").strip()
+        if not isinstance(receipt, dict):
+            raise MarketError("receipt must be an object", field="receipt")
+        required = {
+            "protocol", "receipt_id", "issuer_id", "subject_agent_id",
+            "posture", "coverage", "scanner", "result_counts",
+            "claim_boundary", "evidence_url", "evidence_sha256",
+            "issued_at", "expires_at",
+        }
+        if set(receipt) != required:
+            raise MarketError(
+                "receipt fields do not match viridis-security-receipt-v1",
+                field="receipt",
+                constraint=", ".join(sorted(required)))
+        if receipt.get("protocol") != "viridis-security-receipt-v1":
+            raise MarketError("unsupported security receipt protocol",
+                              field="receipt.protocol")
+        issuer_id = self._id(receipt.get("issuer_id"), "receipt.issuer_id")
+        target_agent_id = self._id(
+            receipt.get("subject_agent_id"), "receipt.subject_agent_id")
+        receipt_id = self._id(receipt.get("receipt_id"), "receipt.receipt_id")
+        unsigned = dict(receipt)
+        unsigned.pop("receipt_id")
+        unsigned.pop("evidence_url")
+        expected_id = "vsr_" + _digest(unsigned)[:24]
+        if receipt_id != expected_id:
+            raise MarketError("receipt_id does not match receipt content",
+                              error_type="AuthenticationError",
+                              field="receipt.receipt_id")
+        trusted_key_b64 = self._trusted_security_receipt_keys.get(issuer_id, "")
+        if not trusted_key_b64:
+            raise MarketError("security receipt issuer is not trusted",
+                              error_type="AuthenticationError",
+                              field="receipt.issuer_id")
+        key = _b64decode(str(trusted_key_b64))
+        signature = _b64decode(signature_b64)
+        if len(key) != 32 or len(signature) != 64:
+            raise MarketError("invalid Ed25519 receipt key or signature length",
+                              error_type="AuthenticationError",
+                              field="signature_b64")
+        try:
+            Ed25519PublicKey.from_public_bytes(key).verify(
+                signature, _stable(receipt).encode())
+        except (InvalidSignature, ValueError) as exc:
+            raise MarketError("security receipt signature verification failed",
+                              error_type="AuthenticationError",
+                              field="signature_b64") from exc
+
+        posture = str(receipt.get("posture") or "").strip().upper()
+        if posture not in SECURITY_POSTURES:
+            raise MarketError("unknown security posture",
+                              field="receipt.posture")
+        coverage = self._tags(
+            receipt.get("coverage"), "receipt.coverage", maximum=50)
+        scanner_raw = receipt.get("scanner")
+        if not isinstance(scanner_raw, dict) or set(scanner_raw) - {
+                "name", "version", "canon_digest"}:
+            raise MarketError("receipt scanner has unsupported fields",
+                              field="receipt.scanner")
+        scanner = {
+            "name": self._text(scanner_raw.get("name"),
+                               "receipt.scanner.name", maximum=160),
+            "version": self._text(scanner_raw.get("version"),
+                                  "receipt.scanner.version", maximum=80),
+        }
+        if scanner_raw.get("canon_digest"):
+            canon_digest = str(scanner_raw["canon_digest"]).lower()
+            if not SHA256_RE.fullmatch(canon_digest):
+                raise MarketError("scanner.canon_digest must be sha256 hex",
+                                  field="receipt.scanner.canon_digest")
+            scanner["canon_digest"] = canon_digest
+        result_counts_raw = receipt.get("result_counts")
+        if (not isinstance(result_counts_raw, dict) or not result_counts_raw
+                or set(result_counts_raw) - SECURITY_RESULT_FIELDS):
+            raise MarketError("receipt result_counts has unsupported fields",
+                              field="receipt.result_counts")
+        result_counts: dict[str, int] = {}
+        for field, value in sorted(result_counts_raw.items()):
+            if (isinstance(value, bool) or not isinstance(value, int)
+                    or not 0 <= value <= 1_000_000_000):
+                raise MarketError(
+                    "security result counts must be bounded non-negative integers",
+                    field=f"receipt.result_counts.{field}")
+            result_counts[field] = value
+        claim_boundary = self._text(
+            receipt.get("claim_boundary"), "receipt.claim_boundary",
+            minimum=20, maximum=2_000)
+        evidence_url = self._public_https(
+            receipt.get("evidence_url"), "receipt.evidence_url")
+        evidence_sha256 = str(receipt.get("evidence_sha256") or "").lower()
+        if not SHA256_RE.fullmatch(evidence_sha256):
+            raise MarketError("evidence_sha256 must be sha256 hex",
+                              field="receipt.evidence_sha256")
+        issued = self._parse_time(receipt.get("issued_at"), "receipt.issued_at")
+        expires = self._parse_time(receipt.get("expires_at"), "receipt.expires_at")
+        now = self._now()
+        if issued > now + timedelta(minutes=5):
+            raise MarketError("receipt issued_at is in the future",
+                              field="receipt.issued_at")
+        if expires <= now:
+            raise MarketError("security receipt has expired",
+                              error_type="AuthenticationError",
+                              field="receipt.expires_at")
+        if expires <= issued or expires - issued > timedelta(
+                days=MAX_SECURITY_ATTESTATION_DAYS):
+            raise MarketError("receipt lifetime must be within 1..90 days",
+                              field="receipt.expires_at")
+
+        receipt_sha = _digest(receipt)
+        with self._tx():
+            existing = self._conn.execute(
+                "SELECT receipt_sha256,signature_b64,attestation_id "
+                "FROM security_receipts WHERE receipt_id=?",
+                (receipt_id,)).fetchone()
+            if existing:
+                if (existing["receipt_sha256"] != receipt_sha
+                        or existing["signature_b64"] != signature_b64):
+                    raise MarketError("receipt_id reused with different content",
+                                      error_type="ConflictError",
+                                      field="receipt.receipt_id")
+                row = self._conn.execute(
+                    "SELECT * FROM security_attestations WHERE attestation_id=?",
+                    (existing["attestation_id"],)).fetchone()
+                return {**self._security_attestation_public(row),
+                        "replayed": True}
+            attester = self._ensure_active(issuer_id)
+            target = self._ensure_active(target_agent_id)
+            relation = self._security_relation(attester, target)
+            attestation_id = "sec-" + receipt_id.removeprefix("vsr_")
+            imported_at = _iso(now)
+            self._conn.execute(
+                "INSERT INTO security_attestations(attestation_id,attester_id,"
+                "target_agent_id,posture,coverage_json,scanner_json,"
+                "result_counts_json,claim_boundary,evidence_url,evidence_sha256,"
+                "receipt_id,receipt_signature_b64,relation,status,issued_at,expires_at,"
+                "created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (attestation_id, issuer_id, target_agent_id, posture,
+                 _stable(coverage), _stable(scanner), _stable(result_counts),
+                 claim_boundary, evidence_url, evidence_sha256, receipt_id,
+                 signature_b64, relation, "ACTIVE", _iso(issued), _iso(expires),
+                 imported_at))
+            self._conn.execute(
+                "INSERT INTO security_receipts(receipt_id,issuer_id,target_agent_id,"
+                "receipt_sha256,receipt_json,signature_b64,attestation_id,imported_at) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                (receipt_id, issuer_id, target_agent_id, receipt_sha,
+                 _stable(receipt), signature_b64, attestation_id, imported_at))
+            event_payload = {
+                "receipt_id": receipt_id,
+                "receipt_sha256": receipt_sha,
+                "target_agent_id": target_agent_id,
+                "posture": posture,
+                "relation": relation,
+                "evidence_sha256": evidence_sha256,
+            }
+            self._conn.execute(
+                "INSERT INTO events(event_id,event_type,actor_id,object_type,"
+                "object_id,payload_sha256,payload_json,created_at) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                (str(uuid.uuid4()), "security.receipt.imported", issuer_id,
+                 "security_attestation", attestation_id,
+                 _digest(event_payload), _stable(event_payload), imported_at))
+            row = self._conn.execute(
+                "SELECT * FROM security_attestations WHERE attestation_id=?",
+                (attestation_id,)).fetchone()
+            return {**self._security_attestation_public(row),
+                    "replayed": False}
+
+    @staticmethod
+    def _operator_verification_public(row: sqlite3.Row) -> dict:
+        return {
+            "receipt_id": row["receipt_id"],
+            "issuer_id": row["issuer_id"],
+            "subject_agent_id": row["subject_agent_id"],
+            "subject_profile_sha256": row["subject_profile_sha256"],
+            "operator_entity": row["operator_entity"],
+            "verification_method": row["verification_method"],
+            "evidence_sha256": row["evidence_sha256"],
+            "claim_boundary": row["claim_boundary"],
+            "status": row["status"],
+            "effective_status": row["effective_status"],
+            "supersedes_receipt_id": row["supersedes_receipt_id"] or None,
+            "issued_at": row["issued_at"],
+            "expires_at": row["expires_at"],
+            "imported_at": row["imported_at"],
+            "provenance": "allowlisted_ed25519_operator_verifier",
+            "privacy_boundary": (
+                "digest and bounded verification claim only; raw identity "
+                "evidence and PII are not accepted or stored"),
+        }
+
+    def list_operator_verifications(
+            self, subject_agent_id: str = "", issuer_id: str = "",
+            current_only: bool = True, limit: int = 100) -> dict:
+        clauses: list[str] = []
+        values: list[Any] = []
+        if subject_agent_id:
+            clauses.append("subject_agent_id=?")
+            values.append(self._id(subject_agent_id, "subject_agent_id"))
+        if issuer_id:
+            clauses.append("issuer_id=?")
+            values.append(self._id(issuer_id, "issuer_id"))
+        if current_only:
+            clauses.extend(["effective_status='VERIFIED'", "expires_at>?"])
+            values.append(_iso(self._now()))
+        bounded_limit = max(1, min(int(limit), 100))
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM operator_verification_receipts" + where +
+                " ORDER BY issued_at DESC,receipt_id LIMIT ?",
+                (*values, bounded_limit)).fetchall()
+        return {
+            "count": len(rows),
+            "verifications": [
+                self._operator_verification_public(row) for row in rows],
+            "current_only": bool(current_only),
+            "claim_boundary": (
+                "A current receipt proves only that an allowlisted verifier "
+                "performed the named operator-control check against the exact "
+                "profile digest. It does not prove service quality, solvency, "
+                "security, or absence of undisclosed control."),
+        }
+
+    def _import_operator_verification_receipt(self, data: dict) -> dict:
+        """Import one signed operator verification or revocation receipt."""
+        receipt = data.get("receipt")
+        signature_b64 = str(data.get("signature_b64") or "").strip()
+        if not isinstance(receipt, dict):
+            raise MarketError("receipt must be an object", field="receipt")
+        required = {
+            "protocol", "receipt_id", "issuer_id", "subject_agent_id",
+            "subject_profile_sha256", "operator_entity",
+            "verification_method", "evidence_sha256", "claim_boundary",
+            "status", "supersedes_receipt_id", "issued_at", "expires_at",
+        }
+        if set(receipt) != required:
+            raise MarketError(
+                "receipt fields do not match viridis-operator-verification-v1",
+                field="receipt", constraint=", ".join(sorted(required)))
+        if receipt.get("protocol") != "viridis-operator-verification-v1":
+            raise MarketError("unsupported operator verification protocol",
+                              field="receipt.protocol")
+        issuer_id = self._id(receipt.get("issuer_id"), "receipt.issuer_id")
+        subject_id = self._id(
+            receipt.get("subject_agent_id"), "receipt.subject_agent_id")
+        receipt_id = self._id(receipt.get("receipt_id"), "receipt.receipt_id")
+        unsigned = dict(receipt)
+        unsigned.pop("receipt_id")
+        expected_id = "ovr_" + _digest(unsigned)[:24]
+        if receipt_id != expected_id:
+            raise MarketError("receipt_id does not match receipt content",
+                              error_type="AuthenticationError",
+                              field="receipt.receipt_id")
+        trusted_key_b64 = self._trusted_operator_verification_keys.get(
+            issuer_id, "")
+        if not trusted_key_b64:
+            raise MarketError("operator verification issuer is not trusted",
+                              error_type="AuthenticationError",
+                              field="receipt.issuer_id")
+        key = _b64decode(str(trusted_key_b64))
+        signature = _b64decode(signature_b64)
+        if len(key) != 32 or len(signature) != 64:
+            raise MarketError("invalid Ed25519 receipt key or signature length",
+                              error_type="AuthenticationError",
+                              field="signature_b64")
+        try:
+            Ed25519PublicKey.from_public_bytes(key).verify(
+                signature, _stable(receipt).encode())
+        except (InvalidSignature, ValueError) as exc:
+            raise MarketError(
+                "operator verification signature verification failed",
+                error_type="AuthenticationError",
+                field="signature_b64") from exc
+
+        profile_sha = str(
+            receipt.get("subject_profile_sha256") or "").lower()
+        evidence_sha = str(receipt.get("evidence_sha256") or "").lower()
+        if not SHA256_RE.fullmatch(profile_sha):
+            raise MarketError("subject_profile_sha256 must be sha256 hex",
+                              field="receipt.subject_profile_sha256")
+        if not SHA256_RE.fullmatch(evidence_sha):
+            raise MarketError("evidence_sha256 must be sha256 hex",
+                              field="receipt.evidence_sha256")
+        operator_entity = self._text(
+            receipt.get("operator_entity"), "receipt.operator_entity",
+            minimum=2, maximum=240)
+        method = str(
+            receipt.get("verification_method") or "").strip().upper()
+        if method not in OPERATOR_VERIFICATION_METHODS:
+            raise MarketError(
+                "unknown operator verification method",
+                field="receipt.verification_method",
+                constraint=", ".join(sorted(OPERATOR_VERIFICATION_METHODS)))
+        claim_boundary = self._text(
+            receipt.get("claim_boundary"), "receipt.claim_boundary",
+            minimum=30, maximum=2_000)
+        status = str(receipt.get("status") or "").strip().upper()
+        if status not in {"VERIFIED", "REVOKED"}:
+            raise MarketError("status must be VERIFIED or REVOKED",
+                              field="receipt.status")
+        supersedes = str(receipt.get("supersedes_receipt_id") or "").strip()
+        if supersedes:
+            supersedes = self._id(
+                supersedes, "receipt.supersedes_receipt_id")
+        issued = self._parse_time(receipt.get("issued_at"), "receipt.issued_at")
+        expires = self._parse_time(
+            receipt.get("expires_at"), "receipt.expires_at")
+        now = self._now()
+        if issued > now + timedelta(minutes=5):
+            raise MarketError("receipt issued_at is in the future",
+                              field="receipt.issued_at")
+        if expires <= now:
+            raise MarketError("operator verification receipt has expired",
+                              error_type="AuthenticationError",
+                              field="receipt.expires_at")
+        if expires <= issued or expires - issued > timedelta(
+                days=MAX_OPERATOR_VERIFICATION_DAYS):
+            raise MarketError("receipt lifetime must be within 1..365 days",
+                              field="receipt.expires_at")
+
+        receipt_sha = _digest(receipt)
+        with self._tx():
+            existing = self._conn.execute(
+                "SELECT * FROM operator_verification_receipts WHERE receipt_id=?",
+                (receipt_id,)).fetchone()
+            if existing:
+                if (existing["receipt_sha256"] != receipt_sha
+                        or existing["signature_b64"] != signature_b64):
+                    raise MarketError("receipt_id reused with different content",
+                                      error_type="ConflictError",
+                                      field="receipt.receipt_id")
+                return {**self._operator_verification_public(existing),
+                        "replayed": True}
+
+            subject = self._profile_row(subject_id)
+            prior = (self._conn.execute(
+                "SELECT * FROM operator_verification_receipts WHERE receipt_id=?",
+                (supersedes,)).fetchone() if supersedes else None)
+            if status == "VERIFIED":
+                subject = self._ensure_active(subject_id)
+                if subject["auth_mode"] != "signed_ed25519":
+                    raise MarketError(
+                        "operator-managed profiles use seed provenance",
+                        error_type="ConflictError",
+                        field="receipt.subject_agent_id")
+                if (subject["profile_sha256"] != profile_sha
+                        or str(subject["operator_entity"]).strip().casefold()
+                        != operator_entity.casefold()):
+                    raise MarketError(
+                        "receipt does not bind the current profile and entity",
+                        error_type="ConflictError",
+                        field="receipt.subject_profile_sha256")
+                current_proof = self._operator_proof(subject)
+                if current_proof and supersedes != current_proof:
+                    raise MarketError(
+                        "new verification must supersede the current receipt",
+                        error_type="ConflictError",
+                        field="receipt.supersedes_receipt_id")
+                if supersedes and (not prior
+                        or prior["subject_agent_id"] != subject_id
+                        or prior["issuer_id"] != issuer_id):
+                    raise MarketError(
+                        "superseded receipt must share issuer and subject",
+                        error_type="ConflictError",
+                        field="receipt.supersedes_receipt_id")
+            else:
+                if (not supersedes or not prior
+                        or prior["effective_status"] != "VERIFIED"
+                        or prior["issuer_id"] != issuer_id
+                        or prior["subject_agent_id"] != subject_id
+                        or prior["subject_profile_sha256"] != profile_sha
+                        or prior["operator_entity"].casefold()
+                        != operator_entity.casefold()):
+                    raise MarketError(
+                        "revocation must supersede the matching active receipt",
+                        error_type="ConflictError",
+                        field="receipt.supersedes_receipt_id")
+
+            imported_at = _iso(now)
+            self._conn.execute(
+                "INSERT INTO operator_verification_receipts("
+                "receipt_id,issuer_id,subject_agent_id,subject_profile_sha256,"
+                "operator_entity,verification_method,evidence_sha256,"
+                "claim_boundary,status,effective_status,supersedes_receipt_id,receipt_sha256,"
+                "receipt_json,signature_b64,issued_at,expires_at,imported_at)"
+                " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (receipt_id, issuer_id, subject_id, profile_sha,
+                 operator_entity, method, evidence_sha, claim_boundary, status,
+                 status, supersedes, receipt_sha, _stable(receipt), signature_b64,
+                 _iso(issued), _iso(expires), imported_at))
+            if status == "VERIFIED":
+                if prior:
+                    self._conn.execute(
+                        "UPDATE operator_verification_receipts "
+                        "SET effective_status='SUPERSEDED' WHERE receipt_id=?",
+                        (supersedes,))
+                self._conn.execute(
+                    "UPDATE profiles SET operator_entity_verified=1,"
+                    "operator_verification_receipt_id=?,"
+                    "operator_verification_expires_at=? WHERE agent_id=?",
+                    (receipt_id, _iso(expires), subject_id))
+            else:
+                self._conn.execute(
+                    "UPDATE operator_verification_receipts "
+                    "SET effective_status='REVOKED' "
+                    "WHERE receipt_id=?", (supersedes,))
+                self._conn.execute(
+                    "UPDATE profiles SET operator_entity_verified=0,"
+                    "operator_verification_receipt_id='',"
+                    "operator_verification_expires_at='' "
+                    "WHERE agent_id=? AND operator_verification_receipt_id=?",
+                    (subject_id, supersedes))
+                self._conn.execute(
+                    "UPDATE usefulness_feedback "
+                    "SET buyer_seller_relation='VERIFICATION_REVOKED' "
+                    "WHERE buyer_operator_proof=? OR seller_operator_proof=?",
+                    (supersedes, supersedes))
+            event_payload = {
+                "receipt_id": receipt_id,
+                "receipt_sha256": receipt_sha,
+                "subject_agent_id": subject_id,
+                "subject_profile_sha256": profile_sha,
+                "operator_entity_sha256": hashlib.sha256(
+                    operator_entity.casefold().encode()).hexdigest(),
+                "verification_method": method,
+                "evidence_sha256": evidence_sha,
+                "status": status,
+                "supersedes_receipt_id": supersedes,
+            }
+            self._conn.execute(
+                "INSERT INTO events(event_id,event_type,actor_id,object_type,"
+                "object_id,payload_sha256,payload_json,created_at) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                (str(uuid.uuid4()), "operator.verification.imported",
+                 issuer_id, "operator_verification", receipt_id,
+                 _digest(event_payload), _stable(event_payload), imported_at))
+            row = self._conn.execute(
+                "SELECT * FROM operator_verification_receipts WHERE receipt_id=?",
+                (receipt_id,)).fetchone()
+            return {**self._operator_verification_public(row),
+                    "replayed": False}
+
     async def process(self, input_data: dict) -> dict:
         if not isinstance(input_data, dict):
             return self._error(MarketError("input must be an object", field="input"))
@@ -914,13 +1590,18 @@ class MarketNetworkCore:
         handlers = {
             "publish_profile": self._publish_profile,
             "publish_security_attestation": self._publish_security_attestation,
+            "import_security_receipt": self._import_security_receipt,
+            "import_operator_verification_receipt":
+                self._import_operator_verification_receipt,
             "subscribe_work": self._subscribe_work,
             "post_work": self._post_work,
             "submit_offer": self._submit_offer,
             "award_offer": self._award_offer,
+            "confirm_work_funding": self._confirm_work_funding,
             "submit_delivery": self._submit_delivery,
             "accept_delivery": self._accept_delivery,
             "attest_settlement": self._attest_settlement,
+            "submit_usefulness_feedback": self._submit_usefulness_feedback,
             "send_message": self._send_message,
             "read_inbox": self._read_inbox,
         }
@@ -950,6 +1631,8 @@ class MarketNetworkCore:
             "ttl_days": int(data.get("ttl_days", 90)),
             "idempotency_key": data.get("idempotency_key", ""),
         }
+        if "operator_entity" in data:
+            body["operator_entity"] = data.get("operator_entity", "")
         name = self._text(body["name"], "name", maximum=160)
         description = self._text(body["description"], "description")
         caps = self._tags(body["capabilities"], "capabilities")
@@ -957,6 +1640,10 @@ class MarketNetworkCore:
                              "representative_queries", required=False)
         endpoint = self._public_https(body["endpoint"], "endpoint")
         payment = self._validate_payment(body["payment"])
+        operator_entity = str(body.get("operator_entity") or "").strip()
+        if operator_entity:
+            operator_entity = self._text(
+                operator_entity, "operator_entity", maximum=240)
         ttl = body["ttl_days"]
         if not 1 <= ttl <= MAX_PROFILE_DAYS:
             raise MarketError("ttl_days outside 1..365", field="ttl_days")
@@ -983,24 +1670,30 @@ class MarketNetworkCore:
                       "description": description, "capabilities": caps,
                       "representative_queries": queries, "endpoint": endpoint,
                       "payment": payment, "auth_mode": "signed_ed25519",
-                      "provenance": "self_signed"}
+                      "provenance": "self_signed",
+                      "operator_entity": operator_entity,
+                      "operator_entity_verified": False}
             profile_sha = _digest(public)
             version = int(existing["version"]) + 1 if existing else 1
             created = existing["created_at"] if existing else now
             self._conn.execute(
                 "INSERT INTO profiles(agent_id,did,name,description,capabilities_json,"
                 "queries_json,endpoint,public_key_b64,payment_json,auth_mode,provenance,"
-                "status,version,profile_sha256,created_at,updated_at,expires_at) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+                "operator_entity,operator_entity_verified,status,version,profile_sha256,"
+                "created_at,updated_at,expires_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
                 "ON CONFLICT(agent_id) DO UPDATE SET name=excluded.name,"
                 "description=excluded.description,capabilities_json=excluded.capabilities_json,"
                 "queries_json=excluded.queries_json,endpoint=excluded.endpoint,"
                 "payment_json=excluded.payment_json,status='ACTIVE',version=excluded.version,"
+                "operator_entity=excluded.operator_entity,operator_entity_verified=0,"
+                "operator_verification_receipt_id='',"
+                "operator_verification_expires_at='',"
                 "profile_sha256=excluded.profile_sha256,updated_at=excluded.updated_at,"
                 "expires_at=excluded.expires_at",
                 (actor, did, name, description, _stable(caps), _stable(queries),
                  endpoint, public_key, _stable(payment), "signed_ed25519",
-                 "self_signed", "ACTIVE", version, profile_sha,
+                 "self_signed", operator_entity, 0, "ACTIVE", version, profile_sha,
                  created, now, expires))
             result = self._profile_public(self._profile_row(actor))
             self._finish_write(
@@ -1062,17 +1755,30 @@ class MarketNetworkCore:
                     "FROM settlements WHERE seller_id=? "
                     "AND status='INDEPENDENTLY_VERIFIED'",
                     (item["agent_id"],)).fetchone()
+                feedback = self._usefulness_metrics(item["agent_id"])
                 item["market_reputation"] = {
                     "counterparty_attested_jobs": int(completed["n"]),
                     "counterparty_attested_revenue_minor": int(completed["revenue"]),
                     "independently_verified_jobs": int(independent["n"]),
                     "independently_verified_revenue_minor": int(independent["revenue"]),
+                    "buyer_feedback_jobs": int(feedback["total"]),
+                    "buyer_signed_useful_paid_deliveries":
+                        int(feedback["buyer_signed_useful"]),
+                    "independently_useful_paid_deliveries":
+                        int(feedback["independently_useful"]),
+                    "would_buy_again": int(feedback["repurchase"]),
                     "note": ("independent totals are gateway-verified; counterparty "
-                             "totals retain legacy dashboard compatibility"),
+                             "totals retain legacy dashboard compatibility; "
+                             "usefulness requires a buyer signature on an "
+                             "independently verified paid job"),
                 }
                 item["match_score"] = overlap * 10 + len(set(caps) & available) * 5
                 results.append(item)
             results.sort(key=lambda item: (-item["match_score"],
+                                           -item["market_reputation"][
+                                               "independently_useful_paid_deliveries"],
+                                           -item["market_reputation"][
+                                               "buyer_signed_useful_paid_deliveries"],
                                            -item["market_reputation"]["independently_verified_jobs"],
                                            -item["security_posture"]["coverage_score"],
                                            -item["market_reputation"]["counterparty_attested_jobs"],
@@ -1081,8 +1787,10 @@ class MarketNetworkCore:
                     "query": query, "capabilities": caps,
                     "security_posture": wanted_posture,
                     "security_attester": wanted_attester,
-                    "ranking": ("semantic match, independently verified work, "
-                                "current security coverage, counterparty outcomes")}
+                    "ranking": ("semantic match, independently useful paid "
+                                "deliveries, buyer-signed useful deliveries, "
+                                "independently verified work, current security "
+                                "coverage, counterparty outcomes")}
 
     def _subscribe_work(self, data: dict) -> dict:
         actor = self._id(data.get("agent_id"))
@@ -1268,6 +1976,10 @@ class MarketNetworkCore:
             "SELECT * FROM deliveries WHERE work_id=?", (work_id,)).fetchone()
         settlement = self._conn.execute(
             "SELECT * FROM settlements WHERE work_id=?", (work_id,)).fetchone()
+        feedback = self._conn.execute(
+            "SELECT * FROM usefulness_feedback WHERE work_id=?",
+            (work_id,)).fetchone()
+        funding_receipt = self._funding_receipt(work_id)
         return {
             "work_id": work["work_id"], "buyer_id": work["buyer_id"],
             "title": work["title"], "description": work["description"],
@@ -1276,9 +1988,13 @@ class MarketNetworkCore:
             "allowed_rails": json.loads(work["allowed_rails_json"]),
             "delivery_deadline": work["delivery_deadline"], "status": work["status"],
             "awarded_offer_id": work["awarded_offer_id"],
+            "funding_status": (
+                "VERIFIED" if funding_receipt else "UNVERIFIED"),
+            "funding_receipt": funding_receipt,
             "offers": [self._offer_public(row) for row in offers],
             "delivery": self._delivery_public(delivery) if delivery else None,
             "settlement": self._settlement_public(settlement) if settlement else None,
+            "buyer_feedback": self._usefulness_public(feedback) if feedback else None,
         }
 
     @staticmethod
@@ -1315,15 +2031,25 @@ class MarketNetworkCore:
                     "asset": str(raw.get("asset") or payment.get("asset") or ""),
                     "payee_address": payee_address.lower(),
                     "price_minor": payment.get("price_minor")}
+        signed_endpoint = payment.get("cash_escrow_endpoint", "")
+        signed_payee = payment.get("payee_id", "")
+        if not signed_endpoint or not signed_payee:
+            raise MarketError(
+                "seller profile does not publish a cash escrow destination",
+                field="settlement.payment_endpoint")
         endpoint = self._public_https(
-            raw.get("payment_endpoint") or payment.get("cash_escrow_endpoint", ""),
+            raw.get("payment_endpoint") or signed_endpoint,
             "settlement.payment_endpoint")
         parsed = urllib.parse.urlsplit(endpoint)
         if parsed.hostname != "mcp.viridisconservation.com" or not parsed.path.endswith("/payments/mcp"):
             raise MarketError("cash escrow offer must use Viridis payments MCP",
                               field="settlement.payment_endpoint")
-        payee_id = self._id(raw.get("payee_id") or payment.get("payee_id"),
+        payee_id = self._id(raw.get("payee_id") or signed_payee,
                             "settlement.payee_id")
+        if endpoint != signed_endpoint or payee_id != signed_payee:
+            raise MarketError(
+                "cash escrow offer must match the seller's signed profile",
+                error_type="ConflictError", field="settlement.payee_id")
         return {"rail": rail, "payment_endpoint": endpoint,
                 "payee_id": payee_id,
                 "release_rail": "Stripe Connect when payee is onboarded; "
@@ -1436,10 +2162,151 @@ class MarketNetworkCore:
                  "payer": work["buyer_id"], "payee": settlement["payee_id"],
                  "amount_minor": offer["amount_minor"], "currency": offer["currency"]},
                 {"order": 2, "action": "escrow_checkout, pay Stripe-hosted URL, confirm_escrow_funding"},
-                {"order": 3, "action": "after accepted delivery, release escrow; Connect auto-pays onboarded payee"},
-                {"order": 4, "action": "both parties attest the resulting refund/transfer/settlement reference"},
+                {"order": 3, "action": "call confirm_work_funding with the escrow id; the Hub must independently verify exact live custody before work starts"},
+                {"order": 4, "action": "after accepted delivery, release escrow; Connect auto-pays onboarded payee"},
+                {"order": 5, "action": "both parties attest the resulting refund/transfer/settlement reference"},
             ]
         return common
+
+    def _funding_receipt(self, work_id: str) -> Optional[dict]:
+        row = self._conn.execute(
+            "SELECT receipt_json FROM funding_receipts WHERE work_id=?",
+            (work_id,)).fetchone()
+        if not row:
+            return None
+        receipt = json.loads(row["receipt_json"])
+        return receipt if receipt.get("verified") is True else None
+
+    def _funding_event(self, work: sqlite3.Row, offer: sqlite3.Row,
+                       reference: str) -> dict:
+        event_id = "funding_" + hashlib.sha256(
+            f"{work['work_id']}|{reference}".encode()).hexdigest()
+        buyer = self._profile_row(work["buyer_id"])
+        seller = self._profile_row(offer["seller_id"])
+        return {
+            "spec_version": "viridis-hub-funding-event-v1",
+            "event_id": event_id,
+            "work": {
+                "work_id": work["work_id"], "buyer_id": work["buyer_id"],
+                "title": work["title"], "description": work["description"],
+                "required_capabilities": json.loads(work["capabilities_json"]),
+                "budget_minor": work["budget_minor"],
+                "currency": work["currency"],
+            },
+            "offer": self._offer_public(offer),
+            "funding": {
+                "rail": "viridis_cash_escrow",
+                "amount_minor": offer["amount_minor"],
+                "currency": offer["currency"],
+                "reference": reference,
+            },
+            "buyer_profile": self._profile_public(buyer),
+            "seller_profile": self._profile_public(seller),
+        }
+
+    def _confirm_work_funding(self, data: dict) -> dict:
+        actor = self._id(data.get("buyer_id"), "buyer_id")
+        body = {
+            "work_id": data.get("work_id", ""),
+            "reference": data.get("reference", ""),
+            "idempotency_key": data.get("idempotency_key", ""),
+        }
+        work_id = self._id(body["work_id"], "work_id")
+        reference = self._id(body["reference"], "reference")
+        idem = self._id(body["idempotency_key"], "idempotency_key")
+        with self._tx():
+            self._ensure_active(actor)
+            work = self._conn.execute(
+                "SELECT * FROM work_orders WHERE work_id=?",
+                (work_id,)).fetchone()
+            offer = (self._conn.execute(
+                "SELECT * FROM offers WHERE offer_id=?",
+                (work["awarded_offer_id"],)).fetchone()
+                     if work and work["awarded_offer_id"] else None)
+            if not work or work["buyer_id"] != actor:
+                raise MarketError(
+                    "only the posting buyer may confirm work funding",
+                    error_type="AuthenticationError", field="buyer_id")
+            if work["status"] != "AWARDED" or not offer:
+                raise MarketError(
+                    "work is not awaiting verified funding",
+                    error_type="ConflictError", field="work_id")
+            settlement = json.loads(offer["settlement_json"])
+            if settlement.get("rail") != "viridis_cash_escrow":
+                raise MarketError(
+                    "pre-delivery funding verification requires "
+                    "viridis_cash_escrow",
+                    error_type="ConflictError", field="work_id")
+            _, replay = self._begin_write(
+                "confirm_work_funding", actor, body,
+                data.get("auth") or {}, idem)
+            if replay is not None:
+                return replay
+            if self._settlement_verifier is None:
+                raise MarketError(
+                    "Hub funding verifier is unavailable",
+                    error_type="FundingVerificationError", field="reference")
+            event = self._funding_event(work, offer, reference)
+            try:
+                receipt = self._settlement_verifier(event)
+            except Exception as exc:
+                raise MarketError(
+                    f"independent work funding verification failed: {exc}",
+                    error_type="FundingVerificationError",
+                    field="reference") from exc
+            if (not isinstance(receipt, dict)
+                    or receipt.get("verified") is not True
+                    or receipt.get("funding_status") != "VERIFIED"
+                    or receipt.get("event_id") != event["event_id"]
+                    or receipt.get("work_id") != work_id):
+                raise MarketError(
+                    "Hub refused the work funding primitive",
+                    error_type="FundingVerificationError",
+                    field="reference")
+            now = _iso(self._now())
+            try:
+                self._conn.execute(
+                    "INSERT INTO funding_receipts(work_id,event_id,reference,"
+                    "rail,amount_minor,currency,receipt_json,verified_at) "
+                    "VALUES(?,?,?,?,?,?,?,?)",
+                    (work_id, event["event_id"], reference,
+                     "viridis_cash_escrow", offer["amount_minor"],
+                     offer["currency"], _stable(receipt), now))
+            except sqlite3.IntegrityError as exc:
+                raise MarketError(
+                    "funding reference is already bound",
+                    error_type="ConflictError", field="reference") from exc
+            result = {
+                "work_id": work_id,
+                "funding_status": "VERIFIED",
+                "verified_at": now,
+                "reference": reference,
+                "rail": "viridis_cash_escrow",
+                "amount_minor": offer["amount_minor"],
+                "currency": offer["currency"],
+                "hub_receipt": receipt,
+                "money_movement": (
+                    "none by market; existing cash escrow remains FUNDED "
+                    "under gateway custody"),
+            }
+            self._insert_message(
+                "market-network", offer["seller_id"], "funding",
+                "Work funding independently verified",
+                f"Cash escrow funding is verified for {work_id}; delivery may begin.",
+                work_id, now)
+            self._finish_write(
+                "confirm_work_funding", actor, body, idem, result,
+                event_type="work.funding_verified", object_type="work",
+                object_id=work_id,
+                event_payload={
+                    "event_id": event["event_id"],
+                    "reference_sha256":
+                        hashlib.sha256(reference.encode()).hexdigest(),
+                    "rail": "viridis_cash_escrow",
+                    "amount_minor": offer["amount_minor"],
+                    "currency": offer["currency"],
+                })
+            return result
 
     def _award_offer(self, data: dict) -> dict:
         actor = self._id(data.get("buyer_id"), "buyer_id")
@@ -1483,7 +2350,8 @@ class MarketNetworkCore:
                 "SELECT * FROM offers WHERE offer_id=?", (offer_id,)).fetchone()
             result = {"work_id": work_id, "status": "AWARDED",
                       "awarded_offer": self._offer_public(offer),
-                      "payment_plan": self._payment_plan(work, offer)}
+                      "payment_plan": self._payment_plan(work, offer),
+                      "funding_status": "UNVERIFIED"}
             self._finish_write(
                 "award_offer", actor, body, idem, result,
                 event_type="work.awarded", object_type="work", object_id=work_id,
@@ -1523,6 +2391,15 @@ class MarketNetworkCore:
             if not work or work["status"] != "AWARDED" or not offer or offer["seller_id"] != actor:
                 raise MarketError("only the awarded seller may deliver",
                                   error_type="AuthenticationError", field="seller_id")
+            settlement = json.loads(offer["settlement_json"])
+            if (self.hub_required
+                    and settlement.get("rail") == "viridis_cash_escrow"
+                    and self._funding_receipt(work_id) is None):
+                raise MarketError(
+                    "cash-escrow work requires independently verified funding "
+                    "before delivery",
+                    error_type="FundingVerificationError",
+                    field="work_id")
             _, replay = self._begin_write(
                 "submit_delivery", actor, body, data.get("auth") or {}, idem)
             if replay is not None:
@@ -1628,6 +2505,56 @@ class MarketNetworkCore:
                     if verified else
                     "both counterparties attest the same receipt; independent "
                     "verification is not present")}
+
+    def _usefulness_public(self, row: sqlite3.Row) -> dict:
+        relation = row["buyer_seller_relation"]
+        buyer_proof = (row["buyer_operator_proof"]
+                       if "buyer_operator_proof" in row.keys() else "")
+        seller_proof = (row["seller_operator_proof"]
+                        if "seller_operator_proof" in row.keys() else "")
+        proofs_current = (
+            relation == "VERIFIED_DISTINCT_OPERATORS"
+            and self._proof_is_current(buyer_proof, row["buyer_id"])
+            and self._proof_is_current(seller_proof, row["seller_id"]))
+        if relation == "VERIFIED_DISTINCT_OPERATORS" and not proofs_current:
+            relation = "VERIFICATION_EXPIRED_OR_INVALIDATED"
+        return {
+            "feedback_id": row["feedback_id"],
+            "work_id": row["work_id"],
+            "buyer_id": row["buyer_id"],
+            "seller_id": row["seller_id"],
+            "outcome": row["outcome"],
+            "useful": row["outcome"] == "USEFUL",
+            "would_buy_again": bool(row["would_buy_again"]),
+            "note_sha256": row["note_sha256"] or None,
+            "buyer_seller_relation": relation,
+            "buyer_operator_proof": buyer_proof or None,
+            "seller_operator_proof": seller_proof or None,
+            "independent_buyer": proofs_current,
+            "created_at": row["created_at"],
+            "provenance": "buyer_signed_independently_verified_paid_job",
+        }
+
+    def _usefulness_metrics(self, seller_id: str = "") -> dict:
+        sql = "SELECT * FROM usefulness_feedback"
+        values: tuple[Any, ...] = ()
+        if seller_id:
+            sql += " WHERE seller_id=?"
+            values = (seller_id,)
+        rows = self._conn.execute(sql, values).fetchall()
+        independently_useful = 0
+        for row in rows:
+            item = self._usefulness_public(row)
+            if item["useful"] and item["independent_buyer"]:
+                independently_useful += 1
+        return {
+            "total": len(rows),
+            "buyer_signed_useful": sum(
+                1 for row in rows if row["outcome"] == "USEFUL"),
+            "independently_useful": independently_useful,
+            "repurchase": sum(
+                1 for row in rows if bool(row["would_buy_again"])),
+        }
 
     def _hub_event(self, work: sqlite3.Row, offer: sqlite3.Row,
                    delivery: sqlite3.Row, settlement: sqlite3.Row) -> dict:
@@ -1795,6 +2722,107 @@ class MarketNetworkCore:
                                "status": settlement["status"]})
             return result
 
+    def _submit_usefulness_feedback(self, data: dict) -> dict:
+        actor = self._id(data.get("buyer_id"), "buyer_id")
+        outcome = str(data.get("outcome") or "").strip().upper()
+        would_buy_again = data.get("would_buy_again")
+        body = {
+            "work_id": data.get("work_id", ""),
+            "outcome": outcome,
+            "would_buy_again": would_buy_again,
+            "note_sha256": str(data.get("note_sha256") or "").strip().lower(),
+            "idempotency_key": data.get("idempotency_key", ""),
+        }
+        work_id = self._id(body["work_id"], "work_id")
+        if outcome not in USEFULNESS_OUTCOMES:
+            raise MarketError(
+                "unknown usefulness outcome", field="outcome",
+                constraint=", ".join(sorted(USEFULNESS_OUTCOMES)))
+        if not isinstance(would_buy_again, bool):
+            raise MarketError("would_buy_again must be boolean",
+                              field="would_buy_again", constraint="boolean")
+        if body["note_sha256"] and not SHA256_RE.fullmatch(body["note_sha256"]):
+            raise MarketError("note_sha256 must be empty or 64 lowercase hex",
+                              field="note_sha256",
+                              constraint="empty or sha256 hex")
+        idem = self._id(body["idempotency_key"], "idempotency_key")
+        with self._tx():
+            self._ensure_active(actor)
+            work = self._conn.execute(
+                "SELECT * FROM work_orders WHERE work_id=?", (work_id,)).fetchone()
+            offer = (self._conn.execute(
+                "SELECT * FROM offers WHERE offer_id=?",
+                (work["awarded_offer_id"],)).fetchone()
+                     if work and work["awarded_offer_id"] else None)
+            settlement = self._conn.execute(
+                "SELECT * FROM settlements WHERE work_id=?", (work_id,)).fetchone()
+            delivery = self._conn.execute(
+                "SELECT * FROM deliveries WHERE work_id=?", (work_id,)).fetchone()
+            if not work or work["buyer_id"] != actor:
+                raise MarketError("only the posting buyer may report usefulness",
+                                  error_type="AuthenticationError",
+                                  field="buyer_id")
+            if (work["status"] != "COMPLETED" or not offer or not delivery
+                    or not settlement
+                    or settlement["status"] != "INDEPENDENTLY_VERIFIED"):
+                raise MarketError(
+                    "usefulness requires an independently verified paid job",
+                    error_type="ConflictError", field="work_id")
+            _, replay = self._begin_write(
+                "submit_usefulness_feedback", actor, body,
+                data.get("auth") or {}, idem)
+            if replay is not None:
+                return replay
+            if self._conn.execute(
+                    "SELECT 1 FROM usefulness_feedback WHERE work_id=?",
+                    (work_id,)).fetchone():
+                raise MarketError(
+                    "usefulness feedback already exists for this work",
+                    error_type="ConflictError", field="work_id")
+            now = _iso(self._now())
+            buyer_profile = self._profile_row(actor)
+            seller_profile = self._profile_row(offer["seller_id"])
+            relation, buyer_proof, seller_proof = self._operator_relation(
+                buyer_profile, seller_profile)
+            feedback_id = "feedback_" + hashlib.sha256(
+                f"{work_id}|{actor}|{delivery['content_sha256']}".encode()
+            ).hexdigest()
+            self._conn.execute(
+                "INSERT INTO usefulness_feedback(feedback_id,work_id,buyer_id,"
+                "seller_id,outcome,would_buy_again,note_sha256,"
+                "buyer_seller_relation,buyer_operator_proof,"
+                "seller_operator_proof,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (feedback_id, work_id, actor, offer["seller_id"], outcome,
+                 int(would_buy_again), body["note_sha256"], relation,
+                 buyer_proof, seller_proof, now))
+            row = self._conn.execute(
+                "SELECT * FROM usefulness_feedback WHERE work_id=?",
+                (work_id,)).fetchone()
+            result = {
+                **self._usefulness_public(row),
+                "delivery_content_sha256": delivery["content_sha256"],
+                "settlement_reference_sha256": hashlib.sha256(
+                    settlement["reference"].encode()).hexdigest(),
+            }
+            self._finish_write(
+                "submit_usefulness_feedback", actor, body, idem, result,
+                event_type="work.usefulness_reported",
+                object_type="usefulness_feedback", object_id=feedback_id,
+                event_payload={
+                    "work_id": work_id,
+                    "seller_id": offer["seller_id"],
+                    "outcome": outcome,
+                    "would_buy_again": would_buy_again,
+                    "buyer_seller_relation": relation,
+                    "buyer_operator_proof": buyer_proof,
+                    "seller_operator_proof": seller_proof,
+                    "note_sha256": body["note_sha256"],
+                    "delivery_content_sha256": delivery["content_sha256"],
+                    "settlement_reference_sha256":
+                        result["settlement_reference_sha256"],
+                })
+            return result
+
     def _daily_count(self, actor: str, event_type: str) -> int:
         cutoff = _iso(self._now() - timedelta(days=1))
         return int(self._conn.execute(
@@ -1919,6 +2947,8 @@ class MarketNetworkCore:
             open_work = self._conn.execute(
                 "SELECT COUNT(*) FROM work_orders WHERE status='OPEN' AND expires_at>?",
                 (now,)).fetchone()[0]
+            funded_work = self._conn.execute(
+                "SELECT COUNT(*) FROM funding_receipts").fetchone()[0]
             completed = self._conn.execute(
                 "SELECT COUNT(*) AS jobs,COALESCE(SUM(amount_minor),0) AS volume "
                 "FROM settlements WHERE status IN "
@@ -1933,14 +2963,53 @@ class MarketNetworkCore:
                 "COUNT(DISTINCT target_agent_id) AS covered_agents "
                 "FROM security_attestations WHERE status='ACTIVE' AND expires_at>?",
                 (now,)).fetchone()
+            receipt_count = self._conn.execute(
+                "SELECT COUNT(*) FROM security_receipts").fetchone()[0]
+            operator_receipt_count = self._conn.execute(
+                "SELECT COUNT(*) FROM operator_verification_receipts").fetchone()[0]
+            operator_current_count = self._conn.execute(
+                "SELECT COUNT(*) FROM operator_verification_receipts "
+                "WHERE effective_status='VERIFIED' AND expires_at>?",
+                (now,)).fetchone()[0]
+            feedback = self._usefulness_metrics()
             return {"protocol": PROTOCOL, "profiles_active": int(profiles),
                     "work_open": int(open_work),
+                    "work_funding_verified": int(funded_work),
+                    "funding_semantics": (
+                        "post-award exact cash escrow independently verified "
+                        "by the private Hub from pull-verified live custody; "
+                        "open listings and counterparty claims remain unverified"),
                     "counterparty_attested_jobs": int(completed["jobs"]),
                     "counterparty_attested_volume_minor": int(completed["volume"]),
                     "independently_verified_jobs": int(verified["jobs"]),
                     "independently_verified_volume_minor": int(verified["volume"]),
+                    "buyer_feedback_jobs": int(feedback["total"]),
+                    "buyer_signed_useful_paid_deliveries":
+                        int(feedback["buyer_signed_useful"]),
+                    "independently_useful_paid_deliveries":
+                        int(feedback["independently_useful"]),
+                    "would_buy_again_count": int(feedback["repurchase"]),
+                    "usefulness_semantics": (
+                        "buyer-signed outcome on an independently verified paid "
+                        "job; independent usefulness additionally requires "
+                        "verified distinct operator entities; direct settlements, "
+                        "related parties, and unverified-control claims do not "
+                        "count as independent"),
                     "security_attestations_current": int(security["attestations"]),
                     "security_covered_agents": int(security["covered_agents"]),
+                    "security_receipts_imported": int(receipt_count),
+                    "security_receipt_trusted_issuers": sorted(
+                        self._trusted_security_receipt_keys),
+                    "operator_verification_receipts_imported":
+                        int(operator_receipt_count),
+                    "operator_verifications_current":
+                        int(operator_current_count),
+                    "operator_verification_trusted_issuers": sorted(
+                        self._trusted_operator_verification_keys),
+                    "operator_verification_semantics": (
+                        "allowlisted Ed25519 receipts bind a named verification "
+                        "method and evidence digest to an exact profile digest; "
+                        "profile changes, expiry, and revocation fail closed"),
                     "security_claim_boundary": (
                         "signed expiring coverage evidence; never a secure or "
                         "vulnerability-free guarantee"),
@@ -1965,11 +3034,14 @@ class MarketNetworkCore:
             "name": self.config.name, "version": self.config.version,
             "description": ("Signed agent capability discovery, intent subscriptions, "
                             "private agent messaging, and a durable work/offer/delivery/"
-                            "settlement marketplace."),
+                            "verified-funding/settlement/usefulness marketplace."),
             "capabilities": ["agent-seo", "capability-discovery", "intent-routing",
                              "agent-messaging", "work-marketplace", "offer-negotiation",
                              "settlement-attribution", "security-posture-attestations",
-                             "security-aware-discovery"],
+                             "security-aware-discovery",
+                             "verified-buyer-usefulness-feedback",
+                             "independently-verified-work-funding",
+                             "signed-operator-verification-receipts"],
             "security": {"write_auth": "Ed25519 signatures",
                          "replay_protection": "one-use nonce + idempotency key",
                          "private_keys": "never accepted or stored",
@@ -1977,10 +3049,22 @@ class MarketNetworkCore:
                          "hub_event_auth": "HMAC over the private Docker network",
                          "posture_semantics": (
                              "signed, expiring coverage statements with explicit "
-                             "claim boundaries; no guarantee or independence inferred")},
+                             "claim boundaries; common-control evidence is related-party, "
+                             "and no guarantee or independence is inferred"),
+                         "security_receipts": (
+                             "allowlisted Ed25519 issuer keys; exact-once durable import; "
+                             "scanner private keys are never accepted or stored"),
+                         "operator_verification": (
+                             "allowlisted Ed25519 issuer keys; content-addressed, "
+                             "expiring, profile-bound, revocable receipts; raw "
+                             "identity evidence and PII are never accepted or stored")},
             "payment_posture": {"rails": sorted(ALLOWED_RAILS),
                                 "moves_money": False,
                                 "marks_paid_from_one_party": False,
+                                "marks_funded_from_one_party": False,
+                                "verified_funding": (
+                                    "post-award Viridis cash escrow only; "
+                                    "private Hub verifies exact live custody"),
                                 "independent_verifier_required": self.hub_required},
         }
 
@@ -1989,7 +3073,10 @@ def build(*, db_path: Optional[str] = None,
           now_fn: Callable[[], datetime] = _utcnow,
           seed_path: Optional[str] = None,
           settlement_verifier: Optional[Callable[[dict], dict]] = None,
-          hub_required: Optional[bool] = None) -> MarketNetworkCore:
+          hub_required: Optional[bool] = None,
+          trusted_security_receipt_keys: Optional[dict[str, str]] = None,
+          trusted_operator_verification_keys: Optional[dict[str, str]] = None
+          ) -> MarketNetworkCore:
     path = db_path if db_path is not None else os.environ.get("MARKET_STATE_DB", ":memory:")
     required = (str(os.environ.get("MARKET_HUB_REQUIRED", "0")).lower()
                 in {"1", "true", "yes", "on"}) if hub_required is None else hub_required
@@ -2000,9 +3087,43 @@ def build(*, db_path: Optional[str] = None,
             from src.hub_client import HubVerificationClient
             settlement_verifier = HubVerificationClient(
                 hub_url, hub_secret).verify
+    if trusted_security_receipt_keys is None:
+        raw_keys = os.environ.get("MARKET_SECURITY_RECEIPT_KEYS_JSON", "{}").strip()
+        try:
+            parsed_keys = json.loads(raw_keys or "{}")
+        except json.JSONDecodeError as exc:
+            raise MarketError("MARKET_SECURITY_RECEIPT_KEYS_JSON must be JSON",
+                              field="MARKET_SECURITY_RECEIPT_KEYS_JSON") from exc
+        if not isinstance(parsed_keys, dict) or any(
+                not isinstance(key, str) or not isinstance(value, str)
+                for key, value in parsed_keys.items()):
+            raise MarketError(
+                "MARKET_SECURITY_RECEIPT_KEYS_JSON must map issuer ids to keys",
+                field="MARKET_SECURITY_RECEIPT_KEYS_JSON")
+        trusted_security_receipt_keys = parsed_keys
+    if trusted_operator_verification_keys is None:
+        raw_operator_keys = os.environ.get(
+            "MARKET_OPERATOR_VERIFICATION_KEYS_JSON", "{}").strip()
+        try:
+            parsed_operator_keys = json.loads(raw_operator_keys or "{}")
+        except json.JSONDecodeError as exc:
+            raise MarketError(
+                "MARKET_OPERATOR_VERIFICATION_KEYS_JSON must be JSON",
+                field="MARKET_OPERATOR_VERIFICATION_KEYS_JSON") from exc
+        if not isinstance(parsed_operator_keys, dict) or any(
+                not isinstance(key, str) or not isinstance(value, str)
+                for key, value in parsed_operator_keys.items()):
+            raise MarketError(
+                "MARKET_OPERATOR_VERIFICATION_KEYS_JSON must map issuer ids to keys",
+                field="MARKET_OPERATOR_VERIFICATION_KEYS_JSON")
+        trusted_operator_verification_keys = parsed_operator_keys
     core = MarketNetworkCore(db_path=path, now_fn=now_fn,
                              settlement_verifier=settlement_verifier,
-                             hub_required=bool(required))
+                             hub_required=bool(required),
+                             trusted_security_receipt_keys=
+                             trusted_security_receipt_keys,
+                             trusted_operator_verification_keys=
+                             trusted_operator_verification_keys)
     seeds = seed_path if seed_path is not None else os.environ.get("MARKET_SEED_PROFILES", "")
     if seeds:
         seed_file = Path(seeds)

@@ -1,5 +1,31 @@
 [
   {
+    "id": "viridis-command-center-general",
+    "platform": "discord",
+    "channel": "Viridis Command Center #general",
+    "channel_id": "1476400938330882142",
+    "route": "*",
+    "credential_env": "GROWTH_DISCORD_BOT_TOKEN",
+    "enabled": true,
+    "policy_cleared": true,
+    "policy_reason": "official Viridis bot installed and authorized by the owner for this exact owned channel on 2026-07-24",
+    "cooldown_days": 14,
+    "base_weight": 9.0
+  },
+  {
+    "id": "viridis-security-announcements",
+    "platform": "discord",
+    "channel": "Viridis Security #announcements",
+    "channel_id": "1484554284799492348",
+    "route": "*",
+    "credential_env": "GROWTH_DISCORD_BOT_TOKEN",
+    "enabled": true,
+    "policy_cleared": true,
+    "policy_reason": "official Viridis bot installed and authorized by the owner for this exact owned channel on 2026-07-24",
+    "cooldown_days": 14,
+    "base_weight": 8.0
+  },
+  {
     "id": "cdp-discord-x402",
     "platform": "discord",
     "channel": "CDP Discord #x402",

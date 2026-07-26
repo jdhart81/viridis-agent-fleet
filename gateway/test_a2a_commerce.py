@@ -60,12 +60,13 @@ def arm(monkeypatch):
     monkeypatch.delenv("X402_INTRO_ENABLED", raising=False)
 
 
-def request_body(task_id="", payload=None, args=None):
+def request_body(task_id="", payload=None, args=None,
+                 skill_id="regulatory-radar.scan_regulations"):
     message = {
         "messageId": "msg-1" if not task_id else "msg-2",
         "role": "ROLE_USER",
         "parts": [{"data": {
-            "skillId": "regulatory-radar.scan_regulations",
+            "skillId": skill_id,
             "input": args or {"jurisdiction": "EU", "sector": "energy"},
         }}],
     }
@@ -139,8 +140,87 @@ def test_agent_card_is_a2a_1_and_declares_required_x402():
         "uri": a2a_commerce.EXTENSION_URI,
         "description": "x402 v2 exact settlement on Base mainnet USDC; settle before serve.",
         "required": True, "params": {"x402Version": 2}}
-    assert len(card["skills"]) == 5
+    assert len(card["skills"]) == 6
     assert all(skill["metadata"]["amountAtomicUsdc"] for skill in card["skills"])
+
+
+def test_hive_a2a_is_full_price_and_preflights_before_task(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "1")
+    core = Core()
+    preflights = []
+    core._paid_preflight = (
+        lambda payload: preflights.append(payload) or None)
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-state.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+    args = {"problem": "Choose a reviewed energy strategy.",
+            "budget_minor": 500, "depth": 0, "redundancy": 2,
+            "fee_bps": 0}
+
+    challenge = run(send(Request(request_body(
+        args=args, skill_id="hive.solve"), extension_headers())))
+
+    assert challenge.status_code == 200
+    task = body(challenge)["task"]
+    required = task["metadata"]["x402.payment.required"]
+    assert required["accepts"][0]["amount"] == "5000000"
+    assert preflights == [{"action": "solve", **args}]
+    assert core.calls == []
+
+
+def test_hive_a2a_provider_unavailable_before_task_or_payment(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    core = Core()
+    core._paid_preflight = lambda _payload: {
+        "status": "error", "error_type": "ServiceUnavailable",
+        "message": "hive solver provider is not configured"}
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-unavailable.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+
+    refused = run(send(Request(request_body(
+        args={"problem": "p", "budget_minor": 500},
+        skill_id="hive.solve"), extension_headers())))
+
+    assert refused.status_code == 503
+    assert core.calls == []
+    assert a2a_commerce.TASKS_KEY not in getattr(core, GATE_ATTR)
+
+
+def test_hive_a2a_rechecks_provider_before_settlement(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    core = Core()
+    decisions = [None, {
+        "status": "error", "error_type": "ServiceUnavailable",
+        "message": "provider became unavailable"}]
+    core._paid_preflight = lambda _payload: decisions.pop(0)
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-recheck.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+    args = {"problem": "Choose a reviewed energy strategy.",
+            "budget_minor": 500}
+    challenge = run(send(Request(request_body(
+        args=args, skill_id="hive.solve"), extension_headers())))
+    task = body(challenge)["task"]
+    required = task["metadata"]["x402.payment.required"]
+
+    refused = run(send(Request(request_body(
+        task["id"], signed(required), skill_id="hive.solve"),
+        extension_headers())))
+
+    assert refused.status_code == 503
+    assert fake.calls == []
+    assert core.calls == []
+    assert getattr(core, GATE_ATTR)["consumed_x402"] == {}
 
 
 def test_missing_extension_and_kill_switch_fail_before_task(tmp_path, monkeypatch):
@@ -170,7 +250,24 @@ def test_payment_task_persists_then_settles_before_one_execution(
         request_body(task["id"], payload), extension_headers())))
     result = body(completed)["task"]
     assert result["status"]["state"] == "TASK_STATE_COMPLETED"
-    assert result["artifacts"][0]["parts"][0]["data"]["status"] == "success"
+    artifact = result["artifacts"][0]["parts"][0]["data"]
+    assert artifact["status"] == "success"
+    commerce = artifact["viridis_commerce"]
+    assert commerce["current_route"] == (
+        "regulatory-radar/scan_regulations")
+    assert commerce["auto_execute"] is False
+    assert commerce["payment_required"] is True
+    assert commerce["buyer_authorization_required"] is True
+    repeat = commerce["repeat_purchase"]
+    assert repeat["endpoint"] == (
+        "https://mcp.test/x402/regulatory-radar/scan_regulations")
+    assert repeat["mcp_endpoint"] == (
+        "https://mcp.test/regulatory-radar/mcp")
+    assert repeat["price_minor"] == 25
+    assert repeat["amount_atomic_usdc"] == "250000"
+    assert repeat["required_buyer_inputs"] == ["jurisdiction"]
+    assert repeat["quote"]["authoritative_source"] == (
+        "repeat_route_unpaid_http_402")
     assert fake.calls == ["verify", "settle"] and len(core.calls) == 1
     record = next(iter(getattr(core, GATE_ATTR)["consumed_x402"].values()))
     assert record["surface"] == "a2a-x402-v2"
@@ -180,14 +277,69 @@ def test_payment_task_persists_then_settles_before_one_execution(
     replay = run(send(Request(
         request_body(task["id"], payload), extension_headers())))
     assert body(replay)["task"]["status"]["state"] == "TASK_STATE_COMPLETED"
+    assert body(replay)["task"]["artifacts"][0]["parts"][0]["data"][
+        "viridis_commerce"]["repeat_purchase"]["price_minor"] == 25
     assert fake.calls == ["verify", "settle"] and len(core.calls) == 1
     restored = Core()
     assert store.restore("regulatory-radar", restored)
-    assert getattr(restored, GATE_ATTR)[a2a_commerce.TASKS_KEY][task["id"]][
-        "status"]["state"] == "TASK_STATE_COMPLETED"
+    restored_task = getattr(
+        restored, GATE_ATTR)[a2a_commerce.TASKS_KEY][task["id"]]
+    assert restored_task["status"]["state"] == "TASK_STATE_COMPLETED"
+    assert restored_task["artifacts"][0]["parts"][0]["data"][
+        "viridis_commerce"]["repeat_purchase"]["price_minor"] == 25
     metrics = x402_http.settlement_metrics({
         "regulatory-radar": getattr(core, GATE_ATTR)})["total"]
     assert metrics["external_settlements"] == 1
+
+
+def test_hive_completed_a2a_artifact_preserves_fixed_price_repeat_contract(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "1")
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    core = Core()
+    core._paid_preflight = lambda _payload: None
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-completed.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+    args = {
+        "problem": "Choose a reviewed energy strategy.",
+        "budget_minor": 500,
+        "depth": 0,
+        "redundancy": 2,
+        "fee_bps": 0,
+    }
+    challenge = run(send(Request(request_body(
+        args=args, skill_id="hive.solve"), extension_headers())))
+    task = body(challenge)["task"]
+    requirement = task["metadata"]["x402.payment.required"]
+
+    completed = run(send(Request(
+        request_body(task["id"], signed(requirement),
+                     skill_id="hive.solve"),
+        extension_headers())))
+
+    result = body(completed)["task"]
+    assert result["status"]["state"] == "TASK_STATE_COMPLETED"
+    commerce = result["artifacts"][0]["parts"][0]["data"][
+        "viridis_commerce"]
+    repeat = commerce["repeat_purchase"]
+    assert commerce["current_route"] == "hive/solve"
+    assert repeat["endpoint"] == "https://mcp.test/x402/hive/solve"
+    assert repeat["mcp_endpoint"] == "https://mcp.test/hive/mcp"
+    assert repeat["price_minor"] == 500
+    assert repeat["amount_atomic_usdc"] == "5000000"
+    assert repeat["input_schema"]["properties"]["budget_minor"] == {
+        "type": "integer", "const": 500}
+    assert repeat["quote"]["authoritative_source"] == (
+        "repeat_route_unpaid_http_402")
+    assert commerce["auto_execute"] is False
+    assert commerce["payment_required"] is True
+    assert commerce["buyer_authorization_required"] is True
+    assert fake.calls == ["verify", "settle"]
+    assert len(core.calls) == 1
 
 
 def test_verify_failure_and_bad_schema_never_execute(tmp_path, monkeypatch):
