@@ -97,15 +97,20 @@ Before a paid call:
    receipt/on-chain state before any retry.
 5. Accept the result only when the response is HTTP 200 and includes
    `PAYMENT-RESPONSE`. Preserve the result digest and settlement receipt.
-6. If the result contains `viridis_commerce.next_paid_routes`, treat those
-   entries as unsigned offers only. Do not follow one automatically. Obtain a
-   fresh route-and-amount mandate and a new live 402 before each next purchase.
-   Each offer includes `input_schema`, `input_example`,
-   `required_buyer_inputs`, and `quote`. Use those fields to prepare the next
-   request, but fill every required buyer input from caller-owned facts rather
-   than inferring it from the prior result. The offer's list price is
-   non-authoritative; `quote.authoritative_source` identifies the next unpaid
-   HTTP 402 as the only authoritative payment requirement.
+6. If the result contains `viridis_commerce.repeat_purchase`, treat it as an
+   unsigned same-service offer only. Do not follow it automatically or reuse
+   the prior request. Fill a new request from caller-owned facts, obtain a
+   fresh route-and-amount mandate, and fetch the new live 402 before paying.
+7. If the result contains `viridis_commerce.next_paid_routes`, treat those
+   entries as unsigned cross-service offers only. Do not follow one
+   automatically. Obtain a fresh route-and-amount mandate and a new live 402
+   before each next purchase. Each repeat or next offer includes
+   `input_schema`, `input_example`, `required_buyer_inputs`, and `quote`. Use
+   those fields to prepare the next request, but fill every required buyer
+   input from caller-owned facts rather than inferring it from the prior
+   result. The offer's list price is non-authoritative;
+   `quote.authoritative_source` identifies the next unpaid HTTP 402 as the only
+   authoritative payment requirement.
 
 For a new wallet, prefer one Regulatory Radar call with a hard one-cent ceiling:
 

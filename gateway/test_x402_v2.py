@@ -758,6 +758,26 @@ def test_paid_success_offers_next_paid_routes_without_auto_execution(
     assert commerce["auto_execute"] is False
     assert commerce["payment_required"] is True
     assert commerce["buyer_authorization_required"] is True
+    repeat = commerce["repeat_purchase"]
+    assert f"{repeat['agent']}/{repeat['tool']}" == (
+        "regulatory-radar/scan_regulations")
+    assert repeat["endpoint"] == (
+        "https://mcp.test/x402/regulatory-radar/scan_regulations")
+    assert repeat["mcp_endpoint"] == (
+        "https://mcp.test/regulatory-radar/mcp")
+    assert repeat["method"] == "POST"
+    assert repeat["price_minor"] == 25
+    assert repeat["amount_atomic_usdc"] == "250000"
+    assert repeat["input_schema"]["type"] == "object"
+    assert repeat["input_example"]
+    assert repeat["required_buyer_inputs"] == list(
+        repeat["input_schema"].get("required", []))
+    assert "new caller-owned request" in repeat["input_policy"]
+    assert repeat["quote"]["preflight_required"] is True
+    assert repeat["quote"]["authoritative_source"] == (
+        "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["advertised_price_posture"] == (
+        "returning_payer_list_price")
     assert {f"{offer['agent']}/{offer['tool']}"
             for offer in commerce["next_paid_routes"]} == {
                 "disclosure-compiler/compile_disclosure",
@@ -779,6 +799,46 @@ def test_paid_success_offers_next_paid_routes_without_auto_execution(
         assert offer["quote"]["advertised_price_posture"] == (
             "returning_payer_list_price")
     assert len(core.calls) == 1
+
+
+def test_repeat_purchase_contract_is_available_for_fixed_price_hive(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    install_fake(monkeypatch, FakeFacilitator())
+    handler, core, _ = build(
+        tmp_path, agent="hive", tool="solve")
+    challenge = go(handler, FakeRequest(body={
+        "problem": "Compare two deployment options.",
+        "budget_minor": 500,
+        "depth": 0,
+        "redundancy": 1,
+        "fee_bps": 0,
+    }, agent="hive", tool="solve"))
+    paid = go(handler, FakeRequest(
+        headers={"payment-signature": signed_from(challenge)},
+        body={
+            "problem": "Compare two deployment options.",
+            "budget_minor": 500,
+            "depth": 0,
+            "redundancy": 1,
+            "fee_bps": 0,
+        },
+        agent="hive", tool="solve"))
+    assert paid.status_code == 200
+    repeat = body_of(paid)["viridis_commerce"]["repeat_purchase"]
+    assert repeat["agent"] == "hive"
+    assert repeat["price_minor"] == 500
+    assert repeat["amount_atomic_usdc"] == "5000000"
+    assert repeat["quote"]["authoritative_source"] == (
+        "repeat_route_unpaid_http_402")
+    assert core.calls == [{
+        "action": "solve",
+        "problem": "Compare two deployment options.",
+        "budget_minor": 500,
+        "depth": 0,
+        "redundancy": 1,
+        "fee_bps": 0,
+    }]
 
 
 def test_wave8_empty_allowlist_is_fail_safe_external(monkeypatch):

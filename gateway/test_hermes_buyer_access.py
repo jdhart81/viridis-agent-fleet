@@ -37,6 +37,7 @@ def test_hermes_skill_is_remote_only_and_covers_every_paid_route():
     assert "make exactly one paid attempt" in lowered
     assert "discovery/search" in skill
     assert "viridis_commerce.next_paid_routes" in skill
+    assert "viridis_commerce.repeat_purchase" in skill
     assert "`input_schema`, `input_example`" in skill
     assert "`required_buyer_inputs`, and `quote`" in skill
     assert "quote.authoritative_source" in skill
