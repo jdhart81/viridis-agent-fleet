@@ -765,6 +765,19 @@ def test_paid_success_offers_next_paid_routes_without_auto_execution(
             }
     assert all(offer["method"] == "POST"
                for offer in commerce["next_paid_routes"])
+    for offer in commerce["next_paid_routes"]:
+        assert offer["input_schema"]["type"] == "object"
+        assert offer["input_example"]
+        assert offer["description"]
+        assert offer["mcp_endpoint"] == (
+            f"https://mcp.test/{offer['agent']}/mcp")
+        assert offer["required_buyer_inputs"] == list(
+            offer["input_schema"].get("required", []))
+        assert offer["quote"]["preflight_required"] is True
+        assert offer["quote"]["authoritative_source"] == (
+            "next_route_unpaid_http_402")
+        assert offer["quote"]["advertised_price_posture"] == (
+            "returning_payer_list_price")
     assert len(core.calls) == 1
 
 
