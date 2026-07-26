@@ -65,11 +65,11 @@ disclosures and never claim completed retirement.
 ## Production evidence
 
 - live image:
-  `sha256:4261247a9094cf1e5d6789cf4122e1ed4e4cf1786a3ed3a2e7610d4e86f5257a`;
+  `sha256:32be1995fb23a9187ed1ac803eb35a5696606f498983fc422af75b4f96dba588`;
 - rollback image:
-  `sha256:94c22d625c0bb8fa8469bf113f0d21779459c6b69e8a5e3069c297e77283b254`;
+  `sha256:4261247a9094cf1e5d6789cf4122e1ed4e4cf1786a3ed3a2e7610d4e86f5257a`;
 - backup SHA-256:
-  `1b0f8a0ba92b222bdc0e2ccc9190caa665aa9de8aa43e25872d2fa4a09fb352e`;
+  `9d1a151d6191d9985eac4f45501edce67c422ac9e827917671d768b124ac7c51`;
 - SQLite integrity and scratch restore: passed;
 - copied-state candidate: healthy with 34 namespaces;
 - Hive: wired, three solvers, provider ready;
@@ -79,7 +79,7 @@ disclosures and never claim completed retirement.
 - local and production deployment gates: `589 passed`;
 - live MCP gate: 27 agents plus subscriptions, 210 tools;
 - local + Registry + live coherence: passed; and
-- controlled restart marker `esc_000037`: survived with valid audit chain.
+- controlled restart marker `esc_000038`: survived with valid audit chain.
 
 The exact external-verifier closeout is recorded at:
 
