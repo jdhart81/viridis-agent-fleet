@@ -24,7 +24,8 @@ The production health and two read-only MCP calls verified:
 - Hive health `ok`, `rails_mode=wired`, and all five shared dependencies ready;
 - three registered solver workers and provider readiness;
 - six published Hive tools;
-- $5.00 per solve after three free solves per caller per UTC day.
+- $5.00 per model-backed solve; read-only tools and unpaid preflight are free,
+  but execution has no free tier.
 
 No live solve, provider request, customer job, payment, signature, or outreach
 was generated during release verification.
@@ -42,17 +43,17 @@ enforces the cost limit before provider access or job mutation:
 - solver settlements capped at $3.00 per solve;
 - list price $5.00, leaving at least $1.82 contribution margin, or 36.4%,
   before fixed infrastructure, taxes, refunds, and payment fees.
+- machine-enforced contribution-margin floor: 35%.
 
 The estimate pessimistically treats every input character as one token and
 uses OpenAI's published GPT-5 mini rates of $0.25 per million input tokens and
 $2.00 per million output tokens:
 `https://developers.openai.com/api/docs/models/gpt-5-mini`.
 
-The free tier is a bounded promotion, not unbounded provider spend. The
-existing anti-rotation pool limits anonymous/external Hive traffic to 15 free
-solves total per UTC day, so the same conservative ceiling bounds promotional
-provider spend below $2.70/day. Internal callers require the fleet's protected
-header.
+Provider-backed free solves were disabled after the release audit showed that
+even a bounded promotion could incur API cost with no covering revenue.
+Read-only inspection and unpaid quote/preflight remain free. Internal
+monitoring must not invoke the provider.
 
 ## Release gates
 
@@ -66,7 +67,7 @@ header.
 - Live distribution generation: 27 agents plus one infrastructure surface,
   210 tools; Hive contributes six.
 - Candidate image health: 27 agents, Hive wired, three workers, provider ready,
-  exact $5/three-free contract.
+  exact $5/no-provider-backed-free-solve contract.
 - Post-cutover image health: same result, no mount errors.
 
 Nightkeeper requires no separate allowlist. It discovers non-underscore agent

@@ -53,10 +53,13 @@ def test_gateway_wiring_fails_closed_when_a_rail_is_missing():
 
 def test_public_economics_leave_healthy_contribution_margin():
     assert adapter.SERVICE_PRICE_MINOR == 500
-    assert adapter.FREE_SOLVES_PER_DAY == 3
+    assert adapter.FREE_SOLVES_PER_DAY == 0
     assert adapter.MAX_SOLVER_SETTLEMENT_MINOR == 300
     assert adapter.MAX_API_COST_USD < 0.18
     assert adapter.MIN_CONTRIBUTION_MARGIN_MINOR >= 182
+    assert adapter.CONTRIBUTION_MARGIN_BPS >= 3_500
+    assert adapter.CONTRIBUTION_MARGIN_BPS >= \
+        adapter.MIN_REQUIRED_CONTRIBUTION_MARGIN_BPS
 
 
 def test_public_limits_refuse_before_provider_or_job_mutation(monkeypatch):
