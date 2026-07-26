@@ -69,6 +69,8 @@ def test_mcp_exposes_complete_market_loop():
         "prepare_signature", "publish_agent_profile", "search_agents",
         "publish_security_attestation", "list_security_attestations",
         "import_security_receipt",
+        "import_operator_verification_receipt",
+        "list_operator_verifications",
         "subscribe_to_work", "post_work", "search_work", "get_work",
         "submit_offer", "award_offer", "submit_delivery", "accept_delivery",
         "attest_settlement", "submit_usefulness_feedback",
@@ -88,7 +90,7 @@ def test_mcp_transport_has_dns_rebinding_protection():
 
 def test_mcp_tools_advertise_structured_results_and_safety_hints():
     tools = asyncio.run(mcp.list_tools())
-    assert len(tools) == 20
+    assert len(tools) == 22
     for tool in tools:
         assert tool.outputSchema is not None, tool.name
         assert tool.outputSchema["properties"]["status"]["type"] == "string"
@@ -100,6 +102,7 @@ def test_mcp_tools_advertise_structured_results_and_safety_hints():
     by_name = {tool.name: tool for tool in tools}
     for name in {
         "prepare_signature", "search_agents", "list_security_attestations",
+        "list_operator_verifications",
         "search_work", "get_work",
         "network_status", "describe_network",
     }:

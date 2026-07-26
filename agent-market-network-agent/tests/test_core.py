@@ -46,7 +46,8 @@ def core(tmp_path):
 
 
 def profile_payload(agent_id, private, public, *, capability="carbon",
-                    idem="profile-0001", nonce="profile-nonce-0001"):
+                    idem="profile-0001", nonce="profile-nonce-0001",
+                    operator_entity=""):
     body = {
         "name": agent_id.replace("-", " ").title(),
         "description": f"Deterministic {capability} agent for autonomous buyers.",
@@ -62,15 +63,18 @@ def profile_payload(agent_id, private, public, *, capability="carbon",
         "ttl_days": 90,
         "idempotency_key": idem,
     }
+    if operator_entity:
+        body["operator_entity"] = operator_entity
     return {"action": "publish_profile", "agent_id": agent_id, **body,
             "auth": auth(private, "publish_profile", agent_id, body, nonce)}
 
 
-def register(core, agent_id, capability="carbon"):
+def register(core, agent_id, capability="carbon", operator_entity=""):
     private, public = keys()
     result = run(core.process(profile_payload(
         agent_id, private, public, capability=capability,
-        idem=f"{agent_id}-profile", nonce=f"{agent_id}-profile-nonce")))
+        idem=f"{agent_id}-profile", nonce=f"{agent_id}-profile-nonce",
+        operator_entity=operator_entity)))
     assert result["status"] == "ok", result
     return private, result["data"]
 
@@ -231,9 +235,55 @@ def security_receipt(private, issuer_id, target_agent_id, *,
     return receipt, signature
 
 
-def full_awarded(core):
-    buyer_key, _ = register(core, "buyer-agent", "procurement")
-    seller_key, _ = register(core, "seller-agent", "carbon")
+def operator_receipt(private, issuer_id, profile, *, status="VERIFIED",
+                     supersedes="", issued=NOW, suffix="one", days=90):
+    unsigned = {
+        "protocol": "viridis-operator-verification-v1",
+        "issuer_id": issuer_id,
+        "subject_agent_id": profile["agent_id"],
+        "subject_profile_sha256": profile["profile_sha256"],
+        "operator_entity": profile["operator_entity"],
+        "verification_method": "GOVERNMENT_REGISTRY_AND_DOMAIN_CONTROL",
+        "evidence_sha256": hashlib.sha256(
+            f"operator-evidence:{profile['agent_id']}:{suffix}".encode()
+        ).hexdigest(),
+        "claim_boundary": (
+            "Verifier matched the named legal entity and controlled service "
+            "domain for this exact signed market profile digest only."),
+        "status": status,
+        "supersedes_receipt_id": supersedes,
+        "issued_at": issued.isoformat(),
+        "expires_at": (issued + timedelta(days=days)).isoformat(),
+    }
+    stable = lambda value: json.dumps(  # noqa: E731
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    receipt_id = "ovr_" + hashlib.sha256(
+        stable(unsigned).encode()).hexdigest()[:24]
+    receipt = {**unsigned, "receipt_id": receipt_id}
+    return receipt, b64(private.sign(stable(receipt).encode()))
+
+
+def verify_profiles(core, profiles, *, issuer_id="operator-verifier"):
+    verifier_private, verifier_public = keys()
+    core._trusted_operator_verification_keys[issuer_id] = verifier_public
+    imported = []
+    for index, profile in enumerate(profiles):
+        receipt, signature = operator_receipt(
+            verifier_private, issuer_id, profile, suffix=str(index))
+        result = run(core.process({
+            "action": "import_operator_verification_receipt",
+            "receipt": receipt, "signature_b64": signature}))
+        assert result["status"] == "ok", result
+        imported.append(result["data"])
+    return verifier_private, imported
+
+
+def full_awarded(core, *, buyer_entity="Independent Buyer LLC",
+                 seller_entity="Independent Seller LLC"):
+    buyer_key, _ = register(
+        core, "buyer-agent", "procurement", buyer_entity)
+    seller_key, _ = register(
+        core, "seller-agent", "carbon", seller_entity)
     work = post_work(core, "buyer-agent", buyer_key)
     bid = offer(core, "seller-agent", seller_key, work["work_id"])
     award(core, "buyer-agent", buyer_key, work["work_id"], bid["offer_id"])
@@ -605,12 +655,10 @@ def test_usefulness_requires_buyer_signature_and_independent_payment_proof(core)
     assert attacked["status"] == "error"
     assert attacked["error_type"] == "AuthenticationError"
 
-    core._conn.execute(
-        "UPDATE profiles SET operator_entity=?,operator_entity_verified=1 "
-        "WHERE agent_id='buyer-agent'", ("Independent Buyer LLC",))
-    core._conn.execute(
-        "UPDATE profiles SET operator_entity=?,operator_entity_verified=1 "
-        "WHERE agent_id='seller-agent'", ("Independent Seller LLC",))
+    verify_profiles(core, [
+        core._profile_public(core._profile_row("buyer-agent")),
+        core._profile_public(core._profile_row("seller-agent")),
+    ])
     note_digest = hashlib.sha256(b"private buyer note").hexdigest()
     accepted = usefulness(
         core, "buyer-agent", buyer_key, work["work_id"],
@@ -624,7 +672,8 @@ def test_usefulness_requires_buyer_signature_and_independent_payment_proof(core)
         key: accepted["data"][key] for key in (
             "feedback_id", "work_id", "buyer_id", "seller_id", "outcome",
             "useful", "would_buy_again", "note_sha256", "created_at",
-            "buyer_seller_relation", "independent_buyer", "provenance")
+            "buyer_seller_relation", "buyer_operator_proof",
+            "seller_operator_proof", "independent_buyer", "provenance")
     }
     status = core.network_status()
     assert status["buyer_feedback_jobs"] == 1
@@ -671,7 +720,9 @@ def test_usefulness_is_exactly_once_private_and_idempotent(core):
 
 
 def test_related_party_usefulness_cannot_inflate_independent_demand(core):
-    buyer_key, seller_key, work, _, _ = full_awarded(core)
+    buyer_key, seller_key, work, _, _ = full_awarded(
+        core, buyer_entity="Same Operator LLC",
+        seller_entity="Same Operator LLC")
     core.hub_required = True
     core._settlement_verifier = lambda event: {
         "verified": True, "event_id": event["event_id"],
@@ -679,10 +730,10 @@ def test_related_party_usefulness_cannot_inflate_independent_demand(core):
     }
     attest(core, "buyer-agent", buyer_key, work["work_id"], "buyer")
     attest(core, "seller-agent", seller_key, work["work_id"], "seller")
-    core._conn.execute(
-        "UPDATE profiles SET operator_entity='Same Operator LLC',"
-        "operator_entity_verified=1 WHERE agent_id IN "
-        "('buyer-agent','seller-agent')")
+    verify_profiles(core, [
+        core._profile_public(core._profile_row("buyer-agent")),
+        core._profile_public(core._profile_row("seller-agent")),
+    ])
     result = usefulness(
         core, "buyer-agent", buyer_key, work["work_id"],
         outcome="USEFUL", would_buy_again=True, suffix="related")
@@ -692,6 +743,124 @@ def test_related_party_usefulness_cannot_inflate_independent_demand(core):
     status = core.network_status()
     assert status["buyer_signed_useful_paid_deliveries"] == 1
     assert status["independently_useful_paid_deliveries"] == 0
+
+
+def test_operator_receipt_allowlist_signature_replay_and_privacy(core):
+    _, profile = register(
+        core, "external-operator", "carbon", "External Operator LLC")
+    verifier_private, verifier_public = keys()
+    receipt, signature = operator_receipt(
+        verifier_private, "trusted-operator-verifier", profile)
+
+    untrusted = run(core.process({
+        "action": "import_operator_verification_receipt",
+        "receipt": receipt, "signature_b64": signature}))
+    assert untrusted["status"] == "error"
+    assert untrusted["error_type"] == "AuthenticationError"
+
+    core._trusted_operator_verification_keys[
+        "trusted-operator-verifier"] = verifier_public
+    tampered = {**receipt, "operator_entity": "Attacker LLC"}
+    rejected = run(core.process({
+        "action": "import_operator_verification_receipt",
+        "receipt": tampered, "signature_b64": signature}))
+    assert rejected["status"] == "error"
+    assert rejected["error_type"] == "AuthenticationError"
+
+    first = run(core.process({
+        "action": "import_operator_verification_receipt",
+        "receipt": receipt, "signature_b64": signature}))
+    replay = run(core.process({
+        "action": "import_operator_verification_receipt",
+        "receipt": receipt, "signature_b64": signature}))
+    assert first["status"] == "ok"
+    assert first["data"]["replayed"] is False
+    assert replay["data"]["replayed"] is True
+    public = core._profile_public(core._profile_row("external-operator"))
+    assert public["operator_entity_verified"] is True
+    assert public["operator_verification_proof"] == receipt["receipt_id"]
+    assert core.list_operator_verifications()["count"] == 1
+    stored = core._conn.execute(
+        "SELECT receipt_json FROM operator_verification_receipts").fetchone()[0]
+    assert "identity_document" not in stored
+    assert "raw_evidence" not in stored
+
+
+def test_operator_verification_expires_and_profile_change_invalidates(tmp_path):
+    clock = [NOW]
+    core = MarketNetworkCore(
+        db_path=str(tmp_path / "operator-expiry.sqlite3"),
+        now_fn=lambda: clock[0])
+    private, profile = register(
+        core, "profile-bound-agent", "carbon", "Profile Bound LLC")
+    verifier_private, verifier_public = keys()
+    core._trusted_operator_verification_keys["operator-verifier"] = verifier_public
+    receipt, signature = operator_receipt(
+        verifier_private, "operator-verifier", profile, days=1)
+    assert run(core.process({
+        "action": "import_operator_verification_receipt",
+        "receipt": receipt, "signature_b64": signature}))["status"] == "ok"
+    assert core._profile_public(
+        core._profile_row("profile-bound-agent"))[
+            "operator_entity_verified"] is True
+
+    clock[0] = NOW + timedelta(days=2)
+    assert core._profile_public(
+        core._profile_row("profile-bound-agent"))[
+            "operator_entity_verified"] is False
+
+    clock[0] = NOW
+    public = b64(private.public_key().public_bytes(
+        serialization.Encoding.Raw, serialization.PublicFormat.Raw))
+    payload = profile_payload(
+        "profile-bound-agent", private, public, capability="carbon",
+        idem="profile-change-0002", nonce="profile-change-nonce-0002",
+        operator_entity="Profile Bound LLC")
+    payload["description"] = (
+        "Updated deterministic carbon agent for autonomous buyers.")
+    body = {key: value for key, value in payload.items()
+            if key not in {"action", "agent_id", "auth"}}
+    payload["auth"] = auth(
+        private, "publish_profile", "profile-bound-agent", body,
+        "profile-change-nonce-0002")
+    assert run(core.process(payload))["status"] == "ok"
+    changed = core._profile_public(core._profile_row("profile-bound-agent"))
+    assert changed["operator_entity_verified"] is False
+    assert changed["operator_verification_proof"] is None
+    core.close()
+
+
+def test_operator_revocation_removes_existing_independent_usefulness(core):
+    buyer_key, seller_key, work, _, _ = full_awarded(core)
+    core.hub_required = True
+    core._settlement_verifier = lambda event: {
+        "verified": True, "event_id": event["event_id"],
+        "work_id": event["work"]["work_id"],
+    }
+    attest(core, "buyer-agent", buyer_key, work["work_id"], "buyer")
+    attest(core, "seller-agent", seller_key, work["work_id"], "seller")
+    verifier_private, imported = verify_profiles(core, [
+        core._profile_public(core._profile_row("buyer-agent")),
+        core._profile_public(core._profile_row("seller-agent")),
+    ])
+    feedback = usefulness(
+        core, "buyer-agent", buyer_key, work["work_id"], suffix="revoke")
+    assert feedback["data"]["independent_buyer"] is True
+    assert core.network_status()["independently_useful_paid_deliveries"] == 1
+
+    buyer_profile = core._profile_public(core._profile_row("buyer-agent"))
+    revoke, signature = operator_receipt(
+        verifier_private, "operator-verifier", buyer_profile,
+        status="REVOKED", supersedes=imported[0]["receipt_id"],
+        suffix="revocation")
+    revoked = run(core.process({
+        "action": "import_operator_verification_receipt",
+        "receipt": revoke, "signature_b64": signature}))
+    assert revoked["status"] == "ok"
+    assert core.network_status()["independently_useful_paid_deliveries"] == 0
+    current = core.get_work(work["work_id"])["buyer_feedback"]
+    assert current["independent_buyer"] is False
+    assert current["buyer_seller_relation"] == "VERIFICATION_REVOKED"
 
 
 def test_usefulness_rejects_free_text_and_non_boolean_repurchase(core):

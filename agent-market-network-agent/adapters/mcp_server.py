@@ -172,6 +172,27 @@ async def list_security_attestations(
     return _safe_read(agent.list_security_attestations, target_agent_id,
                       attester_id, posture, current_only, limit)
 
+@mcp.tool(structured_output=True, annotations=WRITE_TOOL)
+async def import_operator_verification_receipt(
+        receipt: Dict[str, Any],
+        signature_b64: str) -> MarketToolResult:
+    """Import an allowlisted operator verification or revocation receipt.
+
+    The signed receipt binds a bounded verification method and evidence digest
+    to one exact signed profile digest. Raw identity documents and PII are
+    never accepted. Profile changes, expiry, and revocation fail closed.
+    """
+    return await _write("import_operator_verification_receipt", locals())
+
+
+@mcp.tool(structured_output=True, annotations=READ_TOOL)
+async def list_operator_verifications(
+        subject_agent_id: str = "", issuer_id: str = "",
+        current_only: bool = True, limit: int = 100) -> MarketToolResult:
+    """Read signed operator-verification receipts and claim boundaries."""
+    return _safe_read(agent.list_operator_verifications, subject_agent_id,
+                      issuer_id, current_only, limit)
+
 
 @mcp.tool(structured_output=True, annotations=WRITE_TOOL)
 async def subscribe_to_work(agent_id: str, query: str, capabilities: List[str],

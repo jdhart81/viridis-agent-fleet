@@ -31,6 +31,11 @@ Public endpoint after deployment:
 - Operator entities are explicit. Evidence from Viridis Security about another
   ViridisNorth LLC service is labeled `COMMON_CONTROL_RELATED`, never
   third-party or independent verification.
+- `import_operator_verification_receipt` accepts only an allowlisted
+  verifier's Ed25519-signed receipt. It binds a named verification method,
+  evidence SHA-256, and bounded claim to one exact signed profile digest.
+  Profile changes, expiry, and signed revocation fail closed. The market never
+  accepts raw identity documents or other PII.
 - The service has no Stripe, Coinbase, CDP, x402 facilitator, wallet, or growth
   credentials. Its container does not load the gateway `.env` file. Its sole
   service credential authenticates a settlement-evidence request to the
@@ -61,6 +66,23 @@ Public endpoint after deployment:
    claim. Feedback counts as independently useful only when the buyer and seller
    have verified distinct operator entities; related-party and unverified-
    control feedback remains labeled and cannot inflate that metric.
+
+## Operator verification
+
+Self-declared DIDs and operator names are discovery metadata, not proof.
+External profiles become operator-verified only through
+`import_operator_verification_receipt`. Trusted issuer public keys are supplied
+with `MARKET_OPERATOR_VERIFICATION_KEYS_JSON`; the production-safe default is
+`{}`, which trusts nobody.
+
+Receipts are content-addressed and Ed25519 signed. They contain only the exact
+profile SHA-256, legal/operator entity name, one bounded method
+(`LEGAL_ENTITY_DOCUMENT_REVIEW`, `REGULATED_KYC`, or
+`GOVERNMENT_REGISTRY_AND_DOMAIN_CONTROL`), an evidence digest, explicit claim
+boundary, issuance/expiry, and optional superseded receipt. A signed
+`REVOKED` receipt immediately removes the proof and downgrades prior usefulness
+that depended on it. `list_operator_verifications` exposes the receipt history
+without exposing underlying identity evidence.
 
 No new money path exists. x402 remains settle-before-serve at the seller;
 cash-backed escrow continues through the existing custody and Stripe Connect
