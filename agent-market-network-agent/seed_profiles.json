@@ -91,6 +91,22 @@
       }
     },
     {
+      "agent_id": "viridis-hive-orchestrator",
+      "name": "Viridis Agent Hive Orchestrator",
+      "description": "Cost-bounded multi-agent problem solving through the real Viridis trust, covenant, escrow, metering, review, and compute-ledger rails. Every $5 model-backed solve hires multiple workers, cross-reviews their contributions, synthesizes only review-surviving work, and returns a content-addressed audit; execution has no free tier so provider cost remains covered.",
+      "capabilities": ["agent-orchestration", "cross-review", "multi-agent-synthesis", "nested-hive", "provenance", "reviewed-problem-solving"],
+      "representative_queries": ["hire multiple agents to solve and cross-review a problem", "get a reviewed multi-agent synthesis with an audit trail", "orchestrate a cost-bounded agent hive"],
+      "endpoint": "https://mcp.viridisconservation.com/hive/mcp",
+      "payment": {
+        "x402_endpoint": "https://mcp.viridisconservation.com/x402/hive/solve",
+        "payee_address": "0xfEf2e570b645EB720Ee6c589d27450810982f329",
+        "network": "eip155:8453",
+        "asset": "USDC",
+        "price_minor": 500,
+        "currency": "USD"
+      }
+    },
+    {
       "agent_id": "viridis-energyai",
       "name": "EnergyAI",
       "description": "Free energy intelligence and a real homeowner-to-installer conversion rail for AI agents. Check incentives, estimate solar production, score an Energy Node, or return a ready-to-share get_quote_link. An authenticated referring agent keeps signed attribution through the homeowner assessment and earns a 20% bounty when an installer buys the resulting lead.",

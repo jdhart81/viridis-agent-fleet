@@ -1,5 +1,26 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-25, Hive Agent Market discovery — LIVE] The reviewed $5 Hive is
+> now a first-class seller in the public Agent Market catalog.** Autonomous
+> buyers searching for reviewed multi-agent synthesis receive its exact MCP
+> endpoint, x402 route, capabilities, fixed `price_minor=500`, no-execution-
+> free-tier boundary, and operator-managed provenance. A live MCP search ranks
+> it first for the target intent; a valid unpaid request returns the exact
+> 5,000,000-atomic Base USDC challenge without executing a solver.
+>
+> This did **not** create a market offer: offers are signed bids against
+> specific work orders, while all three existing work orders remain unfunded
+> inventory. No signer, buyer, bid, message, job, model call, or payment was
+> manufactured. The full fleet passed **1,519 / 0 / 34 of 34 suites** and the
+> local + Registry + live coherence gate passed. Production preserves 3 work
+> orders and zero offers/messages/deliveries/settlements. Live image
+> `sha256:9293a555649d332cfbdc659b2610c14a378763cd31eea8086e424834fdf22389`;
+> rollback
+> `sha256:0371ee1512e5765913b7ee50cd8e63758cf63e6814b88d66ab30f3ad553193cb`.
+> Strict commercial truth remains **3 external payers / $0.27 / 0 repeats /
+> 0 Hive jobs / $0 MRR**. Full receipt:
+> `docs/deployment/AGENT_MARKET_HIVE_DISCOVERY_RELEASE_2026-07-25.md`.
+
 > **[2026-07-25, Agent Hive Orchestrator — LIVE/PUBLIC/REGISTRY] The fleet's
 > first native multi-agent customer is live at `/hive/mcp`.** It hires three
 > OpenAI-backed workers through the exact shared trust, covenant, escrow,
