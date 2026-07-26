@@ -1,5 +1,39 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-25, Agent Hive Orchestrator — LIVE/PUBLIC/REGISTRY] The fleet's
+> first native multi-agent customer is live at `/hive/mcp`.** It hires three
+> OpenAI-backed workers through the exact shared trust, covenant, escrow,
+> metering, and compute-ledger instances; cross-review remains reviewer !=
+> author and the content-addressed audit preserves the H2/H3/H7/H9/H10 design.
+>
+> The commercial contract is exact: **three free solves per caller per UTC day,
+> then $5.00/solve**. Public execution is bounded to four subtasks, redundancy
+> three, and 24 total model calls. Conservative provider cost stays below
+> $0.18 and solver settlements below $3.00, leaving at least **$1.82 / 36.4%
+> contribution margin** before fixed infrastructure. The anonymous free pool
+> is globally bounded at 15 solves/day, capping conservative promotional API
+> spend below $2.70/day.
+>
+> Production gates passed **1,503 tests / 0 failures / 34/34 suites**, the
+> 21-invariant real-rail composition proof, isolated candidate health, live
+> read-only MCP smokes, 27-agent local + official Registry + live coherence,
+> and 28-surface / 210-tool distribution generation. Live image
+> `sha256:19e9c3fbc9be23410d66cfa71950b454a4e285ebe47c13e8b971b829a3cccac9`
+> is healthy; rollback
+> `viridis-stable:rollback-pre-hive-20260725` preserves
+> `sha256:064c7e513516f04438ef69f7ec59bb50df83e01000374242fffa048c93a0934c`.
+>
+> Public source merged in `jdhart81/viridis-agent-fleet#18` at
+> `dca3ce8830e6aa6abb3ed02502cbf4747a174a4a`; post-merge security passed.
+> The pinned GitHub OIDC workflow published official MCP Registry identity
+> `io.github.jdhart81/agent-hive-orchestrator` version `0.1.0`, active/latest.
+>
+> No live model call, payment, signature, customer task, or outreach was
+> generated. Strict money truth remains **7 settlements / 4 self / 3 external
+> / 3 distinct external payers / 0 repeat external purchases / 270,000 atomic
+> USDC ($0.27) external revenue / $0 MRR**. Full receipt:
+> `docs/deployment/HIVE_ORCHESTRATOR_RELEASE_2026-07-25.md`.
+
 > **[2026-07-25, pre-payment input validation — DEPLOYED/ACTIVE] Viridis now
 > rejects schema-invalid x402 and A2A requests before quoting, settling,
 > persisting, or executing.** A gateway log at the third external settlement's
