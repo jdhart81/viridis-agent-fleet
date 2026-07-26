@@ -618,6 +618,38 @@ def next_paid_routes(agent: str, tool: str, public_base: str) -> list:
     return offers
 
 
+def repeat_paid_route(agent: str, tool: str, public_base: str) -> dict:
+    """Return a same-service repurchase contract without authorizing it."""
+    from payment_gate import PRICE_MINOR, DEFAULT_PRICE_MINOR
+    import x402_rail
+    base = public_base.rstrip("/")
+    price = PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)
+    metadata = X402_HTTP_METADATA[(agent, tool)]
+    input_schema = metadata["input_schema"]
+    return {
+        "agent": agent,
+        "tool": tool,
+        "endpoint": f"{base}/x402/{agent}/{tool}",
+        "mcp_endpoint": f"{base}/{agent}/mcp",
+        "method": "POST",
+        "price_minor": price,
+        "amount_atomic_usdc": x402_rail.price_atomic(price),
+        "description": metadata["description"],
+        "input_schema": input_schema,
+        "input_example": metadata["input_example"],
+        "required_buyer_inputs": list(input_schema.get("required", [])),
+        "input_policy": (
+            "Supply a new caller-owned request. Never reuse prior inputs or "
+            "infer missing facts from the previous result."),
+        "quote": {
+            "preflight_required": True,
+            "authoritative_source": "repeat_route_unpaid_http_402",
+            "payer_hint_header": "X402-Payer-Address",
+            "advertised_price_posture": "returning_payer_list_price",
+        },
+    }
+
+
 def _with_commerce_metadata(payload: Any, agent: str, tool: str,
                             public_base: str) -> Any:
     """Add continuation metadata only to an explicitly successful result."""
@@ -631,13 +663,16 @@ def _with_commerce_metadata(payload: Any, agent: str, tool: str,
     enriched["viridis_commerce"] = {
         "version": "viridis-commerce-v1",
         "current_route": f"{agent}/{tool}",
+        "repeat_purchase": repeat_paid_route(
+            agent, tool, public_base),
         "next_paid_routes": next_paid_routes(
             agent, tool, public_base),
         "auto_execute": False,
         "payment_required": True,
         "buyer_authorization_required": True,
-        "note": ("No follow-on payment was signed, initiated, or executed. "
-                 "Each next route requires a separate x402 settlement."),
+        "note": ("No repeat or follow-on payment was signed, initiated, or "
+                 "executed. Every purchase requires new caller-owned inputs, "
+                 "a fresh unpaid quote, and a separate x402 settlement."),
     }
     return enriched
 

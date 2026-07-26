@@ -1,5 +1,27 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-25, executable repeat-purchase contract — LIVE] Every successful
+> paid x402 result now gives autonomous buyers a complete, machine-readable
+> contract for buying the same service again.** `viridis_commerce` includes
+> `repeat_purchase` with the exact route, MCP endpoint, input schema/example,
+> required buyer inputs, list price, and fresh-402 quote instructions.
+>
+> The object never spends: it requires a new caller-owned request, new mandate,
+> fresh unpaid quote, and separate signed settlement. Prior inputs cannot be
+> reused or inferred implicitly. Focused conversion checks passed **77 tests**,
+> gateway passed **438**, and the full fleet passed **1,520 / 0 / 34 of 34
+> suites**. Public health is `ok` with 27 agents and no mount errors; all 33
+> state rows and sequence sum 1,689 survived.
+>
+> Live image
+> `sha256:d054258a076746beeb4c74757945f0f8411222413bd36bc2d98c294243ccf917`;
+> rollback
+> `sha256:5f89c39145a48191d170f5ea49d94220a37862c574edc7ff2e8b4266bedebe87`.
+> No buyer, payment, model call, or synthetic repeat was created. Strict truth
+> remains **3 external payers / $0.27 / 0 repeats / 0 Hive jobs / $0 MRR**.
+> Full receipt:
+> `docs/deployment/REPEAT_PURCHASE_CONTRACT_RELEASE_2026-07-25.md`.
+
 > **[2026-07-25, Hive x402/A2A commerce — LIVE] Autonomous buyers can now
 > purchase the reviewed Hive directly through `/x402/hive/solve` or A2A skill
 > `hive.solve`.** The public catalog has six paid routes: five deterministic

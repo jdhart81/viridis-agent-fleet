@@ -243,6 +243,7 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     }]}
     assert "name: viridis-paid-tools" in buyer_skill.text
     assert "viridis_commerce.next_paid_routes" in buyer_skill.text
+    assert "viridis_commerce.repeat_purchase" in buyer_skill.text
     assert "`input_schema`, `input_example`" in buyer_skill.text
     assert "`required_buyer_inputs`, and `quote`" in buyer_skill.text
     assert "quote.authoritative_source" in buyer_skill.text
