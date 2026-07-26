@@ -33,17 +33,24 @@ The index pins:
 
 | Route | Evidence posture | Merge | SHA-256 |
 |---|---|---|---|
-| `regulatory-radar/scan_regulations` | settled flow confirmed | `0920d50db53cbf59f20052c6c656f17f881c4b41` | `0dbd36a0cb2cfa3ebf7a3575acc5550bfe2208d640fa2508574454365a7834fe` |
+| `regulatory-radar/scan_regulations` | current unpaid preflight with dated settlement reference | `811fef6b037cfeb71a890cac97bb822f0efcf03a` | `f667444013029bc98e229b0d3021426d8bf18d13afe3007db419a213d0e290b5` |
 | `ghg-ledger/calculate_inventory` | unpaid preflight only | `45b006b42a60562101a43ffc293447793900d095` | `8cd884c016b19c2131207365e523677a9384b8463fb45eb0ca826a89497b7d40` |
 
 ### Drift disclosure
 
-The Regulatory Radar row is now explicitly
-`fixture_state: historical_capture_drift_detected`. Tom Smart's first daily
-comparison found an additive jurisdiction-schema widening on 2026-07-26
-against the 2026-07-24 capture. Payment terms were unchanged. A fresh external
-capture and merge were requested; the dated fixture must not be interpreted as
-current-state evidence while that replacement is pending.
+Tom Smart's first daily comparison found an additive jurisdiction-schema
+widening on 2026-07-26 against the 2026-07-24 capture. Viridis temporarily
+marked that pin `historical_capture_drift_detected`.
+
+The replacement was merged in external PR #15 and independently verified:
+its SHA-256 is
+`f667444013029bc98e229b0d3021426d8bf18d13afe3007db419a213d0e290b5`,
+and its 3,172-byte `PAYMENT-REQUIRED` header was byte-identical to a fresh live
+unpaid preflight. The new fixture is explicitly `capture_method:
+unpaid_preflight`; it does not inherit settlement provenance. The paid-flow
+claim remains attached to merge
+`0920d50db53cbf59f20052c6c656f17f881c4b41`, where it was earned. Payment
+terms were byte-identical across both captures.
 
 GHG Ledger remained byte-identical on its 2026-07-26 comparison. These are
 dated observations, not perpetual freshness claims.

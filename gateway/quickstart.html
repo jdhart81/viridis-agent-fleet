@@ -34,8 +34,8 @@
 
   <section><h2>What an agent can verify before paying</h2>
   <p>Do not treat seller counters as proof. In particular, <code>intro_pricing.seen_payers</code> is seller-reported pricing state used for quoting; it is not independently verifiable buyer or revenue evidence.</p>
-  <p>Machine clients can read <code>independent_evidence</code> in <a href="/.well-known/x402"><code>/.well-known/x402</code></a>. That block is a seller-published pointer index, not proof by itself: verify each external file against its immutable merge commit and SHA-256, then inspect its dated comparison fields. A <code>fixture_state</code> of <code>historical_capture_drift_detected</code> is an archive, not a current-state claim.</p>
-  <p>The Regulatory Radar fixture captured on 2026-07-24 is currently historical. A benign jurisdiction-schema widening was detected on 2026-07-26, payment terms were unchanged, and a replacement fixture has been requested.</p>
+  <p>Machine clients can read <code>independent_evidence</code> in <a href="/.well-known/x402"><code>/.well-known/x402</code></a>. That block is a seller-published pointer index, not proof by itself: verify each external file against its immutable merge commit and SHA-256, then inspect its dated comparison and capture-method fields.</p>
+  <p>The current Regulatory Radar bytes came from an unpaid preflight on 2026-07-26 and matched a fresh live preflight before the pin moved; they are not a settlement receipt. The older paid-settlement capture remains separately identified in <code>settled_flow_provenance.confirmed_at_merge</code>, and payment terms were byte-identical between the captures.</p>
   <ul>
     <li>Send the intended request without a payment signature and verify the returned method, resource URL, x402 version, <code>exact</code> scheme, <code>eip155:8453</code> network, official Base USDC asset, receiver, and maximum amount.</li>
     <li>Verify the input schema and required fields before signing. Each paid result also carries executable same-route and downstream contracts, but every later purchase requires a fresh unpaid quote and caller-owned authorization.</li>

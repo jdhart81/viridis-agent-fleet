@@ -79,24 +79,31 @@ EXTERNAL_EVIDENCE_REPOSITORY = (
 EXTERNAL_EVIDENCE_FIXTURES = (
     {
         "route": "regulatory-radar/scan_regulations",
-        "evidence_posture": "settled_flow_confirmed",
-        "fixture_state": "historical_capture_drift_detected",
-        "captured_on": "2026-07-24",
+        "evidence_posture": (
+            "unpaid_preflight_current_with_dated_settlement_reference"),
+        "fixture_state": "matched_on_last_comparison",
+        "capture_method": "unpaid_preflight",
+        "captured_at": "2026-07-26T16:47:37+00:00",
+        "supersedes_capture": "2026-07-24",
         "last_compared_on": "2026-07-26",
-        "matched_on_last_comparison": False,
+        "matched_on_last_comparison": True,
         "payment_terms_changed": False,
-        "drift_summary": (
-            "Additive jurisdiction schema widening; replacement fixture "
-            "requested."),
-        "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/12",
-        "merge_commit": "0920d50db53cbf59f20052c6c656f17f881c4b41",
+        "settled_flow_provenance": {
+            "current_fixture_is_settlement_receipt": False,
+            "confirmed_at_merge": (
+                "0920d50db53cbf59f20052c6c656f17f881c4b41"),
+            "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/12",
+            "payment_terms_byte_identical": True,
+        },
+        "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/15",
+        "merge_commit": "811fef6b037cfeb71a890cac97bb822f0efcf03a",
         "fixture_path": "tests/fixtures/viridis_regulatory_radar.json",
         "immutable_url": (
             EXTERNAL_EVIDENCE_REPOSITORY
-            + "/blob/0920d50db53cbf59f20052c6c656f17f881c4b41/"
+            + "/blob/811fef6b037cfeb71a890cac97bb822f0efcf03a/"
               "tests/fixtures/viridis_regulatory_radar.json"),
         "sha256": (
-            "0dbd36a0cb2cfa3ebf7a3575acc5550bfe2208d640fa2508574454365a7834fe"),
+            "f667444013029bc98e229b0d3021426d8bf18d13afe3007db419a213d0e290b5"),
     },
     {
         "route": "ghg-ledger/calculate_inventory",
