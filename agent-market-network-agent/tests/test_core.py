@@ -160,6 +160,20 @@ def attest(core, agent_id, private, work_id, suffix):
         f"settlement-{suffix}-nonce-0001")))
 
 
+def usefulness(core, buyer_id, private, work_id, *, outcome="USEFUL",
+               would_buy_again=True, note_sha256="", suffix="one"):
+    body = {
+        "work_id": work_id,
+        "outcome": outcome,
+        "would_buy_again": would_buy_again,
+        "note_sha256": note_sha256,
+        "idempotency_key": f"usefulness-{suffix}-0001",
+    }
+    return run(core.process(signed_input(
+        "submit_usefulness_feedback", "buyer_id", buyer_id, private, body,
+        f"usefulness-{suffix}-nonce-0001")))
+
+
 def security_attest(core, attester_id, private, target_agent_id, *,
                     posture="SCANNED", suffix="scan", ttl_days=30):
     evidence_sha = hashlib.sha256(
@@ -183,6 +197,38 @@ def security_attest(core, attester_id, private, target_agent_id, *,
     return run(core.process(signed_input(
         "publish_security_attestation", "attester_id", attester_id,
         private, body, f"security-{suffix}-nonce-0001")))
+
+
+def security_receipt(private, issuer_id, target_agent_id, *,
+                     issued=NOW, suffix="one"):
+    unsigned = {
+        "protocol": "viridis-security-receipt-v1",
+        "issuer_id": issuer_id,
+        "subject_agent_id": target_agent_id,
+        "posture": "SCANNED",
+        "coverage": ["supplied-prompt-input", "tool-injection"],
+        "scanner": {"name": "viridis-injection-detector", "version": "0.1.0"},
+        "result_counts": {"checks": 4, "passed": 1, "warnings": 0,
+                          "findings": 0, "errors": 0},
+        "claim_boundary": (
+            "Covers only the supplied prompt input and named detector signals; "
+            "it does not certify the target agent as secure or vulnerability-free."),
+        "evidence_sha256": hashlib.sha256(
+            f"security-result:{target_agent_id}:{suffix}".encode()).hexdigest(),
+        "issued_at": issued.isoformat(),
+        "expires_at": (issued + timedelta(days=30)).isoformat(),
+    }
+    stable = lambda value: json.dumps(  # noqa: E731
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    receipt_id = "vsr_" + hashlib.sha256(stable(unsigned).encode()).hexdigest()[:24]
+    receipt = {
+        **unsigned,
+        "receipt_id": receipt_id,
+        "evidence_url": (
+            f"https://mcp.viridis-security.com/v1/security/receipts/{receipt_id}"),
+    }
+    signature = b64(private.sign(stable(receipt).encode()))
+    return receipt, signature
 
 
 def full_awarded(core):
@@ -255,6 +301,134 @@ def test_security_attestation_expires_and_drops_out_of_discovery(tmp_path):
             security_posture="SCANNED")["count"] == 0
     finally:
         item.close()
+
+
+def test_signed_security_receipt_import_is_exactly_once_and_related_party(tmp_path):
+    issuer_private, issuer_public = keys()
+    item = MarketNetworkCore(
+        db_path=str(tmp_path / "receipts.sqlite3"), now_fn=lambda: NOW,
+        trusted_security_receipt_keys={
+            "viridis-security-injection-detector": issuer_public})
+    try:
+        item.seed_owned_profiles([
+            {"agent_id": "viridis-security-injection-detector",
+             "name": "Viridis Security Injection Detector",
+             "description": "Operator-owned security result receipt issuer.",
+             "capabilities": ["security-assessment"],
+             "representative_queries": ["scan an agent"],
+             "endpoint": "https://mcp.viridis-security.com/mcp",
+             "payment": {}, "operator_entity": "ViridisNorth LLC"},
+            {"agent_id": "viridis-ghg-ledger", "name": "Viridis GHG Ledger",
+             "description": "Operator-owned greenhouse gas inventory agent.",
+             "capabilities": ["carbon"],
+             "representative_queries": ["calculate GHG"],
+             "endpoint": "https://mcp.viridisconservation.com/ghg-ledger/mcp",
+             "payment": {}, "operator_entity": "ViridisNorth LLC"},
+        ])
+        receipt, signature = security_receipt(
+            issuer_private, "viridis-security-injection-detector",
+            "viridis-ghg-ledger")
+        first = run(item.process({"action": "import_security_receipt",
+                                  "receipt": receipt,
+                                  "signature_b64": signature}))
+        assert first["status"] == "ok", first
+        assert first["data"]["relation"] == "COMMON_CONTROL_RELATED"
+        assert first["data"]["provenance"] == "signed_security_result_receipt"
+        assert first["data"]["replayed"] is False
+        again = run(item.process({"action": "import_security_receipt",
+                                  "receipt": receipt,
+                                  "signature_b64": signature}))
+        assert again["status"] == "ok"
+        assert again["data"]["replayed"] is True
+        assert item.network_status()["security_receipts_imported"] == 1
+        posture = item.search_agents(
+            security_posture="SCANNED")["results"][0]["security_posture"]
+        assert posture["third_party_attesters"] == []
+        assert posture["related_party_attesters"] == [
+            "viridis-security-injection-detector"]
+    finally:
+        item.close()
+
+
+def test_security_receipt_tamper_unknown_issuer_and_expiry_fail_closed(tmp_path):
+    issuer_private, issuer_public = keys()
+    item = MarketNetworkCore(
+        db_path=str(tmp_path / "receipt-errors.sqlite3"), now_fn=lambda: NOW,
+        trusted_security_receipt_keys={
+            "viridis-security-injection-detector": issuer_public})
+    try:
+        item.seed_owned_profiles([
+            {"agent_id": "viridis-security-injection-detector", "name": "Issuer",
+             "description": "Operator-owned security receipt issuer.",
+             "capabilities": ["security"], "representative_queries": [],
+             "endpoint": "https://mcp.viridis-security.com/mcp", "payment": {}},
+            {"agent_id": "viridis-target-agent", "name": "Target",
+             "description": "Operator-owned target agent for receipt validation.",
+             "capabilities": ["target"], "representative_queries": [],
+             "endpoint": "https://mcp.viridisconservation.com/target/mcp", "payment": {}},
+        ])
+        receipt, signature = security_receipt(
+            issuer_private, "viridis-security-injection-detector",
+            "viridis-target-agent")
+        tampered = {**receipt, "posture": "RUNTIME_GUARDED"}
+        rejected = run(item.process({"action": "import_security_receipt",
+                                     "receipt": tampered,
+                                     "signature_b64": signature}))
+        assert rejected["status"] == "error"
+        assert rejected["error_type"] == "AuthenticationError"
+
+        expired, expired_sig = security_receipt(
+            issuer_private, "viridis-security-injection-detector",
+            "viridis-target-agent", issued=NOW - timedelta(days=31),
+            suffix="expired")
+        rejected = run(item.process({"action": "import_security_receipt",
+                                     "receipt": expired,
+                                     "signature_b64": expired_sig}))
+        assert rejected["status"] == "error"
+        assert rejected["field"] == "receipt.expires_at"
+    finally:
+        item.close()
+
+
+def test_security_receipt_exactly_once_state_survives_restart(tmp_path):
+    issuer_private, issuer_public = keys()
+    path = tmp_path / "receipt-restart.sqlite3"
+    trusted = {"viridis-security-injection-detector": issuer_public}
+    receipt, signature = security_receipt(
+        issuer_private, "viridis-security-injection-detector",
+        "viridis-restart-target", suffix="restart")
+    profiles = [
+        {"agent_id": "viridis-security-injection-detector", "name": "Issuer",
+         "description": "Operator-owned security receipt issuer.",
+         "capabilities": ["security"], "representative_queries": [],
+         "endpoint": "https://mcp.viridis-security.com/mcp", "payment": {}},
+        {"agent_id": "viridis-restart-target", "name": "Target",
+         "description": "Operator-owned target for durable receipt import.",
+         "capabilities": ["target"], "representative_queries": [],
+         "endpoint": "https://mcp.viridisconservation.com/target/mcp", "payment": {}},
+    ]
+    first = MarketNetworkCore(
+        db_path=str(path), now_fn=lambda: NOW,
+        trusted_security_receipt_keys=trusted)
+    first.seed_owned_profiles(profiles)
+    imported = run(first.process({"action": "import_security_receipt",
+                                  "receipt": receipt,
+                                  "signature_b64": signature}))
+    assert imported["status"] == "ok"
+    first.close()
+
+    restored = MarketNetworkCore(
+        db_path=str(path), now_fn=lambda: NOW,
+        trusted_security_receipt_keys=trusted)
+    try:
+        replay = run(restored.process({"action": "import_security_receipt",
+                                       "receipt": receipt,
+                                       "signature_b64": signature}))
+        assert replay["status"] == "ok"
+        assert replay["data"]["replayed"] is True
+        assert restored.network_status()["security_receipts_imported"] == 1
+    finally:
+        restored.close()
 
 
 def test_bad_signature_and_stale_signature_fail_closed(core):
@@ -404,6 +578,136 @@ def test_production_hub_receipt_is_required_before_completion(core):
     assert core.network_status()["independently_verified_jobs"] == 1
 
 
+def test_usefulness_requires_buyer_signature_and_independent_payment_proof(core):
+    buyer_key, seller_key, work, _, _ = full_awarded(core)
+    core.hub_required = True
+
+    before_payment = usefulness(
+        core, "buyer-agent", buyer_key, work["work_id"], suffix="before")
+    assert before_payment["status"] == "error"
+    assert before_payment["error_type"] == "ConflictError"
+    assert core.network_status()["buyer_signed_useful_paid_deliveries"] == 0
+
+    core._settlement_verifier = lambda event: {
+        "verified": True, "event_id": event["event_id"],
+        "work_id": event["work"]["work_id"],
+        "money_primitive": {"tx_hash": event["settlement"]["reference"]},
+    }
+    assert attest(core, "buyer-agent", buyer_key, work["work_id"],
+                  "buyer")["status"] == "ok"
+    assert attest(core, "seller-agent", seller_key, work["work_id"],
+                  "seller")["data"]["status"] == "INDEPENDENTLY_VERIFIED"
+
+    attacker_key, _ = register(core, "feedback-attacker", "procurement")
+    attacked = usefulness(
+        core, "feedback-attacker", attacker_key, work["work_id"],
+        suffix="attacker")
+    assert attacked["status"] == "error"
+    assert attacked["error_type"] == "AuthenticationError"
+
+    core._conn.execute(
+        "UPDATE profiles SET operator_entity=?,operator_entity_verified=1 "
+        "WHERE agent_id='buyer-agent'", ("Independent Buyer LLC",))
+    core._conn.execute(
+        "UPDATE profiles SET operator_entity=?,operator_entity_verified=1 "
+        "WHERE agent_id='seller-agent'", ("Independent Seller LLC",))
+    note_digest = hashlib.sha256(b"private buyer note").hexdigest()
+    accepted = usefulness(
+        core, "buyer-agent", buyer_key, work["work_id"],
+        note_sha256=note_digest, suffix="accepted")
+    assert accepted["status"] == "ok"
+    assert accepted["data"]["provenance"] == (
+        "buyer_signed_independently_verified_paid_job")
+    assert accepted["data"]["note_sha256"] == note_digest
+    assert "private buyer note" not in json.dumps(accepted)
+    assert core.get_work(work["work_id"])["buyer_feedback"] == {
+        key: accepted["data"][key] for key in (
+            "feedback_id", "work_id", "buyer_id", "seller_id", "outcome",
+            "useful", "would_buy_again", "note_sha256", "created_at",
+            "buyer_seller_relation", "independent_buyer", "provenance")
+    }
+    status = core.network_status()
+    assert status["buyer_feedback_jobs"] == 1
+    assert status["buyer_signed_useful_paid_deliveries"] == 1
+    assert status["independently_useful_paid_deliveries"] == 1
+    assert status["would_buy_again_count"] == 1
+    seller = next(item for item in core.search_agents()["results"]
+                  if item["agent_id"] == "seller-agent")
+    assert seller["market_reputation"][
+        "buyer_signed_useful_paid_deliveries"] == 1
+    assert seller["market_reputation"][
+        "independently_useful_paid_deliveries"] == 1
+
+
+def test_usefulness_is_exactly_once_private_and_idempotent(core):
+    buyer_key, seller_key, work, _, _ = full_awarded(core)
+    core.hub_required = True
+    core._settlement_verifier = lambda event: {
+        "verified": True, "event_id": event["event_id"],
+        "work_id": event["work"]["work_id"],
+    }
+    attest(core, "buyer-agent", buyer_key, work["work_id"], "buyer")
+    attest(core, "seller-agent", seller_key, work["work_id"], "seller")
+    first = usefulness(
+        core, "buyer-agent", buyer_key, work["work_id"],
+        outcome="PARTIALLY_USEFUL", would_buy_again=False, suffix="same")
+    replay = usefulness(
+        core, "buyer-agent", buyer_key, work["work_id"],
+        outcome="PARTIALLY_USEFUL", would_buy_again=False, suffix="same")
+    assert replay == first
+    changed = usefulness(
+        core, "buyer-agent", buyer_key, work["work_id"],
+        outcome="USEFUL", would_buy_again=True, suffix="changed")
+    assert changed["status"] == "error"
+    assert changed["error_type"] == "ConflictError"
+    assert core.network_status()["buyer_feedback_jobs"] == 1
+    event = core._conn.execute(
+        "SELECT payload_json FROM events "
+        "WHERE event_type='work.usefulness_reported'").fetchone()
+    assert event is not None
+    event_payload = json.loads(event["payload_json"])
+    assert "note" not in event_payload
+    assert event_payload["note_sha256"] == ""
+
+
+def test_related_party_usefulness_cannot_inflate_independent_demand(core):
+    buyer_key, seller_key, work, _, _ = full_awarded(core)
+    core.hub_required = True
+    core._settlement_verifier = lambda event: {
+        "verified": True, "event_id": event["event_id"],
+        "work_id": event["work"]["work_id"],
+    }
+    attest(core, "buyer-agent", buyer_key, work["work_id"], "buyer")
+    attest(core, "seller-agent", seller_key, work["work_id"], "seller")
+    core._conn.execute(
+        "UPDATE profiles SET operator_entity='Same Operator LLC',"
+        "operator_entity_verified=1 WHERE agent_id IN "
+        "('buyer-agent','seller-agent')")
+    result = usefulness(
+        core, "buyer-agent", buyer_key, work["work_id"],
+        outcome="USEFUL", would_buy_again=True, suffix="related")
+    assert result["status"] == "ok"
+    assert result["data"]["buyer_seller_relation"] == "COMMON_CONTROL_RELATED"
+    assert result["data"]["independent_buyer"] is False
+    status = core.network_status()
+    assert status["buyer_signed_useful_paid_deliveries"] == 1
+    assert status["independently_useful_paid_deliveries"] == 0
+
+
+def test_usefulness_rejects_free_text_and_non_boolean_repurchase(core):
+    buyer_key, _, work, _, _ = full_awarded(core)
+    bad_digest = usefulness(
+        core, "buyer-agent", buyer_key, work["work_id"],
+        note_sha256="raw customer note", suffix="raw-note")
+    assert bad_digest["status"] == "error"
+    assert bad_digest["field"] == "note_sha256"
+    bad_bool = usefulness(
+        core, "buyer-agent", buyer_key, work["work_id"],
+        would_buy_again=1, suffix="bad-bool")
+    assert bad_bool["status"] == "error"
+    assert bad_bool["field"] == "would_buy_again"
+
+
 def test_hub_required_fixed_x402_offer_cannot_claim_custom_job_amount(core):
     buyer_key, _ = register(core, "fixed-buyer", "procurement")
     seller_key, _ = register(core, "fixed-seller", "carbon")
@@ -535,6 +839,15 @@ def test_viridis_security_seed_keeps_auth_and_billing_on_its_own_runtime():
     assert "prompt-injection-detection" in security["capabilities"]
     assert "API key" in security["description"]
     assert security["payment"] == {}
+    assert security["operator_entity"] == "ViridisNorth LLC"
+    ids = {item["agent_id"] for item in payload["profiles"]}
+    assert "viridis-security-canon-scanner" in ids
+    assert "viridis-security-maxwell" in ids
+    for agent_id in {
+            "viridis-security-canon-scanner", "viridis-security-maxwell"}:
+        profile = next(p for p in payload["profiles"] if p["agent_id"] == agent_id)
+        assert profile["endpoint"].startswith("https://mcp.viridis-security.com/")
+        assert profile["payment"] == {}
 
 
 def test_durable_before_ack_survives_restart(tmp_path):

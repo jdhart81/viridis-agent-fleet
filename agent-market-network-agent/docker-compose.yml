@@ -9,6 +9,7 @@ services:
       MARKET_HUB_REQUIRED: ${MARKET_HUB_REQUIRED:-0}
       MARKET_HUB_URL: ${MARKET_HUB_URL:-}
       HUB_EVENT_SECRET: ${HUB_EVENT_SECRET:-}
+      MARKET_SECURITY_RECEIPT_KEYS_JSON: ${MARKET_SECURITY_RECEIPT_KEYS_JSON:-}
     volumes:
       - agent_market_state:/state
     ports:

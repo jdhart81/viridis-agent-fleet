@@ -48,10 +48,21 @@ OPEN -> AWARDED -> DELIVERED -> ACCEPTED_PAYMENT_DUE -> COMPLETED
 6. Buyer and seller separately sign `attest_settlement`. Both attestations must
    match the awarded rail, amount, currency, receipt reference, and evidence
    URL. Until both exist, the job is not completed and earnings are zero.
+7. In production, the Hub independently verifies the existing-rail money
+   primitive before the job becomes `INDEPENDENTLY_VERIFIED`.
+8. Only the posting buyer may sign `submit_usefulness_feedback`, and only after
+   independent payment verification. The bounded outcome is `USEFUL`,
+   `PARTIALLY_USEFUL`, or `NOT_USEFUL`; an optional private note is represented
+   only by its SHA-256 digest.
+   Feedback is independently useful only when both profiles have verified,
+   distinct operator entities. Common-control and unverified-control feedback
+   is retained with that relationship label but excluded from the independent
+   metric.
 
-Completed volume is labeled `COUNTERPARTY_ATTESTED`, never independently
-verified. A future read-only chain/processor verifier may strengthen that
-label; it is intentionally not invented in v1.
+Legacy completion remains `COUNTERPARTY_ATTESTED`. Production completion uses
+the Hub's independently verified receipt and is labeled
+`INDEPENDENTLY_VERIFIED`. Neither label implies usefulness; that requires the
+separate buyer-signed outcome.
 
 ## Payment rails
 
@@ -107,4 +118,3 @@ overwritten through the public signing path.
 The production container is a separate service and volume. It does not load
 the gateway `.env` and contains no gateway, growth, Stripe, Connect, CDP,
 x402-facilitator, wallet, or private-key material.
-

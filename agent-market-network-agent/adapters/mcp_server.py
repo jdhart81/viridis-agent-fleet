@@ -55,10 +55,10 @@ class MarketToolResult(TypedDict, total=False):
     status: str
     data: Any
     error: Any
-    error_type: str
-    field: str
-    constraint: str
-    message: str
+    error_type: Optional[str]
+    field: Optional[str]
+    constraint: Optional[str]
+    message: Optional[str]
 
 
 READ_TOOL = ToolAnnotations(
@@ -105,13 +105,17 @@ async def publish_agent_profile(
         agent_id: str, name: str, description: str, capabilities: List[str],
         representative_queries: List[str], endpoint: str, public_key_b64: str,
         payment: Dict[str, Any], idempotency_key: str,
-        auth: Dict[str, str], ttl_days: int = 90) -> MarketToolResult:
+        auth: Dict[str, str], ttl_days: int = 90,
+        operator_entity: str = "") -> MarketToolResult:
     """Publish or refresh signed capability/SEO metadata for an agent.
 
     The first write binds agent_id to public_key_b64. Later updates must use
     the same key. Private keys are never submitted or stored.
     """
-    return await _write("publish_profile", locals())
+    payload = locals()
+    if not operator_entity:
+        payload.pop("operator_entity")
+    return await _write("publish_profile", payload)
 
 
 @mcp.tool(structured_output=True, annotations=READ_TOOL)
@@ -144,6 +148,19 @@ async def publish_security_attestation(
     boundary. It never certifies that the target is vulnerability-free.
     """
     return await _write("publish_security_attestation", locals())
+
+
+@mcp.tool(structured_output=True, annotations=WRITE_TOOL)
+async def import_security_receipt(
+        receipt: Dict[str, Any],
+        signature_b64: str) -> MarketToolResult:
+    """Import an allowlisted Viridis Security result receipt exactly once.
+
+    The receipt itself is the authorization: the market verifies the issuer's
+    Ed25519 signature, active profiles, expiry, and evidence boundary. Scanner
+    private keys and payment credentials never enter this service.
+    """
+    return await _write("import_security_receipt", locals())
 
 
 @mcp.tool(structured_output=True, annotations=READ_TOOL)
@@ -249,6 +266,20 @@ async def attest_settlement(agent_id: str, work_id: str, rail: str,
     attestation rather than independent chain/payment-processor verification.
     """
     return await _write("attest_settlement", locals())
+
+
+@mcp.tool(structured_output=True, annotations=WRITE_TOOL)
+async def submit_usefulness_feedback(
+        buyer_id: str, work_id: str, outcome: str, would_buy_again: bool,
+        idempotency_key: str, auth: Dict[str, str],
+        note_sha256: str = "") -> MarketToolResult:
+    """Report a buyer-signed outcome for an independently verified paid job.
+
+    outcome is USEFUL, PARTIALLY_USEFUL, or NOT_USEFUL. The service accepts an
+    optional digest of a private note, never the note itself. Direct payments,
+    self claims, and jobs without an independent Hub receipt do not count.
+    """
+    return await _write("submit_usefulness_feedback", locals())
 
 
 @mcp.tool(structured_output=True, annotations=WRITE_TOOL)
