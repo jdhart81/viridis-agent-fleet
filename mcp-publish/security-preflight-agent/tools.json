@@ -9,6 +9,12 @@
         "type": "object",
         "properties": {
           "agent_id": {"type": "string"},
+          "subject_profile_sha256": {
+            "type": ["string", "null"],
+            "description": "Current Agent Market profile_sha256. Required only for ranking-eligible Market import.",
+            "pattern": "^[0-9a-f]{64}$",
+            "default": null
+          },
           "manifest": {"type": "object", "additionalProperties": true},
           "policy": {
             "type": ["object", "null"],

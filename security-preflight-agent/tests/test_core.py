@@ -65,8 +65,61 @@ def test_safe_scan_signs_market_compatible_receipt(signing_key):
             (-len(result["signature_b64"]) % 4)),
         _stable(receipt).encode())
     assert result["market_import"]["automatic"] is False
+    assert result["market_import"]["eligible"] is False
+    artifact_tags = [
+        tag for tag in receipt["coverage"]
+        if tag.startswith("artifact-sha256:")
+    ]
+    assert len(artifact_tags) == 1
     assert result["evidence"]["runtime_tested"] is False
     assert result["privacy"]["raw_manifest_stored"] is False
+
+
+def test_profile_bound_receipt_is_market_eligible_and_digest_exact():
+    payload = safe_payload()
+    payload["subject_profile_sha256"] = "a" * 64
+    first = run(SecurityPreflightCore(), payload)
+    assert first["market_import"]["eligible"] is True
+    assert first["market_import"]["arguments"]["receipt"] == first["receipt"]
+    assert "profile-sha256:" + "a" * 64 in first["receipt"]["coverage"]
+    artifact = first["evidence"]["subject_binding"]["artifact_sha256"]
+    assert "artifact-sha256:" + artifact in first["receipt"]["coverage"]
+
+    changed = safe_payload()
+    changed["subject_profile_sha256"] = "a" * 64
+    changed["manifest"]["description"] = "changed exact artifact"
+    second = run(SecurityPreflightCore(), changed)
+    assert (
+        second["evidence"]["subject_binding"]["artifact_sha256"]
+        != artifact
+    )
+
+
+def test_public_receipt_survives_restart_without_raw_inputs(tmp_path):
+    db_path = tmp_path / "receipts.sqlite3"
+    payload = safe_payload()
+    secret_marker = "private-sample-value-that-must-not-persist"
+    payload["sample_inputs"] = [secret_marker]
+    first = SecurityPreflightCore(receipt_db_path=str(db_path))
+    created = run(first, payload)
+    receipt_id = created["receipt"]["receipt_id"]
+    first.close()
+
+    restored = SecurityPreflightCore(receipt_db_path=str(db_path))
+    found = run(restored, {
+        "action": "get_receipt",
+        "receipt_id": receipt_id,
+    })
+    assert found["receipt"]["receipt_id"] == receipt_id
+    assert run(restored, {
+        "action": "get_receipt",
+        "receipt_id": receipt_id,
+    }) == found
+    assert run(restored, {"action": "get_receipt",
+                          "receipt_id": receipt_id})["privacy"][
+                              "raw_samples_stored"] is False
+    restored.close()
+    assert secret_marker.encode() not in db_path.read_bytes()
 
 
 def test_high_impact_tool_without_approval_fails():
@@ -117,6 +170,8 @@ def test_invalid_inputs_never_raise_or_sign():
             None,
             {"action": "scan", "agent_id": "X", "manifest": {}},
             {"action": "scan", "agent_id": "valid-agent", "manifest": []},
+            {"action": "scan", "agent_id": "valid-agent", "manifest": {},
+             "subject_profile_sha256": "not-a-digest"},
             {"action": "scan", "agent_id": "valid-agent", "manifest": {},
              "sample_inputs": [1]}):
         result = run(core, payload)

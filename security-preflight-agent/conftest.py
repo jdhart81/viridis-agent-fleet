@@ -18,6 +18,8 @@ for module_name in list(sys.modules):
 
 @pytest.fixture(autouse=True)
 def signing_key(monkeypatch):
+    monkeypatch.delenv(
+        "SECURITY_PREFLIGHT_RECEIPT_DB_PATH", raising=False)
     key = Ed25519PrivateKey.generate()
     der = key.private_bytes(
         serialization.Encoding.DER,

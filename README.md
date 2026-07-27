@@ -23,8 +23,11 @@ and Maxwell Defense remain on their separate runtime and billing boundary. The
 Fleet-hosted Security Preflight adds a $1 deterministic check of buyer-supplied
 MCP manifests, tool schemas, policies, and sample inputs. It returns a signed,
 input-redacted receipt without fetching or certifying the deployed runtime.
-Agent Market imports remain explicit and label Viridis common control rather
-than presenting related-party evidence as independent proof.
+Version 1.1 stores receipts durably and binds the exact manifest/policy
+artifact. Supplying the current Agent Market profile SHA-256 additionally makes
+the signed receipt eligible for explicit import; a later profile change removes
+it from ranking. Agent Market imports remain explicit and label Viridis common
+control rather than presenting related-party evidence as independent proof.
 
 | Step | HTTP endpoint | Price | What it does | Chains with |
 |---|---|---:|---|---|

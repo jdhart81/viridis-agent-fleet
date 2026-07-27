@@ -1,5 +1,35 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-27, Security Preflight v1.1 trust binding — DEPLOYED/ACTIVE]
+> Security evidence now survives restarts and fails closed after profile
+> changes.** Every new receipt binds the exact manifest/policy artifact SHA-256.
+> A caller that supplies the target's current Agent Market profile SHA-256 also
+> receives a profile-bound, explicitly importable receipt; standalone scans
+> remain valid evidence but are not ranking-eligible.
+>
+> Agent Market v0.8.1 requires both signed bindings on Preflight v1.1+ imports,
+> rejects a stale profile digest, and removes old profile-bound evidence from
+> discovery rank after a profile changes. Findings or scanner errors receive
+> zero ranking credit; warnings, narrow scope, self evidence, and common-control
+> evidence receive reduced credit. Historical receipts remain visible with
+> their original claim boundaries.
+>
+> The current fleet gate passed **1,846 tests / 0 failures / 35/35 suites**;
+> focused Security tests passed 11 with one production-compatibility skip in the
+> public checkout. Copied-state gateway and Market candidates were healthy. A
+> candidate-only signed receipt survived container recreation, malformed input
+> returned 400 before payment, and a valid unpaid request returned 402.
+>
+> Live gateway image
+> `sha256:9dc219f22d78e8a3e2e199a62c90143468536b248b90c91f5c31a0531d5c717c`
+> and Market image
+> `sha256:f7d7e7e0b338912a3f5fbb35184db1562bf0c4c7554bf0e3ac034058a5c95fce`
+> are healthy. The production receipt database passes integrity checking and
+> currently contains zero receipts. No paid smoke, import, outreach, or
+> self-settlement was generated; **Security Preflight revenue remains $0**.
+> Full receipt:
+> `docs/deployment/SECURITY_PREFLIGHT_V1_1_TRUST_BINDING_RELEASE_2026-07-27.md`.
+
 > **[2026-07-27, Viridis Security Preflight pivot — DEPLOYED/ACTIVE] Viridis
 > Security is now a native paid Fleet offering.** Security Preflight performs
 > deterministic static checks over buyer-supplied MCP manifests, tool schemas,

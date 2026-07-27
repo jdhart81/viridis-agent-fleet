@@ -29,6 +29,21 @@ def test_adapter_exports_paid_and_read_tools():
     assert callable(mcp_server.get_security_receipt)
 
 
+def test_adapter_accepts_optional_profile_binding():
+    mcp_server = _load_adapter()
+    result = json.loads(asyncio.run(mcp_server.security_preflight(
+        agent_id="profile-bound-agent",
+        subject_profile_sha256="b" * 64,
+        manifest={
+            "endpoint": "https://example.com/mcp",
+            "auth": "bearer",
+            "tools": [],
+        },
+    )))
+    assert result["market_import"]["eligible"] is True
+    assert "profile-sha256:" + "b" * 64 in result["receipt"]["coverage"]
+
+
 def test_adapter_validation_envelope():
     mcp_server = _load_adapter()
     result = json.loads(asyncio.run(mcp_server.security_preflight(
