@@ -13,8 +13,11 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
+import threading
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from pathlib import Path
+from typing import Any, Iterable, List, Optional
 
 try:
     from cryptography.hazmat.primitives import serialization
@@ -26,7 +29,7 @@ except ImportError:  # pragma: no cover - the production image provides this
     Ed25519PrivateKey = None
 
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 ISSUER_ID = "viridis-security-preflight"
 PROTOCOL = "viridis-security-receipt-v1"
 MAX_INPUT_BYTES = 131_072
@@ -35,6 +38,7 @@ MAX_SAMPLES = 20
 MAX_SAMPLE_CHARS = 8_192
 RECEIPT_TTL_DAYS = 30
 AGENT_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 CLAIM_BOUNDARY = (
     "Covers only the buyer-supplied manifest, tool schemas, policy, and sample "
@@ -223,8 +227,107 @@ class SecurityPreflightCore:
     KNOWN_ACTIONS = frozenset({"scan", "get_receipt"})
     READ_ACTIONS = frozenset({"get_receipt"})
 
-    def __init__(self):
-        self._receipts: Dict[str, dict] = {}
+    def __init__(self, receipt_db_path: Optional[str] = None):
+        configured_path = (
+            receipt_db_path
+            if receipt_db_path is not None
+            else os.environ.get(
+                "SECURITY_PREFLIGHT_RECEIPT_DB_PATH", ":memory:")
+        )
+        self._receipt_db_path = str(configured_path or ":memory:")
+        if self._receipt_db_path != ":memory:":
+            Path(self._receipt_db_path).parent.mkdir(
+                parents=True, exist_ok=True)
+        self._receipt_lock = threading.RLock()
+        self._receipt_db = sqlite3.connect(
+            self._receipt_db_path, check_same_thread=False)
+        if self._receipt_db_path != ":memory:":
+            self._receipt_db.execute("PRAGMA journal_mode=WAL")
+            self._receipt_db.execute("PRAGMA synchronous=FULL")
+        self._receipt_db.execute(
+            "CREATE TABLE IF NOT EXISTS security_preflight_receipts ("
+            "receipt_id TEXT PRIMARY KEY,"
+            "record_sha256 TEXT NOT NULL,"
+            "record_json TEXT NOT NULL,"
+            "issued_at TEXT NOT NULL,"
+            "expires_at TEXT NOT NULL,"
+            "created_at TEXT NOT NULL"
+            ")")
+        self._receipt_db.commit()
+
+    def close(self) -> None:
+        with self._receipt_lock:
+            self._receipt_db.close()
+
+    def _ensure_receipt_store_ready(self) -> None:
+        try:
+            with self._receipt_lock:
+                self._receipt_db.execute("SELECT 1").fetchone()
+        except sqlite3.Error as exc:
+            raise PreflightError(
+                "receipt store is unavailable",
+                "SECURITY_PREFLIGHT_RECEIPT_DB_PATH",
+                "ServiceUnavailable") from exc
+
+    def _store_receipt(self, record: dict) -> None:
+        receipt = record["receipt"]
+        receipt_id = receipt["receipt_id"]
+        record_json = _stable(record)
+        record_sha256 = hashlib.sha256(
+            record_json.encode("utf-8")).hexdigest()
+        try:
+            with self._receipt_lock:
+                existing = self._receipt_db.execute(
+                    "SELECT record_sha256 FROM security_preflight_receipts "
+                    "WHERE receipt_id=?",
+                    (receipt_id,),
+                ).fetchone()
+                if existing and existing[0] != record_sha256:
+                    raise PreflightError(
+                        "receipt id collision detected",
+                        "receipt_id",
+                        "ConflictError")
+                self._receipt_db.execute(
+                    "INSERT INTO security_preflight_receipts("
+                    "receipt_id,record_sha256,record_json,issued_at,expires_at,"
+                    "created_at) VALUES(?,?,?,?,?,?) "
+                    "ON CONFLICT(receipt_id) DO NOTHING",
+                    (
+                        receipt_id,
+                        record_sha256,
+                        record_json,
+                        receipt["issued_at"],
+                        receipt["expires_at"],
+                        _iso(_now()),
+                    ),
+                )
+                self._receipt_db.commit()
+        except sqlite3.Error as exc:
+            raise PreflightError(
+                "receipt could not be persisted",
+                "SECURITY_PREFLIGHT_RECEIPT_DB_PATH",
+                "ServiceUnavailable") from exc
+
+    def _stored_receipt(self, receipt_id: str) -> Optional[dict]:
+        try:
+            with self._receipt_lock:
+                row = self._receipt_db.execute(
+                    "SELECT record_json FROM security_preflight_receipts "
+                    "WHERE receipt_id=?",
+                    (receipt_id,),
+                ).fetchone()
+        except sqlite3.Error as exc:
+            raise PreflightError(
+                "receipt store is unavailable",
+                "SECURITY_PREFLIGHT_RECEIPT_DB_PATH",
+                "ServiceUnavailable") from exc
+        return json.loads(row[0]) if row else None
+
+    def _stored_receipt_count(self) -> int:
+        with self._receipt_lock:
+            return int(self._receipt_db.execute(
+                "SELECT COUNT(*) FROM security_preflight_receipts"
+            ).fetchone()[0])
 
     @staticmethod
     def _validate_scan(payload: dict) -> dict:
@@ -239,6 +342,13 @@ class SecurityPreflightCore:
         manifest = payload.get("manifest")
         if not isinstance(manifest, dict):
             raise PreflightError("manifest must be an object", "manifest")
+        subject_profile_sha256 = str(
+            payload.get("subject_profile_sha256") or "").strip().lower()
+        if (subject_profile_sha256
+                and not SHA256_RE.fullmatch(subject_profile_sha256)):
+            raise PreflightError(
+                "subject_profile_sha256 must be 64 lowercase hex characters",
+                "subject_profile_sha256")
         policy = payload.get("policy", {})
         if policy is None:
             policy = {}
@@ -261,6 +371,7 @@ class SecurityPreflightCore:
             encoded_size = len(_stable({
                 "agent_id": agent_id,
                 "manifest": manifest,
+                "subject_profile_sha256": subject_profile_sha256,
                 "policy": policy,
                 "sample_inputs": samples,
             }).encode("utf-8"))
@@ -296,6 +407,8 @@ class SecurityPreflightCore:
         return {
             "agent_id": agent_id,
             "manifest": manifest,
+            "subject_profile_sha256": subject_profile_sha256,
+            "policy": policy,
             "tools": normalized_tools,
             "policy_present": bool(policy),
             "allowed": allowed,
@@ -312,6 +425,7 @@ class SecurityPreflightCore:
                     "paid Security Preflight supports only scan", "action")
             self._validate_scan(payload)
             _load_signing_key()
+            self._ensure_receipt_store_ready()
             return None
         except PreflightError as exc:
             return {
@@ -487,6 +601,14 @@ class SecurityPreflightCore:
             coverage.append("tool-policy")
         if data["samples"]:
             coverage.append("sample-inputs")
+        artifact_sha256 = _sha256({
+            "manifest": data["manifest"],
+            "policy": data["policy"],
+        })
+        coverage.append(f"artifact-sha256:{artifact_sha256}")
+        if data["subject_profile_sha256"]:
+            coverage.append(
+                "profile-sha256:" + data["subject_profile_sha256"])
         scanner = {
             "name": "Viridis Security Preflight",
             "version": VERSION,
@@ -501,6 +623,14 @@ class SecurityPreflightCore:
             "scanner": scanner,
             "result_counts": counts,
             "checks": checks,
+            "subject_binding": {
+                "artifact_sha256": artifact_sha256,
+                "manifest_sha256": _sha256(data["manifest"]),
+                "policy_sha256": _sha256(data["policy"]),
+                "profile_sha256":
+                    data["subject_profile_sha256"] or None,
+                "sample_input_count": len(data["samples"]),
+            },
             "claim_boundary": CLAIM_BOUNDARY,
             "input_redacted": True,
             "runtime_tested": False,
@@ -544,22 +674,29 @@ class SecurityPreflightCore:
                 "raw_samples_stored": False,
             },
         }
-        self._receipts[receipt_id] = public_record
+        self._store_receipt(public_record)
+        market_eligible = bool(data["subject_profile_sha256"])
         return {
             **public_record,
             "verdict": verdict,
             "market_import": {
                 "automatic": False,
+                "eligible": market_eligible,
                 "reason": (
                     "Profile ownership and import consent are not inferred "
-                    "from a payment wallet."),
+                    "from a payment wallet."
+                    if market_eligible else
+                    "A current Agent Market profile digest is required to "
+                    "produce ranking-eligible evidence."),
                 "market_endpoint":
                     "https://mcp.viridisconservation.com/network/mcp",
                 "market_tool": "import_security_receipt",
-                "arguments": {
+                "arguments": ({
                     "receipt": receipt,
                     "signature_b64": signature_b64,
-                },
+                } if market_eligible else None),
+                "required_profile_sha256":
+                    data["subject_profile_sha256"] or None,
                 "relation_disclosure": (
                     "ViridisNorth LLC operates both the issuer and seeded "
                     "Viridis fleet profiles; the Market labels that common "
@@ -582,7 +719,7 @@ class SecurityPreflightCore:
             raise PreflightError(
                 "receipt_id must be a Viridis Security receipt id",
                 "receipt_id")
-        record = self._receipts.get(receipt_id)
+        record = self._stored_receipt(receipt_id)
         if record is None:
             return {
                 "status": "error",
@@ -628,14 +765,25 @@ class SecurityPreflightCore:
             "SECURITY_PREFLIGHT_REQUIRED", "0").strip().casefold() in {
                 "1", "true", "yes", "on",
             }
+        try:
+            stored_receipts = self._stored_receipt_count()
+            receipt_store_ready = True
+        except sqlite3.Error:
+            stored_receipts = 0
+            receipt_store_ready = False
+        ready = bool(fingerprint) and receipt_store_ready
         return {
-            "status": "ok" if fingerprint or not required else "degraded",
+            "status": "ok" if ready or not required else "degraded",
             "agent": "security-preflight-agent",
             "version": VERSION,
             "signer_required": required,
             "signer_ready": bool(fingerprint),
             "signer_public_key_sha256": fingerprint,
-            "stored_receipts": len(self._receipts),
+            "stored_receipts": stored_receipts,
+            "receipt_store": (
+                "memory" if self._receipt_db_path == ":memory:"
+                else "persistent-sqlite"),
+            "receipt_store_ready": receipt_store_ready,
             "raw_inputs_stored": False,
             "runtime_fetches_enabled": False,
         }
@@ -654,9 +802,12 @@ class SecurityPreflightCore:
                 "tool-authority-policy-check",
                 "static-injection-indicator-scan",
                 "signed-security-receipts",
+                "persistent-public-receipts",
+                "artifact-and-profile-digest-binding",
             ],
             "inputs": [
-                "agent_id", "manifest", "policy", "sample_inputs",
+                "agent_id", "subject_profile_sha256", "manifest", "policy",
+                "sample_inputs",
             ],
             "outputs": [
                 "verdict", "checks", "signed_receipt",

@@ -50,6 +50,7 @@ async def _run(payload: Dict[str, Any]) -> str:
 async def security_preflight(
         agent_id: str,
         manifest: Dict[str, Any],
+        subject_profile_sha256: Optional[str] = None,
         policy: Optional[Dict[str, Any]] = None,
         sample_inputs: Optional[List[str]] = None,
         payment_ref: Optional[str] = None,
@@ -64,6 +65,9 @@ async def security_preflight(
         "action": "scan",
         "agent_id": agent_id,
         "manifest": manifest,
+        **({
+            "subject_profile_sha256": subject_profile_sha256,
+        } if subject_profile_sha256 else {}),
         "policy": policy or {},
         "sample_inputs": sample_inputs or [],
         **({"payment_ref": payment_ref} if payment_ref else {}),

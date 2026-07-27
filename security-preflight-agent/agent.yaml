@@ -1,5 +1,5 @@
 name: "security-preflight"
-version: "1.0.0"
+version: "1.1.0"
 description: "Evidence-bounded MCP manifest and tool-policy security preflight with signed receipts"
 pillar: "security"
 status: "production"
@@ -17,11 +17,13 @@ thesis_connection: |
 
 env_vars:
   - "SECURITY_PREFLIGHT_SIGNING_KEY_PKCS8_B64"
+  - "SECURITY_PREFLIGHT_RECEIPT_DB_PATH"
   - "PUBLIC_BASE"
 
 capabilities:
   inputs:
     - "agent_id"
+    - "subject_profile_sha256"
     - "manifest"
     - "policy"
     - "sample_inputs"
@@ -39,5 +41,8 @@ invariants:
   - "Raw caller manifests, policies, and samples are never persisted or echoed"
   - "No deployed endpoint is fetched or executed"
   - "No receipt is issued unless the Ed25519 signer is configured and valid"
+  - "Receipts are durable before a successful paid response is returned"
+  - "Every receipt binds the assessed manifest and policy digest"
+  - "Ranking-eligible receipts bind the exact current Agent Market profile digest"
   - "Market import is explicit; payment never implies profile ownership or consent"
   - "Common-control evidence is labeled related-party, never independent proof"
