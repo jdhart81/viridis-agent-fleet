@@ -1,0 +1,43 @@
+name: "security-preflight"
+version: "1.0.0"
+description: "Evidence-bounded MCP manifest and tool-policy security preflight with signed receipts"
+pillar: "security"
+status: "production"
+owner: "Viridis North LLC"
+
+revenue_model: "$1 per scan; fleet-wide first-wallet x402 introduction may reduce one call to $0.01"
+
+thesis_connection: |
+  Turns Viridis Security's accumulated AI-agent security corpus into a
+  low-friction network primitive: every agent can buy a bounded preflight,
+  receive a portable signed receipt, and opt into the fleet reputation graph.
+  Growth comes from useful receipts and safer participation; revenue comes from
+  settled scans and evidence-review upgrades. Raw corpus and caller data stay
+  protected.
+
+env_vars:
+  - "SECURITY_PREFLIGHT_SIGNING_KEY_PKCS8_B64"
+  - "PUBLIC_BASE"
+
+capabilities:
+  inputs:
+    - "agent_id"
+    - "manifest"
+    - "policy"
+    - "sample_inputs"
+  outputs:
+    - "security_verdict"
+    - "input_redacted_evidence"
+    - "signed_viridis_security_receipt_v1"
+
+claim_boundary: |
+  Covers only buyer-supplied static artifacts. Does not fetch or test a
+  deployed runtime and does not certify an agent as secure, vulnerability-free,
+  or independently audited.
+
+invariants:
+  - "Raw caller manifests, policies, and samples are never persisted or echoed"
+  - "No deployed endpoint is fetched or executed"
+  - "No receipt is issued unless the Ed25519 signer is configured and valid"
+  - "Market import is explicit; payment never implies profile ownership or consent"
+  - "Common-control evidence is labeled related-party, never independent proof"

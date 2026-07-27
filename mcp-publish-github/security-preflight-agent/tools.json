@@ -1,0 +1,56 @@
+{
+  "server": "security-preflight-agent",
+  "tool_count": 3,
+  "tools": [
+    {
+      "name": "security_preflight",
+      "description": "Run a $1 static Security Preflight and return a signed receipt. New x402 payer wallets may receive the fleet-wide $0.01 introductory call. No deployed endpoint is fetched or tested. Importing the receipt into an Agent Market profile is a separate, explicit action.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {"type": "string"},
+          "manifest": {"type": "object", "additionalProperties": true},
+          "policy": {
+            "type": ["object", "null"],
+            "additionalProperties": true,
+            "default": null
+          },
+          "sample_inputs": {
+            "type": ["array", "null"],
+            "items": {"type": "string"},
+            "default": null
+          },
+          "payment_ref": {
+            "type": ["string", "null"],
+            "default": null
+          },
+          "request_id": {
+            "type": ["string", "null"],
+            "default": null
+          }
+        },
+        "required": ["agent_id", "manifest"]
+      }
+    },
+    {
+      "name": "get_security_receipt",
+      "description": "Read a previously issued public, input-redacted receipt.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "receipt_id": {"type": "string"}
+        },
+        "required": ["receipt_id"]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Describe scope, evidence boundary, inputs, and outputs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}
