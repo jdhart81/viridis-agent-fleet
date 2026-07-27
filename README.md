@@ -1,9 +1,10 @@
 # Viridis Agent Fleet — autonomous pay-per-call tools
 
-**Autonomous carbon and compliance agents — x402/USDC on Base, no signup.**
-Five deterministic HTTP tools compose into one buyer workflow: **measure →
-account → disclose → claim → scan**. Every paid route verifies and settles
-before execution and returns structured JSON plus a payment receipt.
+**Autonomous agent services — x402/USDC on Base, no signup.**
+Seven deterministic paid HTTP routes cover the five-step carbon and compliance
+workflow—**measure → account → disclose → claim → scan**—plus multi-agent
+problem solving and MCP security preflight. Every paid route verifies and
+settles before execution and returns structured JSON plus a payment receipt.
 
 The first paid call from a new wallet is currently **$0.01**. Subsequent calls
 use the unchanged list prices below.
@@ -17,10 +18,13 @@ python3 scripts/x402_demo_client.py \
   --route regulatory-radar --max-payment-usdc 0.01
 ```
 
-**Security plane:** Viridis Security remains on its separate runtime and billing
-boundary, while fleet discovery lists its live Injection Detector and Agent
-Market supports signed, expiring security-posture attestations. Coverage
-evidence is never promoted to a "secure" or vulnerability-free claim.
+**Security plane:** Viridis Security's deeper Injection Detector, Canon Scanner,
+and Maxwell Defense remain on their separate runtime and billing boundary. The
+Fleet-hosted Security Preflight adds a $1 deterministic check of buyer-supplied
+MCP manifests, tool schemas, policies, and sample inputs. It returns a signed,
+input-redacted receipt without fetching or certifying the deployed runtime.
+Agent Market imports remain explicit and label Viridis common control rather
+than presenting related-party evidence as independent proof.
 
 | Step | HTTP endpoint | Price | What it does | Chains with |
 |---|---|---:|---|---|
@@ -29,6 +33,8 @@ evidence is never promoted to a "secure" or vulnerability-free claim.
 | Disclose | `/x402/disclosure-compiler/compile_disclosure` | $2.00 | CSRD / IFRS S2 disclosure evidence and gaps | GHG + Tax Credit |
 | Claim | `/x402/taxcredit-engine/calculate_tax_credit` | $2.00 | Auditable 45Q/45V/45Y/48E/45X scenarios | Disclosure + Radar |
 | Scan | `/x402/regulatory-radar/scan_regulations` | $0.25 | Energy and climate requirements, urgency, and dates | Full chain |
+| Orchestrate | `/x402/hive/solve` | $5.00 | Cost-bounded multi-agent solve with cross-review and an audit receipt | Fleet trust + settlement rails |
+| Secure | `/x402/security-preflight/security_preflight` | $1.00 | Static MCP metadata and authority-policy checks with a signed receipt | Agent Market security posture |
 
 ## Try it without spending anything
 
@@ -78,7 +84,7 @@ session does not reload the installed skill.
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
 - [Security policy and private vulnerability reporting](SECURITY.md)
 
-The same five paid skills are available as durable A2A HTTP+JSON tasks using
+The same seven paid skills are available as durable A2A HTTP+JSON tasks using
 the official x402 extension. The seller settles before serving and never
 handles the buyer's private key. The
 [official A2A Python SDK quickstart](docs/integrations/A2A_PYTHON_SDK_QUICKSTART.md)
@@ -88,15 +94,15 @@ quote client cannot sign or pay. For agent buyers, the bounded
 under an expiring network/payee/budget mandate and requires a caller-injected
 signer before any paid request.
 
-Viridis has received three independently initiated Regulatory Radar payments
-from three external wallets: $0.27 total USDC on Base ($0.25 plus two $0.01
-new-wallet calls). No repeat purchase has been confirmed yet. The
-[third-payer receipt](docs/deployment/THIRD_EXTERNAL_PAYER_RECEIPT_2026-07-25.md)
-records the latest evidence and revenue boundary. The next commercial gate is
-a first genuine repeat or a fourth distinct payer. The public repository is the
-callable spec, schemas, contracts, and reference gateway for 25 hosted MCP
-agents plus the federated EnergyAI member. The deterministic cores remain
-private.
+Fleet telemetry currently records four independently initiated external
+payments from four external wallets: $0.28 total USDC on Base. No repeat
+purchase has been confirmed yet. Security Preflight itself has no external
+settlement or revenue. The next commercial gate is its first external paid
+scan, followed by a $99 reviewed developer evidence-pack conversion. The public
+repository is the callable spec, schemas, contracts, and reference gateway for
+28 hosted MCP agents plus federated members. Most deterministic cores remain
+private; Security Preflight is published here so buyers can inspect its exact
+claim and privacy boundary.
 
 By [Viridis LLC](https://viridisconservation.com) — conservation technology.
 
@@ -138,18 +144,20 @@ the fleet's draft carbon-receipt standard.
 
 ## Pay per call with x402
 
-💸 Also payable per call via x402/USDC on Base: five carbon and compliance
-routes indexed in CDP Bazaar, designed to chain
-**measure → account → disclose → claim → scan**. No signup or API key is
-required. Start with the [free dry-run](https://mcp.viridisconservation.com/quickstart),
+💸 Also payable per call via x402/USDC on Base: seven routes, including the
+five carbon and compliance steps designed to chain
+**measure → account → disclose → claim → scan**, Hive orchestration, and
+Security Preflight. No signup or API key is required. Start with the
+[free dry-run](https://mcp.viridisconservation.com/quickstart),
 inspect the [live agent suite](https://mcp.viridisconservation.com/agents), or
 verify the [indexed Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329).
 
 The [demo client](scripts/x402_demo_client.py) supports a ceiling-protected
 single route or the full five-route workflow; `--dry-run` makes no payment.
-Production telemetry confirms two Regulatory Radar settlements from two
-distinct external payers, totaling $0.26 USDC on Base. No repeat purchase or
-MRR has been confirmed. Live health now exposes
+Production telemetry confirms four external settlements from four distinct
+external payers, totaling $0.28 USDC on Base. No repeat purchase or MRR has
+been confirmed. Security Preflight remains at zero external settlements. Live
+health exposes
 `repeat_external_purchases` so the next repeat is machine-verifiable.
 
 ## The economy: identity → trust → escrow → settlement → constitution
@@ -175,6 +183,7 @@ as composable MCP services:
 | **Revenue** | `protogen` | MCP CAD services; bundles with SmartScale (measure → CAD) |
 | **Revenue** | `regulatory-radar` | CSRD/TNFD compliance-as-a-service |
 | **Revenue** | `taxcredit-engine` | Auditable 45Q/45V/45Y/48E/45X scenarios; 100 free calls/day, then $2/call |
+| **Revenue** | `security-preflight` | $1 static MCP metadata and policy scan with a signed, input-redacted receipt |
 | **Research** | `wavefunction-search` | Deterministic wavefunction-search experiment tools |
 | **Enabler** | `narrative-engine` | Grant / investor / policy narrative generation |
 
@@ -200,10 +209,11 @@ agent action, with typed input/output schemas.
 
 ## Status
 
-**LIVE (2026-07-12).** The gateway hosts 18 healthy agents at
-`https://mcp.viridisconservation.com` (`/healthz` = 18 ok). Official Registry
-manifests use the `io.github.jdhart81/*` namespace; the newest revenue service is
-`io.github.jdhart81/taxcredit-engine`. The as-shipped manifests are in `mcp-publish-github/`
+**LIVE (2026-07-27).** The gateway hosts 28 healthy agents at
+`https://mcp.viridisconservation.com`; seven x402/A2A paid routes are active.
+Security Preflight is live at `/security-preflight/mcp` and
+`/x402/security-preflight/security_preflight`. Official Registry manifests use
+the `io.github.jdhart81/*` namespace. The as-shipped manifests are in `mcp-publish-github/`
 (the `mcp-publish/` set holds the branded `earth.viridis` variants for the
 round-1b rebrand + custom domain `mcp.viridis.earth`).
 

@@ -1,5 +1,40 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-27, Viridis Security Preflight pivot — DEPLOYED/ACTIVE] Viridis
+> Security is now a native paid Fleet offering.** Security Preflight performs
+> deterministic static checks over buyer-supplied MCP manifests, tool schemas,
+> policies, and sample inputs, then returns a signed, input-redacted
+> `viridis-security-receipt-v1`. It never fetches or executes the deployed
+> runtime, stores no raw caller input, and does not claim that the target is
+> secure or vulnerability-free.
+>
+> The paid HTTP route is
+> `/x402/security-preflight/security_preflight` at a $1.00 list price with zero
+> free calls; the Fleet's existing one-time new-wallet introduction can quote
+> $0.01. The MCP endpoint is `/security-preflight/mcp`. A receipt can be
+> imported into Agent Market only through a separate explicit action. Signed
+> receipts are exactly-once, expire after 30 days, and Viridis-owned issuer and
+> target profiles are labeled `COMMON_CONTROL_RELATED`, never independent.
+>
+> Local gates passed **1,551 tests / 0 failures / 34/34 suites**, including
+> 119 focused Security/Market tests and 463 gateway tests. An isolated
+> production-host candidate restored copied state, initialized the signer,
+> returned the correct unpaid 402 and pre-payment 400 boundaries, and proved
+> signed receipt import plus replay safety. The 1 GB production host could not
+> repeat the whole suite without OOM, so production validation used the exact
+> locally tested image plus isolated and public smoke gates.
+>
+> Live gateway image
+> `sha256:1251bbedb89a41ebfb7c438324dd513ca81309b371b3425aa39865cfdf7a8e92`
+> and Agent Market image
+> `sha256:cfbde1943466d5949290f550bbd2d8464ee09f56dfb89005057831838a4a48ec`
+> are healthy. Public health reports 28 agents, seven paid routes, signer
+> ready, no mount errors, and 12 market profiles. No paid smoke, outreach, or
+> self-settlement was generated. Pre/post telemetry remains four external
+> settlements and 280,000 atomic USDC ($0.28) across the Fleet;
+> **Security Preflight revenue remains $0**. Full receipt:
+> `docs/deployment/SECURITY_PREFLIGHT_RELEASE_2026-07-27.md`.
+
 > **[2026-07-25, Agent Hive Orchestrator — LIVE/PUBLIC/REGISTRY] The fleet's
 > first native multi-agent customer is live at `/hive/mcp`.** It hires three
 > OpenAI-backed workers through the exact shared trust, covenant, escrow,
