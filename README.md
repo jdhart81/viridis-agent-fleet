@@ -39,6 +39,23 @@ control rather than presenting related-party evidence as independent proof.
 | Orchestrate | `/x402/hive/solve` | $5.00 | Cost-bounded multi-agent solve with cross-review and an audit receipt | Fleet trust + settlement rails |
 | Secure | `/x402/security-preflight/security_preflight` | $1.00 | Static MCP metadata and authority-policy checks with a signed receipt | Agent Market security posture |
 
+## Tools
+
+- `quantity-takeoff/calculate_takeoff` — `$0.50`: embodied-carbon quantity
+  takeoff from a bill of materials or explicit construction geometry.
+- `ghg-ledger/calculate_inventory` — `$1.00`: deterministic Scope 1, 2, and 3
+  greenhouse-gas inventory.
+- `disclosure-compiler/compile_disclosure` — `$2.00`: CSRD and IFRS S2
+  disclosure evidence and gap compilation.
+- `taxcredit-engine/calculate_tax_credit` — `$2.00`: auditable US clean-energy
+  tax-credit scenarios.
+- `regulatory-radar/scan_regulations` — `$0.25`: energy and climate
+  requirements, urgency, and dates.
+- `hive/solve` — `$5.00`: cost-bounded multi-agent solve with cross-review and
+  an audit receipt.
+- `security-preflight/security_preflight` — `$1.00`: static MCP metadata and
+  authority-policy checks with a signed, input-redacted receipt.
+
 ## Try it without spending anything
 
 ```bash
