@@ -56,6 +56,11 @@ control rather than presenting related-party evidence as independent proof.
 - `security-preflight/security_preflight` — `$1.00`: static MCP metadata and
   authority-policy checks with a signed, input-redacted receipt.
 
+The [Security Preflight quickstart](docs/SECURITY_PREFLIGHT_QUICKSTART.md)
+includes a valid sample manifest, a no-spend HTTP 402 inspection, MCP client
+configuration, the receipt boundary, and the optional Agent Market binding
+flow.
+
 ## Try it without spending anything
 
 ```bash
@@ -99,6 +104,8 @@ session does not reload the installed skill.
 - [Machine-readable x402 catalog](https://mcp.viridisconservation.com/x402/catalog)
 - [Machine-readable Agent Skills index](https://mcp.viridisconservation.com/.well-known/skills/index.json)
 - [Domain-published buyer skill](https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools/SKILL.md)
+- [Security Preflight quickstart](docs/SECURITY_PREFLIGHT_QUICKSTART.md)
+- [Official MCP Registry entry](https://registry.modelcontextprotocol.io/v0/servers?search=security-preflight&limit=100)
 - [Coinbase Bazaar semantic search](https://api.cdp.coinbase.com/platform/v2/x402/discovery/search?query=energy%20climate%20compliance%20regulation&limit=5)
 - [A2A 1.0 Agent Card](https://mcp.viridisconservation.com/.well-known/agent-card.json)
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
