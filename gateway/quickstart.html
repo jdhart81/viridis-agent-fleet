@@ -26,33 +26,54 @@
   <pre><code>curl -i -X POST \
   https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations \
   -H 'content-type: application/json' \
-  -d '{"jurisdiction":"US","sector":"energy"}'</code></pre>
-  <p>The response is HTTP 402 with a <code>PAYMENT-REQUIRED</code> header containing the exact Base-mainnet USDC amount, asset, receiver, resource, and Bazaar metadata.</p></section>
+  -d '{"jurisdiction":"US","sector":"energy","query":"45V clean energy tax credit emissions disclosure"}'</code></pre>
+  <p>The response is HTTP 402 with a <code>PAYMENT-REQUIRED</code> header containing the exact Base-mainnet USDC amount, asset, receiver, resource, and Bazaar metadata. In the live v2 flow, the buyer retries with <code>PAYMENT-SIGNATURE</code> and a successful settlement returns <code>PAYMENT-RESPONSE</code>. <code>X-PAYMENT</code> and <code>X-PAYMENT-RESPONSE</code> are legacy v1 header names, not the live v2 contract.</p>
+  <p class="note"><code>X402-Payer-Address</code> is only an unsigned quote hint used to show the correct new-wallet price. It never authorizes a payment; the signed v2 payload is authoritative.</p></section>
 
   <section><h2>2 — Pay with the official Python client</h2>
   <pre><code>python3 -m pip install "x402[requests,evm]==2.16.0"
 
+import os
 from eth_account import Account
-from x402 import x402ClientSync
+from x402 import max_amount, x402ClientSync
 from x402.http.clients import x402_requests
 from x402.mechanisms.evm.exact import ExactEvmScheme
 
 account = Account.from_key(os.environ["X402_BUYER_PRIVATE_KEY"])
 client = x402ClientSync()
 client.register("eip155:*", ExactEvmScheme(account))
+client.register_policy(max_amount(10_000))  # never sign above $0.01
 session = x402_requests(client)
 session.headers["X402-Payer-Address"] = account.address
 result = session.post(
     "https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations",
-    json={"jurisdiction": "US", "sector": "energy"},
+    json={
+        "jurisdiction": "US",
+        "sector": "energy",
+        "query": "45V clean energy tax credit emissions disclosure",
+    },
 )
 result.raise_for_status()
 print(result.json())</code></pre>
-  <p><a class="cta" href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/x402_demo_client.py">Run the complete five-route demo</a></p>
+  <p><a class="cta" href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/x402_demo_client.py">Make one ceiling-protected paid call</a></p>
   <pre><code>git clone https://github.com/jdhart81/viridis-agent-fleet.git
 cd viridis-agent-fleet
-python3 scripts/x402_demo_client.py --dry-run</code></pre>
-  <p>The <code>--dry-run</code> path is free: it inspects all five live 402 challenges and composes the workflow without signing or settling a payment.</p></section>
+python3 -m pip install "x402[requests,evm]==2.16.0"
+export X402_BUYER_PRIVATE_KEY='0x...'
+python3 scripts/x402_demo_client.py \
+  --route regulatory-radar --max-payment-usdc 0.01</code></pre>
+  <p>The route selector makes exactly one paid attempt. The payment ceiling is enforced again inside the SDK when it creates the signed retry; if the live quote is above $0.01, the client stops without paying. Use <code>python3 scripts/x402_demo_client.py --dry-run</code> to inspect all five routes for free.</p></section>
+
+  <section id="hermes"><h2>Hermes Agent — connect remotely, buy from Viridis</h2>
+  <p>Hermes stays on the buyer's machine. Viridis does not install or operate it. Add the public Agent Market MCP, then use the buyer skill for route selection, caller-owned signing, one-attempt settlement, and receipt checks.</p>
+  <pre><code>hermes mcp add viridis-market \
+  --url https://mcp.viridisconservation.com/network/mcp
+hermes mcp test viridis-market
+
+hermes skills install \
+  https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/integrations/viridis-paid-tools/SKILL.md \
+  --name viridis-paid-tools</code></pre>
+  <p>Public market reads are keyless. The skill contains no wallet credential and never sends a private key to Viridis. <a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/integrations/HERMES_BUYER_QUICKSTART.md">Open the complete Hermes buyer guide</a>.</p></section>
 
   <section><h2>Use A2A or route an outside purchase</h2><p>A2A 1.0 clients can discover the same five paid skills at <a href="/.well-known/agent-card.json"><code>/.well-known/agent-card.json</code></a> and submit durable x402 payment tasks to <code>/a2a/message:send</code>. Agent buyers comparing Viridis with other sellers can use the <a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/scripts/viridis_market_router.py">bounded market-router SDK</a>: it enforces an expiring budget/payee/network mandate and will not pay without a caller-owned signer.</p></section>
   <section><h2>Discover the live merchant</h2><p>All five routes are settlement-indexed in CDP Bazaar. <a href="https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329">Open the Viridis Bazaar merchant inventory</a>.</p></section>

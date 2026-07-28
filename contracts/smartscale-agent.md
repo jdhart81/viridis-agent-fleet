@@ -1,57 +1,62 @@
-# smartscale-agent — Agent Context
-## Harness Compliance: Playbook v1.1
+# SmartScale Agent Contract
 
-## Project
-Credit-card calibrated measurement revenue agent for Viridis LLC: MCP/FastAPI tools that let users add a standard credit card to a photo, then scale target objects from that known reference.
+Version: `0.9.4`  
+Status: conditional deterministic beta  
+Endpoint: `https://mcp.viridisconservation.com/smartscale/mcp`
 
-**Pillar:** revenue  
-**Status:** near-deploy  
-**Permission Tier:** Tier 1 (write-enabled) — promote to Tier 2 only with explicit justification  
-**Revenue Model:** Strong near-term Viridis LLC money-making opportunity: self-serve measurement plugin/API ($99-$299/mo), SMB workflow packages ($500-$2,000/mo), and custom operations consulting ($3K-$8K/mo). Target first paid pilot within 30 days, then $5K-$20K MRR within 12 months.
+## What the service does
 
-This agent operates under the Universal Agent Harness Playbook v1.1 (Viridis LLC).
-All ten hard invariants (§1) apply without exception.
+SmartScale deterministically converts caller-supplied pixel geometry to
+millimetres using the standard CR80 width of 85.60 mm.
 
-## Invariants
-- I-1: All tool results are message content, never system prompt mutations (Harness §I-1)
-- I-2: Permission tier is frozen at session init — no runtime escalation (Harness §I-3)
-- I-3: Every file write is journaled with SHA256 before/after hashes (Harness §I-5)
-- I-4: Budget checks run before every action, not after (Harness §I-4)
-- I-5: Spec invariance protocol: restate → flag → verify for every non-trivial task (Harness §I-10)
+The caller supplies:
 
-## Directory Map
-- `src/`         → main source — read and write
-- `adapters/`    → model provider adapters — read and write
-- `tests/`       → test files — write only to add tests
-- `agent.yaml`   → agent manifest — read only (modify via version bump process)
+- a caller-defined source identifier;
+- CR80 card pixel width;
+- optional CR80 card pixel height;
+- 1–200 coplanar object pixel boxes; and
+- an optional retry-safe `request_id`.
 
-## Forbidden Operations
-- Never write credentials, API keys, or secrets to any file (use env vars exclusively)
-- Never delete files — use write_file to empty if needed
-- Never modify agent.yaml without a version bump
-- Never commit code without running the test suite
+The service returns scaled 2D dimensions, explicit assumptions, and
+distortion warning/refusal semantics.
 
-## Output Contract
-- All structured outputs MUST be valid JSON matching the agent's declared output schema
-- Error responses MUST use the harness error taxonomy (§11): PermissionError, ValidationError, BudgetError, ContextError, BackendError, RuntimeError
-- All outputs MUST include session_id and budget_consumed metadata
-- Spec invariance: every non-trivial output includes a verification report against stated invariants
+## What the service does not do
 
-## Domain Terminology
-- **Intelligence Bound:** dI/dt ≤ P·D/(k_B·T·ln 2) — the thermodynamic ceiling on information processing
-- **D-Score:** Biodiversity density metric normalized to [0, 1]
-- **HDFM:** Hierarchical Dendritic Forest Management — graph-theoretic corridor design
-- **Pillar:** Agent classification (revenue / climate-intelligence / high-ceiling / infrastructure)
-- **Spec Invariance:** Restate requirements as testable invariants before implementation
+The public MCP does not receive images, detect the reference card, locate
+objects, infer depth, or provide calibrated measurement confidence. It is not
+legal metrology, safety certification, or a fabrication-tolerance guarantee.
 
-## Authorized External Endpoints
-- `supabase`
-- `stripe`
-- `aws-s3`
-- `opencv`
+A human picker, UI, or upstream vision system must supply the pixel geometry.
 
-## Budget Profile
-See Harness Playbook §8.3 for class-specific defaults. Override in agent.yaml or session config.
+## Billing and retry contract
 
----
-*Generated 2026-04-03 — Harness Playbook v1.1 compliance sweep*
+The first ten state-changing calls per caller per UTC day are free, subject to
+the documented aggregate anonymous-pool cap. Additional calls cost $0.50.
+
+When `request_id` is supplied:
+
+- the key is scoped to the server-derived caller identity;
+- the same key and logical input return the original persisted result;
+- replay consumes no second quota, credit, subscription unit, escrow, x402
+  settlement, or metering event; and
+- reusing a key for different logical input fails closed.
+
+`describe` and `health` are always read-only and unmetered.
+
+## Input guards
+
+- every number must be finite;
+- dimension values must be between `1e-3` and `1e7` pixels;
+- at most 200 objects are accepted;
+- labels are at most 128 characters;
+- supplied confidence is treated only as upstream `input_confidence`;
+- reference aspect disagreement above 8% warns; and
+- disagreement above 15% refuses without dimensions.
+
+## Commercial status
+
+The payment rail is mechanically implemented. Commercial validation remains
+absent until an external paid SmartScale call is independently verified.
+
+Do not claim automatic image measurement or real-photo accuracy. Do not claim
+revenue based on a live endpoint, free calls, or internal tests.

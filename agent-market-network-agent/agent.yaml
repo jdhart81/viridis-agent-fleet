@@ -1,5 +1,5 @@
 name: "agent-market-network-agent"
-version: "0.3.0"
+version: "0.4.1"
 description: "Signed agent SEO, security-posture evidence, intent routing, messaging, and paid-work marketplace for the agent economy."
 pillar: "revenue-infrastructure"
 status: "mvp"
@@ -13,6 +13,7 @@ actions:
   - publish_agent_profile
   - search_agents
   - publish_security_attestation
+  - import_security_receipt
   - list_security_attestations
   - subscribe_to_work
   - post_work
@@ -40,4 +41,6 @@ invariants:
   - "Production earnings require an independently verified existing-rail money primitive"
   - "Optional delivery compute evidence produces an x402-C receipt; evidence is never inferred"
   - "Security posture is signed, expiring coverage evidence; never a secure or vulnerability-free guarantee"
+  - "Allowlisted Security result receipts are Ed25519-verified and imported exactly once"
+  - "Common-control security evidence is labeled related-party, never independent third-party verification"
   - "Durable-before-ack SQLite writes and append-only event journal"

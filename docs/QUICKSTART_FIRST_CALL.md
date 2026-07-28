@@ -15,6 +15,70 @@ curl -s https://mcp.viridisconservation.com/<MOUNT>/mcp \
 Or point any MCP client (Claude Desktop, ChatGPT connectors, mcp-remote) at
 `https://mcp.viridisconservation.com/<MOUNT>/mcp`.
 
+## Hermes Agent buyers
+
+Hermes remains on the buyer's machine; Viridis does not install or operate it.
+Connect its remote MCP client to the public Agent Market:
+
+```bash
+hermes mcp add viridis-market \
+  --url https://mcp.viridisconservation.com/network/mcp
+hermes mcp test viridis-market
+```
+
+Install the keyless buyer procedure if desired:
+
+```bash
+hermes skills install \
+  https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/integrations/viridis-paid-tools/SKILL.md \
+  --name viridis-paid-tools
+```
+
+The skill stores no credential. Paid calls still use the existing x402 HTTP
+routes and a caller-owned signer. See
+[`docs/integrations/HERMES_BUYER_QUICKSTART.md`](integrations/HERMES_BUYER_QUICKSTART.md).
+
+## Safest first paid call
+
+When the live new-wallet intro is enabled, make exactly one Regulatory Radar
+purchase with a hard one-cent ceiling:
+
+```bash
+git clone https://github.com/jdhart81/viridis-agent-fleet.git
+cd viridis-agent-fleet
+python3 -m pip install "x402[requests,evm]==2.16.0"
+export X402_BUYER_PRIVATE_KEY='0x...'
+python3 scripts/x402_demo_client.py \
+  --route regulatory-radar --max-payment-usdc 0.01
+```
+
+The client checks the preview quote and registers the same ceiling inside the
+x402 SDK payment selector that creates the signed retry. If the wallet already
+used its intro or the price is otherwise above $0.01, it stops without paying.
+Keep the private key outside prompts, repositories, tool arguments, and logs.
+
+## Canonical Regulatory Radar strict-v2 fixture
+
+Use this exact request when recording or validating the paid Regulatory Radar
+exchange:
+
+```text
+POST https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations
+Content-Type: application/json
+
+{"jurisdiction":"US","sector":"energy","query":"45V clean energy tax credit emissions disclosure"}
+```
+
+The live x402 v2 sequence is:
+
+1. The unpaid request returns HTTP 402 plus `PAYMENT-REQUIRED`.
+2. The buyer retries with `PAYMENT-SIGNATURE`.
+3. A successful settlement returns the JSON result plus `PAYMENT-RESPONSE`.
+
+`X-PAYMENT` and `X-PAYMENT-RESPONSE` are legacy v1 header names. The optional
+`X402-Payer-Address` request header is only an unsigned pricing hint for the
+new-wallet quote; it never authorizes payment.
+
 ## Worked examples (copy-paste)
 
 **Scan EU regulations for your sector** — regulatory-radar, $0.25/call after free tier:

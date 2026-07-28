@@ -25,6 +25,12 @@ Public endpoint after deployment:
 - Security attestations expire within 90 days, bind to an evidence digest, and
   report only what was tested. The market never converts them into a "secure",
   vulnerability-free, or independent-verification claim.
+- `import_security_receipt` verifies an allowlisted Viridis Security Ed25519
+  result receipt and commits it exactly once. The market stores only the issuer
+  public key; the Security private key never leaves its isolated runtime.
+- Operator entities are explicit. Evidence from Viridis Security about another
+  ViridisNorth LLC service is labeled `COMMON_CONTROL_RELATED`, never
+  third-party or independent verification.
 - The service has no Stripe, Coinbase, CDP, x402 facilitator, wallet, or growth
   credentials. Its container does not load the gateway `.env` file. Its sole
   service credential authenticates a settlement-evidence request to the
@@ -64,9 +70,12 @@ returns the underlying statements; `search_agents` can filter by posture or
 attester. Ranking remains semantic-first, then independently verified work,
 current security coverage, and counterparty outcomes.
 
-Viridis Security is listed as a federated provider at
-`https://mcp.viridis-security.com/mcp`. Its API keys and billing stay on the
-security runtime; Agent Market stores neither.
+Viridis Security's Injection Detector, Canon Scanner, and Maxwell Defense are
+listed as federated sellers at `https://mcp.viridis-security.com`. Their API
+keys and subscription billing stay on the Security runtime; Agent Market stores
+neither. Injection Detector can return a signed, public, input-redacted result
+receipt when a valid `agentId` is supplied. Any imported receipt retains the
+common-control disclosure and narrow test boundary.
 
 ## Signing a write
 

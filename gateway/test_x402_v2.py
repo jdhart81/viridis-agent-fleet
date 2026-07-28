@@ -20,7 +20,11 @@ from state_store import StateStore                           # noqa: E402
 
 
 TEST_TOOLS = {("regulatory-radar", "scan_regulations"): "scan"}
-TEST_ARGS = {"jurisdiction": "EU", "sector": "energy"}
+TEST_ARGS = {
+    "jurisdiction": "US",
+    "sector": "energy",
+    "query": "45V clean energy tax credit emissions disclosure",
+}
 V1_RAIL_SHA256 = "ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770"
 
 
@@ -99,7 +103,8 @@ def build(tmp_path, core=None, agent="regulatory-radar",
     store = StateStore(str(tmp_path / "state.db"))
     core = core or DummyCore()
     registry = {(agent, tool): x402_http.X402_HTTP_TOOLS.get(
-        (agent, tool), TEST_TOOLS.get((agent, tool)))}
+        (agent, tool), x402_http.AGENT402_HTTP_TOOLS.get(
+            (agent, tool), TEST_TOOLS.get((agent, tool))))}
     handler = x402_http.make_x402_http_route(
         {agent: core}, store, "https://mcp.test", tools=registry)
     return handler, core, store
@@ -175,6 +180,15 @@ def test_X2_2_mainnet_402_shape_and_usd_coin_domain(tmp_path, monkeypatch):
         "/x402/regulatory-radar/scan_regulations")
 
 
+def test_regulatory_radar_fixture_contract_is_publicly_exact():
+    metadata = x402_http.X402_HTTP_METADATA[
+        ("regulatory-radar", "scan_regulations")]
+    assert metadata["input_example"] == TEST_ARGS
+    assert metadata["input_schema"]["additionalProperties"] is False
+    assert set(metadata["input_schema"]["properties"]) == {
+        "jurisdiction", "sector", "query"}
+
+
 def test_X2_2_sepolia_retains_usdc_domain(monkeypatch):
     arm(monkeypatch)
     cfg = x402_v2._cfg()
@@ -212,6 +226,32 @@ def test_wave9_new_wallet_is_quoted_10000_atomic(tmp_path, monkeypatch):
     status = x402_http.intro_status({})
     assert status["enabled"] is True
     assert status["schedule"]["version"] == "x402-intro-v1"
+
+
+def test_agent402_alias_stays_at_list_price_when_intro_is_enabled(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "1")
+    handler, _, _ = build(
+        tmp_path, tool="scan_regulations_agent402")
+    challenge = go(handler, FakeRequest(
+        tool="scan_regulations_agent402",
+        headers={"x402-payer-address": "0xNewBuyer"}))
+    required = decode_header(challenge, x402_v2.PAYMENT_REQUIRED_HEADER)
+    assert body_of(challenge) == required
+    assert required["accepts"][0]["amount"] == "250000"
+    resource = required["resource"]
+    assert resource["url"].endswith(
+        "/x402/regulatory-radar/scan_regulations_agent402")
+    assert resource["serviceName"] == "Viridis Regulatory Radar"
+    assert len(resource["serviceName"]) <= 32
+    assert resource["serviceName"].isascii()
+    assert resource["category"] == "Search"
+    assert resource["tags"] == [
+        "climate", "energy", "compliance", "regulation", "CSRD"]
+    bazaar = required["extensions"]["bazaar"]
+    assert bazaar["info"]["input"]["body"] == TEST_ARGS
+    assert bazaar["info"]["output"]
 
 
 def test_wave9_intro_settle_marks_seen_then_quotes_full_price(

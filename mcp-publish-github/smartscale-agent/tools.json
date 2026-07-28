@@ -4,66 +4,117 @@
   "tools": [
     {
       "name": "credit_card_photo_instructions",
-      "description": "Return user-facing capture instructions for credit-card calibrated measurement.\n\nUse this before asking for a photo. The user should place a standard\ncredit/debit card flat in the same plane as the target objects.",
+      "description": "Return safe capture guidance for upstream CR80 pixel picking.\n\nThe image stays with the caller or upstream vision system; SmartScale only\nreceives numeric pixel geometry.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "measurement_goal": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Measurement Goal",
+            "type": "string"
           },
           "objects_to_measure": {
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Objects To Measure"
           }
         },
-        "required": []
+        "title": "credit_card_photo_instructionsArguments",
+        "type": "object"
       }
     },
     {
       "name": "scale_objects_from_credit_card",
-      "description": "Scale object pixel dimensions using a standard CR80 credit card reference.\n\nArgs:\n    image_id: Unique photo identifier.\n    credit_card_pixel_width: Pixel width of the visible credit/debit card.\n    objects: Objects to scale. Each object needs pixel_width and pixel_height;\n        label, pixel_area, pixel_perimeter, and confidence are optional.\n    credit_card_pixel_height: Optional card pixel height for distortion check.",
+      "description": "Scale object pixel dimensions using a standard CR80 credit card reference.\n\nArgs:\n    image_id: Caller-defined source identifier; no image is uploaded.\n    credit_card_pixel_width: Caller-supplied pixel width of a CR80-size card.\n    objects: Objects to scale. Each object needs pixel_width and pixel_height;\n        label, pixel_area, pixel_perimeter, and input confidence are optional.\n    credit_card_pixel_height: Optional caller-supplied height for distortion check.\n    payment_ref: Optional paid escrow reference consumed by the gateway.\n    request_id: Optional retry-safe idempotency key (maximum 128 characters).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "image_id": {
+            "title": "Image Id",
             "type": "string"
           },
           "credit_card_pixel_width": {
+            "title": "Credit Card Pixel Width",
             "type": "number"
           },
           "objects": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Objects",
             "type": "array"
           },
           "credit_card_pixel_height": {
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Credit Card Pixel Height"
           },
           "payment_ref": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
           "image_id",
           "credit_card_pixel_width",
           "objects"
-        ]
+        ],
+        "title": "scale_objects_from_credit_cardArguments",
+        "type": "object"
       }
     },
     {
       "name": "describe",
       "description": "Return SmartScale capabilities and input contract.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describeArguments",
+        "type": "object"
       }
     },
     {
       "name": "health",
       "description": "Return SmartScale health status.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "healthArguments",
+        "type": "object"
       }
     }
   ]

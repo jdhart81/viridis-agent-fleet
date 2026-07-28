@@ -164,11 +164,11 @@ AGENT_SEO = {
                     "Match my intention to aligned agents",
                     "Register my collective for agent matchmaking"]},
     "smartscale": {
-        "desc": "Credit-card-calibrated visual measurement — extract real-world object dimensions from a photo using a reference object. 10 free calls/day, then $0.50/call (credit packs via redeem_payment, or x402).",
-        "queries": ["Measure the dimensions of an object from a photo",
-                    "Estimate real-world size using a credit-card reference",
-                    "Extract measurements from an image",
-                    "Cheap pay-per-call measurement API for agents"]},
+        "desc": "Deterministic CR80 pixel-geometry scaling for non-safety-critical coplanar 2D measurements. Callers supply the card and object pixel geometry; SmartScale does not receive images or detect objects. 10 free calls/day, then $0.50/call (credit packs via redeem_payment, or x402).",
+        "queries": ["Convert CR80-calibrated pixel dimensions to millimetres",
+                    "Scale caller-supplied coplanar object pixel boxes",
+                    "Check supplied CR80 width/height geometry for distortion",
+                    "Retry-safe pay-per-call pixel geometry scaling for agents"]},
     "protogen": {
         "desc": "MCP CAD services — turn a spec or a measurement into a parametric CAD design; bundles with SmartScale (measure to CAD). 10 free calls/day, then $1.00/call (credit packs via redeem_payment, or x402).",
         "queries": ["Generate a CAD design from a spec",
@@ -298,13 +298,14 @@ EXTERNAL_MEMBERS = [
             "for tool-policy violations. Results are evidence-bounded verdicts and "
             "recommended actions, not a vulnerability-free guarantee. Discovery is "
             "public; tool calls require a Viridis Security API key, with a 1,000-call "
-            "monthly free tier."),
+            "monthly free tier. Calls naming a market agent can return a signed, "
+            "input-redacted result receipt for exactly-once market import."),
         "capabilities": ["detect_injection", "detect_trace_tool_policy"],
         "representativeQueries": [
             "Screen this untrusted text for prompt injection before my agent reads it",
             "Check whether this agent trace violated the user-approved tool policy",
             "Add an MCP security guardrail to an autonomous agent"],
-        "version": "0.1.0",
+        "version": "0.2.0",
         "infra": "Viridis Security runtime + mcp.viridis-security.com",
         "category": "security-plane",
         "role": "security-posture-provider",
@@ -313,10 +314,71 @@ EXTERNAL_MEMBERS = [
         "tags": ["security", "agent-security", "mcp-security"],
         "metadata": {
             "securityPlane": True,
+            "operatorEntity": "ViridisNorth LLC",
+            "ownershipDisclosure": "Common control with Viridis fleet; related-party evidence, not independent verification.",
             "officialRegistryName": "io.github.viridis-security/injection-detector",
             "claimBoundary": (
                 "Detection coverage is not a secure or vulnerability-free guarantee."),
         },
+    },
+    {
+        "identifier": "urn:air:viridis:security-canon-scanner",
+        "displayName": "Viridis Security Canon Scanner",
+        "url": "https://mcp.viridis-security.com/v1/canon/scan",
+        "description": (
+            "Source-code security scanning for AI agents against the Viridis "
+            "vulnerability canon, with bounded findings and remediation guidance. "
+            "Calls use the separate Viridis Security API-key subscription runtime; "
+            "the fleet never receives those credentials."),
+        "capabilities": ["canon_scan", "source_code_security"],
+        "representativeQueries": [
+            "Scan this agent source for known MCP vulnerabilities",
+            "Check an AI agent implementation against a vulnerability canon",
+            "Find unsafe tool and network patterns in this agent code"],
+        "version": "0.1.0",
+        "infra": "Viridis Security runtime + mcp.viridis-security.com",
+        "category": "security-plane",
+        "role": "security-analysis-provider",
+        "auth": "Bearer API key",
+        "signup": "https://mcp.viridis-security.com/signup",
+        "tags": ["security", "agent-code-security", "mcp-security"],
+        "metadata": {
+            "securityPlane": True,
+            "operatorEntity": "ViridisNorth LLC",
+            "ownershipDisclosure": "Common control with Viridis fleet; related-party evidence, not independent verification.",
+            "claimBoundary": (
+                "Findings cover only supplied source; no vulnerability-free guarantee."),
+        },
+        "probe": "authenticated-rest",
+    },
+    {
+        "identifier": "urn:air:viridis:security-maxwell",
+        "displayName": "Viridis Security Maxwell Defense",
+        "url": "https://mcp.viridis-security.com/v1/maxwell/challenge",
+        "description": (
+            "Adaptive proof-of-work defense for AI-agent endpoints that makes "
+            "abusive requests expensive while legitimate verification stays cheap. "
+            "Available on Viridis Security Growth and higher plans."),
+        "capabilities": ["issue_challenge", "verify_challenge", "bind_receipt"],
+        "representativeQueries": [
+            "Protect my AI agent endpoint from automated abuse",
+            "Issue a proof-of-work challenge for a suspicious agent request",
+            "Add asymmetric denial-of-service defense to an MCP service"],
+        "version": "0.1.0",
+        "infra": "Viridis Security runtime + mcp.viridis-security.com",
+        "category": "security-plane",
+        "role": "runtime-defense-provider",
+        "auth": "Bearer API key (Growth+)",
+        "signup": "https://mcp.viridis-security.com/signup",
+        "tags": ["security", "agent-abuse-defense", "proof-of-work"],
+        "metadata": {
+            "securityPlane": True,
+            "operatorEntity": "ViridisNorth LLC",
+            "ownershipDisclosure": "Common control with Viridis fleet; related-party service, not independent verification.",
+            "claimBoundary": (
+                "Defense raises adversarial request cost; it is not an availability guarantee."),
+        },
+        "probe": "authenticated-rest",
     },
 ]
 
@@ -1522,6 +1584,7 @@ def build_app():
         tools/list. Isolated: a federated outage NEVER degrades the core
         gateway status (they run their own P&L and uptime)."""
         import asyncio
+        import urllib.error
         import urllib.request
         url = member["url"]
         caps = member.get("capabilities", [])
@@ -1546,6 +1609,15 @@ def build_app():
             base["status"] = "ok" if live else "degraded"
             if tools:
                 base["checks"]["tools"] = tools
+        except urllib.error.HTTPError as e:
+            if (member.get("probe") == "authenticated-rest"
+                    and e.code in {401, 403}):
+                base["status"] = "ok"
+                base["checks"]["auth_gate"] = "enforced"
+                base["checks"]["http_status"] = e.code
+            else:
+                base["status"] = "unreachable"
+                base["checks"]["error"] = f"{type(e).__name__}"
         except Exception as e:
             base["status"] = "unreachable"
             base["checks"]["error"] = f"{type(e).__name__}"
@@ -1937,6 +2009,10 @@ def build_app():
                             Route("/agents", agents_page),
                             Route("/quickstart", quickstart),
                             Route("/llms.txt", llms_txt),
+                            # Compatibility alias for Viridis discovery links
+                            # already published to agent communities. This is
+                            # not an x402 protocol-mandated well-known schema.
+                            Route("/.well-known/x402", x402_catalog),
                             Route("/x402/catalog", x402_catalog),
                             Route("/deck", deck), Route("/stats", stats),
                             Route("/.well-known/ai-catalog.json", ard_catalog),

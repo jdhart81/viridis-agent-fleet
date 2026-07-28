@@ -1,5 +1,48 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-07-24, x402 validator fixture — DEPLOYED/ACTIVE] Regulatory Radar
+> now publishes one strict, copyable x402 v2 fixture across its live quickstart
+> and Bazaar schema.** The canonical body includes `jurisdiction`, `sector`,
+> and optional `query`; the public guide now states the
+> `PAYMENT-REQUIRED` → `PAYMENT-SIGNATURE` → `PAYMENT-RESPONSE` sequence and
+> marks `X-PAYMENT*` as legacy v1. Operational and public-mirror focused gates
+> are **52 passed / 0 failed each**. The isolated candidate and public route
+> both returned the exact HTTP 402 contract without a signature or payment.
+>
+> Production gateway image
+> `sha256:a4b3c2ee3eea0e25231ee0d5732885bfcec984885db17cc898e288f9f6086335`
+> is healthy; rollback tag
+> `viridis-stable:prev-2026-07-24-x402-fixture` preserves
+> `sha256:ee4f923e36351692b0ab17cf9c5a39bfe1ff09ac898c1ef0fe0cd4b108169e1b`.
+> Caddy, Agent Market, and Growth Agent were not recreated. Settlement truth
+> remains 6 total / 2 external / 2 distinct external payers / $0.26 external
+> revenue, with $0 MRR. Full receipt:
+> `docs/deployment/X402_FIXTURE_CONTRACT_RELEASE_2026-07-24.md`.
+
+> **[2026-07-22, Agent Market funnel repair — DEPLOYED/ACTIVE] Public Agent
+> Market MCP results now pass FastMCP structured-output validation.** Version
+> 0.4.1 corrects the nullable error fields in the common result envelope; the
+> previously broken `network_status`, `search_work`, `get_work`, and
+> `search_agents` calls now return `isError:false` with valid
+> `structuredContent`. A regression exercises the full signed buyer/seller
+> lifecycle through the MCP adapter: publish, post, discover, offer, award,
+> payment plan, deliver, accept, counterparty attest, and independent Hub
+> verification. The market still moves no money itself.
+>
+> Local gates are **1315 passed / 0 failed / 33/33**; the isolated production
+> source tree is **1299 passed / 0 failed / 33/33**; the Agent Market suite is
+> **31 passed** and the direct gateway suite is **384 passed**. Production image
+> `sha256:a56057ccf1262ad7865ce253684ebbaca9a238b67f9cc4f84d06fcb910e9800f`
+> is live; rollback tag `viridis-agent-market-network:prev-2026-07-22-funnel`
+> preserves
+> `sha256:bce50a55e843a12c6b7cfa18272f75615dfcfef8815b0e059e4b9eb22a87b4da`.
+> The frozen x402 v1 SHA remains `ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770`.
+> Persistent market state is unchanged at 10 active profiles, 3 open work
+> records, 25 events, and 0 independently verified jobs; fleet payment
+> telemetry is unchanged at 5 x402 settlements (4 self, 1 external, $0.25
+> external revenue). Full receipt:
+> `docs/deployment/AGENT_MARKET_FUNNEL_REPAIR_2026-07-22.md`.
+
 > **[2026-07-21, Viridis Security plane — DEPLOYED/ACTIVE] Viridis Security is
 > now a federated fleet member and Agent Market security-attestation plane.**
 > Market v0.3.0 adds signed, expiring coverage attestations, security discovery
