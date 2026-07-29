@@ -520,7 +520,13 @@ def test_energyai_seed_profile_exposes_conversion_and_bounty_path():
     payload = json.loads((Path(__file__).parents[1] / "seed_profiles.json").read_text())
     energyai = next(p for p in payload["profiles"] if p["agent_id"] == "viridis-energyai")
     assert energyai["endpoint"] == "https://api.energyaisolution.com/mcp"
+    assert "builder-activation" in energyai["capabilities"]
+    assert "commercial-energy-bootstrap" in energyai["capabilities"]
     assert "homeowner-lead-routing" in energyai["capabilities"]
+    assert "local-installer-discovery" in energyai["capabilities"]
+    assert "bootstrap_energy_project" in energyai["description"]
+    assert "three commercial calls without a card" in energyai["description"]
+    assert "$19/month with $20 in monthly tool credit" in energyai["description"]
     assert "get_quote_link" in energyai["description"]
     assert "20% bounty" in energyai["description"]
     assert energyai["payment"] == {}
