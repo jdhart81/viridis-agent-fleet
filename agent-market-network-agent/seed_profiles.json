@@ -93,9 +93,9 @@
     {
       "agent_id": "viridis-energyai",
       "name": "EnergyAI",
-      "description": "Free energy intelligence and a real homeowner-to-installer conversion rail for AI agents. Check incentives, estimate solar production, score an Energy Node, or return a ready-to-share get_quote_link. An authenticated referring agent keeps signed attribution through the homeowner assessment and earns a 20% bounty when an installer buys the resulting lead.",
-      "capabilities": ["clean-energy-incentives", "energy-node-score", "homeowner-lead-routing", "referral-bounty", "solar-production"],
-      "representative_queries": ["what clean energy incentives apply to this home", "estimate solar production for a homeowner", "get a homeowner a link to request installer quotes"],
+      "description": "EnergyAI v1.0 gives agents eight no-key energy discovery tools plus a real commercial activation path. Check incentives, estimate solar production, score an Energy Node, find publicly-rated local installers with explicit non-endorsement disclosures, or create a tracked quote handoff with get_quote_link. Builder Activation starts with bootstrap_energy_project: three commercial calls without a card, then $19/month with $20 in monthly tool credit. Authenticated referring agents retain signed attribution and can earn a 20% bounty when an installer buys a resulting lead.",
+      "capabilities": ["builder-activation", "clean-energy-incentives", "commercial-energy-bootstrap", "energy-node-score", "homeowner-lead-routing", "local-installer-discovery", "referral-bounty", "solar-production"],
+      "representative_queries": ["activate an agent's first commercial energy workflow", "what clean energy incentives apply to this home", "estimate solar production for a homeowner", "find publicly-rated clean-energy installers near a US ZIP code", "get a homeowner a link to request installer quotes"],
       "endpoint": "https://api.energyaisolution.com/mcp",
       "payment": {}
     },

@@ -278,25 +278,41 @@ EXTERNAL_MEMBERS = [
         "identifier": "urn:air:viridis:energyai",
         "displayName": "EnergyAI",
         "url": "https://api.energyaisolution.com/mcp",
-        "description": ("Energy intelligence for AI agents — worldwide clean-energy incentive "
-                        "guidance, honest-range solar production estimates, home Energy Node "
-                        "Scores, a source-cited US incentive guide library, and a no-consent-"
-                        "required quote-link handoff (get_quote_link) into a real installer "
-                        "match. Free tier is no-key, no-signup; deeper tools (full roadmap, "
-                        "quote review, information-theoretic recommendation) are billed from a "
-                        "prepaid balance."),
-        # 2026-07-19: synced to the live free-tier allowlist (src/services/agentToolSchemas.ts
+        "description": ("Energy intelligence for AI agents — eight no-key discovery tools for "
+                        "worldwide clean-energy incentives, honest-range solar production, "
+                        "Energy Node Scores, source-cited US guides, quote-link handoff, lead "
+                        "routing, and publicly-rated local contractors. Contractor results are "
+                        "public-reputation listings, not endorsements or partnerships. Builder "
+                        "Activation starts with bootstrap_energy_project: three commercial calls "
+                        "without a card, then $19/month with $20 in monthly tool credit."),
+        # 2026-07-29: synced to the live free-tier allowlist (src/services/agentToolSchemas.ts
         # AGENT_TOOL_SCHEMAS) — this list drifts easily since it's a static discovery-catalog
         # copy, not a live proxy; re-check it whenever EnergyAI's free tools change.
         "capabilities": ["check_incentives", "estimate_production", "get_node_score",
-                         "get_quote_link", "route_lead", "list_guides", "get_guide"],
+                         "get_quote_link", "route_lead", "list_guides", "get_guide",
+                         "find_local_installers"],
         "representativeQueries": [
             "What solar incentives and rebates apply to my ZIP code?",
             "Estimate annual solar production for my home",
             "Score my home's energy-node potential and get a roadmap",
-            "Get a homeowner a link to request installer quotes"],
-        "version": "1.1.0",
+            "Get a homeowner a link to request installer quotes",
+            "Activate an agent's first commercial energy workflow"],
+        "version": "1.0.0",
         "infra": "own droplet energyai-prod + energyaisolution.com (Cloudflare/Caddy)",
+        "metadata": {
+            "officialRegistryName": "com.energyaisolution/energyai",
+            "builderActivation": {
+                "offerId": "builder_activation_v1",
+                "firstCommercialTool": "bootstrap_energy_project",
+                "trialCommercialCalls": 3,
+                "cardRequiredForTrial": False,
+                "monthlyPriceUsd": 19,
+                "monthlyCreditUsd": 20,
+            },
+            "claimBoundary": (
+                "Local contractor results use public reputation data and are "
+                "not vetted, endorsed, or partnered listings."),
+        },
     },
     {
         "identifier": "urn:air:viridis:security-injection-detector",
@@ -329,6 +345,29 @@ EXTERNAL_MEMBERS = [
         },
     },
 ]
+
+
+def _mcp_tool_names(text: str):
+    """Parse tool names from an MCP JSON or SSE tools/list response."""
+    candidates = [text]
+    candidates.extend(
+        line[5:].strip()
+        for line in text.splitlines()
+        if line.startswith("data:") and line[5:].strip()
+    )
+    for candidate in candidates:
+        try:
+            payload = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        tools = payload.get("result", {}).get("tools")
+        if isinstance(tools, list):
+            return {
+                item["name"] for item in tools
+                if isinstance(item, dict)
+                and isinstance(item.get("name"), str)
+            }
+    return None
 
 
 def _load_adapter(path: str, agent_dir: str):
@@ -1570,15 +1609,23 @@ def build_app():
                 headers={"content-type": "application/json",
                          "accept": "application/json, text/event-stream"})
             with urllib.request.urlopen(req, timeout=6) as r:  # nosec
-                return r.status, r.read(4096).decode(errors="replace")
+                raw = r.read(262145)
+                if len(raw) > 262144:
+                    raise ValueError("federated MCP response exceeds 256 KiB")
+                return r.status, raw.decode(errors="replace")
         try:
             status, text = await asyncio.wait_for(
                 asyncio.to_thread(_blocking), timeout=8)
-            live = status == 200 and '"tools"' in text
-            tools = text.count('"name"') if live else 0
-            base["status"] = "ok" if live else "degraded"
-            if tools:
-                base["checks"]["tools"] = tools
+            tool_names = _mcp_tool_names(text) if status == 200 else None
+            missing = sorted(set(caps) - (tool_names or set()))
+            base["checks"]["tools"] = len(tool_names or ())
+            base["checks"]["capabilities_present"] = (
+                len(caps) - len(missing))
+            if missing:
+                base["checks"]["missing_capabilities"] = missing
+            base["status"] = (
+                "ok" if tool_names is not None and not missing
+                else "degraded")
         except Exception as e:
             base["status"] = "unreachable"
             base["checks"]["error"] = f"{type(e).__name__}"
