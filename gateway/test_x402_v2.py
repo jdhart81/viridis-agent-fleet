@@ -25,6 +25,16 @@ TEST_ARGS = {
     "sector": "energy",
     "query": "45V clean energy tax credit emissions disclosure",
 }
+HIVE_ARGS = {
+    "problem": "Choose a reviewed industrial energy strategy.",
+    "budget_minor": 500,
+    "subtasks": ["Assess feasibility.", "Assess economics and risk."],
+    "depth": 0,
+    "redundancy": 2,
+    "accept_threshold": 0.6,
+    "seed": 0,
+    "fee_bps": 0,
+}
 V1_RAIL_SHA256 = "ec8bdf03de5394b363627756e8c2c34a72fbf2b40f8af438e513c71c17f9e770"
 
 
@@ -194,6 +204,47 @@ def test_regulatory_radar_fixture_contract_is_publicly_exact():
     ]
 
 
+def test_regulatory_watch_contract_is_bounded_and_truthful():
+    metadata = x402_http.X402_HTTP_METADATA[
+        ("regulatory-radar", "monitor_changes")]
+    assert metadata["input_schema"]["required"] == ["jurisdiction"]
+    assert metadata["input_schema"]["additionalProperties"] is False
+    assert metadata["input_schema"]["properties"]["lookback_days"] == {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 365,
+        "description": (
+            "Window for recently effective requirements behind today and "
+            "compliance deadlines ahead of today"),
+    }
+    assert metadata["input_example"] == {
+        "jurisdiction": "US",
+        "topics": ["emissions", "climate"],
+        "lookback_days": 90,
+    }
+    assert "not a live external regulatory feed" in metadata[
+        "description"].lower()
+
+
+def test_regulatory_watch_valid_input_quotes_list_price(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    handler, core, _ = build(
+        tmp_path, agent="regulatory-radar", tool="monitor_changes")
+    args = x402_http.X402_HTTP_METADATA[
+        ("regulatory-radar", "monitor_changes")]["input_example"]
+
+    challenge = go(handler, FakeRequest(
+        agent="regulatory-radar", tool="monitor_changes", body=args))
+
+    assert challenge.status_code == 402
+    required = decode_header(challenge, x402_v2.PAYMENT_REQUIRED_HEADER)
+    assert required["accepts"][0]["amount"] == "250000"
+    assert required["resource"]["url"].endswith(
+        "/x402/regulatory-radar/monitor_changes")
+    assert core.calls == []
+
+
 def test_v2_rejects_invalid_input_before_quote_payment_or_execution(
         tmp_path, monkeypatch):
     arm(monkeypatch)
@@ -224,12 +275,29 @@ def test_v2_rejects_invalid_input_before_quote_payment_or_execution(
 def test_v2_valid_advertised_input_still_returns_payment_quote(
         tmp_path, monkeypatch):
     arm(monkeypatch)
-    handler, core, _ = build(tmp_path)
+    handler, core, store = build(tmp_path)
 
     challenge = go(handler, FakeRequest(body=TEST_ARGS))
 
     assert challenge.status_code == 402
     assert x402_v2.PAYMENT_REQUIRED_HEADER in challenge.headers
+    assert core.calls == []
+
+
+def test_v2_bodyless_get_refuses_before_quote_payment_or_execution(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = FakeFacilitator()
+    install_fake(monkeypatch, fake)
+    handler, core, _ = build(tmp_path)
+
+    refused = go(handler, FakeRequest(method="GET", query={}))
+
+    assert refused.status_code == 400
+    assert body_of(refused)["error_type"] == "input_validation_error"
+    assert body_of(refused)["payment_required"] is False
+    assert x402_v2.PAYMENT_REQUIRED_HEADER not in refused.headers
+    assert fake.calls == []
     assert core.calls == []
 
 
@@ -331,6 +399,70 @@ def test_agent402_alias_stays_at_list_price_when_intro_is_enabled(
     assert bazaar["info"]["output"]
 
 
+def test_hive_stays_full_price_and_preflights_before_settlement(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "1")
+    fake = FakeFacilitator()
+    install_fake(monkeypatch, fake)
+    core = DummyCore()
+    preflights = []
+    core._paid_preflight = (
+        lambda payload: preflights.append(payload) or None)
+    handler, _, _ = build(
+        tmp_path, core=core, agent="hive", tool="solve")
+    request = FakeRequest(
+        agent="hive", tool="solve", body=HIVE_ARGS,
+        headers={"x402-payer-address": "0xNewBuyer"})
+
+    challenge = go(handler, request)
+    required = decode_header(challenge, x402_v2.PAYMENT_REQUIRED_HEADER)
+    assert challenge.status_code == 402
+    assert required["accepts"][0]["amount"] == "5000000"
+    assert fake.calls == []
+    assert core.calls == []
+
+    paid = go(handler, FakeRequest(
+        agent="hive", tool="solve", body=HIVE_ARGS,
+        headers={"payment-signature": signed_from(
+            challenge, payer="0xNewBuyer")}))
+    assert paid.status_code == 200
+    assert [phase for phase, _ in fake.calls] == ["verify", "settle"]
+    assert core.calls == [{"action": "solve", **HIVE_ARGS}]
+    assert preflights == [
+        {"action": "solve", **HIVE_ARGS},
+        {"action": "solve", **HIVE_ARGS},
+    ]
+    gate = getattr(core, GATE_ATTR)
+    assert x402_http.INTRO_SEEN_KEY not in gate
+    record = next(iter(gate["consumed_x402"].values()))
+    assert record["intro_price_applied"] is False
+    assert record["list_price_minor"] == 500
+
+
+def test_hive_provider_unavailable_before_quote_or_settlement(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = FakeFacilitator()
+    install_fake(monkeypatch, fake)
+    core = DummyCore()
+    core._paid_preflight = lambda _payload: {
+        "status": "error", "error_type": "ServiceUnavailable",
+        "message": "hive solver provider is not configured"}
+    handler, _, store = build(
+        tmp_path, core=core, agent="hive", tool="solve")
+
+    refused = go(handler, FakeRequest(
+        agent="hive", tool="solve", body=HIVE_ARGS))
+
+    assert refused.status_code == 503
+    assert body_of(refused)["payment_required"] is False
+    assert fake.calls == []
+    assert core.calls == []
+    restored = DummyCore()
+    assert store.restore("hive", restored) is False
+
+
 def test_wave9_intro_settle_marks_seen_then_quotes_full_price(
         tmp_path, monkeypatch):
     arm(monkeypatch)
@@ -354,6 +486,104 @@ def test_wave9_intro_settle_marks_seen_then_quotes_full_price(
     second = go(handler, FakeRequest(headers=hint))
     assert decode_header(second, x402_v2.PAYMENT_REQUIRED_HEADER)[
         "accepts"][0]["amount"] == "250000"
+
+
+def test_intro_status_labels_seen_payers_as_non_authoritative_seller_state(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "true")
+    _, core, _ = build(tmp_path)
+    gate = getattr(core, GATE_ATTR)
+    gate[x402_http.INTRO_SEEN_KEY] = {
+        "0xbuyer": {"pricing_schedule_version": "x402-intro-v1"}}
+
+    status = x402_http.intro_status({"regulatory-radar": core})
+
+    assert status["seen_payers"] == 1
+    assert status["seen_payers_evidence"] == {
+        "classification": "seller_reported_pricing_eligibility_state",
+        "independently_verifiable": False,
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+    }
+    assert "not independent buyer or revenue proof" in status["note"]
+
+
+def test_independent_evidence_index_pins_external_fixture_bytes():
+    evidence = x402_http.independent_evidence_index()
+
+    assert evidence == {
+        "classification": "external_fixture_pointer_index",
+        "index_posture": "seller_published_pointer_only",
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+        "verification_required": True,
+        "repository": (
+            "https://github.com/smartflowproai-lang/"
+            "x402-endpoint-validator"),
+        "fixtures": [
+            {
+                "route": "regulatory-radar/scan_regulations",
+                "evidence_posture": (
+                    "unpaid_preflight_current_with_dated_settlement_reference"),
+                "fixture_state": "matched_on_last_comparison",
+                "capture_method": "unpaid_preflight",
+                "captured_at": "2026-07-26T16:47:37+00:00",
+                "supersedes_capture": "2026-07-24",
+                "last_compared_on": "2026-07-26",
+                "matched_on_last_comparison": True,
+                "payment_terms_changed": False,
+                "settled_flow_provenance": {
+                    "current_fixture_is_settlement_receipt": False,
+                    "confirmed_at_merge": (
+                        "0920d50db53cbf59f20052c6c656f17f881c4b41"),
+                    "pull_request": (
+                        "https://github.com/smartflowproai-lang/"
+                        "x402-endpoint-validator/pull/12"),
+                    "payment_terms_byte_identical": True,
+                },
+                "pull_request": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/pull/15"),
+                "merge_commit": (
+                    "811fef6b037cfeb71a890cac97bb822f0efcf03a"),
+                "fixture_path": (
+                    "tests/fixtures/viridis_regulatory_radar.json"),
+                "immutable_url": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/blob/"
+                    "811fef6b037cfeb71a890cac97bb822f0efcf03a/"
+                    "tests/fixtures/viridis_regulatory_radar.json"),
+                "sha256": (
+                    "f667444013029bc98e229b0d3021426d8bf18d13afe3007db419a213d0e290b5"),
+            },
+            {
+                "route": "ghg-ledger/calculate_inventory",
+                "evidence_posture": "unpaid_preflight_only",
+                "fixture_state": "matched_on_last_comparison",
+                "captured_on": "2026-07-26",
+                "last_compared_on": "2026-07-26",
+                "matched_on_last_comparison": True,
+                "payment_terms_changed": False,
+                "pull_request": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/pull/14"),
+                "merge_commit": (
+                    "45b006b42a60562101a43ffc293447793900d095"),
+                "fixture_path": "tests/fixtures/viridis_ghg_ledger.json",
+                "immutable_url": (
+                    "https://github.com/smartflowproai-lang/"
+                    "x402-endpoint-validator/blob/"
+                    "45b006b42a60562101a43ffc293447793900d095/"
+                    "tests/fixtures/viridis_ghg_ledger.json"),
+                "sha256": (
+                    "8cd884c016b19c2131207365e523677a9384b8463fb45eb0ca826a89497b7d40"),
+            },
+        ],
+    }
+    evidence["fixtures"][0]["sha256"] = "forged"
+    assert x402_http.independent_evidence_index()[
+        "fixtures"][0]["sha256"].startswith("f6674440")
 
 
 def test_wave9_intro_external_flips_first_dollar_metrics(
@@ -499,6 +729,7 @@ def test_wave8_routes_have_schema_valid_shape_and_exact_amount(
 
 
 @pytest.mark.parametrize("agent,tool", [
+    ("regulatory-radar", "monitor_changes"),
     ("quantity-takeoff", "calculate_takeoff"),
     ("disclosure-compiler", "compile_disclosure"),
 ])
@@ -524,6 +755,7 @@ def test_wave8_routes_settle_before_serve_and_replay_once(
 
 
 @pytest.mark.parametrize("agent,tool", [
+    ("regulatory-radar", "monitor_changes"),
     ("quantity-takeoff", "calculate_takeoff"),
     ("disclosure-compiler", "compile_disclosure"),
 ])
@@ -586,23 +818,50 @@ def test_X2_4_X2_5_settle_persist_serve_and_replay_refusal(
     arm(monkeypatch)
     fake = FakeFacilitator()
     install_fake(monkeypatch, fake)
-    handler, core, _ = build(tmp_path)
+    handler, core, store = build(tmp_path)
     challenge = go(handler, FakeRequest())
     signature = signed_from(challenge)
     paid = go(handler, FakeRequest(headers={
-        "payment-signature": signature}))
+        "payment-signature": signature,
+        "x-viridis-acquisition-source": "GitHub"}))
     assert paid.status_code == 200
     assert [phase for phase, _ in fake.calls] == ["verify", "settle"]
     assert len(core.calls) == 1
     stored = next(iter(getattr(core, GATE_ATTR)["consumed_x402"].values()))
     assert stored["tx_hash"] == "0xv2settled"
     assert stored["payment_identifier"].startswith("nonce:")
+    assert stored["delivery_status"] == "delivered"
+    delivery = body_of(paid)["viridis_delivery"]
+    assert delivery["version"] == "viridis-paid-delivery-v1"
+    assert delivery["classification"] == "seller_transport_delivery_receipt"
+    assert delivery["route"] == "regulatory-radar/scan_regulations"
+    assert delivery["settlement"]["transaction"] == "0xv2settled"
+    assert delivery["buyer_acceptance"] == "not_observed"
+    assert delivery["usefulness"] == "not_observed"
+    result_without_receipt = body_of(paid)
+    result_without_receipt.pop("viridis_delivery")
+    assert delivery["result_sha256"] == (
+        x402_http._canonical_json_sha256(result_without_receipt))
+    receipt_without_digest = dict(delivery)
+    receipt_without_digest.pop("receipt_sha256")
+    assert delivery["receipt_sha256"] == (
+        x402_http._canonical_json_sha256(receipt_without_digest))
+    assert stored["delivery_receipt"] == delivery
     replay = go(handler, FakeRequest(headers={
         "payment-signature": signature}))
     assert replay.status_code == 402
     assert body_of(replay)["idempotent"] is True
     assert body_of(replay)["transaction"] == "0xv2settled"
     assert len(fake.calls) == 2 and len(core.calls) == 1
+    store.close()
+    restored_store = StateStore(str(tmp_path / "state.db"))
+    restored = DummyCore()
+    assert restored_store.restore("regulatory-radar", restored) is True
+    settlement = x402_http.settlement_metrics({
+        "regulatory-radar": getattr(restored, GATE_ATTR),
+    })["total"]
+    assert settlement["external_paid_results_receipted"] == 1
+    restored_store.close()
 
 
 def test_wave8_self_settlement_is_classified_and_persisted(
@@ -633,7 +892,12 @@ def test_wave8_self_settlement_is_classified_and_persisted(
         "settlements_total": 1, "self_settlements": 1,
         "external_settlements": 0, "distinct_external_payers": 0,
         "repeat_external_purchases": 0,
-        "external_revenue_atomic": 0, "first_external_settlement": None}
+        "external_revenue_atomic": 0,
+        "external_paid_results_delivered": 0,
+        "external_paid_results_receipted": 0,
+        "external_paid_results_failed": 0,
+        "external_paid_results_unknown": 0,
+        "first_external_settlement": None}
 
 
 def test_wave8_external_distinct_payers_first_flip_and_empty_allowlist():
@@ -642,11 +906,14 @@ def test_wave8_external_distinct_payers_first_flip_and_empty_allowlist():
         "route": "quantity-takeoff/calculate_takeoff",
         "payer_wallet": "0xExternalA", "self_settle": False,
         "amount_atomic": "500000", "tx_hash": "0xfirst",
-        "timestamp": "2026-07-20T01:00:00+00:00"}
+        "timestamp": "2026-07-20T01:00:00+00:00",
+        "delivery_status": "delivered"}
     second = {**first, "payer_wallet": "0xExternalB",
               "tx_hash": "0xsecond", "amount_atomic": "700000",
-              "timestamp": "2026-07-20T02:00:00+00:00"}
+              "timestamp": "2026-07-20T02:00:00+00:00",
+              "delivery_status": "failed"}
     repeat = {**second, "tx_hash": "0xthird"}
+    repeat.pop("delivery_status")
     legacy_seed = {"surface": "http-402-v2", "tx_hash": "0xlegacy",
                    "amount_atomic": "99999999"}
     metrics = x402_http.settlement_metrics({"quantity-takeoff": {
@@ -659,6 +926,9 @@ def test_wave8_external_distinct_payers_first_flip_and_empty_allowlist():
     assert total["distinct_external_payers"] == 2
     assert total["repeat_external_purchases"] == 1
     assert total["external_revenue_atomic"] == 1900000
+    assert total["external_paid_results_delivered"] == 1
+    assert total["external_paid_results_failed"] == 1
+    assert total["external_paid_results_unknown"] == 1
     assert total["first_external_settlement"] == {
         "tx_hash": "0xfirst", "timestamp": "2026-07-20T01:00:00+00:00"}
     assert metrics["per_route"][
@@ -684,14 +954,100 @@ def test_paid_success_offers_next_paid_routes_without_auto_execution(
     assert commerce["auto_execute"] is False
     assert commerce["payment_required"] is True
     assert commerce["buyer_authorization_required"] is True
+    repeat = commerce["repeat_purchase"]
+    assert f"{repeat['agent']}/{repeat['tool']}" == (
+        "regulatory-radar/scan_regulations")
+    assert repeat["endpoint"] == (
+        "https://mcp.test/x402/regulatory-radar/scan_regulations")
+    assert repeat["mcp_endpoint"] == (
+        "https://mcp.test/regulatory-radar/mcp")
+    assert repeat["method"] == "POST"
+    assert repeat["price_minor"] == 25
+    assert repeat["amount_atomic_usdc"] == "250000"
+    assert repeat["input_schema"]["type"] == "object"
+    assert repeat["input_example"]
+    assert repeat["required_buyer_inputs"] == list(
+        repeat["input_schema"].get("required", []))
+    assert "new caller-owned request" in repeat["input_policy"]
+    assert repeat["quote"]["preflight_required"] is True
+    assert repeat["quote"]["authoritative_source"] == (
+        "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_value_source"] == (
+        "caller_public_signing_address")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is True
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
+    assert repeat["quote"]["advertised_price_posture"] == (
+        "returning_payer_list_price")
     assert {f"{offer['agent']}/{offer['tool']}"
             for offer in commerce["next_paid_routes"]} == {
+                "regulatory-radar/monitor_changes",
                 "disclosure-compiler/compile_disclosure",
                 "taxcredit-engine/calculate_tax_credit",
             }
     assert all(offer["method"] == "POST"
                for offer in commerce["next_paid_routes"])
+    for offer in commerce["next_paid_routes"]:
+        assert offer["input_schema"]["type"] == "object"
+        assert offer["input_example"]
+        assert offer["description"]
+        assert offer["mcp_endpoint"] == (
+            f"https://mcp.test/{offer['agent']}/mcp")
+        assert offer["required_buyer_inputs"] == list(
+            offer["input_schema"].get("required", []))
+        assert offer["quote"]["preflight_required"] is True
+        assert offer["quote"]["authoritative_source"] == (
+            "next_route_unpaid_http_402")
+        assert offer["quote"]["payer_hint_value_source"] == (
+            "caller_public_signing_address")
+        assert offer["quote"]["payer_hint_required_for_exact_quote"] is True
+        assert offer["quote"]["payer_hint_authorizes_payment"] is False
+        assert offer["quote"]["advertised_price_posture"] == (
+            "returning_payer_list_price")
     assert len(core.calls) == 1
+
+
+def test_repeat_purchase_contract_is_available_for_fixed_price_hive(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    install_fake(monkeypatch, FakeFacilitator())
+    handler, core, _ = build(
+        tmp_path, agent="hive", tool="solve")
+    challenge = go(handler, FakeRequest(body={
+        "problem": "Compare two deployment options.",
+        "budget_minor": 500,
+        "depth": 0,
+        "redundancy": 1,
+        "fee_bps": 0,
+    }, agent="hive", tool="solve"))
+    paid = go(handler, FakeRequest(
+        headers={"payment-signature": signed_from(challenge)},
+        body={
+            "problem": "Compare two deployment options.",
+            "budget_minor": 500,
+            "depth": 0,
+            "redundancy": 1,
+            "fee_bps": 0,
+        },
+        agent="hive", tool="solve"))
+    assert paid.status_code == 200
+    commerce = body_of(paid)["viridis_commerce"]
+    assert "seat_option" not in commerce
+    repeat = commerce["repeat_purchase"]
+    assert repeat["agent"] == "hive"
+    assert repeat["price_minor"] == 500
+    assert repeat["amount_atomic_usdc"] == "5000000"
+    assert repeat["quote"]["authoritative_source"] == (
+        "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is False
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
+    assert core.calls == [{
+        "action": "solve",
+        "problem": "Compare two deployment options.",
+        "budget_minor": 500,
+        "depth": 0,
+        "redundancy": 1,
+        "fee_bps": 0,
+    }]
 
 
 def test_wave8_empty_allowlist_is_fail_safe_external(monkeypatch):
@@ -775,6 +1131,7 @@ def test_X2_6_settle_extension_rejection_records_payment_but_serves_nothing(
     stored = getattr(core, GATE_ATTR)["consumed_x402"]
     assert len(stored) == 1
     assert next(iter(stored.values()))["tx_hash"] == "0xv2settled"
+    assert next(iter(stored.values()))["delivery_status"] == "failed"
 
 
 def test_X2_6_persistence_failure_after_settle_serves_nothing(
@@ -837,9 +1194,11 @@ def test_health_inventory_surfaces_bazaar_feedback(tmp_path, monkeypatch):
     signature = signed_from(go(handler, FakeRequest()))
     assert go(handler, FakeRequest(headers={
         "payment-signature": signature})).status_code == 200
-    entries = {item["agent"]: item for item in
-               x402_http.discovery_entries("https://mcp.test")}
-    status = entries["regulatory-radar"]["bazaar_extension_responses"]
-    assert entries["regulatory-radar"]["x402_version"] == 2
+    entries = {
+        (item["agent"], item["tool"]): item
+        for item in x402_http.discovery_entries("https://mcp.test")}
+    radar = entries[("regulatory-radar", "scan_regulations")]
+    status = radar["bazaar_extension_responses"]
+    assert radar["x402_version"] == 2
     assert status["verify"]["status"] == "accepted"
     assert status["settle"]["status"] == "processing"

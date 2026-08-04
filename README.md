@@ -111,7 +111,7 @@ session does not reload the installed skill.
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
 - [Security policy and private vulnerability reporting](SECURITY.md)
 
-The same seven paid skills are available as durable A2A HTTP+JSON tasks using
+The same eight paid skills are available as durable A2A HTTP+JSON tasks using
 the official x402 extension. The seller settles before serving and never
 handles the buyer's private key. The
 [official A2A Python SDK quickstart](docs/integrations/A2A_PYTHON_SDK_QUICKSTART.md)
@@ -236,10 +236,14 @@ agent action, with typed input/output schemas.
 
 ## Status
 
-**LIVE (2026-07-27).** The gateway hosts 28 healthy agents at
-`https://mcp.viridisconservation.com`; seven x402/A2A paid routes are active.
+**LIVE (2026-08-04).** The gateway hosts 28 healthy agents at
+`https://mcp.viridisconservation.com`; eight x402/A2A paid routes are active.
 Security Preflight is live at `/security-preflight/mcp` and
-`/x402/security-preflight/security_preflight`. Official Registry manifests use
+`/x402/security-preflight/security_preflight`, and Regulatory Radar's bounded
+dated watch is live at `/x402/regulatory-radar/monitor_changes`. Successful
+paid responses now include a buyer-verifiable `viridis-paid-delivery-v1`
+transport receipt while keeping buyer acceptance and usefulness explicitly
+unobserved. Official Registry manifests use
 the `io.github.jdhart81/*` namespace. The as-shipped manifests are in `mcp-publish-github/`
 (the `mcp-publish/` set holds the branded `earth.viridis` variants for the
 round-1b rebrand + custom domain `mcp.viridis.earth`).

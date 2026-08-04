@@ -46,6 +46,9 @@ COPY deploy/gateway/x402_rail.py deploy/gateway/
 COPY deploy/gateway/x402_http.py deploy/gateway/
 COPY deploy/gateway/x402_v2.py deploy/gateway/
 COPY deploy/gateway/a2a_commerce.py deploy/gateway/
+COPY deploy/gateway/commercial_outcome_exporter.py deploy/gateway/
+COPY deploy/gateway/commercial_outcome_outbox.py deploy/gateway/
+COPY deploy/gateway/fleet_settlement_overlay.py deploy/gateway/
 COPY deploy/gateway/hub_kernel.py deploy/gateway/
 COPY deploy/gateway/escrow_custody.py deploy/gateway/
 COPY deploy/gateway/connect_rail.py deploy/gateway/
