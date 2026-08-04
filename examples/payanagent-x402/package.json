@@ -1,0 +1,16 @@
+{
+  "name": "viridis-payanagent-x402-examples",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "mcp-buy": "node mcp-buy-example.mjs",
+    "test": "node --test mcp-buy-example.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0"
+  }
+}
