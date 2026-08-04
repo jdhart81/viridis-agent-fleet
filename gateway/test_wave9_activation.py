@@ -238,7 +238,7 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "name: viridis-paid-tools" in buyer_skill.text
     assert "viridis_commerce.next_paid_routes" in buyer_skill.text
     assert "funding_status: UNVERIFIED" in buyer_skill.text
-    assert "5 live paid routes" in agents.text
+    assert "8 paid routes" in agents.text
     assert "CDP Bazaar" in agents.text
     assert "First paid call from every new wallet is $0.01" in agents.text
     assert "quantity-takeoff" in quickstart.text

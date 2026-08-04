@@ -46,6 +46,14 @@ PS9  Atomic group commit: capital-path mutations that span more than one core
      can persist all changed snapshots in one SQLite transaction. Any failure
      rolls the transaction back and returns False, allowing the caller to undo
      in-memory reservations before granting service.
+PS10 Bounded artifact stores: known append-only result collections are capped
+     before snapshotting. The newest N records remain live and a cumulative
+     count/hash chain of evicted records is persisted on the core. Audit-chain
+     stores that need agent-specific anchoring are not truncated here.
+PS11 Release compatibility: compatibility_report() unpickles every persisted
+     row against the currently loaded per-agent modules without mutating the
+     live cores. A release gate can therefore reject renamed/unrestorable
+     snapshots before deployment.
 
 Usage (see viridis_mcp_gateway.build_app):
     store = StateStore.open_default()          # STATE_DB env / /data / local
@@ -75,6 +83,26 @@ logger = logging.getLogger("viridis.state_store")
 # Recreated by build()/attach() on every boot; excluding them means code
 # upgrades always win over stale snapshots.
 EXCLUDED_ATTRS = frozenset({"config", "logger", "process"})
+
+# FS7 shared safe caps. These collections are insertion-ordered result caches;
+# retaining the newest records plus a hash chain is compatible with their
+# public list/get contracts. Verified Relay receipts are intentionally absent:
+# they are a tamper-evident chain and require an agent-specific checkpoint
+# before eviction can be safe.
+COLLECTION_CAPS = {
+    "smartscale": {"reports": 500},
+    "protogen": {
+        "plans": 500,
+        "cad_workspaces": 500,
+        "cad_designs": 500,
+    },
+    "neurogenesis": {
+        "_states": 500,
+        "_route_decisions": 1000,
+    },
+    "green-router": {"_certificates": 1000},
+    "security-preflight": {"_receipts": 1000},
+}
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS agent_state (
@@ -170,8 +198,44 @@ class StateStore:
     # ------------------------------------------------------------------ #
     # snapshot / restore
     # ------------------------------------------------------------------ #
+    @staticmethod
+    def _record_eviction(core: Any, attr: str, evicted: Any) -> None:
+        """Persist only count plus a chained digest for bounded artifacts."""
+        if not evicted:
+            return
+        ledger = getattr(core, "_state_store_evictions", None)
+        if not isinstance(ledger, dict):
+            ledger = {}
+            setattr(core, "_state_store_evictions", ledger)
+        prior = ledger.get(attr, {})
+        prior_hash = str(prior.get("sha256_chain", ""))
+        encoded = pickle.dumps(evicted, protocol=pickle.HIGHEST_PROTOCOL)
+        chain = hashlib.sha256(
+            prior_hash.encode("ascii") + encoded).hexdigest()
+        ledger[attr] = {
+            "evicted_count": int(prior.get("evicted_count", 0)) +
+            len(evicted),
+            "sha256_chain": chain,
+            "updated_at": _utcnow(),
+        }
+
+    def _enforce_collection_caps(self, name: str, core: Any) -> None:
+        """Bound known result stores in place before serialization (PS10)."""
+        for attr, limit in COLLECTION_CAPS.get(name, {}).items():
+            value = getattr(core, attr, None)
+            if isinstance(value, dict) and len(value) > limit:
+                items = list(value.items())
+                evicted = items[:-limit]
+                setattr(core, attr, dict(items[-limit:]))
+                self._record_eviction(core, attr, evicted)
+            elif isinstance(value, list) and len(value) > limit:
+                evicted = value[:-limit]
+                setattr(core, attr, list(value[-limit:]))
+                self._record_eviction(core, attr, evicted)
+
     def _snapshot_state(self, name: str, core: Any) -> Dict[str, Any]:
         """Picklable subset of the core's instance state (PS6)."""
+        self._enforce_collection_caps(name, core)
         state: Dict[str, Any] = {}
         skipped = self._skipped_attrs.setdefault(name, set())
         for attr, value in vars(core).items():
@@ -303,6 +367,56 @@ class StateStore:
                             "forensics", name, e)
             return False
 
+    def compatibility_report(self, cores: Dict[str, Any]) -> Dict[str, Any]:
+        """Unpickle every stored row against current modules without mutation.
+
+        The caller should point StateStore at a copy of production state.
+        Missing code, checksum drift, renamed classes, or a non-dict snapshot
+        are failures. Rows absent from the database are not invented.
+        """
+        report = {"status": "ok", "rows": {}, "errors": {}}
+        if not self.available:
+            return {
+                "status": "error",
+                "rows": {},
+                "errors": {"__store__": "state store unavailable"},
+            }
+        try:
+            with self._lock:
+                rows = self._conn.execute(
+                    "SELECT agent, seq, snapshot, sha256, updated_at "
+                    "FROM agent_state ORDER BY agent").fetchall()
+            for name, seq, blob, expected_sha, updated_at in rows:
+                actual_sha = hashlib.sha256(blob).hexdigest()
+                if actual_sha != expected_sha:
+                    report["errors"][name] = "snapshot SHA-256 mismatch"
+                    continue
+                try:
+                    with self._module_context(name):
+                        state = pickle.loads(blob)
+                    if not isinstance(state, dict):
+                        raise TypeError("snapshot root must be a dict")
+                    # Re-serialize under the current module graph as an
+                    # additional compatibility check; never apply to core.
+                    with self._module_context(name):
+                        pickle.dumps(
+                            state, protocol=pickle.HIGHEST_PROTOCOL)
+                    report["rows"][name] = {
+                        "seq": seq,
+                        "updated_at": updated_at,
+                        "snapshot_bytes": len(blob),
+                        "attributes": len(state),
+                        "current_core_loaded": name in cores,
+                    }
+                except Exception as exc:
+                    report["errors"][name] = (
+                        f"{type(exc).__name__}: {exc}")
+        except Exception as exc:
+            report["errors"]["__query__"] = f"{type(exc).__name__}: {exc}"
+        if report["errors"]:
+            report["status"] = "error"
+        return report
+
     # ------------------------------------------------------------------ #
     # write-through wiring
     # ------------------------------------------------------------------ #
@@ -339,10 +453,33 @@ class StateStore:
     # ------------------------------------------------------------------ #
     def status(self) -> Dict[str, Any]:
         """For /healthz: is persistence live, where, any errors."""
+        snapshots = {}
+        if self.available:
+            try:
+                with self._lock:
+                    rows = self._conn.execute(
+                        "SELECT agent, seq, length(snapshot), updated_at "
+                        "FROM agent_state ORDER BY agent").fetchall()
+                snapshots = {
+                    name: {
+                        "seq": seq,
+                        "snapshot_bytes": size,
+                        "updated_at": updated_at,
+                    }
+                    for name, seq, size, updated_at in rows
+                }
+            except Exception as exc:
+                self._errors["__status__"] = (
+                    f"{type(exc).__name__}: {exc}")
         return {
             "available": self.available,
             "db_path": self.db_path,
             "errors": dict(self._errors),
+            "snapshots": snapshots,
+            "collection_caps": {
+                name: dict(caps)
+                for name, caps in COLLECTION_CAPS.items()
+            },
         }
 
     def close(self) -> None:

@@ -1,9 +1,16 @@
 # Viridis autonomous carbon and compliance agents
 
-Viridis provides five deterministic JSON-in/JSON-out tools that agents can
-discover and pay per call with x402 v2 and USDC on Base. No signup or API key
-is required. The tools form one chain: measure -> account -> disclose -> claim
--> scan.
+Viridis provides eight JSON-in/JSON-out paid routes that agents can discover
+and buy with x402 v2 and USDC on Base. Five deterministic tools form one
+carbon/compliance chain: measure -> account -> disclose -> claim -> scan.
+The sixth operation watches the curated Regulatory Radar dataset for recently
+effective requirements and approaching deadlines. The seventh route is a
+cost-bounded three-worker Hive solve with independent cross-review, escrow
+settlement, compute accounting, and an audit digest. The eighth is a $1
+Security Preflight for caller-supplied MCP manifests, tool
+schemas, policies, and sample inputs. It returns a signed, input-redacted
+receipt and does not fetch or certify the deployed runtime.
+No signup or API key is required.
 
 ## Activation
 
@@ -16,6 +23,9 @@ is required. The tools form one chain: measure -> account -> disclose -> claim
 - Disclose: POST https://mcp.viridisconservation.com/x402/disclosure-compiler/compile_disclosure — $2.00 list price — CSRD / IFRS S2 sustainability disclosure evidence.
 - Claim: POST https://mcp.viridisconservation.com/x402/taxcredit-engine/calculate_tax_credit — $2.00 list price — auditable 45Q, 45V, 45Y, 48E, and 45X scenarios.
 - Scan: POST https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations — $0.25 list price — energy and climate requirements, urgency, and effective dates.
+- Watch: POST https://mcp.viridisconservation.com/x402/regulatory-radar/monitor_changes — $0.25 list price — source-linked recently effective requirements and approaching deadlines inside a bounded 1–365 day window over the curated Viridis dataset; not a live external feed.
+- Orchestrate: POST https://mcp.viridisconservation.com/x402/hive/solve — fixed $5.00 price — reviewed multi-agent solve with at most four subtasks and redundancy three. Hive is excluded from one-cent intro pricing.
+- Secure: POST https://mcp.viridisconservation.com/x402/security-preflight/security_preflight — $1.00 list price — bounded static agent-security checks plus a signed receipt; no raw input storage or runtime fetch.
 
 ## How payment works
 
@@ -32,6 +42,8 @@ The client makes exactly one paid attempt and registers the 10000-atomic ceiling
 - A2A 1.0 Agent Card: https://mcp.viridisconservation.com/.well-known/agent-card.json
 - A2A HTTP+JSON task endpoint: https://mcp.viridisconservation.com/a2a/message:send — activate https://github.com/google-a2a/a2a-x402/v0.1 in A2A-Extensions. The server returns a durable input-required payment task, settles the caller-supplied x402 v2 payload, then returns the completed task artifact.
 - Human agent catalog: https://mcp.viridisconservation.com/agents
+- Reviewed Compliance Snapshot: https://mcp.viridisconservation.com/compliance-snapshot — $49 one-time founding offer for one company or project, one jurisdiction, one sector, and one immediate question; Stripe-hosted payment, human source review, two-business-day delivery, not legal advice.
+- Monthly team seats: https://mcp.viridisconservation.com/seats
 - Copy-paste quickstart and free dry-run: https://mcp.viridisconservation.com/quickstart
 - Machine-readable x402 catalog: https://mcp.viridisconservation.com/x402/catalog
 - Machine-readable Agent Skills index: https://mcp.viridisconservation.com/.well-known/skills/index.json

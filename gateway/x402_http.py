@@ -50,6 +50,19 @@ H402-11 BUYER CONTINUATION: a successful paid result may advertise compatible
        signs, initiates, or executes another payment; every next call requires
        a separate buyer-authorized x402 settlement. Repeat-purchase telemetry
        counts only versioned external settlements with a known payer wallet.
+H402-12 EXECUTABLE CONTINUATION: each next-route offer includes the target
+       description, input schema, example, required buyer-supplied fields, MCP
+       endpoint, and quote instructions. The offer is preparation metadata,
+       never authorization; the next route's unpaid challenge is the only
+       authoritative price/payment requirement.
+H402-13 EXTERNAL EVIDENCE POINTERS: the catalog may point to immutable fixture
+       files in an external verifier's repository. The index is explicitly a
+       seller-published pointer, never payment authority or independent proof
+       by itself; buyers verify the external file, commit, and SHA-256.
+H402-15 DELIVERY TRUTH: after execution, a versioned settlement records only
+       whether the paid response was delivered or failed. Historical records
+       without this field remain explicitly unknown. A settlement, delivery,
+       usefulness signal, and repeat purchase are four separate facts.
 """
 from __future__ import annotations
 
@@ -63,16 +76,87 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Tuple
 
+from commercial_outcome_outbox import enqueue_from_environment
+from fleet_settlement_overlay import bind_security_preflight_delivery
+
 logger = logging.getLogger("viridis.x402_http")
+
+EXTERNAL_EVIDENCE_REPOSITORY = (
+    "https://github.com/smartflowproai-lang/x402-endpoint-validator")
+EXTERNAL_EVIDENCE_FIXTURES = (
+    {
+        "route": "regulatory-radar/scan_regulations",
+        "evidence_posture": (
+            "unpaid_preflight_current_with_dated_settlement_reference"),
+        "fixture_state": "matched_on_last_comparison",
+        "capture_method": "unpaid_preflight",
+        "captured_at": "2026-07-26T16:47:37+00:00",
+        "supersedes_capture": "2026-07-24",
+        "last_compared_on": "2026-07-26",
+        "matched_on_last_comparison": True,
+        "payment_terms_changed": False,
+        "settled_flow_provenance": {
+            "current_fixture_is_settlement_receipt": False,
+            "confirmed_at_merge": (
+                "0920d50db53cbf59f20052c6c656f17f881c4b41"),
+            "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/12",
+            "payment_terms_byte_identical": True,
+        },
+        "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/15",
+        "merge_commit": "811fef6b037cfeb71a890cac97bb822f0efcf03a",
+        "fixture_path": "tests/fixtures/viridis_regulatory_radar.json",
+        "immutable_url": (
+            EXTERNAL_EVIDENCE_REPOSITORY
+            + "/blob/811fef6b037cfeb71a890cac97bb822f0efcf03a/"
+              "tests/fixtures/viridis_regulatory_radar.json"),
+        "sha256": (
+            "f667444013029bc98e229b0d3021426d8bf18d13afe3007db419a213d0e290b5"),
+    },
+    {
+        "route": "ghg-ledger/calculate_inventory",
+        "evidence_posture": "unpaid_preflight_only",
+        "fixture_state": "matched_on_last_comparison",
+        "captured_on": "2026-07-26",
+        "last_compared_on": "2026-07-26",
+        "matched_on_last_comparison": True,
+        "payment_terms_changed": False,
+        "pull_request": EXTERNAL_EVIDENCE_REPOSITORY + "/pull/14",
+        "merge_commit": "45b006b42a60562101a43ffc293447793900d095",
+        "fixture_path": "tests/fixtures/viridis_ghg_ledger.json",
+        "immutable_url": (
+            EXTERNAL_EVIDENCE_REPOSITORY
+            + "/blob/45b006b42a60562101a43ffc293447793900d095/"
+              "tests/fixtures/viridis_ghg_ledger.json"),
+        "sha256": (
+            "8cd884c016b19c2131207365e523677a9384b8463fb45eb0ca826a89497b7d40"),
+    },
+)
+
+
+def independent_evidence_index() -> dict:
+    """Return verifiable pointers without promoting seller metadata to proof."""
+    return {
+        "classification": "external_fixture_pointer_index",
+        "index_posture": "seller_published_pointer_only",
+        "authoritative_for_payment": False,
+        "revenue_signal": False,
+        "verification_required": True,
+        "repository": EXTERNAL_EVIDENCE_REPOSITORY,
+        "fixtures": [dict(fixture) for fixture in EXTERNAL_EVIDENCE_FIXTURES],
+    }
+
 
 # (agent_path, http_tool_name) -> core action. Extend as tools are exposed.
 # Verified mappings only — an entry here makes a real paid endpoint.
 X402_HTTP_TOOLS: Dict[Tuple[str, str], str] = {
     ("regulatory-radar", "scan_regulations"): "scan",
+    ("regulatory-radar", "monitor_changes"): "monitor_changes",
     ("taxcredit-engine", "calculate_tax_credit"): "calculate",
     ("ghg-ledger", "calculate_inventory"): "calculate_inventory",
     ("quantity-takeoff", "calculate_takeoff"): "calculate_takeoff",
     ("disclosure-compiler", "compile_disclosure"): "compile_disclosure",
+    ("hive", "solve"): "solve",
+    ("security-preflight", "security_preflight"): "scan",
 }
 
 AGENT402_FIXED_ROUTE = ("regulatory-radar", "scan_regulations_agent402")
@@ -125,6 +209,74 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
         },
         "output_example": {"status": "success", "jurisdiction": "EU",
                            "matches": 3, "urgency": "high"},
+    },
+    ("regulatory-radar", "monitor_changes"): {
+        "description": (
+            "Monitor regulatory changes, compliance deadlines, and effective "
+            "dates in a bounded, source-linked regulatory calendar over the "
+            "curated Viridis dataset. Returns requirements that became "
+            "effective or have a deadline approaching inside the selected day "
+            "window, with alert level and recommended review actions. This is "
+            "a deterministic follow-up to a regulation scan, not a live "
+            "external regulatory feed."),
+        "service_name": "Viridis Regulatory Radar Watch",
+        "category": "climate-compliance",
+        "tags": [
+            "climate-compliance",
+            "regulatory-calendar",
+            "compliance-deadlines",
+            "effective-dates",
+            "change-monitoring",
+        ],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "jurisdiction": {
+                    "type": "string",
+                    "enum": [
+                        "AU", "CA", "EU", "GLOBAL", "JP", "SG", "UK", "US",
+                        "au", "ca", "eu", "global", "jp", "sg", "uk", "us",
+                        "CALIFORNIA", "California", "california",
+                        "US-CA", "us-ca",
+                    ],
+                },
+                "topics": {
+                    "type": ["array", "null"],
+                    "items": {
+                        "type": "string", "minLength": 1, "maxLength": 100,
+                    },
+                    "maxItems": 10,
+                },
+                "lookback_days": {
+                    "type": "integer", "minimum": 1, "maximum": 365,
+                    "description": (
+                        "Window for recently effective requirements behind "
+                        "today and compliance deadlines ahead of today"),
+                },
+            },
+            "required": ["jurisdiction"],
+            "additionalProperties": False,
+        },
+        "input_error_hint": (
+            "Use a supported jurisdiction, optional topics array, and "
+            "lookback_days from 1 through 365."),
+        "input_example": {
+            "jurisdiction": "US",
+            "topics": ["emissions", "climate"],
+            "lookback_days": 90,
+        },
+        "output_example": {
+            "jurisdiction": "us",
+            "lookback_days": 90,
+            "change_count": 1,
+            "alert_level": "critical",
+            "changes": [{
+                "type": "deadline_approaching",
+                "regulation_id": "ca-sb253-2026",
+                "days_until_deadline": 13,
+                "source_verified_on": "2026-07-25",
+            }],
+        },
     },
     ("taxcredit-engine", "calculate_tax_credit"): {
         "description": ("Auditable US clean-energy tax-credit calculator from "
@@ -252,6 +404,164 @@ X402_HTTP_METADATA: Dict[Tuple[str, str], dict] = {
                      "audit_sha256": "content-addressed-draft-digest"},
         },
     },
+    ("hive", "solve"): {
+        "description": (
+            "Cost-bounded multi-agent solve with three independent workers, "
+            "reviewer-not-author cross-review, escrow settlement, trust "
+            "outcomes, compute accounting, and a content-addressed audit. "
+            "The fixed $5 profile supports at most four subtasks and "
+            "redundancy three."),
+        "service_name": "Viridis Agent Hive",
+        "category": "AI Services",
+        "tags": ["agents", "orchestration", "audit", "escrow", "reasoning"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "problem": {
+                    "type": "string", "minLength": 1,
+                    "maxLength": 12000,
+                },
+                "budget_minor": {"type": "integer", "const": 500},
+                "subtasks": {
+                    "type": ["array", "null"], "minItems": 1, "maxItems": 4,
+                    "items": {
+                        "type": "string", "minLength": 1, "maxLength": 4000,
+                    },
+                },
+                "depth": {"type": "integer", "const": 0},
+                "redundancy": {
+                    "type": "integer", "minimum": 1, "maximum": 3,
+                },
+                "accept_threshold": {
+                    "type": "number", "exclusiveMinimum": 0,
+                    "maximum": 1,
+                },
+                "seed": {"type": "integer"},
+                "fee_bps": {"type": "integer", "const": 0},
+            },
+            "required": ["problem", "budget_minor"],
+            "additionalProperties": False,
+        },
+        "input_error_hint": (
+            "Use the fixed $5 profile: non-empty problem, budget_minor=500, "
+            "depth=0, fee_bps=0, at most four subtasks, redundancy 1..3."),
+        "input_example": {
+            "problem": (
+                "Compare two approaches to reducing industrial energy cost "
+                "and return a reviewed recommendation with key risks."),
+            "budget_minor": 500,
+            "subtasks": [
+                "Assess technical feasibility.",
+                "Assess economics and implementation risk.",
+            ],
+            "depth": 0,
+            "redundancy": 2,
+            "accept_threshold": 0.6,
+            "seed": 0,
+            "fee_bps": 0,
+        },
+        "output_example": {
+            "status": "ok",
+            "data": {
+                "job_id": "job-content-addressed-id",
+                "state": "COMPLETED",
+                "synthesis": "review-surviving answer",
+                "audit_sha256": "content-addressed-audit-digest",
+            },
+        },
+    },
+    ("security-preflight", "security_preflight"): {
+        "description": (
+            "Deterministic security preflight of caller-supplied MCP agent "
+            "metadata. Checks endpoint/auth declarations, closed tool schemas, "
+            "high-impact approval policy, policy conflicts, and static "
+            "injection indicators. Returns a signed, input-redacted receipt. "
+            "Does not fetch or certify the deployed runtime."),
+        "service_name": "Viridis Security Preflight",
+        "category": "Security",
+        "icon_url": (
+            "https://mcp.viridisconservation.com/brand/viridis-mark.svg"),
+        "tags": ["security", "MCP", "agents", "receipts", "preflight"],
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "agent_id": {
+                    "type": "string",
+                    "description": (
+                        "Existing or intended lowercase Agent Market profile "
+                        "identifier"),
+                },
+                "subject_profile_sha256": {
+                    "type": ["string", "null"],
+                    "pattern": "^[0-9a-f]{64}$",
+                    "description": (
+                        "Optional current Agent Market profile digest. When "
+                        "supplied, the signed receipt is bound to this exact "
+                        "profile and becomes eligible for explicit Market "
+                        "import."),
+                },
+                "manifest": {
+                    "type": "object",
+                    "description": (
+                        "Caller-supplied agent manifest; common fields are "
+                        "endpoint, auth, description, instructions, and tools"),
+                },
+                "policy": {
+                    "type": ["object", "null"],
+                    "description": (
+                        "Optional allowed_tools, denied_tools, and "
+                        "approval_required_tools lists"),
+                },
+                "sample_inputs": {
+                    "type": ["array", "null"],
+                    "items": {"type": "string"},
+                    "description": (
+                        "Optional bounded sample text for static injection "
+                        "indicator checks"),
+                },
+            },
+            "required": ["agent_id", "manifest"],
+            "additionalProperties": False,
+        },
+        "input_error_hint": (
+            "Supply a lowercase agent_id and JSON manifest. Optional policy "
+            "must be an object, subject_profile_sha256 must be 64 lowercase "
+            "hex characters, and sample_inputs must be an array of strings."),
+        "input_example": {
+            "agent_id": "example-research-agent",
+            "manifest": {
+                "endpoint": "https://agent.example/mcp",
+                "auth": "bearer",
+                "tools": [{
+                    "name": "read_status",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"id": {"type": "string"}},
+                        "required": ["id"],
+                        "additionalProperties": False,
+                    },
+                }],
+            },
+            "policy": {
+                "allowed_tools": ["read_status"],
+                "denied_tools": [],
+                "approval_required_tools": [],
+            },
+            "sample_inputs": ["Summarize the supplied status record."],
+        },
+        "output_example": {
+            "status": "ok",
+            "verdict": "pass",
+            "receipt": {
+                "protocol": "viridis-security-receipt-v1",
+                "posture": "SCANNED",
+                "subject_agent_id": "example-research-agent",
+            },
+            "market_import": {"automatic": False},
+            "claim_boundary": (
+                "Static buyer-supplied artifacts only; runtime not tested."),
+        },
+    },
 }
 
 # Agent402 native listings advertise one static per-call price.  Keep this
@@ -266,12 +576,18 @@ X402_HTTP_METADATA[AGENT402_FIXED_ROUTE] = {
         "https://mcp.viridisconservation.com/brand/viridis-mark.svg"),
     "tags": ["climate", "energy", "compliance", "regulation", "CSRD"],
 }
-INTRO_EXEMPT_ROUTES = frozenset({AGENT402_FIXED_ROUTE})
+HIVE_FIXED_ROUTE = ("hive", "solve")
+INTRO_EXEMPT_ROUTES = frozenset({AGENT402_FIXED_ROUTE, HIVE_FIXED_ROUTE})
 
 # A small deterministic workflow graph for paid buyers. Values are
 # ((target_agent, target_tool), why_that_step_is_compatible). Targets remain
 # ordinary x402 endpoints: this graph is discovery metadata, never execution.
 NEXT_PAID_ROUTES = {
+    ("security-preflight", "security_preflight"): (
+        (("hive", "solve"),
+         "Use a reviewed multi-agent solve to turn the bounded preflight "
+         "findings into a remediation plan from buyer-supplied context."),
+    ),
     ("quantity-takeoff", "calculate_takeoff"): (
         (("ghg-ledger", "calculate_inventory"),
          "Use measured material quantities as auditable GHG activity inputs."),
@@ -291,10 +607,18 @@ NEXT_PAID_ROUTES = {
          "Check current compliance requirements around the proposed claim."),
     ),
     ("regulatory-radar", "scan_regulations"): (
+        (("regulatory-radar", "monitor_changes"),
+         "Watch dated requirements after the initial regulation scan."),
         (("disclosure-compiler", "compile_disclosure"),
          "Turn identified disclosure requirements into an auditable draft."),
         (("taxcredit-engine", "calculate_tax_credit"),
          "Evaluate an applicable clean-energy tax-credit opportunity."),
+    ),
+    ("regulatory-radar", "monitor_changes"): (
+        (("regulatory-radar", "scan_regulations"),
+         "Inspect the full applicable regulation set behind a dated watch."),
+        (("disclosure-compiler", "compile_disclosure"),
+         "Turn an identified disclosure requirement into an auditable draft."),
     ),
     AGENT402_FIXED_ROUTE: (
         (("disclosure-compiler", "compile_disclosure"),
@@ -302,10 +626,18 @@ NEXT_PAID_ROUTES = {
         (("taxcredit-engine", "calculate_tax_credit"),
          "Evaluate an applicable clean-energy tax-credit opportunity."),
     ),
+    HIVE_FIXED_ROUTE: (
+        (("regulatory-radar", "scan_regulations"),
+         "Check the reviewed recommendation against applicable requirements."),
+        (("disclosure-compiler", "compile_disclosure"),
+         "Turn review-surviving conclusions into an auditable disclosure."),
+    ),
 }
 
 OUTPUT_SCHEMA = {"type": "object", "additionalProperties": True}
 SETTLEMENT_CLASSIFICATION_VERSION = 1
+PAID_DELIVERY_RECEIPT_VERSION = "viridis-paid-delivery-v1"
+PAID_DELIVERY_RECEIPT_FIELD = "viridis_delivery"
 INTRO_SEEN_KEY = "x402_intro_seen_payers"
 INTRO_PAYER_HEADER = "x402-payer-address"
 INTRO_SCHEDULE = {
@@ -364,10 +696,27 @@ def intro_status(cores: Dict[str, Any]) -> dict:
         "enabled": intro_enabled(),
         "schedule": dict(INTRO_SCHEDULE),
         "seen_payers": len(_seen_payers(cores)),
+        "seen_payers_evidence": {
+            "classification": "seller_reported_pricing_eligibility_state",
+            "independently_verifiable": False,
+            "authoritative_for_payment": False,
+            "revenue_signal": False,
+        },
         "payer_hint_header": "X402-Payer-Address",
-        "note": ("The hint improves preflight quoting only; signed payment "
-                 "authorization determines eligibility."),
+        "note": ("seen_payers is a seller-reported pricing-state count, not "
+                 "independent buyer or revenue proof. The hint improves "
+                 "preflight quoting only; signed payment authorization "
+                 "determines eligibility."),
     }
+
+
+def price_for_payer(cores: Dict[str, Any], route: Tuple[str, str],
+                    list_price: int, payer: str = "") -> int:
+    """Return the exact public price, honoring fixed-price exclusions."""
+    if (intro_enabled() and route not in INTRO_EXEMPT_ROUTES
+            and not _payer_seen(cores, payer)):
+        return INTRO_SCHEDULE["price_minor"]
+    return list_price
 
 
 def _payer_wallet(payload: dict) -> str:
@@ -420,6 +769,90 @@ def _classified_settlement(payload: dict, agent: str, tool: str,
     return record
 
 
+def _paid_delivery_status(payload: Any) -> str:
+    """Classify transport delivery without claiming usefulness or adoption."""
+    if isinstance(payload, dict):
+        status = str(payload.get("status", "")).strip().lower()
+        if (payload.get("error") or payload.get("error_type")
+                or status in {"error", "failed", "failure"}):
+            return "failed"
+    return "delivered"
+
+
+def _canonical_json_sha256(payload: Any) -> str:
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _attach_paid_delivery_receipt(
+    payload: Any,
+    record: dict,
+    agent: str,
+    tool: str,
+) -> tuple[Any, dict | None]:
+    """Bind the returned JSON result to its settlement without overstating it.
+
+    The buyer can remove the viridis_delivery field from the returned object,
+    canonicalize the remainder using the advertised recipe, and reproduce the
+    result digest. This is seller-side transport evidence, not buyer
+    acceptance, usefulness, adoption, or permission for another purchase.
+    """
+    if not isinstance(payload, dict):
+        return payload, None
+    result_payload = dict(payload)
+    result_payload.pop(PAID_DELIVERY_RECEIPT_FIELD, None)
+    delivered_at = (
+        str(record.get("delivery_recorded_at", "")).strip()
+        or datetime.now(timezone.utc).isoformat()
+    )
+    receipt = {
+        "version": PAID_DELIVERY_RECEIPT_VERSION,
+        "classification": "seller_transport_delivery_receipt",
+        "route": f"{agent}/{tool}",
+        "settlement": {
+            "transaction": record.get("tx_hash"),
+            "network": record.get("network"),
+            "amount_atomic": record.get("amount_atomic"),
+        },
+        "delivered_at": delivered_at,
+        "result_canonicalization": (
+            "UTF-8 JSON with sort_keys=true, separators=(',', ':'), "
+            "ensure_ascii=false, excluding viridis_delivery"
+        ),
+        "result_sha256": _canonical_json_sha256(result_payload),
+        "buyer_acceptance": "not_observed",
+        "usefulness": "not_observed",
+    }
+    receipt["receipt_sha256"] = _canonical_json_sha256(receipt)
+    enriched = dict(result_payload)
+    enriched[PAID_DELIVERY_RECEIPT_FIELD] = receipt
+    return enriched, receipt
+
+
+def _record_delivery_status(
+    record: dict,
+    status: str,
+    receipt: dict | None = None,
+) -> None:
+    if status not in {"delivered", "failed"}:
+        raise ValueError("delivery status must be delivered or failed")
+    record["delivery_status"] = status
+    recorded_at = (
+        receipt.get("delivered_at")
+        if status == "delivered" and isinstance(receipt, dict)
+        else None
+    )
+    record["delivery_recorded_at"] = (
+        recorded_at or datetime.now(timezone.utc).isoformat())
+    if status == "delivered" and isinstance(receipt, dict):
+        record["delivery_receipt"] = dict(receipt)
+
+
 def _empty_settlement_metrics() -> dict:
     return {
         "settlements_total": 0,
@@ -428,6 +861,10 @@ def _empty_settlement_metrics() -> dict:
         "distinct_external_payers": 0,
         "repeat_external_purchases": 0,
         "external_revenue_atomic": 0,
+        "external_paid_results_delivered": 0,
+        "external_paid_results_receipted": 0,
+        "external_paid_results_failed": 0,
+        "external_paid_results_unknown": 0,
         "first_external_settlement": None,
     }
 
@@ -471,6 +908,26 @@ def settlement_metrics(gate_states: Dict[str, dict]) -> dict:
                 amount = 0
             route_metrics["external_revenue_atomic"] += amount
             total["external_revenue_atomic"] += amount
+            delivery_status = record.get("delivery_status")
+            delivery_field = {
+                "delivered": "external_paid_results_delivered",
+                "failed": "external_paid_results_failed",
+            }.get(delivery_status, "external_paid_results_unknown")
+            route_metrics[delivery_field] += 1
+            total[delivery_field] += 1
+            delivery_receipt = record.get("delivery_receipt")
+            if (
+                delivery_status == "delivered"
+                and isinstance(delivery_receipt, dict)
+                and delivery_receipt.get("version")
+                == PAID_DELIVERY_RECEIPT_VERSION
+                and isinstance(delivery_receipt.get("result_sha256"), str)
+                and len(delivery_receipt["result_sha256"]) == 64
+                and isinstance(delivery_receipt.get("receipt_sha256"), str)
+                and len(delivery_receipt["receipt_sha256"]) == 64
+            ):
+                route_metrics["external_paid_results_receipted"] += 1
+                total["external_paid_results_receipted"] += 1
             payer = str(record.get("payer_wallet", "")).strip().lower()
             if payer:
                 known_payer_purchases[route] += 1
@@ -505,16 +962,70 @@ def next_paid_routes(agent: str, tool: str, public_base: str) -> list:
         if (next_agent, next_tool) not in X402_HTTP_TOOLS:
             continue
         price = PRICE_MINOR.get(next_agent, DEFAULT_PRICE_MINOR)
+        metadata = X402_HTTP_METADATA[(next_agent, next_tool)]
+        input_schema = metadata["input_schema"]
         offers.append({
             "agent": next_agent,
             "tool": next_tool,
             "endpoint": f"{base}/x402/{next_agent}/{next_tool}",
+            "mcp_endpoint": f"{base}/{next_agent}/mcp",
             "method": "POST",
             "price_minor": price,
             "amount_atomic_usdc": x402_rail.price_atomic(price),
             "reason": reason,
+            "description": metadata["description"],
+            "input_schema": input_schema,
+            "input_example": metadata["input_example"],
+            "required_buyer_inputs": list(input_schema.get("required", [])),
+            "quote": {
+                "preflight_required": True,
+                "authoritative_source": "next_route_unpaid_http_402",
+                "payer_hint_header": "X402-Payer-Address",
+                "payer_hint_value_source":
+                    "caller_public_signing_address",
+                "payer_hint_required_for_exact_quote":
+                    (next_agent, next_tool) not in INTRO_EXEMPT_ROUTES,
+                "payer_hint_authorizes_payment": False,
+                "advertised_price_posture": "returning_payer_list_price",
+            },
         })
     return offers
+
+
+def repeat_paid_route(agent: str, tool: str, public_base: str) -> dict:
+    """Return a same-service repurchase contract without authorizing it."""
+    from payment_gate import PRICE_MINOR, DEFAULT_PRICE_MINOR
+    import x402_rail
+    base = public_base.rstrip("/")
+    price = PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)
+    metadata = X402_HTTP_METADATA[(agent, tool)]
+    input_schema = metadata["input_schema"]
+    return {
+        "agent": agent,
+        "tool": tool,
+        "endpoint": f"{base}/x402/{agent}/{tool}",
+        "mcp_endpoint": f"{base}/{agent}/mcp",
+        "method": "POST",
+        "price_minor": price,
+        "amount_atomic_usdc": x402_rail.price_atomic(price),
+        "description": metadata["description"],
+        "input_schema": input_schema,
+        "input_example": metadata["input_example"],
+        "required_buyer_inputs": list(input_schema.get("required", [])),
+        "input_policy": (
+            "Supply a new caller-owned request. Never reuse prior inputs or "
+            "infer missing facts from the previous result."),
+        "quote": {
+            "preflight_required": True,
+            "authoritative_source": "repeat_route_unpaid_http_402",
+            "payer_hint_header": "X402-Payer-Address",
+            "payer_hint_value_source": "caller_public_signing_address",
+            "payer_hint_required_for_exact_quote":
+                (agent, tool) not in INTRO_EXEMPT_ROUTES,
+            "payer_hint_authorizes_payment": False,
+            "advertised_price_posture": "returning_payer_list_price",
+        },
+    }
 
 
 def _with_commerce_metadata(payload: Any, agent: str, tool: str,
@@ -530,13 +1041,16 @@ def _with_commerce_metadata(payload: Any, agent: str, tool: str,
     enriched["viridis_commerce"] = {
         "version": "viridis-commerce-v1",
         "current_route": f"{agent}/{tool}",
+        "repeat_purchase": repeat_paid_route(
+            agent, tool, public_base),
         "next_paid_routes": next_paid_routes(
             agent, tool, public_base),
         "auto_execute": False,
         "payment_required": True,
         "buyer_authorization_required": True,
-        "note": ("No follow-on payment was signed, initiated, or executed. "
-                 "Each next route requires a separate x402 settlement."),
+        "note": ("No repeat or follow-on payment was signed, initiated, or "
+                 "executed. Every purchase requires new caller-owned inputs, "
+                 "a fresh unpaid quote, and a separate x402 settlement."),
     }
     return enriched
 
@@ -599,6 +1113,40 @@ async def _request_args(request) -> dict:
     return args
 
 
+async def _paid_preflight(core: Any, action: str,
+                          args: Dict[str, Any]) -> Dict[str, Any] | None:
+    """Run an agent-owned, side-effect-free paid-lane admission check."""
+    hook = getattr(core, "_paid_preflight", None)
+    if not callable(hook):
+        return None
+    try:
+        result = hook({"action": action, **args})
+        if asyncio.iscoroutine(result):
+            result = await result
+    except Exception as exc:
+        logger.exception("paid preflight failed closed")
+        return {
+            "status": "error", "error_type": "ServiceUnavailable",
+            "message": f"paid preflight unavailable: {type(exc).__name__}",
+        }
+    if result is None:
+        return None
+    if isinstance(result, dict) and result.get("status") == "error":
+        return result
+    return {
+        "status": "error", "error_type": "ServiceUnavailable",
+        "message": "paid preflight returned an invalid decision",
+    }
+
+
+def _preflight_http_response(error: Dict[str, Any]):
+    unavailable = error.get("error_type") == "ServiceUnavailable"
+    return _resp({
+        **error,
+        "payment_required": False,
+    }, 503 if unavailable else 400)
+
+
 def _normalize_request_args(agent: str, tool: str, args: dict) -> dict:
     """Normalize advertised aliases without mutating the caller's object."""
     if not isinstance(args, dict):
@@ -641,11 +1189,37 @@ def make_x402_http_route(cores, store, public_base, tools=None):
         if not x402_rail.is_enabled():                         # H402-6
             return _resp({"error": "x402 rail disabled"}, 503)
         list_price = PRICE_MINOR.get(agent, DEFAULT_PRICE_MINOR)
-        intro_for_route = (intro_enabled()
-                           and (agent, tool) not in INTRO_EXEMPT_ROUTES)
         payer_hint = str(request.headers.get(INTRO_PAYER_HEADER, "")).strip()
-        price = list_price
+        route = (agent, tool)
+        intro_for_route = intro_enabled() and route not in INTRO_EXEMPT_ROUTES
+        price = price_for_payer(cores, route, list_price, payer_hint)
         resource = f"{public_base}/x402/{agent}/{tool}"
+        meta = X402_HTTP_METADATA.get(route, {
+            "description": f"Viridis {agent} {tool} tool call",
+            "input_schema": {"type": "object", "additionalProperties": True},
+            "input_example": {},
+        })
+        args = _normalize_request_args(
+            agent, tool, await _request_args(request))
+        try:
+            import x402_v2
+            schema_matches = x402_v2._matches_schema(
+                args, meta["input_schema"])
+        except Exception:
+            schema_matches = True
+        if not schema_matches:
+            return _resp({
+                "error": "input does not match advertised schema",
+                "error_type": "input_validation_error",
+                "payment_required": False,
+                "hint": meta.get(
+                    "input_error_hint",
+                    "Correct the request to match the advertised JSON "
+                    "input schema."),
+            }, 400)
+        preflight_error = await _paid_preflight(core, action, args)
+        if preflight_error is not None:
+            return _preflight_http_response(preflight_error)
         # X2-1/X2-7: a separate, default-off v2 lane.  Flag off continues at
         # the byte-stable Wave-6 v1 behavior below; flag on never falls back.
         try:
@@ -654,23 +1228,6 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                 if not x402_v2.is_enabled():
                     return _resp({"error": "x402 v2 rail disabled or "
                                            "incompletely configured"}, 503)
-                price = (INTRO_SCHEDULE["price_minor"]
-                         if intro_for_route
-                         and not _payer_seen(cores, payer_hint)
-                         else list_price)
-                meta = X402_HTTP_METADATA[(agent, tool)]
-                args = _normalize_request_args(
-                    agent, tool, await _request_args(request))
-                if not x402_v2._matches_schema(args, meta["input_schema"]):
-                    return _resp({
-                        "error": "input does not match advertised schema",
-                        "error_type": "input_validation_error",
-                        "payment_required": False,
-                        "hint": meta.get(
-                            "input_error_hint",
-                            "Correct the request to match the advertised "
-                            "input schema."),
-                    }, 400)
                 payment_required = x402_v2.build_payment_required(
                     agent, tool, price, resource,
                     str(getattr(request, "method", "POST")).upper(), meta)
@@ -691,8 +1248,8 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                         return _resp({"error": "signed payer address required "
                                               "for intro-price eligibility"},
                                      402, required_headers)
-                    expected_price = (list_price if _payer_seen(cores, payer)
-                                      else INTRO_SCHEDULE["price_minor"])
+                    expected_price = price_for_payer(
+                        cores, route, list_price, payer)
                     if expected_price != price:
                         payment_required = x402_v2.build_payment_required(
                             agent, tool, expected_price, resource,
@@ -772,6 +1329,11 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                                   "transaction": result["tx_hash"]},
                                  500, paid_headers)
                 if not result.get("serve", True):
+                    _record_delivery_status(consumed[key], "failed")
+                    try:
+                        store.save(agent, core)
+                    except Exception:
+                        pass
                     return _resp({"error": result.get("reason"),
                                   "transaction": result["tx_hash"],
                                   "extension_responses":
@@ -794,18 +1356,50 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                                       f"{type(exc).__name__} (payment settled; "
                                       "contact support with the transaction)",
                            "tx_hash": result["tx_hash"]}
-                return _resp(_with_commerce_metadata(
-                    out, agent, tool, public_base), 200, paid_headers)
+                delivery_status = _paid_delivery_status(out)
+                _record_delivery_status(consumed[key], delivery_status)
+                accepted = payment_required["accepts"][0]
+                bind_security_preflight_delivery(
+                    consumed[key],
+                    out,
+                    asset=accepted["asset"],
+                    currency="USDC",
+                    currency_decimals=6,
+                )
+                out = _with_commerce_metadata(
+                    out, agent, tool, public_base)
+                delivery_receipt = None
+                if delivery_status == "delivered":
+                    out, delivery_receipt = _attach_paid_delivery_receipt(
+                        out, consumed[key], agent, tool)
+                    _record_delivery_status(
+                        consumed[key], delivery_status, delivery_receipt)
+                delivery_persisted = False
+                try:
+                    delivery_persisted = bool(store.save(agent, core))
+                except Exception:
+                    logger.error(
+                        "x402_v2[%s]: delivery outcome persistence failed",
+                        agent,
+                    )
+                if delivery_persisted:
+                    try:
+                        enqueue_from_environment(
+                            consumed[key],
+                            prior_settlements=consumed.values(),
+                        )
+                    except Exception as exc:
+                        logger.error(
+                            "x402_v2[%s]: commercial export refused: %s",
+                            agent,
+                            type(exc).__name__,
+                        )
+                return _resp(out, 200, paid_headers)
         except Exception as exc:
             logger.exception("x402 v2 route failed closed")
             return _resp({"error": f"x402 v2 error: {type(exc).__name__}"},
                          500)
         reqs = dict(x402_rail.build_accepts(agent, price, resource))
-        meta = X402_HTTP_METADATA.get((agent, tool), {
-            "description": f"Viridis {agent} {tool} tool call",
-            "input_schema": {"type": "object", "additionalProperties": True},
-            "input_example": {},
-        })
         reqs["description"] = (f"{meta['description']} MCP pointer: "
                                f"{public_base}/{agent}/mcp tool={tool}")
         # CDP Bazaar's backwards-compatible v1 discovery hook. It indexes
@@ -848,7 +1442,6 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                             result["tx_hash"])
 
         # H402-4: execute via the ungated inner (payment already made).
-        args = await _request_args(request)
         args = {k: v for k, v in args.items() if k != "action"}
         try:
             out = inner({"action": action, **args})
@@ -865,11 +1458,26 @@ def make_x402_http_route(cores, store, public_base, tools=None):
                    "message": f"paid call errored: {type(exc).__name__} "
                               "(payment settled; contact support with the tx)",
                    "tx_hash": result["tx_hash"]}
+        delivery_status = _paid_delivery_status(out)
+        _record_delivery_status(consumed[key], delivery_status)
+        out = _with_commerce_metadata(out, agent, tool, public_base)
+        delivery_receipt = None
+        if delivery_status == "delivered":
+            out, delivery_receipt = _attach_paid_delivery_receipt(
+                out, consumed[key], agent, tool)
+            _record_delivery_status(
+                consumed[key], delivery_status, delivery_receipt)
+        try:
+            store.save(agent, core)
+        except Exception:
+            logger.error(
+                "x402_http[%s]: delivery outcome persistence failed",
+                agent,
+            )
         receipt = base64.b64encode(json.dumps(
             result.get("settlement_receipt")
             or {"transaction": result["tx_hash"]}).encode()).decode()
-        return _resp(_with_commerce_metadata(
-            out, agent, tool, public_base), 200, {
+        return _resp(out, 200, {
                 "X-PAYMENT-RESPONSE": receipt,
                 "X-Payment-Tx": result["tx_hash"]})
 

@@ -1,5 +1,25 @@
 # STATUS — Viridis Agent Fleet
 
+> **[2026-08-04, Eight-route commerce and delivery receipts — DEPLOYED/ACTIVE]
+> Regulatory Radar's bounded dated watch is now the eighth public paid route,
+> and successful HTTP x402 v2 and A2A deliveries emit
+> `viridis-paid-delivery-v1`.** Each receipt binds the exact route, settlement,
+> canonical result SHA-256, and receipt SHA-256. It classifies only seller-side
+> transport delivery; buyer acceptance, usefulness, repeat demand, and recurring
+> revenue remain separate and unobserved until external evidence exists.
+>
+> The exact production candidate passed copied-state compatibility, 28/28
+> health, eight-route HTTP and A2A discovery, unpaid 402 challenges, provider
+> readiness, restart durability, exact runtime parity, and a fresh 35-row
+> SQLite backup/restore drill. Production now runs on the 2 GB CPU/RAM class;
+> disk size was unchanged and the previous image remains pinned for rollback.
+>
+> Commercial truth remains four distinct external payers, four external
+> settlements, 280,000 atomic USDC ($0.28), zero repeats, zero active
+> subscriptions, and zero newly receipted paid deliveries. The four historical
+> outcomes predate durable delivery instrumentation and remain unknown. No
+> self-paid smoke or synthetic revenue was generated.
+
 > **[2026-07-27, Security Preflight v1.1 trust binding — DEPLOYED/ACTIVE]
 > Security evidence now survives restarts and fails closed after profile
 > changes.** Every new receipt binds the exact manifest/policy artifact SHA-256.

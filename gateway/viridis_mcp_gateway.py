@@ -2,7 +2,7 @@
 """
 Viridis Agent Stable — MCP Gateway (deployment round 1).
 
-One process, twenty-two hosted MCP servers. Each agent's existing
+One process, twenty-six hosted MCP servers. Each agent's existing
 adapters/mcp_server.py is loaded unmodified and mounted at the path its
 registry manifest already declares:
 
@@ -46,10 +46,12 @@ import argparse
 import asyncio
 import contextlib
 import functools
+import hashlib
 import html
 import importlib.util
 import inspect
 import json
+import logging
 import os
 import re
 import sys
@@ -57,9 +59,10 @@ import threading
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
+logger = logging.getLogger("viridis.gateway")
 
 # mount path -> agent directory (paths match deploy/mcp-publish manifests)
 MOUNTS = {
@@ -90,6 +93,7 @@ MOUNTS = {
     "neurogenesis":     "neurogenesis-agent",
     "green-router":     "green-router-agent",
     "viridisos":        "viridisos",
+    "security-preflight": "security-preflight-agent",
 }
 
 # Agent-discovery ("agent SEO") metadata for the ARD /.well-known/ai-catalog.json.
@@ -174,11 +178,11 @@ AGENT_SEO = {
                     "Match my intention to aligned agents",
                     "Register my collective for agent matchmaking"]},
     "smartscale": {
-        "desc": "Credit-card-calibrated visual measurement — extract real-world object dimensions from a photo using a reference object. 10 free calls/day, then $0.50/call (credit packs via redeem_payment, or x402).",
-        "queries": ["Measure the dimensions of an object from a photo",
-                    "Estimate real-world size using a credit-card reference",
-                    "Extract measurements from an image",
-                    "Cheap pay-per-call measurement API for agents"]},
+        "desc": "Deterministic CR80 pixel-geometry scaling for non-safety-critical coplanar 2D measurements. Callers supply the card and object pixel geometry; SmartScale does not receive images or detect objects. 10 free calls/day, then $0.50/call (credit packs via redeem_payment, or x402).",
+        "queries": ["Convert CR80-calibrated pixel dimensions to millimetres",
+                    "Scale caller-supplied coplanar object pixel boxes",
+                    "Check supplied CR80 width/height geometry for distortion",
+                    "Retry-safe pay-per-call pixel geometry scaling for agents"]},
     "protogen": {
         "desc": "MCP CAD services — turn a spec or a measurement into a parametric CAD design; bundles with SmartScale (measure to CAD). 10 free calls/day, then $1.00/call (credit packs via redeem_payment, or x402).",
         "queries": ["Generate a CAD design from a spec",
@@ -266,6 +270,18 @@ AGENT_SEO = {
                     "Is this conservation claim backed by a machine-checked proof?",
                     "Bind a did:viridis identity for my agent",
                     "Which ViridisOS modules are live?"]},
+    "security-preflight": {
+        "desc": (
+            "A $1 deterministic security preflight for caller-supplied MCP "
+            "manifests, tool schemas, policies, and sample inputs. Returns "
+            "bounded checks plus a signed, input-redacted receipt; it does "
+            "not fetch or certify the deployed runtime."),
+        "queries": [
+            "Check my MCP agent manifest before I deploy it",
+            "Scan my AI agent tool policy for unsafe authority",
+            "Get a signed security receipt for my agent profile",
+            "Detect injection indicators in sample agent inputs",
+        ]},
 }
 
 
@@ -278,25 +294,41 @@ EXTERNAL_MEMBERS = [
         "identifier": "urn:air:viridis:energyai",
         "displayName": "EnergyAI",
         "url": "https://api.energyaisolution.com/mcp",
-        "description": ("Energy intelligence for AI agents — worldwide clean-energy incentive "
-                        "guidance, honest-range solar production estimates, home Energy Node "
-                        "Scores, a source-cited US incentive guide library, and a no-consent-"
-                        "required quote-link handoff (get_quote_link) into a real installer "
-                        "match. Free tier is no-key, no-signup; deeper tools (full roadmap, "
-                        "quote review, information-theoretic recommendation) are billed from a "
-                        "prepaid balance."),
-        # 2026-07-19: synced to the live free-tier allowlist (src/services/agentToolSchemas.ts
+        "description": ("Energy intelligence for AI agents — eight no-key discovery tools for "
+                        "worldwide clean-energy incentives, honest-range solar production, "
+                        "Energy Node Scores, source-cited US guides, quote-link handoff, lead "
+                        "routing, and publicly-rated local contractors. Contractor results are "
+                        "public-reputation listings, not endorsements or partnerships. Builder "
+                        "Activation starts with bootstrap_energy_project: three commercial calls "
+                        "without a card, then $19/month with $20 in monthly tool credit."),
+        # 2026-07-29: synced to the live free-tier allowlist (src/services/agentToolSchemas.ts
         # AGENT_TOOL_SCHEMAS) — this list drifts easily since it's a static discovery-catalog
         # copy, not a live proxy; re-check it whenever EnergyAI's free tools change.
         "capabilities": ["check_incentives", "estimate_production", "get_node_score",
-                         "get_quote_link", "route_lead", "list_guides", "get_guide"],
+                         "get_quote_link", "route_lead", "list_guides", "get_guide",
+                         "find_local_installers"],
         "representativeQueries": [
             "What solar incentives and rebates apply to my ZIP code?",
             "Estimate annual solar production for my home",
             "Score my home's energy-node potential and get a roadmap",
-            "Get a homeowner a link to request installer quotes"],
-        "version": "1.1.0",
+            "Get a homeowner a link to request installer quotes",
+            "Activate an agent's first commercial energy workflow"],
+        "version": "1.0.0",
         "infra": "own droplet energyai-prod + energyaisolution.com (Cloudflare/Caddy)",
+        "metadata": {
+            "officialRegistryName": "com.energyaisolution/energyai",
+            "builderActivation": {
+                "offerId": "builder_activation_v1",
+                "firstCommercialTool": "bootstrap_energy_project",
+                "trialCommercialCalls": 3,
+                "cardRequiredForTrial": False,
+                "monthlyPriceUsd": 19,
+                "monthlyCreditUsd": 20,
+            },
+            "claimBoundary": (
+                "Local contractor results use public reputation data and are "
+                "not vetted, endorsed, or partnered listings."),
+        },
     },
     {
         "identifier": "urn:air:viridis:security-injection-detector",
@@ -308,13 +340,14 @@ EXTERNAL_MEMBERS = [
             "for tool-policy violations. Results are evidence-bounded verdicts and "
             "recommended actions, not a vulnerability-free guarantee. Discovery is "
             "public; tool calls require a Viridis Security API key, with a 1,000-call "
-            "monthly free tier."),
+            "monthly free tier. Calls naming a market agent can return a signed, "
+            "input-redacted result receipt for exactly-once market import."),
         "capabilities": ["detect_injection", "detect_trace_tool_policy"],
         "representativeQueries": [
             "Screen this untrusted text for prompt injection before my agent reads it",
             "Check whether this agent trace violated the user-approved tool policy",
             "Add an MCP security guardrail to an autonomous agent"],
-        "version": "0.1.0",
+        "version": "0.2.0",
         "infra": "Viridis Security runtime + mcp.viridis-security.com",
         "category": "security-plane",
         "role": "security-posture-provider",
@@ -323,10 +356,71 @@ EXTERNAL_MEMBERS = [
         "tags": ["security", "agent-security", "mcp-security"],
         "metadata": {
             "securityPlane": True,
+            "operatorEntity": "ViridisNorth LLC",
+            "ownershipDisclosure": "Common control with Viridis fleet; related-party evidence, not independent verification.",
             "officialRegistryName": "io.github.viridis-security/injection-detector",
             "claimBoundary": (
                 "Detection coverage is not a secure or vulnerability-free guarantee."),
         },
+    },
+    {
+        "identifier": "urn:air:viridis:security-canon-scanner",
+        "displayName": "Viridis Security Canon Scanner",
+        "url": "https://mcp.viridis-security.com/v1/canon/scan",
+        "description": (
+            "Source-code security scanning for AI agents against the Viridis "
+            "vulnerability canon, with bounded findings and remediation guidance. "
+            "Calls use the separate Viridis Security API-key subscription runtime; "
+            "the fleet never receives those credentials."),
+        "capabilities": ["canon_scan", "source_code_security"],
+        "representativeQueries": [
+            "Scan this agent source for known MCP vulnerabilities",
+            "Check an AI agent implementation against a vulnerability canon",
+            "Find unsafe tool and network patterns in this agent code"],
+        "version": "0.1.0",
+        "infra": "Viridis Security runtime + mcp.viridis-security.com",
+        "category": "security-plane",
+        "role": "security-analysis-provider",
+        "auth": "Bearer API key",
+        "signup": "https://mcp.viridis-security.com/signup",
+        "tags": ["security", "agent-code-security", "mcp-security"],
+        "metadata": {
+            "securityPlane": True,
+            "operatorEntity": "ViridisNorth LLC",
+            "ownershipDisclosure": "Common control with Viridis fleet; related-party evidence, not independent verification.",
+            "claimBoundary": (
+                "Findings cover only supplied source; no vulnerability-free guarantee."),
+        },
+        "probe": "authenticated-rest",
+    },
+    {
+        "identifier": "urn:air:viridis:security-maxwell",
+        "displayName": "Viridis Security Maxwell Defense",
+        "url": "https://mcp.viridis-security.com/v1/maxwell/challenge",
+        "description": (
+            "Adaptive proof-of-work defense for AI-agent endpoints that makes "
+            "abusive requests expensive while legitimate verification stays cheap. "
+            "Available on Viridis Security Growth and higher plans."),
+        "capabilities": ["issue_challenge", "verify_challenge", "bind_receipt"],
+        "representativeQueries": [
+            "Protect my AI agent endpoint from automated abuse",
+            "Issue a proof-of-work challenge for a suspicious agent request",
+            "Add asymmetric denial-of-service defense to an MCP service"],
+        "version": "0.1.0",
+        "infra": "Viridis Security runtime + mcp.viridis-security.com",
+        "category": "security-plane",
+        "role": "runtime-defense-provider",
+        "auth": "Bearer API key (Growth+)",
+        "signup": "https://mcp.viridis-security.com/signup",
+        "tags": ["security", "agent-abuse-defense", "proof-of-work"],
+        "metadata": {
+            "securityPlane": True,
+            "operatorEntity": "ViridisNorth LLC",
+            "ownershipDisclosure": "Common control with Viridis fleet; related-party service, not independent verification.",
+            "claimBoundary": (
+                "Defense raises adversarial request cost; it is not an availability guarantee."),
+        },
+        "probe": "authenticated-rest",
     },
 ]
 
@@ -338,7 +432,11 @@ def _load_adapter(path: str, agent_dir: str):
     Between loads we evict all `src*` modules and put the agent's root at the
     front of sys.path, so each adapter binds to ITS OWN core.
     """
-    for mod in [m for m in list(sys.modules) if m == "src" or m.startswith("src.")]:
+    for mod in [
+            name for name in list(sys.modules)
+            if (name == "src" or name.startswith("src.")
+                or name == "adapters" or name.startswith("adapters."))
+    ]:
         del sys.modules[mod]
     agent_root = str(ROOT / agent_dir)
     while agent_root in sys.path:
@@ -351,6 +449,33 @@ def _load_adapter(path: str, agent_dir: str):
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+class _UnavailableStatus:
+    """Health/status placeholder for a shared subsystem whose dependency
+    failed to mount. It never pretends the subsystem is enabled."""
+
+    def __init__(self, component: str, reason: str):
+        self.component = component
+        self.reason = reason
+
+    def status(self) -> dict:
+        return {
+            "enabled": False,
+            "errors": {"dependency": self.reason},
+        }
+
+
+class _UnavailableGate(_UnavailableStatus):
+    free_calls = 0
+    attached = ()
+
+    def redeem(self, *_args, **_kwargs):
+        return {
+            "status": "error",
+            "error_type": "payment_gate_unavailable",
+            "message": self.reason,
+        }
 
 
 def _is_sha256(value) -> bool:
@@ -572,13 +697,16 @@ class _StripeSubscriptionProvider:
         return response
 
     def create_subscription_checkout(self, *, price_id: str, plan_id: str,
-                                     account_ref: str, catalog_version: str,
+                                     account_ref: str,
+                                     acquisition_source: str = "unattributed",
+                                     catalog_version: str,
                                      catalog_sha256: str, **_ignored) -> dict:
         import stripe_payments
         return self._require_ok(stripe_payments.create_subscription_checkout(
             price_id, plan_id, account_ref,
             catalog_version=catalog_version,
             catalog_sha256=catalog_sha256,
+            acquisition_source=acquisition_source,
             success_url=(self.public_base +
                          "/seats/success?session_id={CHECKOUT_SESSION_ID}"),
             cancel_url=self.public_base + "/seats"),
@@ -689,6 +817,89 @@ def _attach_subscription_bearer(subscription_core, account_key_getter) -> None:
     subscription_core.process = process
 
 
+def _subscription_activation_reconciliation(
+    subscription_core,
+    admin_token,
+    lookback_days=90,
+    *,
+    provider_list=None,
+    now=None,
+) -> dict:
+    """Return a privacy-safe, read-only paid-seat activation aggregate."""
+    import hmac as _hmac
+
+    expected = os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
+    if (not expected or not isinstance(admin_token, str)
+            or not _hmac.compare_digest(admin_token, expected)):
+        return {
+            "status": "error",
+            "error_type": "unauthorized",
+            "message": "valid admin_token required (VIRIDIS_ADMIN_TOKEN)",
+        }
+    if (not isinstance(lookback_days, int)
+            or isinstance(lookback_days, bool)
+            or not 1 <= lookback_days <= 365):
+        return {
+            "status": "error",
+            "error_type": "bad_lookback_days",
+            "message": "lookback_days must be an integer in [1, 365]",
+        }
+    if subscription_core is None:
+        return {
+            "status": "error",
+            "error_type": "subscriptions_unavailable",
+            "message": "subscription ledger is unavailable",
+        }
+    if provider_list is None:
+        import stripe_payments
+        provider_list = stripe_payments.list_subscription_checkout_evidence
+    observed = now or datetime.now(timezone.utc)
+    if observed.tzinfo is None or observed.utcoffset() is None:
+        return {
+            "status": "error",
+            "error_type": "invalid_clock",
+            "message": "reconciliation clock must be timezone-aware",
+        }
+    observed = observed.astimezone(timezone.utc)
+    created_after_epoch = int(observed.timestamp()) - lookback_days * 86400
+    provider = provider_list(created_after_epoch=created_after_epoch)
+    if not isinstance(provider, dict) or provider.get("status") != "ok":
+        error_type = (
+            provider.get("error_type")
+            if isinstance(provider, dict) else "provider_contract_error")
+        message = (
+            provider.get("message")
+            if isinstance(provider, dict) else
+            "provider evidence response is invalid")
+        return {
+            "status": "error",
+            "error_type": str(error_type or "provider_contract_error"),
+            "message": str(message or "provider evidence unavailable")[:500],
+            "provider_mutation": False,
+            "customer_action_authorized": False,
+        }
+    try:
+        result = subscription_core.provider_activation_reconciliation(
+            provider.get("sessions"),
+            observed_at=provider.get("timestamp"),
+            created_after_epoch=provider.get("created_after_epoch"),
+            pages=provider.get("pages"),
+        )
+    except Exception as exc:
+        logger.warning(
+            "subscription activation reconciliation refused: %s",
+            type(exc).__name__,
+        )
+        return {
+            "status": "error",
+            "error_type": type(exc).__name__,
+            "message": "provider evidence failed subscription reconciliation",
+            "provider_mutation": False,
+            "customer_action_authorized": False,
+        }
+    return {"status": "ok", **result}
+
+
 _SEAT_PLAN_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,79}$")
 _SEAT_SESSION_RE = re.compile(r"^cs_[A-Za-z0-9_]+$")
 _SEAT_ACCOUNT_RE = re.compile(r"^acct_[A-Za-z0-9_-]{1,64}$")
@@ -707,6 +918,48 @@ _SEAT_PUBLIC_HEADERS = {
     key: value for key, value in _SEAT_SECURITY_HEADERS.items()
     if key != "X-Robots-Tag"
 }
+_ACQUISITION_SOURCE_TAGS = {
+    "awesome-x402": "awesome_x402",
+    "awesome_x402": "awesome_x402",
+    "meshmcp": "meshmcp",
+    "x402-success": "x402_success",
+    "x402_success": "x402_success",
+    "openclaw": "openclaw",
+}
+_SEAT_SOURCE_VALUES = frozenset({
+    "awesome_x402", "meshmcp", "x402_success", "openclaw", "github",
+    "internal", "search", "direct", "other", "unattributed",
+})
+_SEARCH_REFERRERS = (
+    "google.", "bing.", "duckduckgo.", "brave.", "search.yahoo.")
+
+
+def _public_acquisition_source(request) -> str:
+    """Map request context to one finite non-PII acquisition label."""
+    values = request.query_params.getlist("source")
+    if len(values) == 1 and values[0] in _ACQUISITION_SOURCE_TAGS:
+        return _ACQUISITION_SOURCE_TAGS[values[0]]
+    raw = str(request.headers.get("referer") or "").strip()
+    if not raw:
+        return "direct"
+    try:
+        hostname = (urlparse(raw).hostname or "").lower().rstrip(".")
+    except ValueError:
+        return "other"
+    if not hostname:
+        return "other"
+    request_host = str(getattr(request.url, "hostname", "") or "").lower()
+    if hostname == request_host or hostname == "mcp.viridisconservation.com":
+        return "internal"
+    if hostname == "github.com" or hostname.endswith(".github.com"):
+        return "github"
+    if any(
+            hostname == prefix.rstrip(".")
+            or hostname.startswith(prefix)
+            or ("." + prefix) in hostname
+            for prefix in _SEARCH_REFERRERS):
+        return "search"
+    return "other"
 
 
 def _seat_pledge_percent(value=None) -> Decimal:
@@ -728,6 +981,10 @@ def _seat_percent_text(value: Decimal) -> str:
 
 
 def _seat_conservation_line(value: Decimal) -> str:
+    if value == 0:
+        return ("Conservation allocation is not active yet. Any future pledge "
+                "will be published before checkout and will remain separate "
+                "from verified retirement evidence.")
     percent = _seat_percent_text(value)
     return (f"{percent}% of your subscription funds are pledged for verified "
             "conservation. Offset routing is not yet active, so this is a "
@@ -817,7 +1074,7 @@ def _build_seat_routes(subscription_core, *, public_base: str,
         return RedirectResponse(url, status_code=302,
                                 headers=dict(_SEAT_SECURITY_HEADERS))
 
-    def render_catalog(catalog: dict) -> str:
+    def render_catalog(catalog: dict, acquisition_source: str) -> str:
         plans = catalog.get("plans")
         currency = catalog.get("currency")
         if (not isinstance(plans, list) or not plans
@@ -847,6 +1104,8 @@ def _build_seat_routes(subscription_core, *, public_base: str,
                 control = (
                     '<form class="checkout" action="/seats/checkout" method="get">'
                     f'<input type="hidden" name="plan" value="{html.escape(plan_id)}">'
+                    '<input type="hidden" name="source" value="'
+                    f'{html.escape(acquisition_source)}">'
                     '<label>Email <input type="email" name="email" maxlength="200" '
                     'autocomplete="email" required placeholder="you@company.com"></label>'
                     '<button type="submit">Continue to Stripe</button></form>')
@@ -878,8 +1137,12 @@ def _build_seat_routes(subscription_core, *, public_base: str,
                          html.escape(conservation_line)))
 
     async def seats(request):
+        acquisition_source = _public_acquisition_source(request)
         view = await _seat_core_action(
-            subscription_core, {"action": "record_frontdoor_view"})
+            subscription_core, {
+                "action": "record_frontdoor_view",
+                "source": acquisition_source,
+            })
         if not isinstance(view, dict) or view.get("status") != "ok":
             return response(_seat_error_page(
                 "Seat plans are temporarily unavailable. Please try again."), 503)
@@ -889,7 +1152,8 @@ def _build_seat_routes(subscription_core, *, public_base: str,
             return response(_seat_error_page(
                 "Seat plans are temporarily unavailable. Please try again."), 503)
         try:
-            body = render_catalog(listed.get("data", {}))
+            body = render_catalog(
+                listed.get("data", {}), acquisition_source)
         except Exception:
             return response(_seat_error_page(
                 "Seat plans are temporarily unavailable. Please try again."), 503)
@@ -898,14 +1162,17 @@ def _build_seat_routes(subscription_core, *, public_base: str,
     async def checkout(request):
         plan_id = _seat_single_query(request, "plan")
         email = _seat_single_query(request, "email")
+        acquisition_source = _seat_single_query(request, "source")
         if (not isinstance(plan_id, str)
                 or not _SEAT_PLAN_RE.fullmatch(plan_id)
-                or not _seat_valid_email(email)):
+                or not _seat_valid_email(email)
+                or acquisition_source not in _SEAT_SOURCE_VALUES):
             return response(_seat_error_page(
                 "Choose a listed plan and enter a valid business email."), 400)
         result = await _seat_core_action(subscription_core, {
             "action": "create_checkout_link", "plan_id": plan_id,
-            "account_ref": email})
+            "account_ref": email,
+            "acquisition_source": acquisition_source})
         if not isinstance(result, dict) or result.get("status") != "ok":
             configuration = (isinstance(result, dict)
                              and result.get("error_type") ==
@@ -1018,15 +1285,24 @@ def build_app():
 
     adapters = {}
     src_modules = {}
+    mount_errors = {}
     for path, agent_dir in MOUNTS.items():
-        adapters[path] = _load_adapter(path, agent_dir)
-        # PS8: capture this agent's src modules BEFORE the next load evicts
-        # them — its pickled classes must (de)serialize against these.
-        src_modules[path] = {m: sys.modules[m] for m in list(sys.modules)
-                             if m == "src" or m.startswith("src.")}
+        try:
+            adapters[path] = _load_adapter(path, agent_dir)
+            # PS8: capture this agent's src modules BEFORE the next load
+            # evicts them — its pickled classes must (de)serialize against
+            # these.
+            src_modules[path] = {
+                module: sys.modules[module] for module in list(sys.modules)
+                if module == "src" or module.startswith("src.")
+            }
+        except Exception as exc:
+            mount_errors[path] = f"{type(exc).__name__}: {exc}"
+            logger.exception("adapter mount failed for %s", path)
 
     # H10 is an honest local fallback, not a production configuration. Bind
-    # the Hive to the exact shared cores already loaded in this gateway.
+    # the hive to the exact shared cores already loaded in this gateway and
+    # fail its mount closed if any required rail is unavailable.
     if "hive" in adapters:
         hive_rail_mounts = {
             "trust": "trust",
@@ -1039,28 +1315,40 @@ def build_app():
             mount for mount in hive_rail_mounts.values()
             if mount not in adapters
         ]
-        if missing:
-            raise RuntimeError(
-                "hive missing shared rails: " + ", ".join(sorted(missing)))
-        adapters["hive"].configure_gateway({
-            rail: adapters[mount].agent
-            for rail, mount in hive_rail_mounts.items()
-        })
+        try:
+            if missing:
+                raise RuntimeError(
+                    "missing shared rails: " + ", ".join(sorted(missing)))
+            adapters["hive"].configure_gateway({
+                rail: adapters[mount].agent
+                for rail, mount in hive_rail_mounts.items()
+            })
+        except Exception as exc:
+            mount_errors["hive"] = f"{type(exc).__name__}: {exc}"
+            adapters.pop("hive", None)
+            logger.exception("hive production wiring failed closed")
 
     servers = {path: mod.mcp for path, mod in adapters.items()}
     cores = {path: mod.agent for path, mod in adapters.items()}
 
     # Subscriptions is fleet revenue infrastructure, not a twenty-second leaf
     # agent. It is mounted and persisted separately so /healthz agents remains
-    # the production-coherent count of 27 (Hive mounted 2026-07-25).
-    subscription_adapter = _load_adapter("subscriptions", "subscriptions-agent")
-    subscription_src_modules = {
-        module: sys.modules[module] for module in list(sys.modules)
-        if module == "src" or module.startswith("src.")}
-    subscription_core = subscription_adapter.agent
-    subscription_core.config.stripe_provider = _StripeSubscriptionProvider(
-        public_base)
-    servers["subscriptions"] = subscription_adapter.mcp
+    # the production-coherent count of 28.
+    subscription_core = None
+    subscription_src_modules = {}
+    try:
+        subscription_adapter = _load_adapter(
+            "subscriptions", "subscriptions-agent")
+        subscription_src_modules = {
+            module: sys.modules[module] for module in list(sys.modules)
+            if module == "src" or module.startswith("src.")}
+        subscription_core = subscription_adapter.agent
+        subscription_core.config.stripe_provider = _StripeSubscriptionProvider(
+            public_base)
+        servers["subscriptions"] = subscription_adapter.mcp
+    except Exception as exc:
+        mount_errors["subscriptions"] = f"{type(exc).__name__}: {exc}"
+        logger.exception("subscriptions mount failed")
 
     # Persistence (PS1-PS8, see state_store.py): restore each core's state
     # from the last snapshot, then wrap process() so every state change is
@@ -1074,22 +1362,25 @@ def build_app():
         store.register_modules(path, src_modules[path])
         store.restore(path, core)
         store.attach(path, core)
-    store.register_modules("subscriptions", subscription_src_modules)
-    store.restore("subscriptions", subscription_core)
-    # A first-time account key is acknowledged only after the verified
-    # activation snapshot is committed. The core rolls every activation/index
-    # mutation back if this writer fails, so a retry can safely issue the key.
-    subscription_core.config.durable_activation_commit = (
-        lambda: store.save("subscriptions", subscription_core))
-    _attach_subscription_bearer(subscription_core, current_account_key)
-    store.attach("subscriptions", subscription_core)
+    if subscription_core is not None:
+        store.register_modules("subscriptions", subscription_src_modules)
+        store.restore("subscriptions", subscription_core)
+        # A first-time account key is acknowledged only after the verified
+        # activation snapshot is committed. The core rolls every
+        # activation/index mutation back if this writer fails, so a retry can
+        # safely issue the key.
+        subscription_core.config.durable_activation_commit = (
+            lambda: store.save("subscriptions", subscription_core))
+        _attach_subscription_bearer(subscription_core, current_account_key)
+        store.attach("subscriptions", subscription_core)
 
     # Successful GHG inventories compose into the free rails before the paid
     # gate wraps calculate_inventory. IDs are audit-derived, so retries are
     # idempotent in both ledgers. Rail failures stay explicit in rail_posts
     # but never corrupt or replace the deterministic inventory result.
-    _attach_ghg_rail_composition(
-        cores["ghg-ledger"], cores["compute-ledger"], cores["provenance"])
+    if {"ghg-ledger", "compute-ledger", "provenance"} <= set(cores):
+        _attach_ghg_rail_composition(
+            cores["ghg-ledger"], cores["compute-ledger"], cores["provenance"])
 
     # GR3: green-router certificates become REAL clearinghouse retirements
     # (fail-closed) before the paid gate wraps certify.
@@ -1112,12 +1403,18 @@ def build_app():
     # autonomously on Stripe's licensed rails; only non-onboarded payees'
     # payouts remain CERTIFIED for Justin.
     from escrow_custody import EscrowCustody, verified_stats_from_core
-    custody = EscrowCustody(
-        store, cores["escrow"], connect=connect,
-        # EC10 connect_verified tier: payee's certified delivery count
-        # read sync from the verified core (V7 pure surface); payee id
-        # must equal the registered provider string (uw-v1 keying).
-        verified_stats=verified_stats_from_core(cores["verified"]))
+    if "escrow" in cores:
+        custody = EscrowCustody(
+            store, cores["escrow"], connect=connect,
+            # EC10 connect_verified tier: payee's certified delivery count
+            # read sync from the verified core (V7 pure surface); payee id
+            # must equal the registered provider string (uw-v1 keying).
+            verified_stats=(
+                verified_stats_from_core(cores["verified"])
+                if "verified" in cores else None))
+    else:
+        custody = _UnavailableStatus(
+            "escrow_custody", "escrow adapter did not mount")
 
     # Hub Kernel (HK1-HK8): the isolated agent market may ask the gateway to
     # verify an already-executed x402/escrow settlement. It receives no Stripe,
@@ -1136,17 +1433,91 @@ def build_app():
     # a pure escrow `fund` transition can no longer mint service credits.
     # Participant internal-earnings spend remains a separate path.
     from payment_gate import PaymentGate, PRICE_MINOR, DEFAULT_PRICE_MINOR
-    gate = PaymentGate(
-        store, cores["metering"], subscription_core=subscription_core,
-        account_key_getter=current_account_key,
-        escrow_core=cores["escrow"], escrow_persist_key="escrow",
-        custody=custody)
-    for path in ("smartscale", "protogen", "taxcredit-engine", "ghg-ledger",
-                 "quantity-takeoff", "disclosure-compiler",
-                 "narrative-engine", "regulatory-radar", "verified",
-                 "verdigraph", "neurogenesis", "green-router", "hive"):
-        if path in cores:
-            gate.attach(path, cores[path])
+    gated_mounts = (
+        "smartscale", "protogen", "taxcredit-engine", "ghg-ledger",
+        "quantity-takeoff", "disclosure-compiler", "narrative-engine",
+        "regulatory-radar", "verified", "verdigraph", "neurogenesis",
+        "green-router", "hive", "security-preflight",
+    )
+    def _verify_market_hive_funding(name: str, binding: dict) -> dict:
+        """Recheck the Hub receipt plus live custody before every held call."""
+        if name != "hive" or not isinstance(binding, dict):
+            return {"verified": False}
+        event_id = str(binding.get("funding_event_id") or "")
+        work_id = str(binding.get("work_id") or "")
+        escrow_id = str(binding.get("escrow_id") or "")
+        receipt = hub.state.funding_receipts.get(event_id)
+        if (not isinstance(receipt, dict)
+                or receipt.get("verified") is not True
+                or receipt.get("work_id") != work_id
+                or receipt.get("event_sha256") != binding.get("event_sha256")
+                or hub.state.funding_references.get(escrow_id.lower())
+                != work_id):
+            return {"verified": False}
+        primitive = receipt.get("money_primitive") or {}
+        if (primitive.get("primitive")
+                != "stripe_checkout_escrow_funding"
+                or primitive.get("escrow_id") != escrow_id
+                or primitive.get("escrow_state") != "FUNDED"
+                or primitive.get("payee") != binding.get("payee")
+                or primitive.get("amount_minor")
+                != binding.get("amount_minor")
+                or primitive.get("currency") != binding.get("currency")):
+            return {"verified": False}
+        funded = getattr(getattr(custody, "state", None), "funded", {}) or {}
+        evidence = funded.get(escrow_id)
+        if (not isinstance(evidence, dict)
+                or evidence.get("livemode") is not True
+                or int(evidence.get("amount_total") or 0)
+                != int(binding.get("amount_minor") or 0)):
+            return {"verified": False}
+        current = cores["escrow"].process_sync(
+            {"action": "status", "escrow_id": escrow_id})
+        escrow = current.get("data") if isinstance(current, dict) else None
+        verified = bool(
+            isinstance(escrow, dict)
+            and escrow.get("state") == "FUNDED"
+            and escrow.get("payee") == binding.get("payee")
+            and escrow.get("currency") == binding.get("currency")
+            and escrow.get("amount_minor") == binding.get("amount_minor"))
+        return {"verified": verified}
+
+    if "metering" in cores:
+        gate = PaymentGate(
+            store, cores["metering"], subscription_core=subscription_core,
+            account_key_getter=current_account_key,
+            escrow_core=cores.get("escrow"), escrow_persist_key="escrow",
+            custody=(custody if "escrow" in cores else None),
+            market_funding_verifier=(
+                _verify_market_hive_funding
+                if {"hive", "escrow"} <= set(cores) else None))
+        for path in gated_mounts:
+            if path in cores:
+                gate.attach(path, cores[path])
+    else:
+        gate = _UnavailableGate(
+            "payment_gate", "metering adapter did not mount")
+        # A sellable core must never fall through ungated if the shared gate
+        # cannot load. Free rails stay up; paid mounts fail closed.
+        for path in gated_mounts:
+            servers.pop(path, None)
+            cores.pop(path, None)
+
+    # MH1-MH8: the seller-side conversion bridge is present but inert unless
+    # its separate lifecycle flag and caller-held Market signing key are
+    # configured. It cannot accept on the buyer's behalf or release escrow.
+    market_hive_bridge = None
+    if ("hive" in cores and isinstance(gate, PaymentGate)
+            and callable(gate.market_funding_verifier)):
+        try:
+            from market_hive_bridge import MarketHiveBridge
+            market_hive_bridge = MarketHiveBridge(
+                store, cores["hive"], gate, public_base=public_base)
+            store.restore("market_hive_bridge", market_hive_bridge)
+        except Exception as exc:
+            logger.exception("Market Hive bridge failed closed")
+            mount_errors["market-hive-bridge"] = (
+                f"{type(exc).__name__}: {exc}")
 
     # The Weave (WV1-WV8, see weave.py): EnergyAI restoration share, rate
     # schedule weave-B-v1 (ratified 2026-07-16), settled through the fleet's
@@ -1154,7 +1525,11 @@ def build_app():
     # same-account allocation; an optional external beneficiary uses the
     # existing Connect rail with CR7 manual fallback when not onboarded.
     from weave import Weave
-    weave_bridge = Weave(store, cores["offsets"], connect=connect)
+    weave_bridge = (
+        Weave(store, cores["offsets"], connect=connect)
+        if "offsets" in cores else
+        _UnavailableStatus("weave", "offsets adapter did not mount")
+    )
 
     # Participant bridge (PB1-PB8, see participant_bridge.py): counterparties
     # become participants — payees claim identities and make earnings liquid
@@ -1162,22 +1537,36 @@ def build_app():
     # escrows flow through arbitration to an executed ruling plus immediate
     # EC5 cash completion (refund/Connect/manual fallback as applicable).
     from participant_bridge import ParticipantBridge, attach_self_teaching
-    participants = ParticipantBridge(
-        store, cores["escrow"], cores["identity"], cores["arbitration"],
-        gate, custody)
+    participant_dependencies = {"escrow", "identity", "arbitration"}
+    if participant_dependencies <= set(cores) and isinstance(gate, PaymentGate):
+        participants = ParticipantBridge(
+            store, cores["escrow"], cores["identity"], cores["arbitration"],
+            gate, custody)
+    else:
+        missing = sorted(participant_dependencies - set(cores))
+        participants = _UnavailableStatus(
+            "participants",
+            "missing dependencies: " + ", ".join(missing or ["payment_gate"]))
     # PB9/PB10: self-teaching envelopes — the moment an escrow RELEASES to
     # a non-viridis payee (payee_next_steps: claim/balance/spend) or enters
     # DISPUTED (dispute_next_steps: file/evidence/fee schedule), the
     # response itself teaches the participant's next step. Additive only;
     # the stdlib escrow core stays pure.
-    attach_self_teaching(cores["escrow"])
+    if "escrow" in cores:
+        attach_self_teaching(cores["escrow"])
 
     # Collateralized bonds (CB1-CB7, see bond_bridge.py): bond-writing with
     # zero Viridis capital — the provider's own cash-funded escrow is the
     # reserve; premiums priced by uw-v1; slashing stays ruling-gated (SB).
     from bond_bridge import BondBridge
-    bonds = BondBridge(store, cores["escrow"], cores["surety"],
-                       cores["verified"], custody, connect=connect)
+    bond_dependencies = {"escrow", "surety", "verified"}
+    if bond_dependencies <= set(cores):
+        bonds = BondBridge(store, cores["escrow"], cores["surety"],
+                           cores["verified"], custody, connect=connect)
+    else:
+        bonds = _UnavailableStatus(
+            "bonds", "missing dependencies: " +
+            ", ".join(sorted(bond_dependencies - set(cores))))
 
     # stateless_http: no session persistence needed for these tools; makes the
     # endpoints trivially load-balancer-friendly.
@@ -1195,6 +1584,10 @@ def build_app():
         _sec = None
     for s in servers.values():
         s.settings.stateless_http = True
+        # JSON POST responses avoid the SDK's SSE headers-before-body failure
+        # mode, where a crashed response task leaves callers with HTTP 200 and
+        # an empty, unparseable body.
+        s.settings.json_response = True
         if _sec is not None:
             try:
                 s.settings.transport_security = _sec
@@ -1208,6 +1601,18 @@ def build_app():
     # Reads STRIPE_API_KEY from the container env; degrades to a structured error
     # (never a crash) when the key is absent.
     try:
+        payment_dependencies = {
+            "metering", "escrow", "identity", "arbitration", "offsets",
+            "surety", "verified",
+        }
+        missing_payment_dependencies = (
+            payment_dependencies - set(cores))
+        if subscription_core is None:
+            missing_payment_dependencies.add("subscriptions")
+        if missing_payment_dependencies:
+            raise RuntimeError(
+                "payment surface disabled; missing adapters: " +
+                ", ".join(sorted(missing_payment_dependencies)))
         import stripe_payments
         from mcp.server.fastmcp import FastMCP
         pay = FastMCP("payments")
@@ -1248,6 +1653,35 @@ def build_app():
             import reconciliation
             return await reconciliation.build_report(
                 cores["metering"], gate, days=days, custody=custody)
+
+        @pay.tool()
+        async def checkout_lifecycle_report(admin_token: str) -> dict:
+            """Admin: pull-verify pending custody Checkout Sessions and return
+            a privacy-safe lifecycle report. Read-only: never expires a Stripe
+            Session, archives local state, exposes a session ID or hosted URL,
+            funds an escrow, or moves money. Requires VIRIDIS_ADMIN_TOKEN."""
+            import hmac as _hmac
+            expected = os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
+            if not expected or not isinstance(admin_token, str) \
+                    or not _hmac.compare_digest(admin_token, expected):
+                return {"status": "error", "error_type": "unauthorized",
+                        "message": "valid admin_token required "
+                                   "(VIRIDIS_ADMIN_TOKEN)"}
+            return custody.checkout_lifecycle_report(verify_provider=True)
+
+        @pay.tool()
+        async def subscription_activation_reconciliation(
+                admin_token: str, lookback_days: int = 90) -> dict:
+            """Admin: reconcile live Stripe subscription Checkouts against
+            the durable seat ledger. Returns aggregate paid-but-not-activated
+            evidence only: no customer, Checkout, or subscription identifiers.
+            Provider and ledger access are read-only; no outreach is authorized.
+            Requires VIRIDIS_ADMIN_TOKEN."""
+            return _subscription_activation_reconciliation(
+                subscription_core,
+                admin_token,
+                lookback_days,
+            )
 
         @pay.tool()
         async def escrow_checkout(escrow_id: str) -> dict:
@@ -1520,6 +1954,7 @@ def build_app():
                 job_amount_minor, coverage_minor, duration_days)
 
         pay.settings.stateless_http = True
+        pay.settings.json_response = True
         if _sec is not None:
             try:
                 pay.settings.transport_security = _sec
@@ -1527,7 +1962,9 @@ def build_app():
                 pass
         servers["payments"] = pay
     except Exception:
-        pass  # gateway still serves the 21 agents even if payments fails to load
+        logger.warning(
+            "payments surface not loaded; remaining fleet stays available",
+            exc_info=True)
 
     routes = [Mount(f"/{path}", app=s.streamable_http_app())
               for path, s in servers.items()]
@@ -1555,6 +1992,7 @@ def build_app():
         tools/list. Isolated: a federated outage NEVER degrades the core
         gateway status (they run their own P&L and uptime)."""
         import asyncio
+        import urllib.error
         import urllib.request
         url = member["url"]
         caps = member.get("capabilities", [])
@@ -1570,15 +2008,54 @@ def build_app():
                 headers={"content-type": "application/json",
                          "accept": "application/json, text/event-stream"})
             with urllib.request.urlopen(req, timeout=6) as r:  # nosec
-                return r.status, r.read(4096).decode(errors="replace")
+                raw = r.read(262145)
+                if len(raw) > 262144:
+                    raise ValueError("federated MCP response exceeds 256 KiB")
+                return r.status, raw.decode(errors="replace")
+
+        def _tool_names(text: str):
+            candidates = [text]
+            candidates.extend(
+                line[5:].strip()
+                for line in text.splitlines()
+                if line.startswith("data:") and line[5:].strip()
+            )
+            for candidate in candidates:
+                try:
+                    payload = json.loads(candidate)
+                except json.JSONDecodeError:
+                    continue
+                tools = payload.get("result", {}).get("tools")
+                if isinstance(tools, list):
+                    return {
+                        item["name"] for item in tools
+                        if isinstance(item, dict)
+                        and isinstance(item.get("name"), str)
+                    }
+            return None
+
         try:
             status, text = await asyncio.wait_for(
                 asyncio.to_thread(_blocking), timeout=8)
-            live = status == 200 and '"tools"' in text
-            tools = text.count('"name"') if live else 0
-            base["status"] = "ok" if live else "degraded"
-            if tools:
-                base["checks"]["tools"] = tools
+            tool_names = _tool_names(text) if status == 200 else None
+            missing = sorted(set(caps) - (tool_names or set()))
+            base["checks"]["tools"] = len(tool_names or ())
+            base["checks"]["capabilities_present"] = (
+                len(caps) - len(missing))
+            if missing:
+                base["checks"]["missing_capabilities"] = missing
+            base["status"] = (
+                "ok" if tool_names is not None and not missing
+                else "degraded")
+        except urllib.error.HTTPError as e:
+            if (member.get("probe") == "authenticated-rest"
+                    and e.code in {401, 403}):
+                base["status"] = "ok"
+                base["checks"]["auth_gate"] = "enforced"
+                base["checks"]["http_status"] = e.code
+            else:
+                base["status"] = "unreachable"
+                base["checks"]["error"] = f"{type(e).__name__}"
         except Exception as e:
             base["status"] = "unreachable"
             base["checks"]["error"] = f"{type(e).__name__}"
@@ -1586,21 +2063,41 @@ def build_app():
 
     async def healthz(request):
         import asyncio
-        checks = {}
+        checks = {
+            path: {
+                "status": "degraded",
+                "agent": MOUNTS[path],
+                "error_type": "adapter_import_failed",
+                "message": reason,
+            }
+            for path, reason in mount_errors.items()
+            if path in MOUNTS
+        }
         for path, core in cores.items():
             h = core.health()
             checks[path] = (await h) if asyncio.iscoroutine(h) else h
-        subscription_health = subscription_core.health()
-        subscription_health = (await subscription_health
-                               if asyncio.iscoroutine(subscription_health)
-                               else subscription_health)
-        subscription_health = dict(subscription_health)
-        # Aggregate-only capital visibility: no account, customer, key, or
-        # subscription identifiers leave the infrastructure core.
-        subscription_health["mrr_summary"] = subscription_core.mrr_summary()
-        subscription_health["frontdoor_funnel"] = (
-            subscription_core.frontdoor_summary())
+        if subscription_core is not None:
+            subscription_health = subscription_core.health()
+            subscription_health = (await subscription_health
+                                   if asyncio.iscoroutine(subscription_health)
+                                   else subscription_health)
+            subscription_health = dict(subscription_health)
+            # Aggregate-only capital visibility: no account, customer, key, or
+            # subscription identifiers leave the infrastructure core.
+            subscription_health["mrr_summary"] = subscription_core.mrr_summary()
+            subscription_health["frontdoor_funnel"] = (
+                subscription_core.frontdoor_summary())
+        else:
+            subscription_health = {
+                "status": "degraded",
+                "agent": "subscriptions-agent",
+                "error_type": "adapter_import_failed",
+                "message": mount_errors.get(
+                    "subscriptions", "subscription adapter unavailable"),
+            }
         persistence = store.status()
+        metering_snapshot = persistence.get("snapshots", {}).get(
+            "metering", {})
         # Federated members (EnergyAI etc.) run on their own infra — probed
         # for the dashboard but EXCLUDED from the core status gate (SB: their
         # uptime is not ours).
@@ -1611,16 +2108,31 @@ def build_app():
         # Trust infrastructure fails loud: agents up but state not durable
         # is a degraded gateway, not a healthy one.
         hub_status = hub.status()
+        market_hive_status = (
+            market_hive_bridge.status()
+            if market_hive_bridge is not None else {
+                "enabled": False,
+                "status": "unavailable",
+                "error": mount_errors.get(
+                    "market-hive-bridge", "dependencies unavailable"),
+            })
         ok = (all(c.get("status") == "ok" for c in checks.values())
               and subscription_health.get("status") == "ok"
+              and not mount_errors
               and persistence["available"] and not persistence["errors"]
               and (not hub_required or hub_status["enabled"])
               and not hub_status["errors"])
         return JSONResponse({"status": "ok" if ok else "degraded",
                              "gateway": "viridis-agent-stable",
+                             "mount_errors": dict(mount_errors),
                              "human_surfaces": {
                                  "agents": public_base + "/agents",
                                  "quickstart": public_base + "/quickstart",
+                                 "compliance_snapshot":
+                                     public_base + "/compliance-snapshot",
+                                 "compliance_snapshot_example":
+                                     public_base +
+                                     "/compliance-snapshot/example",
                                  "llms_txt": public_base + "/llms.txt",
                                  "x402_catalog": public_base + "/x402/catalog",
                                  "agent_skills_index":
@@ -1637,6 +2149,15 @@ def build_app():
                                  "agent_market": public_base + "/network/catalog",
                              },
                              "persistence": persistence,
+                             "state_change_auth": __import__(
+                                 "state_change_auth").status(),
+                             "mcp_initialize_recovery": __import__(
+                                 "mcp_initialize_recovery").status(),
+                             "metering_persistence": {
+                                 "snapshot_seq": metering_snapshot.get("seq"),
+                                 "last_persisted_at":
+                                     metering_snapshot.get("updated_at"),
+                             },
                              "payment_gate": gate.status(),
                              "escrow_custody": custody.status(),
                              "connect_rail": connect.status(),
@@ -1645,22 +2166,31 @@ def build_app():
                              "collateralized_bonds": bonds.status(),
                              "a2a_commerce": a2a_status(),
                              "hub_kernel": hub_status,
+                             "market_hive_bridge": market_hive_status,
                              "subscriptions": subscription_health,
                              "agents": checks,
                              "federated": federated}, status_code=200 if ok else 503)
 
     async def directory(request):
+        described_agents = {}
+        for path, core in cores.items():
+            described = core.describe()
+            described_agents[path] = {
+                "endpoint": f"/{path}/mcp",
+                **{key: described[key]
+                   for key in ("name", "version", "capabilities")},
+            }
         return JSONResponse({
             "gateway": "viridis-agent-stable",
-            "agents": {path: {"endpoint": f"/{path}/mcp",
-                              **{k: cores[path].describe()[k]
-                                 for k in ("name", "version", "capabilities")}}
-                       for path in MOUNTS},
+            "status": "ok" if not mount_errors else "degraded",
+            "mount_errors": dict(mount_errors),
+            "agents": described_agents,
             "infrastructure": {
-                "subscriptions": {
+                **({"subscriptions": {
                     "endpoint": "/subscriptions/mcp",
                     **{key: subscription_core.describe()[key]
                        for key in ("name", "version", "capabilities")}},
+                   } if subscription_core is not None else {}),
                 "payments": {"endpoint": "/payments/mcp"},
                 "agent_market": {
                     "endpoint": "/network/mcp",
@@ -1677,8 +2207,15 @@ def build_app():
                 },
                 "quickstart": {
                     "endpoint": "/quickstart",
-                    "description": ("x402 buyer quickstart and five-route "
-                                    "workflow demo"),
+                    "description": ("x402 buyer quickstart for the five-route "
+                                    "workflow and reviewed Hive solve"),
+                },
+                "compliance_snapshot": {
+                    "endpoint": "/compliance-snapshot",
+                    "description": (
+                        "Reviewed one-time regulatory applicability and "
+                        "deadline snapshot for human buyers"),
+                    "money_movement": "Stripe-hosted human action only",
                 },
                 "llms_txt": {
                     "endpoint": "/llms.txt",
@@ -1727,7 +2264,7 @@ def build_app():
             }
         except Exception:
             x402_by_agent = {}
-        for path in MOUNTS:
+        for path in sorted(cores):
             d = cores[path].describe()
             seo = AGENT_SEO.get(path, {})
             x402_item = x402_by_agent.get(path)
@@ -1809,6 +2346,8 @@ def build_app():
                 "metadata": {"seatCheckoutUrl": public_base + "/seats",
                              "agentsUrl": public_base + "/agents",
                              "x402QuickstartUrl": public_base + "/quickstart",
+                             "complianceSnapshotUrl":
+                                 public_base + "/compliance-snapshot",
                              "llmsTxtUrl": public_base + "/llms.txt",
                              "x402CatalogUrl": public_base + "/x402/catalog",
                              "agentMarketUrl": public_base + "/network/catalog",
@@ -1822,16 +2361,27 @@ def build_app():
                     "displayName": "Viridis autonomous agent suite",
                     "type": "text/html",
                     "url": public_base + "/agents",
-                    "description": ("Five pay-per-call carbon and compliance "
-                                    "agents, payable with x402 Base USDC."),
+                    "description": ("Six pay-per-call routes: five carbon and "
+                                    "compliance agents plus reviewed Hive "
+                                    "orchestration, payable with x402 Base "
+                                    "USDC."),
                 },
                 {
                     "identifier": "urn:air:viridis:x402-quickstart",
                     "displayName": "Viridis x402 quickstart",
                     "type": "text/html",
                     "url": public_base + "/quickstart",
-                    "description": ("Copy-paste buyer setup and a chainable "
-                                    "five-route workflow demo."),
+                    "description": ("Copy-paste buyer setup for the chainable "
+                                    "five-route workflow and reviewed Hive."),
+                },
+                {
+                    "identifier": "urn:air:viridis:compliance-snapshot",
+                    "displayName": "Viridis Compliance Snapshot",
+                    "type": "text/html",
+                    "url": public_base + "/compliance-snapshot",
+                    "description": (
+                        "Reviewed, source-linked regulatory applicability and "
+                        "deadline snapshot for one company or project."),
                 },
                 {
                     "identifier": "urn:air:viridis:llms-txt",
@@ -1846,7 +2396,7 @@ def build_app():
                     "displayName": "Viridis x402 route catalog",
                     "type": "application/json",
                     "url": public_base + "/x402/catalog",
-                    "description": ("Machine-readable five-route inventory "
+                    "description": ("Machine-readable eight-route inventory "
                                     "with live protocol and Bazaar status."),
                 },
                 {
@@ -1906,23 +2456,40 @@ def build_app():
     _quickstart_html = (
         _quickstart_path.read_text() if _quickstart_path.exists() else
         "<h1>quickstart.html not deployed</h1>")
+    _snapshot_path = (
+        Path(__file__).resolve().parent / "compliance_snapshot.html")
+    _snapshot_html = (
+        _snapshot_path.read_text() if _snapshot_path.exists() else
+        "<h1>Compliance Snapshot is temporarily unavailable.</h1>"
+        "{{STATUS_MESSAGE}}")
+    _snapshot_example_path = (
+        Path(__file__).resolve().parent /
+        "compliance_snapshot_example.html")
+    _snapshot_example_html = (
+        _snapshot_example_path.read_text()
+        if _snapshot_example_path.exists() else
+        "<h1>Compliance Snapshot example is temporarily unavailable.</h1>")
+    _snapshot_example_og_path = (
+        Path(__file__).resolve().parent /
+        "compliance-snapshot-example-og.png")
+    _snapshot_example_og = (
+        _snapshot_example_og_path.read_bytes()
+        if _snapshot_example_og_path.exists() else b"")
     _llms_path = Path(__file__).resolve().parent / "llms.txt"
     _llms_text = (_llms_path.read_text() if _llms_path.exists() else
                   "# Viridis agents\n\nllms.txt not deployed\n")
-    _paid_skill_candidates = (
-        ROOT / "integrations" / "viridis-paid-tools" / "SKILL.md",
-        Path(__file__).resolve().parents[1] /
-        "integrations" / "viridis-paid-tools" / "SKILL.md",
-    )
-    _paid_skill_path = next(
-        (path for path in _paid_skill_candidates if path.exists()),
-        _paid_skill_candidates[0])
+    _paid_skill_path = (
+        ROOT / "integrations" / "viridis-paid-tools" / "SKILL.md")
     _paid_skill_text = (
         _paid_skill_path.read_text(encoding="utf-8")
         if _paid_skill_path.exists() else "")
     _paid_skill_description = (
         "Discover and safely buy Viridis deterministic carbon and compliance "
         "tools through x402 v2, or inspect signed Agent Market work listings.")
+    _brand_mark_path = Path(__file__).resolve().parent / "viridis-mark.svg"
+    _brand_mark_svg = (
+        _brand_mark_path.read_text() if _brand_mark_path.exists() else
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>')
 
     def _intro_public_line() -> str:
         try:
@@ -1931,8 +2498,10 @@ def build_app():
         except Exception:
             active = False
         if active:
-            return ("First paid call from every new wallet is $0.01 USDC; "
-                    "subsequent calls use the unchanged list price.")
+            return ("First paid call from every new wallet on eligible "
+                    "carbon/compliance routes is $0.01 USDC; Hive stays at "
+                    "its fixed $5.00 price and subsequent eligible calls use "
+                    "the unchanged list price.")
         return "Intro pricing is currently disabled; list prices apply."
 
     async def agents_page(request):
@@ -1947,6 +2516,229 @@ def build_app():
                             _quickstart_html.replace(
                                 "{{INTRO_STATUS}}", _intro_public_line()),
                             headers=dict(_SEAT_PUBLIC_HEADERS))
+
+    _SNAPSHOT_AMOUNT_CENTS = 4900
+    _SNAPSHOT_OFFER_ID = "compliance-snapshot-v1"
+    _SNAPSHOT_JURISDICTIONS = frozenset({
+        "CALIFORNIA", "EU", "US", "UK",
+    })
+    _SNAPSHOT_SECTORS = frozenset({
+        "energy", "manufacturing", "financial_services", "consumer_goods",
+        "agriculture", "forestry", "technology",
+    })
+
+    def _snapshot_message_page(title: str, message: str) -> str:
+        return (
+            "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            f"<title>{html.escape(title)} · Viridis</title><style>"
+            "body{font:16px/1.55 system-ui;max-width:760px;margin:8vh auto;"
+            "padding:24px;color:#18352b}a{color:#14694c}</style></head><body>"
+            "<p>Viridis Conservation</p>"
+            f"<h1>{html.escape(title)}</h1><p>{html.escape(message)}</p>"
+            "<p><a href='/compliance-snapshot'>Return to the Compliance "
+            "Snapshot</a></p></body></html>")
+
+    def _snapshot_single(form: dict, name: str):
+        values = form.get(name)
+        if not isinstance(values, list) or len(values) != 1:
+            return None
+        return values[0]
+
+    def _snapshot_text(value, *, minimum: int, maximum: int):
+        if not isinstance(value, str):
+            return None
+        normalized = " ".join(value.split())
+        if not minimum <= len(normalized) <= maximum:
+            return None
+        return normalized
+
+    async def compliance_snapshot(request):
+        from starlette.responses import HTMLResponse
+        if subscription_core is None:
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Snapshot temporarily unavailable",
+                    "The order system is unavailable. No payment was taken."),
+                status_code=503, headers=dict(_SEAT_SECURITY_HEADERS))
+        recorded = await _seat_core_action(
+            subscription_core, {"action": "record_snapshot_view"})
+        if not isinstance(recorded, dict) or recorded.get("status") != "ok":
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Snapshot temporarily unavailable",
+                    "The order system is unavailable. No payment was taken."),
+                status_code=503, headers=dict(_SEAT_SECURITY_HEADERS))
+        cancelled = (
+            request.query_params.get("cancelled") == "1")
+        status_message = (
+            '<p class="status">Checkout was cancelled. No charge was made.</p>'
+            if cancelled else "")
+        return HTMLResponse(
+            _snapshot_html.replace("{{STATUS_MESSAGE}}", status_message),
+            headers=dict(_SEAT_PUBLIC_HEADERS))
+
+    async def compliance_snapshot_example(request):
+        from starlette.responses import HTMLResponse
+        return HTMLResponse(
+            _snapshot_example_html, headers=dict(_SEAT_PUBLIC_HEADERS))
+
+    async def compliance_snapshot_example_og(request):
+        from starlette.responses import Response
+        return Response(
+            _snapshot_example_og,
+            status_code=200 if _snapshot_example_og else 404,
+            headers=dict(_SEAT_PUBLIC_HEADERS),
+            media_type="image/png")
+
+    async def compliance_snapshot_checkout(request):
+        from starlette.responses import HTMLResponse, RedirectResponse
+        if subscription_core is None:
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Checkout temporarily unavailable",
+                    "The order system is unavailable. No charge was made."),
+                status_code=503, headers=dict(_SEAT_SECURITY_HEADERS))
+        content_type = request.headers.get("content-type", "")
+        if not content_type.lower().startswith(
+                "application/x-www-form-urlencoded"):
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Check the order details",
+                    "Submit the order form from the Compliance Snapshot page."),
+                status_code=415, headers=dict(_SEAT_SECURITY_HEADERS))
+        try:
+            form = parse_qs(
+                (await request.body()).decode("utf-8", errors="strict"),
+                keep_blank_values=True, max_num_fields=8)
+        except Exception:
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Check the order details",
+                    "The submitted form could not be read."),
+                status_code=400, headers=dict(_SEAT_SECURITY_HEADERS))
+
+        email = _snapshot_text(
+            _snapshot_single(form, "email"), minimum=5, maximum=200)
+        company = _snapshot_text(
+            _snapshot_single(form, "company"), minimum=2, maximum=120)
+        jurisdiction = _snapshot_single(form, "jurisdiction")
+        sector = _snapshot_single(form, "sector")
+        question = _snapshot_text(
+            _snapshot_single(form, "question"), minimum=20, maximum=500)
+        website = _snapshot_single(form, "website")
+        if (not _seat_valid_email(email)
+                or company is None
+                or jurisdiction not in _SNAPSHOT_JURISDICTIONS
+                or sector not in _SNAPSHOT_SECTORS
+                or question is None
+                or website not in ("", None)):
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Check the order details",
+                    "Enter a valid business email, company or project, "
+                    "jurisdiction, sector, and question."),
+                status_code=400, headers=dict(_SEAT_SECURITY_HEADERS))
+
+        import stripe_payments
+        created = stripe_payments.create_checkout(
+            _SNAPSHOT_AMOUNT_CENTS,
+            "Viridis Compliance Snapshot",
+            customer_email=email,
+            success_url=(
+                public_base + "/compliance-snapshot/success"
+                "?session_id={CHECKOUT_SESSION_ID}"),
+            cancel_url=(
+                public_base + "/compliance-snapshot?cancelled=1#order"),
+            metadata={
+                "offer_id": _SNAPSHOT_OFFER_ID,
+                "company_or_project": company,
+                "jurisdiction": jurisdiction,
+                "sector": sector,
+                "question": question,
+            },
+        )
+        if not isinstance(created, dict) or created.get("status") != "ok":
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Checkout temporarily unavailable",
+                    "Stripe Checkout could not be opened. No charge was made."),
+                status_code=503, headers=dict(_SEAT_SECURITY_HEADERS))
+        checkout_url = _seat_hosted_url(
+            created.get("url"), "checkout.stripe.com")
+        if checkout_url is None or created.get("livemode") is not True:
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Checkout temporarily unavailable",
+                    "Live Stripe Checkout could not be verified. "
+                    "No charge was made."),
+                status_code=503, headers=dict(_SEAT_SECURITY_HEADERS))
+        recorded = await _seat_core_action(
+            subscription_core,
+            {"action": "record_snapshot_checkout_started"})
+        if not isinstance(recorded, dict) or recorded.get("status") != "ok":
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Checkout temporarily unavailable",
+                    "The order could not be recorded. No charge was made."),
+                status_code=503, headers=dict(_SEAT_SECURITY_HEADERS))
+        return RedirectResponse(
+            checkout_url, status_code=303,
+            headers=dict(_SEAT_SECURITY_HEADERS))
+
+    async def compliance_snapshot_success(request):
+        from starlette.responses import HTMLResponse
+        session_id = _seat_single_query(request, "session_id")
+        if (not isinstance(session_id, str)
+                or not _SEAT_SESSION_RE.fullmatch(session_id)
+                or len(session_id) > 255):
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Payment confirmation missing",
+                    "A valid Stripe Checkout confirmation is required."),
+                status_code=400, headers=dict(_SEAT_SECURITY_HEADERS))
+        import stripe_payments
+        verified = stripe_payments.verify_session(session_id)
+        valid = (
+            isinstance(verified, dict)
+            and verified.get("status") == "ok"
+            and verified.get("payment_status") == "paid"
+            and verified.get("amount_total") == _SNAPSHOT_AMOUNT_CENTS
+            and verified.get("currency") == "usd"
+            and verified.get("mode") == "payment"
+            and verified.get("offer_id") == _SNAPSHOT_OFFER_ID
+            and verified.get("livemode") is True
+        )
+        if not valid:
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Payment not yet verified",
+                    "No order was recorded. If you just paid, retry this "
+                    "confirmation page shortly."),
+                status_code=409, headers=dict(_SEAT_SECURITY_HEADERS))
+        recorded = await _seat_core_action(
+            subscription_core, {
+                "action": "record_snapshot_paid",
+                "stripe_reference": session_id,
+            })
+        if not isinstance(recorded, dict) or recorded.get("status") != "ok":
+            return HTMLResponse(
+                _snapshot_message_page(
+                    "Payment verified; order recording delayed",
+                    "Your payment is safe, but the order could not be recorded "
+                    "yet. Please retry this page shortly."),
+                status_code=503, headers=dict(_SEAT_SECURITY_HEADERS))
+        replay = bool((recorded.get("data") or {}).get("idempotent_replay"))
+        message = (
+            "Your paid order was already verified. We will deliver the "
+            "snapshot to the email used at Checkout within two business days."
+            if replay else
+            "Your $49 payment is verified. We will deliver the snapshot to "
+            "the email used at Checkout within two business days."
+        )
+        return HTMLResponse(
+            _snapshot_message_page("Compliance Snapshot ordered", message),
+            headers=dict(_SEAT_SECURITY_HEADERS))
 
     async def llms_txt(request):
         from starlette.responses import PlainTextResponse
@@ -1982,12 +2774,22 @@ def build_app():
             headers=dict(_SEAT_PUBLIC_HEADERS),
             media_type="text/markdown")
 
+    async def brand_mark(request):
+        from starlette.responses import Response
+        return Response(_brand_mark_svg, headers=dict(_SEAT_PUBLIC_HEADERS),
+                        media_type="image/svg+xml")
+
     async def x402_catalog(request):
-        from x402_http import discovery_entries, intro_status
+        from x402_http import (
+            discovery_entries,
+            independent_evidence_index,
+            intro_status,
+        )
         return JSONResponse({
             "spec_version": "viridis-x402-catalog-v1",
             "gateway": "viridis-agent-stable",
             "intro_pricing": intro_status(cores),
+            "independent_evidence": independent_evidence_index(),
             "routes": discovery_entries(public_base),
             "quickstart": public_base + "/quickstart",
             "llms_txt": public_base + "/llms.txt",
@@ -1996,27 +2798,103 @@ def build_app():
                 "/.well-known/skills/viridis-paid-tools/SKILL.md"),
         })
 
+    async def market_hive_artifact(request):
+        from starlette.responses import Response
+        digest = str(request.path_params.get("digest") or "").lower()
+        if (market_hive_bridge is None
+                or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+            return Response("not found", status_code=404,
+                            media_type="text/plain")
+        content = market_hive_bridge.artifact_bytes(digest)
+        if content is None or hashlib.sha256(content).hexdigest() != digest:
+            return Response("not found", status_code=404,
+                            media_type="text/plain")
+        return Response(
+            content, media_type="application/json",
+            headers={
+                "cache-control": "public, max-age=31536000, immutable",
+                "x-content-type-options": "nosniff",
+                "etag": f'"{digest}"',
+            })
+
+    async def security_preflight_receipt(request):
+        receipt_id = str(request.path_params.get("receipt_id") or "")
+        core = cores.get("security-preflight")
+        if core is None or re.fullmatch(r"vsr_[a-f0-9]{24}", receipt_id) is None:
+            return JSONResponse({"status": "error", "error": "not found"},
+                                status_code=404)
+        result = core.process({
+            "action": "get_receipt",
+            "receipt_id": receipt_id,
+        })
+        if asyncio.iscoroutine(result):
+            result = await result
+        if not isinstance(result, dict) or result.get("status") != "ok":
+            return JSONResponse({"status": "error", "error": "not found"},
+                                status_code=404)
+        return JSONResponse(
+            result,
+            headers={
+                "cache-control": "public, max-age=60",
+                "x-content-type-options": "nosniff",
+            })
+
     @contextlib.asynccontextmanager
     async def lifespan(app):
+        lifecycle_task = None
+
+        async def _market_hive_loop():
+            interval = max(
+                60, int(os.environ.get(
+                    "HIVE_MARKET_LIFECYCLE_INTERVAL_SECONDS", "300")))
+            while True:
+                try:
+                    await market_hive_bridge.run_once(apply=True)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    logger.exception("Market Hive lifecycle run failed")
+                await asyncio.sleep(interval)
+
         async with contextlib.AsyncExitStack() as stack:
             for s in servers.values():
                 await stack.enter_async_context(s.session_manager.run())
+            if (market_hive_bridge is not None
+                    and market_hive_bridge.status().get("enabled")):
+                lifecycle_task = asyncio.create_task(_market_hive_loop())
             try:
                 yield
             finally:
-                store.save_all({**cores, "subscriptions": subscription_core,
-                                "hub_kernel": hub.state})
+                if lifecycle_task is not None:
+                    lifecycle_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await lifecycle_task
+                final_cores = {
+                    **cores,
+                    "hub_kernel": hub.state,
+                    **({"market_hive_bridge": market_hive_bridge}
+                       if market_hive_bridge is not None else {}),
+                }
+                if subscription_core is not None:
+                    final_cores["subscriptions"] = subscription_core
+                store.save_all(final_cores)
                 store.close()
 
-    seat_routes = _build_seat_routes(
-        subscription_core, public_base=public_base,
-        template_html=_seats_html,
-        pledge_percent=os.environ.get("SEAT_CONSERVATION_PLEDGE_PERCENT", "0"))
+    seat_routes = (
+        _build_seat_routes(
+            subscription_core, public_base=public_base,
+            template_html=_seats_html,
+            pledge_percent=os.environ.get(
+                "SEAT_CONSERVATION_PLEDGE_PERCENT", "0"))
+        if subscription_core is not None else []
+    )
     # x402-native HTTP-402 surface (H402): a drop-in x402 client pays for a
     # gated tool with no in-band MCP parsing — Bazaar-discoverable. Additive;
     # if the module is absent the gateway still serves everything else.
     x402_http_routes = []
     try:
+        if not isinstance(gate, PaymentGate):
+            raise RuntimeError("payment gate unavailable")
         from x402_http import make_x402_http_route
         x402_http_routes = [Route("/x402/{agent}/{tool}",
                                   make_x402_http_route(cores, store, public_base),
@@ -2025,25 +2903,45 @@ def build_app():
         logger.warning("x402 HTTP-402 surface not loaded", exc_info=True)
     hub_routes = [Route("/internal/hub/events", make_hub_route(hub),
                         methods=["POST"])]
+    market_hive_routes = [
+        Route("/market-artifacts/{digest}.json", market_hive_artifact,
+              methods=["GET", "HEAD"])]
 
     app = Starlette(routes=[Route("/", directory), Route("/healthz", healthz),
                             Route("/agents", agents_page),
                             Route("/quickstart", quickstart),
+                            Route("/compliance-snapshot",
+                                  compliance_snapshot, methods=["GET"]),
+                            Route("/compliance-snapshot/example",
+                                  compliance_snapshot_example,
+                                  methods=["GET"]),
+                            Route("/compliance-snapshot/checkout",
+                                  compliance_snapshot_checkout,
+                                  methods=["POST"]),
+                            Route("/compliance-snapshot/success",
+                                  compliance_snapshot_success,
+                                  methods=["GET"]),
                             Route("/llms.txt", llms_txt),
                             Route("/.well-known/skills/index.json",
                                   agent_skills_index),
                             Route("/.well-known/skills/"
                                   "viridis-paid-tools/SKILL.md",
                                   buyer_skill),
+                            Route("/brand/viridis-mark.svg", brand_mark),
+                            Route("/brand/compliance-snapshot-example-og.png",
+                                  compliance_snapshot_example_og),
                             # Compatibility alias for Viridis discovery links
                             # already published to agent communities. This is
                             # not an x402 protocol-mandated well-known schema.
                             Route("/.well-known/x402", x402_catalog),
                             Route("/x402/catalog", x402_catalog),
+                            Route("/security-preflight/receipts/{receipt_id}",
+                                  security_preflight_receipt,
+                                  methods=["GET", "HEAD"]),
                             Route("/deck", deck), Route("/stats", stats),
                             Route("/.well-known/ai-catalog.json", ard_catalog),
                             *seat_routes, *a2a_routes, *x402_http_routes,
-                            *hub_routes,
+                            *hub_routes, *market_hive_routes,
                             *routes],
                     lifespan=lifespan)
     # CORS for the read-only observability surface (healthz / directory /
@@ -2065,6 +2963,14 @@ def build_app():
     # request. Deny-nothing: classification failure degrades to "unknown".
     from request_context import RequestContextMiddleware
     app = RequestContextMiddleware(app)
+    # FS3/FS4: the Caddy 1 MB limit is duplicated inside the process, and
+    # non-finite JSON is rejected before any mounted core sees it.
+    from mcp_initialize_recovery import MCPInitializeRecoveryMiddleware
+    app = MCPInitializeRecoveryMiddleware(app)
+    from state_change_auth import StateChangeAuthMiddleware
+    app = StateChangeAuthMiddleware(app)
+    from request_limits import RequestLimitsMiddleware
+    app = RequestLimitsMiddleware(app)
     return app
 
 
