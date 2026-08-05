@@ -1,0 +1,4 @@
+interface:
+  display_name: "Viridis Regulatory Radar"
+  short_description: "Inspect bounded regulatory scan quotes"
+  default_prompt: "Use $viridis-regulatory-radar to inspect a live Regulatory Radar quote without paying."
