@@ -43,10 +43,21 @@ NG7 WU WEI COMPUTE ROUTING (added 2026-07-18): route_task chooses the
     surfaced by compute_efficiency_report together with the
     Landauer-grounded energy context (thermo.py) — honest physics, the
     dI/dt <= P*D/(kB*T*ln2) thesis as a routable service.
+NG8 WU WEI ROUTER V2 (added 2026-08-09): routing can explicitly reuse,
+    apply a deterministic rule, run locally, call a cloud/tool profile, or
+    defer low-value work when the caller authorizes deferral. Quality,
+    reliability, locality, capability, context, cost, latency, and energy
+    ceilings are hard contracts. Energy/carbon estimates are labeled with
+    their evidence method; unknown energy never becomes a measured claim.
+    Decisions and observed outcomes are independently hash-bound receipts,
+    so predicted-vs-actual cost, latency, energy, and quality can be audited.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -70,7 +81,7 @@ MAX_AGENTS = 200          # bounded state (PG18 table-bound idiom)
 @dataclass
 class AgentConfig:
     name: str
-    version: str = "0.1.0"
+    version: str = "0.2.0"
     debug: bool = False
 
 
@@ -108,6 +119,16 @@ class ValidationError(ValueError):
 # --------------------------------------------------------------------------- #
 class NeurogenesisCore(AgentCore):
     """Genome -> developmental agent -> evaluation-driven evolution."""
+    KNOWN_ACTIONS = frozenset({
+        "create_agent", "list_agents", "get_agent", "submit_evaluation",
+        "best_next_steps", "get_ledger", "export_state", "import_state",
+        "delete_agent", "register_compute_profile", "route_task",
+        "record_route_outcome", "compute_efficiency_report", "describe",
+    })
+    READ_ACTIONS = frozenset({
+        "list_agents", "get_agent", "best_next_steps", "get_ledger",
+        "export_state", "compute_efficiency_report", "describe",
+    })
 
     def __init__(self, config: Optional[AgentConfig] = None):
         super().__init__(config or AgentConfig(name="neurogenesis-agent"))
@@ -121,6 +142,9 @@ class NeurogenesisCore(AgentCore):
         # PS8-safe) + append-only routing decision log.
         self._profiles: Dict[str, dict] = {}
         self._route_decisions: list = []
+        self._route_outcomes: list = []
+        self._route_seq = 0
+        self._outcome_seq = 0
 
     # -- live-object cache (never persisted; NG4 truth is _states) --------- #
     def _live(self, agent_id: str) -> DevelopmentalAgent:
@@ -155,6 +179,7 @@ class NeurogenesisCore(AgentCore):
                        "delete_agent": self._delete,
                        "register_compute_profile": self._register_profile,
                        "route_task": self._route_task,
+                       "record_route_outcome": self._record_route_outcome,
                        "compute_efficiency_report": self._efficiency_report,
                        "describe": lambda _d: self._ok(self.describe()),
                        }.get(action)
@@ -166,7 +191,8 @@ class NeurogenesisCore(AgentCore):
                                "submit_evaluation, best_next_steps, "
                                "get_ledger, export_state, import_state, "
                                "delete_agent, register_compute_profile, "
-                               "route_task, compute_efficiency_report, "
+                               "route_task, record_route_outcome, "
+                               "compute_efficiency_report, "
                                "describe")
             return handler(input_data)
         except ValidationError as e:
@@ -324,13 +350,45 @@ class NeurogenesisCore(AgentCore):
         allowed = {f.name for f in dataclass_fields(cls)}
         return {k: v for k, v in doc.items() if k in allowed}
 
+    def _ensure_router_state(self) -> None:
+        """Keep pre-v2 persisted snapshots forward-compatible."""
+        if not isinstance(getattr(self, "_profiles", None), dict):
+            self._profiles = {}
+        if not isinstance(getattr(self, "_route_decisions", None), list):
+            self._route_decisions = []
+        if not isinstance(getattr(self, "_route_outcomes", None), list):
+            self._route_outcomes = []
+        decision_ids = [
+            str(item.get("decision_id") or "")
+            for item in self._route_decisions if isinstance(item, dict)
+        ]
+        outcome_ids = [
+            str(item.get("outcome_id") or "")
+            for item in self._route_outcomes if isinstance(item, dict)
+        ]
+        decision_max = max((
+            int(value.rsplit("_", 1)[1]) for value in decision_ids
+            if value.startswith("wwr_") and value.rsplit("_", 1)[1].isdigit()
+        ), default=0)
+        outcome_max = max((
+            int(value.rsplit("_", 1)[1]) for value in outcome_ids
+            if value.startswith("wwo_") and value.rsplit("_", 1)[1].isdigit()
+        ), default=0)
+        self._route_seq = max(
+            int(getattr(self, "_route_seq", 0) or 0), decision_max)
+        self._outcome_seq = max(
+            int(getattr(self, "_outcome_seq", 0) or 0), outcome_max)
+
     def _register_profile(self, data: dict) -> dict:
+        self._ensure_router_state()
         doc = data.get("profile")
         if not isinstance(doc, dict) or not str(doc.get("id") or "").strip():
             raise ValidationError(
-                "profile is required: {id, kind?, quality_score [0,1], "
-                "cost_per_1k_input_tokens?, cost_per_1k_output_tokens?, "
-                "latency_ms?, gpu_memory_gb?, max_context_tokens?, local?}",
+                "profile is required: {id, kind/execution_mode?, "
+                "quality_score [0,1], reliability_score [0,1], costs?, "
+                "latency_ms?, energy rates or average_power_watts?, "
+                "carbon_intensity_g_per_kwh?, capabilities?, local?, "
+                "cache_confidence/cache_age_seconds?}",
                 field="profile", constraint="object with non-empty id")
         profile = ComputeProfile(**self._filter_fields(ComputeProfile, doc))
         if len(self._profiles) >= 200 and profile.id not in self._profiles:
@@ -339,29 +397,60 @@ class NeurogenesisCore(AgentCore):
                              constraint="max 200")
         self._profiles[profile.id] = doc                     # caller-supplied
         return self._ok({"profile_id": profile.id,
+                         "execution_mode": profile.mode,
+                         "energy_estimate_status": profile.estimate_energy(
+                             1000, 1000)[1],
                          "registered_profiles": len(self._profiles),
                          "next_steps": {"route": (
                              "call route_task with {task: {id, task_type, "
                              "expected_input_tokens, expected_output_tokens, "
-                             "min_quality, risk?, difficulty?, "
-                             "requires_local?}} — the cheapest profile "
-                             "meeting your quality floor wins (NG7)")}})
+                             "min_quality, min_reliability?, risk?, "
+                             "requires_local?, required_capabilities?, "
+                             "cost/latency/energy ceilings?, baselines?}} — "
+                             "the least-burden eligible route wins")}})
+
+    @staticmethod
+    def _receipt_sha256(document: dict) -> str:
+        encoded = json.dumps(
+            document, sort_keys=True, separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    @staticmethod
+    def _optional_nonnegative(data: dict, field: str) -> Optional[float]:
+        value = data.get(field)
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            raise ValidationError(
+                f"{field} must be a non-negative number or null",
+                field=field, value=value, constraint=">= 0 or null")
+        numeric = float(value)
+        if not math.isfinite(numeric) or numeric < 0:
+            raise ValidationError(
+                f"{field} must be a non-negative finite number or null",
+                field=field, value=value, constraint=">= 0 or null")
+        return numeric
 
     def _route_task(self, data: dict) -> dict:
+        self._ensure_router_state()
         doc = data.get("task")
         if not isinstance(doc, dict) or not str(doc.get("id") or "").strip():
             raise ValidationError(
                 "task is required: {id, task_type, expected_input_tokens, "
                 "expected_output_tokens, min_quality [0,1], risk?, "
-                "difficulty?, requires_local?}",
+                "requires_local?, required_capabilities?, "
+                "cost/latency/energy ceilings?, allow_reuse?, "
+                "allow_defer/value_score/urgency?, baselines?}",
                 field="task", constraint="object with non-empty id")
-        if not self._profiles:
+        task = TaskProfile(**self._filter_fields(TaskProfile, doc))
+        if not self._profiles and not task.should_defer():
             raise ValidationError(
                 "no compute profiles registered — call "
                 "register_compute_profile first (profiles are yours, "
                 "never invented: NG7)",
                 field="profiles", constraint=">= 1 registered")
-        task = TaskProfile(**self._filter_fields(TaskProfile, doc))
         optimizer = ComputeOptimizer(
             ComputeProfile(**self._filter_fields(ComputeProfile, p))
             for p in self._profiles.values())
@@ -373,33 +462,201 @@ class NeurogenesisCore(AgentCore):
                              constraint="register a profile meeting the "
                                         "task's min_quality/context/local "
                                         "constraints, or relax them")
-        record = {"task_id": task.id, "task_type": task.task_type,
+        self._route_seq += 1
+        decision_id = f"wwr_{self._route_seq:06d}"
+        record = {"policy_version": "wu-wei-router-v2",
+                  "decision_id": decision_id,
+                  "task_id": task.id, "task_type": task.task_type,
                   "profile_id": decision.profile_id,
+                  "execution_mode": decision.execution_mode,
                   "score": decision.score,
+                  "total_burden": decision.total_burden,
                   "estimated_cost": decision.estimated_cost,
                   "estimated_latency_ms": decision.estimated_latency_ms,
+                  "estimated_gpu_memory_gb":
+                      decision.estimated_gpu_memory_gb,
+                  "estimated_energy_wh": decision.estimated_energy_wh,
+                  "energy_estimate_status":
+                      decision.energy_estimate_status,
+                  "estimated_carbon_g": decision.estimated_carbon_g,
+                  "estimated_cost_saved": decision.estimated_cost_saved,
+                  "estimated_energy_saved_wh":
+                      decision.estimated_energy_saved_wh,
+                  "estimated_latency_saved_ms":
+                      decision.estimated_latency_saved_ms,
+                  "hard_contracts": {
+                      "quality_floor": task.min_quality,
+                      "reliability_floor": task.min_reliability,
+                      "requires_local": task.requires_local,
+                      "required_capabilities":
+                          list(task.required_capabilities),
+                      "max_cost_usd": task.max_cost_usd,
+                      "max_energy_wh": task.max_energy_wh,
+                      "max_latency_ms": task.max_latency_ms,
+                      "require_energy_estimate":
+                          task.require_energy_estimate,
+                  },
                   "reason": decision.reason, "at": _utcnow()}
+        record["decision_sha256"] = self._receipt_sha256(record)
         self._route_decisions.append(record)                 # NG7 log
         if len(self._route_decisions) > 1000:
             self._route_decisions = self._route_decisions[-1000:]
         return self._ok({**record,
                          "quality_floor_honored": True,
-                         "note": ("cheapest RELIABLE path: profiles below "
-                                  "min_quality were ineligible regardless "
-                                  "of cost (NG7)")})
+                         "no_result_claimed":
+                             decision.execution_mode == "defer",
+                         "note": (
+                             "least-burden eligible path: hard contracts "
+                             "cannot be traded for cost or energy savings; "
+                             "unknown energy is labeled, never measured")})
+
+    def _record_route_outcome(self, data: dict) -> dict:
+        self._ensure_router_state()
+        decision_id = str(data.get("decision_id") or "").strip()
+        if not decision_id:
+            raise ValidationError(
+                "decision_id is required (from route_task)",
+                field="decision_id", constraint="existing decision id")
+        decision = next((
+            item for item in reversed(self._route_decisions)
+            if item.get("decision_id") == decision_id
+        ), None)
+        if decision is None:
+            raise ValidationError(
+                "unknown decision_id", field="decision_id",
+                value=decision_id,
+                constraint="must refer to a retained route_task receipt")
+        if any(item.get("decision_id") == decision_id
+               for item in self._route_outcomes):
+            return self._err(
+                "outcome already recorded; receipts are append-only",
+                error_type="conflict", field="decision_id",
+                value=decision_id, constraint="one outcome per decision")
+        success_value = data.get("success_score")
+        if isinstance(success_value, bool):
+            raise ValidationError(
+                "success_score must be in [0,1]", field="success_score",
+                value=success_value, constraint="finite number in [0,1]")
+        success_score = float(success_value)
+        if not math.isfinite(success_score) or not 0.0 <= success_score <= 1.0:
+            raise ValidationError(
+                "success_score must be in [0,1]", field="success_score",
+                value=success_value, constraint="finite number in [0,1]")
+        actual_cost = self._optional_nonnegative(data, "actual_cost_usd")
+        actual_latency = self._optional_nonnegative(
+            data, "actual_latency_ms")
+        actual_energy = self._optional_nonnegative(
+            data, "actual_energy_wh")
+        self._outcome_seq += 1
+        outcome = {
+            "policy_version": "wu-wei-router-v2",
+            "outcome_id": f"wwo_{self._outcome_seq:06d}",
+            "decision_id": decision_id,
+            "decision_sha256": decision["decision_sha256"],
+            "success_score": success_score,
+            "actual_cost_usd": actual_cost,
+            "actual_latency_ms": actual_latency,
+            "actual_energy_wh": actual_energy,
+            "actual_energy_status": (
+                "caller_observed" if actual_energy is not None else "unknown"
+            ),
+            "quality_floor_met": success_score >= float(
+                decision["hard_contracts"]["quality_floor"]),
+            "notes": str(data.get("notes") or "")[:500],
+            "recorded_at": _utcnow(),
+        }
+        outcome["outcome_sha256"] = self._receipt_sha256(outcome)
+        self._route_outcomes.append(outcome)
+        if len(self._route_outcomes) > 1000:
+            self._route_outcomes = self._route_outcomes[-1000:]
+        return self._ok(outcome)
 
     def _efficiency_report(self, data: dict) -> dict:
+        self._ensure_router_state()
         limit = max(1, min(200, int(data.get("limit") or 50)))
-        decisions = self._route_decisions[-limit:]
+        v2_decisions = [
+            item for item in self._route_decisions
+            if isinstance(item, dict)
+            and item.get("policy_version") == "wu-wei-router-v2"
+        ]
+        decisions = v2_decisions[-limit:]
+        retained_ids = {item["decision_id"] for item in decisions}
+        outcomes = [item for item in self._route_outcomes
+                    if item.get("decision_id") in retained_ids]
         total_cost = sum(d["estimated_cost"] for d in decisions)
+        known_energy = [d["estimated_energy_wh"] for d in decisions
+                        if d.get("estimated_energy_wh") is not None]
+        known_carbon = [d["estimated_carbon_g"] for d in decisions
+                        if d.get("estimated_carbon_g") is not None]
+        actual_cost = [o["actual_cost_usd"] for o in outcomes
+                       if o.get("actual_cost_usd") is not None]
+        actual_latency = [o["actual_latency_ms"] for o in outcomes
+                          if o.get("actual_latency_ms") is not None]
+        actual_energy = [o["actual_energy_wh"] for o in outcomes
+                         if o.get("actual_energy_wh") is not None]
         return self._ok({
+            "policy_version": "wu-wei-router-v2",
             "decisions_total": len(self._route_decisions),
+            "v2_decisions_total": len(v2_decisions),
+            "legacy_decisions_unreceipted": (
+                len(self._route_decisions) - len(v2_decisions)),
             "window": len(decisions),
             "total_estimated_cost": round(total_cost, 6),
+            "estimated_energy": {
+                "known_decisions": len(known_energy),
+                "unknown_decisions": len(decisions) - len(known_energy),
+                "total_wh": round(sum(known_energy), 9),
+            },
+            "estimated_carbon": {
+                "known_decisions": len(known_carbon),
+                "unknown_decisions": len(decisions) - len(known_carbon),
+                "total_g": round(sum(known_carbon), 9),
+            },
+            "estimated_savings": {
+                "cost_usd": round(sum(
+                    value for value in (
+                        d.get("estimated_cost_saved") for d in decisions)
+                    if value is not None), 6),
+                "energy_wh": round(sum(
+                    value for value in (
+                        d.get("estimated_energy_saved_wh") for d in decisions)
+                    if value is not None), 9),
+                "latency_ms": round(sum(
+                    value for value in (
+                        d.get("estimated_latency_saved_ms") for d in decisions)
+                    if value is not None), 3),
+            },
             "by_profile": {
-                pid: sum(1 for d in decisions if d["profile_id"] == pid)
+                str(pid): sum(1 for d in decisions if d["profile_id"] == pid)
                 for pid in {d["profile_id"] for d in decisions}},
+            "by_mode": {
+                mode: sum(1 for d in decisions
+                          if d["execution_mode"] == mode)
+                for mode in {d["execution_mode"] for d in decisions}},
+            "compute_avoided": sum(
+                1 for d in decisions
+                if d["execution_mode"] in {"defer", "reuse"}),
+            "observed_outcomes": {
+                "count": len(outcomes),
+                "average_success_score": (
+                    None if not outcomes else round(sum(
+                        float(o["success_score"]) for o in outcomes
+                    ) / len(outcomes), 6)
+                ),
+                "quality_floor_failures": sum(
+                    1 for o in outcomes if not o["quality_floor_met"]),
+                "actual_cost_usd": (
+                    None if not actual_cost else round(sum(actual_cost), 6)),
+                "actual_latency_ms": (
+                    None if not actual_latency
+                    else round(sum(actual_latency), 3)),
+                "actual_energy_wh": (
+                    None if not actual_energy
+                    else round(sum(actual_energy), 9)),
+                "energy_coverage": f"{len(actual_energy)}/{len(outcomes)}",
+            },
             "decisions": decisions,
+            "outcomes": outcomes,
             "physics": {
                 "landauer_energy_per_bit_joules_at_300K":
                     landauer_energy_per_bit(300.0),
@@ -411,11 +668,14 @@ class NeurogenesisCore(AgentCore):
 
     # ---------------------------------------------------------------------- #
     async def health(self) -> dict:
+        self._ensure_router_state()
         h = await super().health()
         h["checks"] = {"agents": len(self._states),
                        "evaluations": self._evaluations,
                        "compute_profiles": len(self._profiles),
-                       "route_decisions": len(self._route_decisions)}
+                       "route_decisions": len(self._route_decisions),
+                       "route_outcomes": len(self._route_outcomes),
+                       "wu_wei_policy": "wu-wei-router-v2"}
         return h
 
     def describe(self) -> dict:
@@ -425,18 +685,24 @@ class NeurogenesisCore(AgentCore):
             "description": ("Developmental agents from digital genomes: "
                             "evaluation-driven growth/pruning over a "
                             "cognitive graph with safety axioms and an "
-                            "append-only developmental ledger."),
+                            "append-only developmental ledger; Wu Wei v2 "
+                            "routes or defers work under hard quality, "
+                            "reliability, cost, latency, locality, and "
+                            "energy contracts."),
             "capabilities": ["create_agent", "list_agents", "get_agent",
                              "submit_evaluation", "best_next_steps",
                              "get_ledger", "export_state", "import_state",
                              "delete_agent", "register_compute_profile",
-                             "route_task", "compute_efficiency_report",
-                             "describe"],
+                             "route_task", "record_route_outcome",
+                             "compute_efficiency_report", "describe"],
             "inputs": {"action": "str", "genome": "dict?", "agent_id": "str?",
                        "evaluation": "dict?", "from_node": "str?",
-                       "state": "dict?", "limit": "int?"},
+                       "state": "dict?", "profile": "dict?",
+                       "task": "dict?", "decision_id": "str?",
+                       "success_score": "float?", "limit": "int?"},
             "outputs": {"agent_id": "str", "nodes": "int", "edges": "int",
-                        "ledger_events": "int"},
+                        "ledger_events": "int", "decision_sha256": "str?",
+                        "outcome_sha256": "str?"},
         }
 
 

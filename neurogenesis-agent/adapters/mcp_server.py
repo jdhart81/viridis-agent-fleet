@@ -44,7 +44,11 @@ mcp = _mk_mcp("neurogenesis-agent",
                           "it with evaluation results as selective pressure — "
                           "growth, pruning, safety axioms, and an append-only "
                           "developmental ledger. The brain mount certifies "
-                          "what an agent IS; this grows what it BECOMES.")
+                          "what an agent IS; this grows what it BECOMES. "
+                          "Wu Wei v2 routes work through reuse, rules, local, "
+                          "tool, or cloud execution—or explicitly defers "
+                          "low-value work—under hard quality and energy "
+                          "contracts with hash-bound receipts.")
 agent = build()
 
 
@@ -53,16 +57,20 @@ async def _run(payload: Dict[str, Any]) -> str:
 
 
 @mcp.tool()
-async def create_agent(genome: Dict[str, Any]) -> str:
+async def create_agent(genome: Dict[str, Any],
+                       request_id: Optional[str] = None) -> str:
     """Create a developmental agent from a digital genome:
     {agent_name, purpose, initial_nodes (unique, >=1), fitness_metrics
     (>=1), optional growth_rules / safety_axioms}. Returns agent_id +
     initial graph summary."""
-    return await _run({"action": "create_agent", "genome": genome})
+    return await _run({"action": "create_agent", "genome": genome,
+                       **({"request_id": request_id}
+                          if request_id is not None else {})})
 
 
 @mcp.tool()
-async def submit_evaluation(agent_id: str, evaluation: Dict[str, Any]) -> str:
+async def submit_evaluation(agent_id: str, evaluation: Dict[str, Any],
+                            request_id: Optional[str] = None) -> str:
     """Evolve an agent with one task outcome: {task_id, task_type,
     success_score in [0,1], optional accuracy/user_satisfaction/
     cost_efficiency/safety_score/notes/used_nodes/used_edges}. Success
@@ -70,7 +78,9 @@ async def submit_evaluation(agent_id: str, evaluation: Dict[str, Any]) -> str:
     follow the genome's rules under its safety axioms (NG1). Returns the
     new developmental-ledger events."""
     return await _run({"action": "submit_evaluation", "agent_id": agent_id,
-                       "evaluation": evaluation})
+                       "evaluation": evaluation,
+                       **({"request_id": request_id}
+                          if request_id is not None else {})})
 
 
 @mcp.tool()
@@ -110,45 +120,77 @@ async def export_state(agent_id: str) -> str:
 
 
 @mcp.tool()
-async def import_state(state: Dict[str, Any]) -> str:
+async def import_state(state: Dict[str, Any],
+                       request_id: Optional[str] = None) -> str:
     """Recreate an agent from an export_state document."""
-    return await _run({"action": "import_state", "state": state})
+    return await _run({"action": "import_state", "state": state,
+                       **({"request_id": request_id}
+                          if request_id is not None else {})})
 
 
 @mcp.tool()
-async def delete_agent(agent_id: str) -> str:
+async def delete_agent(agent_id: str,
+                       request_id: Optional[str] = None) -> str:
     """Remove a developmental agent from this mount."""
-    return await _run({"action": "delete_agent", "agent_id": agent_id})
+    return await _run({"action": "delete_agent", "agent_id": agent_id,
+                       **({"request_id": request_id}
+                          if request_id is not None else {})})
 
 
 @mcp.tool()
-async def register_compute_profile(profile: Dict[str, Any]) -> str:
-    """Wu Wei compute routing (NG7): register an execution profile —
-    {id, kind?, quality_score [0,1], cost_per_1k_input_tokens?,
-    cost_per_1k_output_tokens?, latency_ms?, gpu_memory_gb?,
-    max_context_tokens?, local?}. A profile can be a local model, cloud
-    API, rules engine, or cached workflow. Profiles are yours — routing
-    never invents capacity."""
+async def register_compute_profile(profile: Dict[str, Any],
+                                   request_id: Optional[str] = None) -> str:
+    """Register a caller-owned Wu Wei execution profile: reuse/cache,
+    deterministic rule, local model, tool/workflow, or cloud model. Profiles
+    can declare quality, reliability, capabilities, token costs, latency,
+    locality, energy rates or average power, carbon intensity, and cache
+    confidence/age. Routing never invents capacity or energy evidence."""
     return await _run({"action": "register_compute_profile",
-                       "profile": profile})
+                       "profile": profile,
+                       **({"request_id": request_id}
+                          if request_id is not None else {})})
 
 
 @mcp.tool()
-async def route_task(task: Dict[str, Any]) -> str:
-    """Choose the cheapest RELIABLE compute path for a task:
-    {id, task_type, expected_input_tokens, expected_output_tokens,
-    min_quality [0,1], risk?, difficulty?, requires_local?}. Hard
-    contract (NG7): profiles below your min_quality are ineligible
-    regardless of cost — compute savings never silently regress quality.
-    Deterministic; every decision is logged with its reason."""
-    return await _run({"action": "route_task", "task": task})
+async def route_task(task: Dict[str, Any],
+                     request_id: Optional[str] = None) -> str:
+    """Choose the least-burden eligible route for a task. Hard constraints
+    include quality, reliability, locality, capabilities, context, cost,
+    latency, and energy. Optional baselines quantify predicted savings.
+    Explicit allow_defer/value/urgency fields may produce a no-work decision;
+    no result is then claimed. Returns a hash-bound decision receipt."""
+    return await _run({"action": "route_task", "task": task,
+                       **({"request_id": request_id}
+                          if request_id is not None else {})})
+
+
+@mcp.tool()
+async def record_route_outcome(decision_id: str, success_score: float,
+                               actual_cost_usd: Optional[float] = None,
+                               actual_latency_ms: Optional[float] = None,
+                               actual_energy_wh: Optional[float] = None,
+                               notes: str = "",
+                               request_id: Optional[str] = None) -> str:
+    """Attach one observed outcome to a Wu Wei decision. Actual cost,
+    latency, and energy are optional and remain explicitly unknown when
+    omitted. One append-only, hash-bound outcome is allowed per decision."""
+    return await _run({
+        "action": "record_route_outcome",
+        "decision_id": decision_id,
+        "success_score": success_score,
+        "actual_cost_usd": actual_cost_usd,
+        "actual_latency_ms": actual_latency_ms,
+        "actual_energy_wh": actual_energy_wh,
+        "notes": notes,
+        **({"request_id": request_id} if request_id is not None else {}),
+    })
 
 
 @mcp.tool()
 async def compute_efficiency_report(limit: int = 50) -> str:
-    """Free read: the routing decision log (per-profile counts, estimated
-    costs, reasons) with the Landauer-floor physics context — honest
-    compute-efficiency accounting in the Intelligence Bound frame."""
+    """Free read: decision/outcome receipts, route modes, compute avoided,
+    predicted savings, predicted-vs-observed cost/latency/energy coverage,
+    and Landauer-floor context. Estimates and observations stay distinct."""
     return await _run({"action": "compute_efficiency_report",
                        "limit": limit})
 
