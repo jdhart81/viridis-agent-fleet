@@ -1,6 +1,6 @@
 name: "neurogenesis-agent"
-version: "0.1.0"
-description: "Developmental agents from digital genomes: evaluation-driven growth and pruning over a cognitive graph, under safety axioms, with an append-only developmental ledger. The brain mount certifies what an agent IS; this grows what it BECOMES."
+version: "0.2.0"
+description: "Developmental agents plus Wu Wei routing: choose reuse, rules, local, tool, or cloud execution—and explicitly defer low-value work—under hard quality, reliability, locality, capability, cost, latency, and energy contracts with hash-bound decision and outcome receipts."
 pillar: "rails"
 status: "mvp"
 owner: "justin@viridisconservation.com"
@@ -14,7 +14,8 @@ thesis_connection: |
   developmental stage) and the trust oracle (evaluations as attestations).
 revenue_model: |
   Per-evaluation micro-fee via the fleet gate ($0.25, 10 free/day per
-  caller); B2B seats for teams running evolving agent populations.
+  caller); B2B seats for teams running evolving agent populations and
+  auditable cost/energy routing policies.
 engine: |
   Vendored verdigraph-neurogenesis modules (stdlib-only,
   DOI 10.5281/zenodo.20400274). Canonical repo: viridis-security/
