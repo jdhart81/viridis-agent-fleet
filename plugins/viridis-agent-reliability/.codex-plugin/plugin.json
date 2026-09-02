@@ -1,0 +1,40 @@
+{
+  "name": "viridis-agent-reliability",
+  "version": "0.1.0",
+  "description": "Evidence-bounded reliability checks for MCP and A2A services",
+  "author": {
+    "name": "Viridis North LLC",
+    "url": "https://viridisconservation.com"
+  },
+  "homepage": "https://viridisconservation.com/reliability-sprint",
+  "repository": "https://github.com/jdhart81/viridis-agent-fleet",
+  "keywords": [
+    "agent-reliability",
+    "mcp",
+    "a2a",
+    "security",
+    "delivery-evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Viridis Agent Reliability",
+    "shortDescription": "Check whether an MCP or A2A service is safe and reliable to buy.",
+    "longDescription": "Runs a bounded, read-only reliability check across discovery, protocol compatibility, identity, authority, payment, delivery evidence, and retention readiness. It distinguishes observed evidence from unknowns and never treats listings or technical health as commercial proof.",
+    "developerName": "Viridis North LLC",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read-only diagnostics",
+      "MCP compatibility",
+      "A2A identity",
+      "Evidence reports"
+    ],
+    "websiteURL": "https://viridisconservation.com/reliability-sprint",
+    "defaultPrompt": [
+      "Run a reliability check on this agent endpoint.",
+      "Audit this MCP server before I connect it.",
+      "Check this A2A Agent Card and authority boundary."
+    ],
+    "brandColor": "#176B4D"
+  },
+  "mcpServers": "./.mcp.json"
+}

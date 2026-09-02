@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "viridis-security-preflight": {
+      "type": "http",
+      "url": "https://mcp.viridisconservation.com/security-preflight/mcp"
+    }
+  }
+}

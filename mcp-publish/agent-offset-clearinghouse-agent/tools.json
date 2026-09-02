@@ -1,26 +1,55 @@
 {
   "server": "agent-offset-clearinghouse-agent",
-  "tool_count": 7,
+  "tool_count": 19,
   "tools": [
     {
       "name": "list_credit",
-      "description": "List a conservation credit on the book. verification_ref (a D-Score /\nland-verification attestation) is REQUIRED \u2014 unverified credits cannot\nenter the book.",
+      "description": "List a conservation credit on the book. verification_ref (a D-Score /\nland-verification attestation) is REQUIRED \u2014 unverified credits cannot\nenter the book. To trade on the Verra network, pass registry=\"verra\" with\nthe VCS provenance (vcs_project_id, serial_number, vintage, methodology) so\nretirements are cross-referenceable on registry.verra.org.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "issuer": {
+            "title": "Issuer",
             "type": "string"
           },
           "project_id": {
+            "title": "Project Id",
             "type": "string"
           },
           "mass_g": {
+            "title": "Mass G",
             "type": "integer"
           },
           "price_minor_per_kg": {
+            "title": "Price Minor Per Kg",
             "type": "integer"
           },
           "verification_ref": {
+            "title": "Verification Ref",
+            "type": "string"
+          },
+          "registry": {
+            "default": "",
+            "title": "Registry",
+            "type": "string"
+          },
+          "vcs_project_id": {
+            "default": "",
+            "title": "Vcs Project Id",
+            "type": "string"
+          },
+          "vintage": {
+            "default": "",
+            "title": "Vintage",
+            "type": "string"
+          },
+          "serial_number": {
+            "default": "",
+            "title": "Serial Number",
+            "type": "string"
+          },
+          "methodology": {
+            "default": "",
+            "title": "Methodology",
             "type": "string"
           }
         },
@@ -30,97 +59,604 @@
           "mass_g",
           "price_minor_per_kg",
           "verification_ref"
-        ]
+        ],
+        "title": "list_creditArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "list_creditOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "delist_credit",
+      "description": "Admin operation: remove a credit from the active fill path while\nretaining its listing and retirement history for audit. Idempotent for an\nalready-delisted credit. Gateway state-change authentication is required.",
+      "inputSchema": {
+        "properties": {
+          "credit_id": {
+            "title": "Credit Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credit_id",
+          "reason"
+        ],
+        "title": "delist_creditArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "delist_creditOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verra_supply",
+      "description": "The tradeable Verra VCS book: verified credits carrying genuine Verra\nprovenance (project id + serial + vintage), cross-referenceable on\nregistry.verra.org. Read-only. Every retirement nets the project 85% and\nViridis the 15% marketplace take.",
+      "inputSchema": {
+        "properties": {},
+        "title": "verra_supplyArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "verra_supplyOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verra_retirement_record",
+      "description": "Generate the Verra-portal-ready retirement record(s) for a retirement\nmade against Verra supply \u2014 VCS project id, serial, vintage, methodology,\nquantity (tCO2e), beneficiary, and the registry.verra.org cross-reference.\nRead-only. Submit these under the Viridis Verra account to finalize the\non-registry retirement (portal today; auto-posts when Verra's transaction\nAPI is live).",
+      "inputSchema": {
+        "properties": {
+          "purchase_id": {
+            "title": "Purchase Id",
+            "type": "string"
+          },
+          "retirement_reason": {
+            "default": "",
+            "title": "Retirement Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purchase_id"
+        ],
+        "title": "verra_retirement_recordArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "verra_retirement_recordOutput",
+        "type": "object"
       }
     },
     {
       "name": "buy_offset",
-      "description": "Retire mass_g of verified credits for a buyer: cheapest-first matching,\nexactly-once (idempotent on purchase_id), returns a content-addressed\noffset certificate with per-fill costs. Payment settles via escrow.",
+      "description": "Retire mass_g of verified credits for a buyer: cheapest-first matching,\nexactly-once (idempotent on purchase_id), returns a content-addressed\noffset certificate with per-fill costs. Payment settles via escrow.\ndry_run=true previews the exact fills/cost without mutating the book.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "buyer": {
+            "title": "Buyer",
             "type": "string"
           },
           "purchase_id": {
+            "title": "Purchase Id",
             "type": "string"
           },
           "mass_g": {
+            "title": "Mass G",
             "type": "integer"
+          },
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
           }
         },
         "required": [
           "buyer",
           "purchase_id",
           "mass_g"
-        ]
+        ],
+        "title": "buy_offsetArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "buy_offsetOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "buy_offset_budget",
+      "description": "Money-denominated offset purchase: retire the maximum cheapest-first\nverified mass whose exact cost fits inside budget_minor (never overspends).\nBuilt for callers whose restoration obligation is a currency amount \u2014\ne.g. a revenue share accrued in a ledger. Idempotent on purchase_id;\ndry_run=true previews without mutating.",
+      "inputSchema": {
+        "properties": {
+          "buyer": {
+            "title": "Buyer",
+            "type": "string"
+          },
+          "purchase_id": {
+            "title": "Purchase Id",
+            "type": "string"
+          },
+          "budget_minor": {
+            "title": "Budget Minor",
+            "type": "integer"
+          },
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "buyer",
+          "purchase_id",
+          "budget_minor"
+        ],
+        "title": "buy_offset_budgetArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "buy_offset_budgetOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "settlement_batch",
+      "description": "Read-only cash-settlement summary for a buyer: the list + exact sums\n(purchases, mass_g, cost_minor) of their retirements, optionally since an\nISO-8601 timestamp \u2014 the statement a human settles in one transfer.",
+      "inputSchema": {
+        "properties": {
+          "buyer": {
+            "title": "Buyer",
+            "type": "string"
+          },
+          "since": {
+            "default": "",
+            "title": "Since",
+            "type": "string"
+          }
+        },
+        "required": [
+          "buyer"
+        ],
+        "title": "settlement_batchArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "settlement_batchOutput",
+        "type": "object"
       }
     },
     {
       "name": "net_position",
       "description": "Buyer's carbon position: emitted (from agent-compute-ledger) minus\nretired. carbon_accountable == true when fully offset.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "buyer": {
+            "title": "Buyer",
             "type": "string"
           },
           "emitted_g": {
+            "title": "Emitted G",
             "type": "number"
           }
         },
         "required": [
           "buyer",
           "emitted_g"
-        ]
+        ],
+        "title": "net_positionArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "net_positionOutput",
+        "type": "object"
       }
     },
     {
       "name": "verify_certificate",
       "description": "Verify an offset certificate: recompute its hash and check the ledger.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "certificate": {
+            "additionalProperties": true,
+            "title": "Certificate",
             "type": "object"
           }
         },
         "required": [
           "certificate"
-        ]
+        ],
+        "title": "verify_certificateArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "verify_certificateOutput",
+        "type": "object"
       }
     },
     {
       "name": "book",
       "description": "The full credit book with per-credit and book-wide mass conservation totals.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "bookArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "bookOutput",
+        "type": "object"
       }
     },
     {
       "name": "get_purchase",
       "description": "Fetch a past purchase / offset certificate by id.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "purchase_id": {
+            "title": "Purchase Id",
             "type": "string"
           }
         },
         "required": [
           "purchase_id"
-        ]
+        ],
+        "title": "get_purchaseArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "get_purchaseOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_retirement",
+      "description": "x402-C C4 check: confirm a retirement (offset_ref = purchase_id)\nactually retires at least required_g grams of verified conservation\ncredit \u2014 the check that lets a carbon receipt's neutrality claim be\nhonored. Returns covered / retired_g / shortfall_g and the backing\ncredits. Read-only.",
+      "inputSchema": {
+        "properties": {
+          "purchase_id": {
+            "title": "Purchase Id",
+            "type": "string"
+          },
+          "required_g": {
+            "default": 0,
+            "title": "Required G",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "purchase_id"
+        ],
+        "title": "verify_retirementArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "verify_retirementOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "register_project",
+      "description": "Register a VERIFIED restoration project so retirements against its\ncredits can be funded. verification_ref (D-Score / land-verification /\nregistry id) is required \u2014 only verified conservation is funded.\nproject_id is immutable once registered.",
+      "inputSchema": {
+        "properties": {
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "verification_ref": {
+            "title": "Verification Ref",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "location": {
+            "default": "",
+            "title": "Location",
+            "type": "string"
+          },
+          "methodology": {
+            "default": "",
+            "title": "Methodology",
+            "type": "string"
+          },
+          "beneficiary": {
+            "default": "",
+            "title": "Beneficiary",
+            "type": "string"
+          },
+          "registry_ref": {
+            "default": "",
+            "title": "Registry Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "verification_ref"
+        ],
+        "title": "register_projectArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "register_projectOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "project_funding",
+      "description": "Supply-side disbursement ledger: how much each restoration project has\nearned from retirements and is owed (gross_proceeds_minor + retired_g).\nPass a project_id for one project, else all. Read-only \u2014 the CEO settles\nthe actual payout. This is what makes the clearinghouse fund restoration.",
+      "inputSchema": {
+        "properties": {
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "title": "project_fundingArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "project_fundingOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_projects",
+      "description": "List all registered restoration projects with their metadata.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_projectsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "list_projectsOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "disbursement_schedule",
+      "description": "Automated disbursement preview: for each verified restoration project,\nsplits its newly-accrued proceeds into the Viridis Conservation withhold\n(default 15%, seeds the software/business) and the project payout (85%).\nRead-only. Funded-but-unregistered projects are surfaced separately as\npending_registration (can't pay an unverified project).",
+      "inputSchema": {
+        "properties": {
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "title": "disbursement_scheduleArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "disbursement_scheduleOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "certify_disbursement",
+      "description": "Freeze the current disbursement schedule into a certified, tamper-evident\nbatch (content-addressed, hash-chained). Idempotent on batch_id; only\nnewly-accrued proceeds for verified projects are certified (never disbursed\ntwice). This is the certified investment record the CEO executes the actual\nStripe transfers against.",
+      "inputSchema": {
+        "properties": {
+          "batch_id": {
+            "title": "Batch Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "batch_id"
+        ],
+        "title": "certify_disbursementArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "certify_disbursementOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_disbursement",
+      "description": "Recompute the disbursement certificate hash chain and confirm whole-book\nconservation of disbursed proceeds. Any party can audit disbursements.",
+      "inputSchema": {
+        "properties": {},
+        "title": "verify_disbursementArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "verify_disbursementOutput",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Fleet-standard self-description.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "describe_agentOutput",
+        "type": "object"
       }
     }
   ]

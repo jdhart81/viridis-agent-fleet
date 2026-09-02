@@ -91,7 +91,7 @@
     },
     {
       "name": "rule",
-      "description": "Issue the deterministic ruling: allocates 100% of the disputed amount\n    from evidence weights + trust scores, and emits an escrow instruction\n    (release/refund). Exactly-once \u2014 re-ruling returns the existing ruling.",
+      "description": "Issue the deterministic ruling: allocates 100% of the disputed amount\n    from evidence weights + trust scores, and emits an escrow instruction\n    (release/refund). Exactly-once — re-ruling returns the existing ruling.",
       "inputSchema": {
         "properties": {
           "case_id": {
@@ -175,7 +175,7 @@
   "compute-ledger": [
     {
       "name": "record_work",
-      "description": "Record a unit of agent compute work. energy_j = power_w * duration_s;\n    carbon_g follows from grid intensity. If bit_ops is declared, the entry is\n    validated against the Landauer floor (bit_ops * kB * T * ln2) \u2014 physically\n    impossible claims are rejected. Idempotent on entry_id.",
+      "description": "Record a unit of agent compute work. energy_j = power_w * duration_s;\n    carbon_g follows from grid intensity. If bit_ops is declared, the entry is\n    validated against the Landauer floor (bit_ops * kB * T * ln2) — physically\n    impossible claims are rejected. Idempotent on entry_id.",
       "inputSchema": {
         "properties": {
           "agent_id": {
@@ -332,7 +332,7 @@
     },
     {
       "name": "carbon_receipt",
-      "description": "Emit an x402-C carbon receipt for a recorded work entry \u2014 the\n    physically-grounded {version, g_co2e, energy_j, method, landauer_*, ...}\n    object an x402 machine-payment receipt can carry. method is\n    'landauer-floor' when the workload declared bit_ops (thermodynamically\n    validated), else 'measured'. Pass offset_ref (a retirement id from the\n    offset clearinghouse) to assert carbon-neutrality. Read-only; the returned\n    attestation_hash binds the receipt to the ledger's hash chain.",
+      "description": "Emit an x402-C carbon receipt for a recorded work entry — the\n    physically-grounded {version, g_co2e, energy_j, method, landauer_*, ...}\n    object an x402 machine-payment receipt can carry. method is\n    'landauer-floor' when the workload declared bit_ops (thermodynamically\n    validated), else 'measured'. Pass offset_ref (a retirement id from the\n    offset clearinghouse) to assert carbon-neutrality. Read-only; the returned\n    attestation_hash binds the receipt to the ledger's hash chain.",
       "inputSchema": {
         "properties": {
           "entry_id": {
@@ -513,7 +513,7 @@
     },
     {
       "name": "check_act",
-      "description": "Check (and if allowed, record) a proposed act against a covenant.\n    Deny-by-default. Idempotent on act_id \u2014 retries never double-consume\n    budget. Every check lands on the audit chain.",
+      "description": "Check (and if allowed, record) a proposed act against a covenant.\n    Deny-by-default. Idempotent on act_id — retries never double-consume\n    budget. Every check lands on the audit chain.",
       "inputSchema": {
         "properties": {
           "covenant_id": {
@@ -876,7 +876,7 @@
     },
     {
       "name": "score_agent",
-      "description": "Decay-weighted trust score in [0,1] + tier over the agent's imported\n    ERC-8004 feedback \u2014 recent behavior outweighs old; no feedback scores a\n    neutral 0.5 prior (no blind trust, no unfair zero).",
+      "description": "Decay-weighted trust score in [0,1] + tier over the agent's imported\n    ERC-8004 feedback — recent behavior outweighs old; no feedback scores a\n    neutral 0.5 prior (no blind trust, no unfair zero).",
       "inputSchema": {
         "properties": {
           "bridge_did": {
@@ -1088,7 +1088,7 @@
     },
     {
       "name": "release_escrow",
-      "description": "Release a FUNDED/DISPUTED escrow to the payee (exactly-once \u2014 a repeat\n    release returns the existing terminal record, never a double payout).",
+      "description": "Release a FUNDED/DISPUTED escrow to the payee (exactly-once — a repeat\n    release returns the existing terminal record, never a double payout).",
       "inputSchema": {
         "properties": {
           "escrow_id": {
@@ -1344,7 +1344,7 @@
   "green-router": [
     {
       "name": "quote_footprint",
-      "description": "FREE: honest energy/carbon footprint for an agent workload \u2014\n    {backend_id? (frontier_cloud | efficient_cloud | local_small),\n    total_tokens, output_tokens, calls?, success_score?,\n    grid_gco2e_per_kwh?, pue?, custom_backend? {id, wh_per_1k_tokens}}.\n    Returns joules, gCO2e, useful bits, the retirement mass a certificate\n    would carry, every model assumption with its source, and the Landauer\n    context (GR1/GR2).",
+      "description": "FREE: honest energy/carbon footprint for an agent workload —\n    {backend_id? (frontier_cloud | efficient_cloud | local_small),\n    total_tokens, output_tokens, calls?, success_score?,\n    grid_gco2e_per_kwh?, pue?, custom_backend? {id, wh_per_1k_tokens}}.\n    Returns joules, gCO2e, useful bits, the retirement mass a certificate\n    would carry, every model assumption with its source, and the Landauer\n    context (GR1/GR2).",
       "inputSchema": {
         "properties": {
           "workload": {
@@ -1362,7 +1362,7 @@
     },
     {
       "name": "green_route",
-      "description": "FREE: rank compute backends by carbon for this workload \u2014 the\n    greenest eligible path and the gCO2e saved per call. Carbon only\n    (GR6); pair with /neurogenesis/mcp route_task for quality-floor\n    routing.",
+      "description": "FREE: rank compute backends by carbon for this workload — the\n    greenest eligible path and the gCO2e saved per call. Carbon only\n    (GR6); pair with /neurogenesis/mcp route_task for quality-floor\n    routing.",
       "inputSchema": {
         "properties": {
           "workload": {
@@ -1395,7 +1395,7 @@
     },
     {
       "name": "certify",
-      "description": "PAID ($0.50 after free tier): compute the workload footprint, then\n    RETIRE the required verified offset mass through the fleet's own\n    clearinghouse \u2014 Verra provenance rides into the certificate; no\n    retirement, no certificate (GR3, fail-closed). Returns a\n    machine-verifiable certificate anyone can check for free (GR4).",
+      "description": "PAID ($0.50 after free tier): compute the workload footprint, then\n    RETIRE the required verified offset mass through the fleet's own\n    clearinghouse — Verra provenance rides into the certificate; no\n    retirement, no certificate (GR3, fail-closed). Returns a\n    machine-verifiable certificate anyone can check for free (GR4).",
       "inputSchema": {
         "properties": {
           "workload": {
@@ -1430,7 +1430,7 @@
     },
     {
       "name": "list_green_certificates",
-      "description": "FREE: the certificate ledger \u2014 counts, total grams retired, total\n    clearinghouse cost (honest books, GR8).",
+      "description": "FREE: the certificate ledger — counts, total grams retired, total\n    clearinghouse cost (honest books, GR8).",
       "inputSchema": {
         "properties": {
           "limit": {
@@ -1654,7 +1654,7 @@
     },
     {
       "name": "record_usage",
-      "description": "Record a usage event. Idempotent on event_id (safe to retry \u2014 never\n    double-billed). outcome is 'ok' or 'error' and feeds the SLA report.",
+      "description": "Record a usage event. Idempotent on event_id (safe to retry — never\n    double-billed). outcome is 'ok' or 'error' and feeds the SLA report.",
       "inputSchema": {
         "properties": {
           "meter_id": {
@@ -1892,7 +1892,7 @@
     },
     {
       "name": "usage_timeseries",
-      "description": "Usage time series bucketed on each event's recorded_at (UTC;\n    bucket=day|hour), grouped across meters by provider \u2014 a real time-series\n    primitive, independent of meter creation times. Includes per-bucket\n    breakdowns by consumer_class / channel / provider. est_accrued_minor is\n    an estimate; authoritative billing stays with usage_summary.",
+      "description": "Usage time series bucketed on each event's recorded_at (UTC;\n    bucket=day|hour), grouped across meters by provider — a real time-series\n    primitive, independent of meter creation times. Includes per-bucket\n    breakdowns by consumer_class / channel / provider. est_accrued_minor is\n    an estimate; authoritative billing stays with usage_summary.",
       "inputSchema": {
         "properties": {
           "bucket": {
@@ -1984,7 +1984,7 @@
     },
     {
       "name": "flag_meter",
-      "description": "Admin: flag/unflag a meter as test/synthetic so its events are\n    excluded from usage statistics by default. Touches meter metadata only \u2014\n    never events, never the hash chain, never billing accruals. Requires the\n    server's VIRIDIS_ADMIN_TOKEN.",
+      "description": "Admin: flag/unflag a meter as test/synthetic so its events are\n    excluded from usage statistics by default. Touches meter metadata only —\n    never events, never the hash chain, never billing accruals. Requires the\n    server's VIRIDIS_ADMIN_TOKEN.",
       "inputSchema": {
         "properties": {
           "meter_id": {
@@ -2097,6 +2097,18 @@
             "additionalProperties": true,
             "title": "Genome",
             "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
@@ -2119,6 +2131,18 @@
             "additionalProperties": true,
             "title": "Evaluation",
             "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
@@ -2184,7 +2208,7 @@
     },
     {
       "name": "get_ledger",
-      "description": "The append-only developmental ledger: every growth, pruning, and\n    evaluation event with reasons (NG3 \u2014 returned verbatim).",
+      "description": "The append-only developmental ledger: every growth, pruning, and\n    evaluation event with reasons (NG3 — returned verbatim).",
       "inputSchema": {
         "properties": {
           "agent_id": {
@@ -2206,7 +2230,7 @@
     },
     {
       "name": "export_state",
-      "description": "Portable state document for an agent (import_state recreates it\n    anywhere \u2014 including a self-hosted verdigraph-neurogenesis).",
+      "description": "Portable state document for an agent (import_state recreates it\n    anywhere — including a self-hosted verdigraph-neurogenesis).",
       "inputSchema": {
         "properties": {
           "agent_id": {
@@ -2230,6 +2254,18 @@
             "additionalProperties": true,
             "title": "State",
             "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
@@ -2247,6 +2283,18 @@
           "agent_id": {
             "title": "Agent Id",
             "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
@@ -2258,13 +2306,25 @@
     },
     {
       "name": "register_compute_profile",
-      "description": "Wu Wei compute routing (NG7): register an execution profile \u2014\n    {id, kind?, quality_score [0,1], cost_per_1k_input_tokens?,\n    cost_per_1k_output_tokens?, latency_ms?, gpu_memory_gb?,\n    max_context_tokens?, local?}. A profile can be a local model, cloud\n    API, rules engine, or cached workflow. Profiles are yours \u2014 routing\n    never invents capacity.",
+      "description": "Register a caller-owned Wu Wei execution profile: reuse/cache,\n    deterministic rule, local model, tool/workflow, or cloud model. Profiles\n    can declare quality, reliability, capabilities, token costs, latency,\n    locality, energy rates or average power, carbon intensity, and cache\n    confidence/age. Routing never invents capacity or energy evidence.",
       "inputSchema": {
         "properties": {
           "profile": {
             "additionalProperties": true,
             "title": "Profile",
             "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
@@ -2276,13 +2336,25 @@
     },
     {
       "name": "route_task",
-      "description": "Choose the cheapest RELIABLE compute path for a task:\n    {id, task_type, expected_input_tokens, expected_output_tokens,\n    min_quality [0,1], risk?, difficulty?, requires_local?}. Hard\n    contract (NG7): profiles below your min_quality are ineligible\n    regardless of cost \u2014 compute savings never silently regress quality.\n    Deterministic; every decision is logged with its reason.",
+      "description": "Choose the least-burden eligible route for a task. Hard constraints\n    include quality, reliability, locality, capabilities, context, cost,\n    latency, and energy. Optional baselines quantify predicted savings.\n    Explicit allow_defer/value/urgency fields may produce a no-work decision;\n    no result is then claimed. Returns a hash-bound decision receipt.",
       "inputSchema": {
         "properties": {
           "task": {
             "additionalProperties": true,
             "title": "Task",
             "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
@@ -2293,8 +2365,83 @@
       }
     },
     {
+      "name": "record_route_outcome",
+      "description": "Attach one observed outcome to a Wu Wei decision. Actual cost,\n    latency, and energy are optional and remain explicitly unknown when\n    omitted. One append-only, hash-bound outcome is allowed per decision.",
+      "inputSchema": {
+        "properties": {
+          "decision_id": {
+            "title": "Decision Id",
+            "type": "string"
+          },
+          "success_score": {
+            "title": "Success Score",
+            "type": "number"
+          },
+          "actual_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actual Cost Usd"
+          },
+          "actual_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actual Latency Ms"
+          },
+          "actual_energy_wh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actual Energy Wh"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "decision_id",
+          "success_score"
+        ],
+        "title": "record_route_outcomeArguments",
+        "type": "object"
+      }
+    },
+    {
       "name": "compute_efficiency_report",
-      "description": "Free read: the routing decision log (per-profile counts, estimated\n    costs, reasons) with the Landauer-floor physics context \u2014 honest\n    compute-efficiency accounting in the Intelligence Bound frame.",
+      "description": "Free read: decision/outcome receipts, route modes, compute avoided,\n    predicted savings, predicted-vs-observed cost/latency/energy coverage,\n    and Landauer-floor context. Estimates and observations stay distinct.",
       "inputSchema": {
         "properties": {
           "limit": {
@@ -2463,7 +2610,7 @@
   "offsets": [
     {
       "name": "list_credit",
-      "description": "List a conservation credit on the book. verification_ref (a D-Score /\n    land-verification attestation) is REQUIRED \u2014 unverified credits cannot\n    enter the book. To trade on the Verra network, pass registry=\"verra\" with\n    the VCS provenance (vcs_project_id, serial_number, vintage, methodology) so\n    retirements are cross-referenceable on registry.verra.org.",
+      "description": "List a conservation credit on the book. verification_ref (a D-Score /\n    land-verification attestation) is REQUIRED — unverified credits cannot\n    enter the book. To trade on the Verra network, pass registry=\"verra\" with\n    the VCS provenance (vcs_project_id, serial_number, vintage, methodology) so\n    retirements are cross-referenceable on registry.verra.org.",
       "inputSchema": {
         "properties": {
           "issuer": {
@@ -2524,6 +2671,28 @@
       }
     },
     {
+      "name": "delist_credit",
+      "description": "Admin operation: remove a credit from the active fill path while\n    retaining its listing and retirement history for audit. Idempotent for an\n    already-delisted credit. Gateway state-change authentication is required.",
+      "inputSchema": {
+        "properties": {
+          "credit_id": {
+            "title": "Credit Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credit_id",
+          "reason"
+        ],
+        "title": "delist_creditArguments",
+        "type": "object"
+      }
+    },
+    {
       "name": "verra_supply",
       "description": "The tradeable Verra VCS book: verified credits carrying genuine Verra\n    provenance (project id + serial + vintage), cross-referenceable on\n    registry.verra.org. Read-only. Every retirement nets the project 85% and\n    Viridis the 15% marketplace take.",
       "inputSchema": {
@@ -2534,7 +2703,7 @@
     },
     {
       "name": "verra_retirement_record",
-      "description": "Generate the Verra-portal-ready retirement record(s) for a retirement\n    made against Verra supply \u2014 VCS project id, serial, vintage, methodology,\n    quantity (tCO2e), beneficiary, and the registry.verra.org cross-reference.\n    Read-only. Submit these under the Viridis Verra account to finalize the\n    on-registry retirement (portal today; auto-posts when Verra's transaction\n    API is live).",
+      "description": "Generate the Verra-portal-ready retirement record(s) for a retirement\n    made against Verra supply — VCS project id, serial, vintage, methodology,\n    quantity (tCO2e), beneficiary, and the registry.verra.org cross-reference.\n    Read-only. Submit these under the Viridis Verra account to finalize the\n    on-registry retirement (portal today; auto-posts when Verra's transaction\n    API is live).",
       "inputSchema": {
         "properties": {
           "purchase_id": {
@@ -2588,7 +2757,7 @@
     },
     {
       "name": "buy_offset_budget",
-      "description": "Money-denominated offset purchase: retire the maximum cheapest-first\n    verified mass whose exact cost fits inside budget_minor (never overspends).\n    Built for callers whose restoration obligation is a currency amount \u2014\n    e.g. a revenue share accrued in a ledger. Idempotent on purchase_id;\n    dry_run=true previews without mutating.",
+      "description": "Money-denominated offset purchase: retire the maximum cheapest-first\n    verified mass whose exact cost fits inside budget_minor (never overspends).\n    Built for callers whose restoration obligation is a currency amount —\n    e.g. a revenue share accrued in a ledger. Idempotent on purchase_id;\n    dry_run=true previews without mutating.",
       "inputSchema": {
         "properties": {
           "buyer": {
@@ -2620,7 +2789,7 @@
     },
     {
       "name": "settlement_batch",
-      "description": "Read-only cash-settlement summary for a buyer: the list + exact sums\n    (purchases, mass_g, cost_minor) of their retirements, optionally since an\n    ISO-8601 timestamp \u2014 the statement a human settles in one transfer.",
+      "description": "Read-only cash-settlement summary for a buyer: the list + exact sums\n    (purchases, mass_g, cost_minor) of their retirements, optionally since an\n    ISO-8601 timestamp — the statement a human settles in one transfer.",
       "inputSchema": {
         "properties": {
           "buyer": {
@@ -2708,7 +2877,7 @@
     },
     {
       "name": "verify_retirement",
-      "description": "x402-C C4 check: confirm a retirement (offset_ref = purchase_id)\n    actually retires at least required_g grams of verified conservation\n    credit \u2014 the check that lets a carbon receipt's neutrality claim be\n    honored. Returns covered / retired_g / shortfall_g and the backing\n    credits. Read-only.",
+      "description": "x402-C C4 check: confirm a retirement (offset_ref = purchase_id)\n    actually retires at least required_g grams of verified conservation\n    credit — the check that lets a carbon receipt's neutrality claim be\n    honored. Returns covered / retired_g / shortfall_g and the backing\n    credits. Read-only.",
       "inputSchema": {
         "properties": {
           "purchase_id": {
@@ -2730,7 +2899,7 @@
     },
     {
       "name": "register_project",
-      "description": "Register a VERIFIED restoration project so retirements against its\n    credits can be funded. verification_ref (D-Score / land-verification /\n    registry id) is required \u2014 only verified conservation is funded.\n    project_id is immutable once registered.",
+      "description": "Register a VERIFIED restoration project so retirements against its\n    credits can be funded. verification_ref (D-Score / land-verification /\n    registry id) is required — only verified conservation is funded.\n    project_id is immutable once registered.",
       "inputSchema": {
         "properties": {
           "project_id": {
@@ -2777,7 +2946,7 @@
     },
     {
       "name": "project_funding",
-      "description": "Supply-side disbursement ledger: how much each restoration project has\n    earned from retirements and is owed (gross_proceeds_minor + retired_g).\n    Pass a project_id for one project, else all. Read-only \u2014 the CEO settles\n    the actual payout. This is what makes the clearinghouse fund restoration.",
+      "description": "Supply-side disbursement ledger: how much each restoration project has\n    earned from retirements and is owed (gross_proceeds_minor + retired_g).\n    Pass a project_id for one project, else all. Read-only — the CEO settles\n    the actual payout. This is what makes the clearinghouse fund restoration.",
       "inputSchema": {
         "properties": {
           "project_id": {
@@ -3072,7 +3241,7 @@
   "provenance": [
     {
       "name": "register_genesis",
-      "description": "Register an agent's birth. Issues a content-addressed genesis\n    certificate with a strictly monotone index (epoch 0 = the founding\n    cohort). parent_id records lineage; children of recalled/quarantined\n    parents are quarantined at birth. Idempotent \u2014 an agent is born once.",
+      "description": "Register an agent's birth. Issues a content-addressed genesis\n    certificate with a strictly monotone index (epoch 0 = the founding\n    cohort). parent_id records lineage; children of recalled/quarantined\n    parents are quarantined at birth. Idempotent — an agent is born once.",
       "inputSchema": {
         "properties": {
           "agent_id": {
@@ -3440,7 +3609,7 @@
   "regulatory-radar": [
     {
       "name": "scan_regulations",
-      "description": "Scan the regulatory landscape for a jurisdiction (e.g. EU, US), optionally filtered by sector.\n\nReturns regulations with urgency flags and effective dates. Price: $0.25\nper call after 10 free calls/day. Pay at\n/x402/regulatory-radar/scan_regulations with Base USDC, cash-fund payment_ref through\nescrow_checkout + confirm_escrow_funding, or use /seats.",
+      "description": "Scan a jurisdiction (e.g. EU, US, california, or CA for Canada), optionally filtered by sector.\n\nReturns regulations with urgency flags and effective dates. Price: $0.25\nper call after 10 free calls/day. Pay at\n/x402/regulatory-radar/scan_regulations with Base USDC, cash-fund payment_ref through\nescrow_checkout + confirm_escrow_funding, or use /seats.",
       "inputSchema": {
         "properties": {
           "jurisdiction": {
@@ -3470,6 +3639,18 @@
             ],
             "default": null,
             "title": "Payment Ref"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
@@ -3477,11 +3658,24 @@
         ],
         "title": "scan_regulationsArguments",
         "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "scan_regulationsOutput",
+        "type": "object"
       }
     },
     {
       "name": "assess_compliance",
-      "description": "Assess a company's compliance posture against applicable regulations.\n\n    Returns compliance level, percentage, gaps, and remediation priorities.",
+      "description": "Assess a company's compliance posture against applicable regulations.\n\nReturns compliance level, percentage, gaps, and remediation priorities.",
       "inputSchema": {
         "properties": {
           "company_name": {
@@ -3522,6 +3716,18 @@
             ],
             "default": null,
             "title": "Payment Ref"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
@@ -3531,11 +3737,24 @@
         ],
         "title": "assess_complianceArguments",
         "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "assess_complianceOutput",
+        "type": "object"
       }
     },
     {
       "name": "monitor_changes",
-      "description": "Monitor recent regulatory changes in a jurisdiction over a trailing window.",
+      "description": "Watch curated regulatory effective dates and deadlines in a bounded window.\n\n`since_days` controls both recently effective dates behind today and\neffective/deadline dates ahead of today. This is a source-linked watch\nover the curated Viridis dataset, not a live external regulatory feed.",
       "inputSchema": {
         "properties": {
           "jurisdiction": {
@@ -3546,6 +3765,21 @@
             "default": 90,
             "title": "Since Days",
             "type": "integer"
+          },
+          "topics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Topics"
           },
           "payment_ref": {
             "anyOf": [
@@ -3558,12 +3792,120 @@
             ],
             "default": null,
             "title": "Payment Ref"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
           }
         },
         "required": [
           "jurisdiction"
         ],
         "title": "monitor_changesArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "monitor_changesOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "build_evidence_pack",
+      "description": "Build a live, source-hashed regulatory change evidence pack.\n\nFetches only the product's registry-owned regulator URLs, reports source\nretrieval timestamps and SHA-256 hashes, distinguishes a first baseline\nfrom a detected change, emits a bounded text diff on later changes, and\ncombines the evidence with a curated deadline calendar. Screening only;\nconfirm legal applicability with the cited authority or qualified counsel.",
+      "inputSchema": {
+        "properties": {
+          "jurisdiction": {
+            "title": "Jurisdiction",
+            "type": "string"
+          },
+          "topics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Topics"
+          },
+          "company_profile": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Company Profile"
+          },
+          "source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Ids"
+          },
+          "since_days": {
+            "default": 90,
+            "title": "Since Days",
+            "type": "integer"
+          },
+          "persist_snapshot": {
+            "default": true,
+            "title": "Persist Snapshot",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "jurisdiction"
+        ],
+        "title": "build_evidence_packArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "build_evidence_packOutput",
         "type": "object"
       }
     },
@@ -3573,6 +3915,19 @@
       "inputSchema": {
         "properties": {},
         "title": "describe_agentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "describe_agentOutput",
         "type": "object"
       }
     }
@@ -3929,7 +4284,7 @@
     },
     {
       "name": "slash_bond",
-      "description": "Execute an arbitration ruling against a claim. Requires the ruling's\n    case id + content hash from agent-arbitration \u2014 no ruling, no slash; a\n    given ruling pays at most once. Payout caps at the bond's available\n    balance (over-claims exhaust the bond).",
+      "description": "Execute an arbitration ruling against a claim. Requires the ruling's\n    case id + content hash from agent-arbitration — no ruling, no slash; a\n    given ruling pays at most once. Payout caps at the bond's available\n    balance (over-claims exhaust the bond).",
       "inputSchema": {
         "properties": {
           "bond_id": {
@@ -3966,7 +4321,7 @@
     },
     {
       "name": "release_bond",
-      "description": "Release the remaining stake to the principal after the coverage window\n    elapses \u2014 refused while any claim is still open.",
+      "description": "Release the remaining stake to the principal after the coverage window\n    elapses — refused while any claim is still open.",
       "inputSchema": {
         "properties": {
           "bond_id": {
@@ -4039,7 +4394,7 @@
     },
     {
       "name": "price_bond",
-      "description": "Underwrite a surety bond: deterministic actuarial premium quote from a\n    counterparty's track record (attestations, notarized deliveries, completed\n    bonds lower the rate; slashes raise it or decline outright). Integer-only\n    model uw-v1; the returned quote_hash lets any party recompute and verify\n    the quote. Pure \u2014 never mutates bond state.",
+      "description": "Underwrite a surety bond: deterministic actuarial premium quote from a\n    counterparty's track record (attestations, notarized deliveries, completed\n    bonds lower the rate; slashes raise it or decline outright). Integer-only\n    model uw-v1; the returned quote_hash lets any party recompute and verify\n    the quote. Pure — never mutates bond state.",
       "inputSchema": {
         "properties": {
           "coverage_minor": {
@@ -4223,7 +4578,7 @@
     },
     {
       "name": "score_agent",
-      "description": "Get an agent's decay-weighted trust score in [0,1] and tier. Unknown\n    agents get a neutral 0.5 prior \u2014 no blind trust, no unfair zero.",
+      "description": "Get an agent's decay-weighted trust score in [0,1] and tier. Unknown\n    agents get a neutral 0.5 prior — no blind trust, no unfair zero.",
       "inputSchema": {
         "properties": {
           "agent_id": {
@@ -4443,7 +4798,7 @@
     },
     {
       "name": "call_verified",
-      "description": "Relay a tools/call to a registered MCP service and notarize the\n    exchange: request hash + response hash + outcome land in a tamper-evident\n    receipt chain. Idempotent on call_id (a replay returns the original\n    receipt and cached result \u2014 the downstream is never double-called).\n    Failures are receipted evidence, not silence.",
+      "description": "Relay a tools/call to a registered MCP service and notarize the\n    exchange: request hash + response hash + outcome land in a tamper-evident\n    receipt chain. Idempotent on call_id (a replay returns the original\n    receipt and cached result — the downstream is never double-called).\n    Failures are receipted evidence, not silence.",
       "inputSchema": {
         "properties": {
           "service_id": {
@@ -4950,6 +5305,121 @@
           "amount_minor",
           "payee_tier"
         ]
+      }
+    }
+  ],
+  "security-preflight": [
+    {
+      "name": "security_preflight",
+      "description": "Run a $1 static Security Preflight and return a signed receipt.\n\n    New x402 payer wallets may receive the fleet-wide $0.01 introductory call.\n    No deployed endpoint is fetched or tested. Importing the receipt into an\n    Agent Market profile is a separate, explicit action.\n    ",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "manifest": {
+            "additionalProperties": true,
+            "title": "Manifest",
+            "type": "object"
+          },
+          "subject_profile_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Subject Profile Sha256"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Policy"
+          },
+          "sample_inputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sample Inputs"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "agent_id",
+          "manifest"
+        ],
+        "title": "security_preflightArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_security_receipt",
+      "description": "Read a previously issued public, input-redacted receipt.",
+      "inputSchema": {
+        "properties": {
+          "receipt_id": {
+            "title": "Receipt Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "receipt_id"
+        ],
+        "title": "get_security_receiptArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Describe scope, evidence boundary, inputs, and outputs.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
       }
     }
   ]

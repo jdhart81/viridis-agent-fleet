@@ -1,8 +1,8 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
-  "name": "earth.viridis/agent-offset-clearinghouse",
-  "description": "Verified conservation credits matched to agent compute emissions \u2014 the conservation flywheel of the agent economy.",
-  "version": "0.1.2",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.jdhart81/agent-offset-clearinghouse",
+  "description": "Verified conservation credits matched to agent compute emissions \u2014 the conservation flywheel of the ",
+  "version": "0.6.0",
   "repository": {
     "url": "https://github.com/jdhart81/viridis-agent-fleet",
     "source": "github"
@@ -10,7 +10,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://mcp.viridis.earth/offsets/mcp"
+      "url": "https://mcp.viridisconservation.com/offsets/mcp"
     }
   ]
 }
