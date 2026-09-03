@@ -29,6 +29,74 @@ buyer's infrastructure; never install or run it on Viridis production.
   python3 scripts/x402_demo_client.py --dry-run
   ```
 
+## Decide before paying
+
+Ask the free read-only decision endpoint to select one relevant shipped route
+from the buyer's objective, available inputs, and list-price ceiling:
+
+```bash
+curl -fsS -X POST \
+  https://mcp.viridisconservation.com/x402/decide \
+  -H 'content-type: application/json' \
+  -d '{
+    "objective":"monitor regulatory changes and compliance deadlines",
+    "inputs":{
+      "jurisdiction":"US",
+      "topics":["emissions","climate"],
+      "lookback_days":90
+    },
+    "max_price_minor":25
+  }'
+```
+
+The decision is one of `REQUEST_QUOTE`, `NEEDS_INPUT`, `BUDGET_TOO_LOW`, or
+`NO_MATCH`. The endpoint is deterministic, free, and read-only: it never
+signs, pays, settles, executes, or stores a paid call. It will not substitute a
+cheaper unrelated tool. `REQUEST_QUOTE` means only that one route and input
+shape fit the objective and list-price screen. It does not authorize payment;
+fetch the selected route's fresh unpaid HTTP 402 and apply the buyer's separate
+spend mandate before signing.
+
+For a complete recurring workflow, set `decision_type` to `WORKFLOW` and supply
+buyer-owned value, scope, access, acceptance, and authority facts:
+
+```bash
+curl -fsS -X POST \
+  https://mcp.viridisconservation.com/x402/decide \
+  -H 'content-type: application/json' \
+  -d '{
+    "decision_type":"WORKFLOW",
+    "objective":"qualify inbound leads and prepare a reviewed CRM follow-up",
+    "workflow":{
+      "delivery_shape":"INTEGRATED_WORKFLOW",
+      "runs_per_month":40,
+      "minutes_per_run":30,
+      "loaded_hourly_cost_minor":6000,
+      "monthly_error_cost_minor":40000,
+      "implementation_budget_minor":99500,
+      "monthly_operating_cost_minor":14900,
+      "target_payback_months":3,
+      "systems":["CRM","email"],
+      "data_access_ready":true,
+      "acceptance_criteria_ready":true,
+      "irreversible_actions":["customer_message"],
+      "human_approval_available":true
+    }
+  }'
+```
+
+The workflow decision is `BUY`, `BUILD`, `DO_NOT_AUTOMATE`, or `NEEDS_INPUT`.
+`BUY` points to one shipped route for a single-result job. `BUILD` qualifies
+only the existing `viridis-mcp-delivery` profile, now named Viridis Agent
+Reliability Sprint: $995 for one workflow and up to two existing systems or
+APIs, with approval gates, security preflight, tests, logging/failure handling,
+a deployable handoff, and one delivery receipt. The value screen applies a
+disclosed 50% realization factor and guarantees no savings or payback.
+
+The decision never creates an agent, signs, pays, submits an offer, starts
+work, or creates a subscription. The optional $149/month Reliability Watch is
+separate, available only after accepted delivery, and never auto-enrolled.
+
 ## Discover through Coinbase Bazaar for free
 
 Do not rely only on a hardcoded seller URL. Query Coinbase's public x402
@@ -51,6 +119,7 @@ result or catalog call is discovery, not customer revenue.
 
 | Need | Route | List price |
 |---|---|---:|
+| Screen an MCP server before connecting | `POST /x402/security-preflight/security_preflight` | $1.00 |
 | Embodied-carbon quantity takeoff | `POST /x402/quantity-takeoff/calculate_takeoff` | $0.50 |
 | Scope 1, 2, and 3 inventory | `POST /x402/ghg-ledger/calculate_inventory` | $1.00 |
 | CSRD / IFRS S2 disclosure evidence | `POST /x402/disclosure-compiler/compile_disclosure` | $2.00 |
@@ -58,7 +127,6 @@ result or catalog call is discovery, not customer revenue.
 | Energy and climate requirement scan | `POST /x402/regulatory-radar/scan_regulations` | $0.25 |
 | Bounded effective-date and deadline watch | `POST /x402/regulatory-radar/monitor_changes` | $0.25 |
 | Reviewed multi-agent solve and audit | `POST /x402/hive/solve` | $5.00 fixed |
-| MCP agent security preflight and signed receipt | `POST /x402/security-preflight/security_preflight` | $1.00 |
 
 Prefix every route with `https://mcp.viridisconservation.com`. Treat the
 live HTTP 402 challenge as authoritative for amount, network, asset, receiver,
@@ -120,32 +188,58 @@ Before a paid call:
    returning wallets. The public address is only a pricing hint and never
    authorizes payment; never send the private key.
 
-For a new wallet, prefer one Regulatory Radar call with a hard one-cent ceiling:
+For a new wallet, prefer one Security Preflight call with a hard one-cent
+ceiling. This is the fleet's agent-native wedge: screen one caller-supplied MCP
+manifest and authority policy before connecting, then retain the signed,
+input-redacted receipt:
 
 ```bash
 python3 -m pip install "x402[requests,evm]==2.16.0"
 # Set X402_BUYER_PRIVATE_KEY outside the conversation and outside command logs.
 python3 scripts/x402_demo_client.py \
-  --route regulatory-radar --max-payment-usdc 0.01
+  --route security-preflight --max-payment-usdc 0.01
 ```
 
 The client makes exactly one paid attempt. It checks the preview quote and
 registers the same ceiling inside the x402 SDK payment selector that creates
 the signed retry. If the live quote exceeds $0.01, it stops without paying.
 
-After a useful scan, a buyer may inspect one new dated watch without paying:
+If the buyer already uses Coinbase Payments MCP, prefer its native x402
+request tool over cloning this repository. Supply the exact Security Preflight
+URL and caller-owned JSON body, require the agent's configured spending limits,
+and retain the returned result and settlement receipt. For Bazaar MCP, use
+`search_resources` and then `proxy_tool_call` only when the exact Viridis route
+is present in the current Bazaar result. Do not substitute a similarly named
+seller.
+
+For a returning buyer, proceed only after a useful prior result and a fresh
+route-and-amount mandate. Use the same locally controlled wallet and allow at
+most the unchanged Regulatory Radar list price:
 
 ```bash
-curl -i -X POST \
-  https://mcp.viridisconservation.com/x402/regulatory-radar/monitor_changes \
-  -H 'content-type: application/json' \
-  -d '{"jurisdiction":"US","topics":["emissions","climate"],"lookback_days":90}'
+# Set X402_BUYER_PRIVATE_KEY outside the conversation and outside command logs.
+python3 scripts/x402_demo_client.py \
+  --route regulatory-radar --max-payment-usdc 0.25
 ```
 
-Treat the returned unpaid 402 as authoritative. Paying for the watch requires
-a fresh route-and-amount mandate, a caller-owned signer, and a hard ceiling of
-$0.25 USDC. It is one call over the curated source-linked dataset, not a
-subscription, scheduled monitor, automatic retry, or live external feed.
+The client puts that wallet's public address on the unpaid preflight, treats
+the fresh 402 as authoritative, and makes exactly one new paid attempt under
+a 250,000-atomic-USDC ceiling. It does not reuse the prior payment, create a
+subscription, schedule another call, or authorize any later purchase.
+
+After a useful scan, the buyer can request one new effective-date or deadline
+window from the curated, source-linked dataset:
+
+```bash
+# Set X402_BUYER_PRIVATE_KEY outside the conversation and outside command logs.
+python3 scripts/x402_demo_client.py \
+  --route regulatory-watch --max-payment-usdc 0.25
+```
+
+This is one fresh, ceiling-protected purchase of
+`regulatory-radar/monitor_changes`. It is not a scheduled monitor, live
+external feed, subscription, automatic retry, or authorization for any later
+window. Require a fresh unpaid quote and caller-owned signature every time.
 
 The command without `--route` purchases the full five-call workflow and must
 not run without explicit authorization for that complete spend.

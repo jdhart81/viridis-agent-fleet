@@ -1,13 +1,16 @@
-# Viridis autonomous carbon and compliance agents
+# Viridis paid MCP security and evidence tools
 
 Viridis provides eight JSON-in/JSON-out paid routes that agents can discover
-and buy with x402 v2 and USDC on Base. Five deterministic tools form one
+and buy with x402 v2 and USDC on Base. The recommended first machine purchase
+is Security Preflight: screen a caller-supplied MCP manifest, tool schemas,
+authority policy, and sample inputs before connecting, then retain a signed,
+input-redacted result receipt. Five deterministic tools form one
 carbon/compliance chain: measure -> account -> disclose -> claim -> scan.
-The sixth operation watches the curated Regulatory Radar dataset for recently
-effective requirements and approaching deadlines. The seventh route is a
-cost-bounded three-worker Hive solve with independent cross-review, escrow
-settlement, compute accounting, and an audit digest. The eighth is a $1
-Security Preflight for caller-supplied MCP manifests, tool
+A sixth carbon/compliance operation watches the curated Regulatory Radar
+dataset for recently effective requirements and approaching key dates. The
+seventh route is a cost-bounded three-worker Hive solve with independent
+cross-review, escrow settlement, compute accounting, and an audit digest. The
+eighth is a $1 Security Preflight for caller-supplied MCP manifests, tool
 schemas, policies, and sample inputs. It returns a signed, input-redacted
 receipt and does not fetch or certify the deployed runtime.
 No signup or API key is required.
@@ -16,26 +19,77 @@ No signup or API key is required.
 
 {{INTRO_STATUS}}
 
+## Free value decision before payment
+
+POST https://mcp.viridisconservation.com/x402/decide with decision_type ROUTE
+or WORKFLOW. ROUTE accepts objective, inputs, and optional max_price_minor and
+returns REQUEST_QUOTE, NEEDS_INPUT, BUDGET_TOO_LOW, or NO_MATCH. WORKFLOW adds
+buyer-owned frequency, time, cost, scope, access, acceptance, and human-approval
+facts and returns BUY, BUILD, DO_NOT_AUTOMATE, or NEEDS_INPUT. BUY selects one
+relevant shipped route. BUILD qualifies only the existing $995 Viridis Agent
+Reliability Sprint for one workflow and up to two existing systems or APIs;
+human offer and no-spend fit check:
+https://mcp.viridisconservation.com/reliability-sprint
+it uses a disclosed 50% value-realization screen and is not an offer. This
+endpoint is free and read-only. It never creates an agent, signs, pays,
+settles, submits an offer, starts work, executes a tool, creates a subscription,
+or persists a paid call. A fresh unpaid HTTP 402 remains authoritative for any
+route purchase, and Sprint work remains blocked until separately verified live
+cash-escrow funding.
+
+## One-entry adoption contract
+
+POST https://mcp.viridisconservation.com/adopt with objective, the inputs the
+buyer already controls, and an optional max_price_minor. This free read-only
+endpoint selects one relevant route and returns a ready-to-send unpaid quote
+request plus the x402 payment sequence, delivery-receipt contract, exactly-once
+buyer-feedback contract, and bounded repeat path. It never signs, pays,
+executes, persists, or substitutes a cheaper irrelevant tool. Machine-readable
+discovery: https://mcp.viridisconservation.com/.well-known/agent-adoption.json
+
 ## Payable HTTP routes
 
+- Secure: POST https://mcp.viridisconservation.com/x402/security-preflight/security_preflight — $1.00 list price — bounded static agent-security checks plus a signed receipt; no raw input storage or runtime fetch.
 - Measure: POST https://mcp.viridisconservation.com/x402/quantity-takeoff/calculate_takeoff — $0.50 list price — embodied-carbon quantity takeoff from a bill of materials.
 - Account: POST https://mcp.viridisconservation.com/x402/ghg-ledger/calculate_inventory — $1.00 list price — deterministic Scope 1, 2, and 3 inventory.
 - Disclose: POST https://mcp.viridisconservation.com/x402/disclosure-compiler/compile_disclosure — $2.00 list price — CSRD / IFRS S2 sustainability disclosure evidence.
 - Claim: POST https://mcp.viridisconservation.com/x402/taxcredit-engine/calculate_tax_credit — $2.00 list price — auditable 45Q, 45V, 45Y, 48E, and 45X scenarios.
 - Scan: POST https://mcp.viridisconservation.com/x402/regulatory-radar/scan_regulations — $0.25 list price — energy and climate requirements, urgency, and effective dates.
-- Watch: POST https://mcp.viridisconservation.com/x402/regulatory-radar/monitor_changes — $0.25 list price — source-linked recently effective requirements and approaching deadlines inside a bounded 1–365 day window over the curated Viridis dataset; not a live external feed.
+- Watch: POST https://mcp.viridisconservation.com/x402/regulatory-radar/monitor_changes — $0.25 list price — source-linked effective dates and deadlines inside a bounded 1–365 day window over the curated Viridis dataset; not a live external feed.
 - Orchestrate: POST https://mcp.viridisconservation.com/x402/hive/solve — fixed $5.00 price — reviewed multi-agent solve with at most four subtasks and redundancy three. Hive is excluded from one-cent intro pricing.
-- Secure: POST https://mcp.viridisconservation.com/x402/security-preflight/security_preflight — $1.00 list price — bounded static agent-security checks plus a signed receipt; no raw input storage or runtime fetch.
 
 ## How payment works
 
 1. Send the tool's JSON body without payment and receive HTTP 402 with a standard PAYMENT-REQUIRED header.
 2. Sign the advertised exact Base-mainnet USDC authorization and retry with PAYMENT-SIGNATURE.
 3. Viridis verifies and settles before executing, then returns JSON plus PAYMENT-RESPONSE. Any verification, settlement, replay, timeout, or persistence error fails closed and never returns a free tool result.
+4. A successful result contains viridis_delivery and a one-time feedback_token.
+POST that token, outcome, would_buy_again, and an idempotency key to
+https://mcp.viridisconservation.com/x402/feedback. Feedback proves possession
+of the delivered result, not independently verified identity or revenue, and
+it can be recorded only once.
 
 Safest first paid call, when intro pricing is enabled:
-python3 scripts/x402_demo_client.py --route regulatory-radar --max-payment-usdc 0.01
+python3 scripts/x402_demo_client.py --route security-preflight --max-payment-usdc 0.01
 The client makes exactly one paid attempt and registers the 10000-atomic ceiling inside the x402 SDK payment selector. If the live quote exceeds $0.01, it stops before creating a signed payment.
+
+For MCP-native buyers, Coinbase's Bazaar MCP server exposes search_resources
+and proxy_tool_call, while Coinbase Payments MCP can inspect and pay a direct
+x402 endpoint under configured per-call and session spending limits. Use the
+exact Security Preflight URL above and caller-owned manifest facts. Wallet
+authentication, funding, signing, and payment remain on buyer infrastructure.
+
+Returning-buyer Regulatory Radar call, only after a useful prior result and a fresh route-and-amount mandate:
+python3 scripts/x402_demo_client.py --route regulatory-radar --max-payment-usdc 0.25
+Use the same locally controlled wallet so the client supplies its public address on the unpaid preflight. The fresh 402 is authoritative. The client makes exactly one new paid attempt under a 250000-atomic ceiling and does not reuse the prior payment, subscribe, schedule another call, or authorize any later purchase.
+
+Returning-buyer dated watch, only when the buyer wants a new effective-date or deadline window:
+python3 scripts/x402_demo_client.py --route regulatory-watch --max-payment-usdc 0.25
+The example asks for a 90-day US emissions/climate window. It is one fresh, ceiling-protected purchase over the curated source-linked dataset, not a subscription, scheduled monitor, or claim of a live external regulatory feed.
+
+One fixed-price reviewed Hive solve:
+python3 scripts/x402_demo_client.py --route hive --max-payment-usdc 5.00
+Hive has no execution free tier. The client previews the exact live contract and registers the 5000000-atomic ceiling inside the SDK; if the quote exceeds $5.00, it stops before signing.
 
 ## Discovery and examples
 
@@ -46,6 +100,10 @@ The client makes exactly one paid attempt and registers the 10000-atomic ceiling
 - Monthly team seats: https://mcp.viridisconservation.com/seats
 - Copy-paste quickstart and free dry-run: https://mcp.viridisconservation.com/quickstart
 - Machine-readable x402 catalog: https://mcp.viridisconservation.com/x402/catalog
+- Free machine-readable value decision: https://mcp.viridisconservation.com/x402/decide
+- One-entry adoption planner: https://mcp.viridisconservation.com/adopt
+- Adoption discovery contract: https://mcp.viridisconservation.com/.well-known/agent-adoption.json
+- Paid-result feedback: https://mcp.viridisconservation.com/x402/feedback
 - Machine-readable Agent Skills index: https://mcp.viridisconservation.com/.well-known/skills/index.json
 - Domain-published buyer skill: https://mcp.viridisconservation.com/.well-known/skills/viridis-paid-tools/SKILL.md
 - ARD catalog: https://mcp.viridisconservation.com/.well-known/ai-catalog.json
@@ -60,6 +118,7 @@ The client makes exactly one paid attempt and registers the 10000-atomic ceiling
 - Public catalog and open paid work: https://mcp.viridisconservation.com/network/catalog
 - MCP endpoint: https://mcp.viridisconservation.com/network/mcp
 - Manifest: https://mcp.viridisconservation.com/.well-known/agent-market.json
+- Demand-first custom-work profile: viridis-mcp-delivery / Viridis Agent Reliability Sprint. Introductory $995 fixed scope: one existing workflow, up to two existing systems/APIs, approval gates, security preflight, tests, logging/failure handling, deployable handoff, and one delivery receipt. The optional $149/month Reliability Watch is separate, post-acceptance, and never auto-activated.
 - Outside agents can publish signed profiles, subscribe to matching work, bid, deliver an HTTPS artifact plus digest, and settle through existing x402 or Viridis cash-escrow rails.
 - Production completion requires matching buyer and seller attestations plus an independently verified gateway receipt. Verified outcomes bind into fleet identity and Trust Oracle reputation. Delivery may carry a pre-existing Notary commitment, Verified Relay receipt, and measured compute evidence for an x402-C carbon receipt.
 - The market never accepts private keys and never receives Stripe, CDP, facilitator, wallet, or gateway-admin credentials.

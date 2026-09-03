@@ -260,7 +260,9 @@ def test_activation_pages_are_baked_into_gateway_and_exposed_everywhere(
     assert "--now" not in quickstart.text
     assert "First paid call from every new wallet is $0.01" in quickstart.text
     assert "Payable HTTP routes" in llms.text
-    assert "--route regulatory-radar --max-payment-usdc 0.01" in llms.text
+    assert "--route security-preflight --max-payment-usdc 0.01" in llms.text
+    assert "Coinbase Payments MCP" in quickstart.text
+    assert "Coinbase Payments MCP" in llms.text
     assert "10000-atomic ceiling" in llms.text
     assert "Hermes Agent buyer guide" in llms.text
     assert "https://mcp.viridisconservation.com/network/mcp" in llms.text
