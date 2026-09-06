@@ -1,0 +1,57 @@
+{
+  "date": "2026-09-06",
+  "status": "DEPLOYED_RESTART_VERIFIED",
+  "fleet_image": "sha256:3201fb43b147222b0696155cc3840db9e63a0c35652387c3be304ffe4ea9e6d1",
+  "previous_fleet_image": "sha256:d31d4a3c9e0ee548a791239e12d2af6f18b4a291e54423867ac21c802482b672",
+  "files": [
+    {
+      "path": "deploy/gateway/viridis_mcp_gateway.py",
+      "sha256": "2c092651f3a1e6ab684bf8ade91d0fa651c312fc2493889f8561f2c722953eb9"
+    },
+    {
+      "path": "deploy/gateway/security_preflight.html",
+      "sha256": "138ae056849cd43b6f64837d989477d877f1bca1a7e459d2d57bc62df11c191a"
+    },
+    {
+      "path": "deploy/gateway/quickstart.html",
+      "sha256": "4bd6ea2c8b7c95214258aaf3cce4c51e72fb34bd53144cb20bb55235ff457a74"
+    },
+    {
+      "path": "deploy/gateway/llms.txt",
+      "sha256": "624f8db42dc6dcc6b92fa3e30822682c76dd4ee305e1b3d4c32446b4ae4f3468"
+    },
+    {
+      "path": "deploy/gateway/Dockerfile",
+      "sha256": "8548593a5c35394509b856240625980cfc81601e39da162951a8d17dbc4b14f7"
+    }
+  ],
+  "main_site_commit": "926cd1a7a55b873756ae41cd40fa257491ee564e",
+  "main_site_image": "sha256:1f304b95703ab46cc5362b024077eb76def53270b2d626fabc301ffbc0b50f40",
+  "fleet_regression": {
+    "passed": 2214,
+    "failed": 0,
+    "errors": 0,
+    "suites_clean": 37,
+    "duration_seconds": 34.41
+  },
+  "main_site_verification": {
+    "harnesses": 84,
+    "build": "PASS",
+    "ci": "https://github.com/jdhart81/viridis-conservation-app/actions/runs/34008246858"
+  },
+  "public_surface_checks": 8,
+  "registry": {
+    "name": "io.github.jdhart81/security-preflight",
+    "latest_version": "1.2.0",
+    "publication_run": "https://github.com/jdhart81/viridis-agent-fleet/actions/runs/34007730693"
+  },
+  "bazaar": {
+    "valid_input_probe": "valid=true; simulation=accepted; no failed checks",
+    "indexed": false,
+    "empty_input_probe": "400 input validation error",
+    "payment_attempted": false
+  },
+  "search_console_performance_verified": false,
+  "third_party_directory_recrawl_verified": false,
+  "new_revenue_claimed": false
+}

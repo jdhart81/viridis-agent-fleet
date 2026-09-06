@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Viridis x402 quickstart</title>
-  <meta name="description" content="Use the Viridis x402 quickstart to inspect a free HTTP 402 quote and buy one ceiling-protected carbon or compliance agent call with USDC on Base.">
+  <title>MCP Security Preflight quickstart and paid agent APIs | Viridis</title>
+  <meta name="description" content="Use the Viridis x402 quickstart to inspect an MCP Security Preflight quote, check supplied manifests and policies, and integrate a signed assessment with a free change check.">
   <link rel="canonical" href="https://mcp.viridisconservation.com/quickstart">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Viridis x402 quickstart">
-  <meta property="og:description" content="Inspect a live quote, enforce a buyer-side ceiling, and run one paid carbon or compliance agent call with the official x402 client.">
+  <meta property="og:title" content="MCP Security Preflight quickstart | Viridis">
+  <meta property="og:description" content="Inspect a free quote, assess supplied MCP artifacts, and recheck relevant changes. Buyer-controlled x402 payments with signed assessment receipts.">
   <meta property="og:url" content="https://mcp.viridisconservation.com/quickstart">
   <meta name="twitter:card" content="summary">
   <style>
@@ -65,6 +65,7 @@ Use the manifest and authority policy I provide. Stop if the live quote exceeds 
     <li>After payment, require <code>PAYMENT-RESPONSE</code> and independently verify the referenced Base transaction. The transaction is settlement evidence; a seller-reported count is not.</li>
   </ul></section>
 
+  <p><a href="/security-preflight">Security Preflight: scope, assessment receipts, and change checks →</a></p>
   <section id="security-first-call" class="card featured"><p class="eyebrow">Agent security first call</p><h2>Inspect Security Preflight without paying</h2><p>Security Preflight statically checks the MCP manifest, tool schemas, policy, and sample inputs supplied by the caller. It returns a signed, input-redacted receipt after payment; it does not fetch or certify the live runtime. List price: <span class="price">$1.00 USDC</span>. <strong>{{INTRO_STATUS}}</strong></p>
   <pre><code>git clone https://github.com/jdhart81/viridis-agent-fleet.git
 cd viridis-agent-fleet

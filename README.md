@@ -58,10 +58,32 @@ control rather than presenting related-party evidence as independent proof.
 - `security-preflight/security_preflight` — `$1.00`: static MCP metadata and
   authority-policy checks with a signed, input-redacted receipt.
 
+Start at the [MCP Security Preflight service page](https://mcp.viridisconservation.com/security-preflight)
+for scope, price, assessment shape, and the change-check workflow.
+
 The [Security Preflight quickstart](docs/SECURITY_PREFLIGHT_QUICKSTART.md)
 includes a valid sample manifest, a no-spend HTTP 402 inspection, MCP client
 configuration, the receipt boundary, and the optional Agent Market binding
 flow.
+
+## MCP configuration
+
+Connect this specific service in a client supporting Streamable HTTP:
+
+```json
+{
+  "mcpServers": {
+    "viridis-security-preflight": {
+      "type": "streamable-http",
+      "url": "https://mcp.viridisconservation.com/security-preflight/mcp"
+    }
+  }
+}
+```
+
+The official MCP Registry entry `io.github.jdhart81/security-preflight`
+is published at v1.2.0. Connecting does not authorize a paid call; inspect the
+quote and apply the buyer's purchase mandate separately.
 
 ## Try it without spending anything
 
@@ -236,7 +258,7 @@ mcp-publish-github/<agent>/tools.json  # exact JSON-Schema tool definitions
 mcp-publish-github/<agent>/DEPLOY.md   # endpoint and publication notes
 contracts/<agent>.md              # public agent contract (capabilities, invariants)
 gateway/                          # reference gateway for the hosted streamable-http fleet
-deploy/glama/                     # single-install 18-agent / 117-tool aggregate bridge
+deploy/glama/                     # single-install bundled-manifest aggregate bridge
 docs/A2A_ECONOMY.md               # the full identity→trust→escrow thesis + composition demo
 ```
 

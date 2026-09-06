@@ -1,0 +1,59 @@
+--- a/deploy/gateway/viridis_mcp_gateway.py
++++ b/deploy/gateway/viridis_mcp_gateway.py
+@@ -2649,6 +2649,7 @@
+                                      public_base + "/x402/decide",
+                                  "adoption": public_base + "/adopt",
+                                  "security_change_check": public_base + "/security-preflight/watch",
++                                 "security_preflight": public_base + "/security-preflight",
+                                  "adoption_discovery":
+                                      public_base +
+                                      "/.well-known/agent-adoption.json",
+@@ -3046,7 +3047,7 @@
+         _paid_skill_path.read_text(encoding="utf-8")
+         if _paid_skill_path.exists() else "")
+     _paid_skill_description = (
+-        "Discover and safely buy Viridis deterministic carbon and compliance "
++        "Discover and buy Viridis MCP Security Preflight, carbon and compliance "
+         "tools through x402 v2, or inspect signed Agent Market work listings.")
+     _brand_mark_path = Path(__file__).resolve().parent / "viridis-mark.svg"
+     _brand_mark_svg = (
+@@ -3084,6 +3085,12 @@
+         from starlette.responses import HTMLResponse
+         return HTMLResponse(
+             _reliability_sprint_html,
++            headers=dict(_SEAT_PUBLIC_HEADERS))
++
++    async def security_preflight_page(request):
++        from starlette.responses import HTMLResponse
++        return HTMLResponse(
++            (Path(__file__).parent / "security_preflight.html").read_text(),
+             headers=dict(_SEAT_PUBLIC_HEADERS))
+ 
+     async def quickstart(request):
+@@ -3426,6 +3433,7 @@
+         paths = (
+             "/agents",
+             "/reliability-sprint",
++            "/security-preflight",
+             "/quickstart",
+             "/seats",
+             "/compliance-snapshot",
+@@ -3570,6 +3578,8 @@
+                             Route("/agents", agents_page),
+                             Route("/reliability-sprint", reliability_sprint,
+                                   methods=["GET"]),
++                            Route("/security-preflight", security_preflight_page),
++                            Route("/security-preflight/", security_preflight_page),
+                             Route("/quickstart", quickstart),
+                             Route("/compliance-snapshot",
+                                   compliance_snapshot, methods=["GET"]),
+--- a/deploy/gateway/Dockerfile
++++ b/deploy/gateway/Dockerfile
+@@ -74,6 +74,7 @@
+ COPY deploy/gateway/agents.html deploy/gateway/
+ COPY deploy/gateway/reliability_sprint.html deploy/gateway/
+ COPY deploy/gateway/quickstart.html deploy/gateway/
++COPY deploy/gateway/security_preflight.html deploy/gateway/
+ COPY deploy/gateway/compliance_snapshot.html deploy/gateway/
+ COPY deploy/gateway/compliance_snapshot_example.html deploy/gateway/
+ COPY deploy/gateway/compliance-snapshot-example-og.png deploy/gateway/

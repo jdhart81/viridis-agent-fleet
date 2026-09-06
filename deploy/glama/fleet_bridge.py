@@ -13,9 +13,9 @@ automated safety/quality checks):
 
   * Tool LISTING is network-independent — it is served from a bundled manifest
     (`fleet_manifest.json`, generated from the live fleet). The server always
-    advertises the bundled fleet tools (153 expected for 21 hosted agents plus
-    the subscriptions infrastructure surface) even if the check sandbox blocks
-    outbound network.
+    advertises the tools recorded in the bundled manifest even if the check
+    sandbox blocks outbound network. Hosted-agent health and a directory
+    rebuild are verified separately from this offline tool listing.
   * Tool CALLS forward to the live hosted endpoint at runtime (works wherever
     the container has network, i.e. real user installs).
   * Built on the low-level `mcp.server.Server` API (stable across SDK versions)

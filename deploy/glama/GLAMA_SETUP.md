@@ -23,16 +23,17 @@ Claude Desktop / Cursor:
   "args": ["run","-i","--rm","ghcr.io/jdhart81/viridis-fleet-bridge"] } } }
 ```
 
-Release target 2026-07-13: 21 hosted agents plus the auxiliary subscriptions
-surface, with an expected 153-tool aggregate (143 live fleet tools plus ten
-subscription/account/catalog tools). Call forwarding includes
-`escrow__list_escrows`, `surety__list_bonds`,
-`taxcredit-engine__calculate_tax_credit`, and
-`ghg-ledger__calculate_inventory`, `quantity-takeoff__calculate_takeoff`,
-`disclosure-compiler__compile_disclosure`,
-`subscriptions__list_plans`, and `subscriptions__mrr_summary`. Regenerate
-`fleet_manifest.json` from the live 22-agent fleet plus `/subscriptions/mcp` before the Glama build to turn this
-expected count into the released aggregate.
+Manifest reconciliation on 2026-09-06: the checked-in manifest contains
+29 route groups and 216 tool declarations. That includes the auxiliary
+subscriptions route alongside hosted agents. These are bundled declarations,
+not evidence that a directory has rebuilt the image, that every forwarded
+call succeeded, or that customers adopted the service. Read the current
+manifest and gateway health separately before publishing a live count.
+
+For the focused security service, use the direct Streamable HTTP URL
+`https://mcp.viridisconservation.com/security-preflight/mcp` and the
+[Security Preflight page](https://mcp.viridisconservation.com/security-preflight).
+The official Registry name is `io.github.jdhart81/security-preflight`, v1.2.0.
 
 ## Steps (the two account actions are yours — Justin)
 
