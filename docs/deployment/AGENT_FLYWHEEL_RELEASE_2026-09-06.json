@@ -1,0 +1,79 @@
+{
+  "status": "PROMOTED_RESTART_VERIFIED",
+  "production_image": "sha256:d31d4a3c9e0ee548a791239e12d2af6f18b4a291e54423867ac21c802482b672",
+  "rollback_image": "sha256:b4515d26cc232a4e4619d18b01036f392ef9c6f61494bd925391dfe2509a9784",
+  "files": [
+    {
+      "path": "deploy/gateway/viridis_mcp_gateway.py",
+      "sha256": "45acda212bbc6df27d15e136657692108dafa4ed77c7a78fc3d47fc92657405c"
+    },
+    {
+      "path": "deploy/gateway/preflight_watch.py",
+      "sha256": "212cec970f43f9e34561ac0d2d0a8684849ce057ab724fa501ad17ae84b50876"
+    },
+    {
+      "path": "deploy/gateway/adoption_loop.py",
+      "sha256": "19f22e7b6ad89eee4bf313187603c40b7d35a03addf35e67fcd8e64cc7052dc1"
+    },
+    {
+      "path": "deploy/gateway/x402_http.py",
+      "sha256": "5e3a095aadaee7362355ca3638159b7190f7963f77cd3fe636b3aa3666ac8d1c"
+    },
+    {
+      "path": "deploy/gateway/quickstart.html",
+      "sha256": "6d71f98750e673c6c137d681aea3944135283717670b5cdc7d4ad044c0f59bc4"
+    },
+    {
+      "path": "deploy/gateway/llms.txt",
+      "sha256": "43c1df5d6141825251738a8a62d73ac186ed10d611b4590bae872e6e02b32c92"
+    },
+    {
+      "path": "integrations/viridis-paid-tools/SKILL.md",
+      "sha256": "6b526130cbeee29c48138249ae9a6099496ecc6f0cabf38850c176a46d0aaa77"
+    },
+    {
+      "path": "security-preflight-agent/src/core.py",
+      "sha256": "5a01bc3721437af585e69152c36668adf5b9e833f23c1d3a27a3bb497952ab17"
+    },
+    {
+      "path": "security-preflight-agent/agent.yaml",
+      "sha256": "72a195cc7e7e6f8431dd752cdce780291bb644758082a7eca4dc9cb6faf3c0e3"
+    }
+  ],
+  "local_fleet_tests": {
+    "passed": 2213,
+    "failed": 0,
+    "errors": 0,
+    "suites_clean": 37,
+    "duration_seconds": 30.71
+  },
+  "production": {
+    "hosted_agents_healthy": 28,
+    "mount_errors": 0,
+    "persisted_agent_state_rows": 35,
+    "first_boot_verified": true,
+    "restart_verified": true,
+    "exact_image_file_hashes_verified": true,
+    "offhost_restore_verified": true
+  },
+  "commercial_boundary": {
+    "payment_attempted": false,
+    "customer_created": false,
+    "subscription_activated": false
+  },
+  "public_package_tests": {
+    "change_check_and_clients": {
+      "passed": 22
+    },
+    "security_preflight": {
+      "passed": 11,
+      "skipped": 1,
+      "skip_reason": "Full private-market integration remains covered by the private fleet suite"
+    },
+    "repository_security_baseline": {
+      "passed": 7
+    },
+    "production_integration_patch_exact_replay": true,
+    "live_free_client": "BASELINE_REQUIRED; no payment or assessment created"
+  }
+}

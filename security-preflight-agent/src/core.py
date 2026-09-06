@@ -29,7 +29,7 @@ except ImportError:  # pragma: no cover - the production image provides this
     Ed25519PrivateKey = None
 
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 ISSUER_ID = "viridis-security-preflight"
 PROTOCOL = "viridis-security-receipt-v1"
 MAX_INPUT_BYTES = 131_072
@@ -584,6 +584,17 @@ class SecurityPreflightCore:
             "errors": 0,
         }
 
+    @staticmethod
+    def watch_binding(data: dict) -> dict:
+        """Bind every assessment input; store digests, never raw samples."""
+        return {
+            "agent_id": data["agent_id"],
+            "manifest_sha256": _sha256(data["manifest"]),
+            "policy_sha256": _sha256(data["policy"]),
+            "sample_inputs_sha256": _sha256(data["samples"]),
+            "profile_sha256": data["subject_profile_sha256"] or None,
+        }
+
     def _scan(self, payload: dict) -> dict:
         data = self._validate_scan(payload)
         key = _load_signing_key()
@@ -624,6 +635,7 @@ class SecurityPreflightCore:
             "result_counts": counts,
             "checks": checks,
             "subject_binding": {
+                **self.watch_binding(data),
                 "artifact_sha256": artifact_sha256,
                 "manifest_sha256": _sha256(data["manifest"]),
                 "policy_sha256": _sha256(data["policy"]),
@@ -786,9 +798,16 @@ class SecurityPreflightCore:
             "receipt_store_ready": receipt_store_ready,
             "raw_inputs_stored": False,
             "runtime_fetches_enabled": False,
+            "change_aware_recheck": True,
         }
 
     def describe(self) -> dict:
+        try:
+            public_key = _b64url(_load_signing_key().public_key().public_bytes(
+                encoding=serialization.Encoding.Raw,
+                format=serialization.PublicFormat.Raw))
+        except PreflightError:
+            public_key = None
         return {
             "name": "security-preflight-agent",
             "version": VERSION,
@@ -816,5 +835,6 @@ class SecurityPreflightCore:
             "claim_boundary": CLAIM_BOUNDARY,
             "receipt_protocol": PROTOCOL,
             "receipt_issuer_id": ISSUER_ID,
+            "receipt_public_key_b64": public_key,
             "privacy": "raw caller inputs are neither persisted nor returned",
         }

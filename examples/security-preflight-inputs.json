@@ -1,0 +1,25 @@
+{
+  "agent_id": "my-agent",
+  "manifest": {
+    "endpoint": "https://example.invalid/mcp",
+    "auth": "bearer",
+    "tools": [
+      {
+        "name": "read_status",
+        "input_schema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      }
+    ]
+  },
+  "policy": {
+    "allowed_tools": [
+      "read_status"
+    ]
+  },
+  "sample_inputs": [
+    "ordinary fixture"
+  ]
+}

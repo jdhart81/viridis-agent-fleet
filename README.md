@@ -23,8 +23,10 @@ and Maxwell Defense remain on their separate runtime and billing boundary. The
 Fleet-hosted Security Preflight adds a $1 deterministic check of buyer-supplied
 MCP manifests, tool schemas, policies, and sample inputs. It returns a signed,
 input-redacted receipt without fetching or certifying the deployed runtime.
-Version 1.1 stores receipts durably and binds the exact manifest/policy
-artifact. Supplying the current Agent Market profile SHA-256 additionally makes
+Version 1.2 stores receipts durably and binds the exact manifest, policy, and
+sample contents. Its free change check reuses a current assessment or prepares
+a fresh quote for a relevant change. Supplying the current Agent Market
+profile SHA-256 additionally makes
 the signed receipt eligible for explicit import; a later profile change removes
 it from ranking. Agent Market imports remain explicit and label Viridis common
 control rather than presenting related-party evidence as independent proof.
@@ -62,6 +64,17 @@ configuration, the receipt boundary, and the optional Agent Market binding
 flow.
 
 ## Try it without spending anything
+
+**Repeat only when needed:** the [Security Preflight change check](docs/SECURITY_PREFLIGHT_CHANGE_CHECK.md)
+connects a signed assessment to your own release events or scheduler. Start
+with a free check:
+
+```bash
+python3 scripts/viridis_preflight_watch.py --inputs examples/security-preflight-inputs.json
+```
+
+An unchanged assessment retains its findings. A new quote still requires the
+buyer's purchase mandate. The client never signs or pays.
 
 ```bash
 git clone https://github.com/jdhart81/viridis-agent-fleet.git
@@ -124,8 +137,9 @@ signer before any paid request.
 Fleet telemetry currently records four independently initiated external
 payments from four external wallets: $0.28 total USDC on Base. No repeat
 purchase has been confirmed yet. Security Preflight itself has no external
-settlement or revenue. The next commercial gate is its first external paid
-scan, followed by a $99 reviewed developer evidence-pack conversion. The public
+settlement or revenue. The next commercial gate is a buyer-confirmed useful
+paid scan, followed by a separately authorized repeat for a real change. The
+public
 repository is the callable spec, schemas, contracts, and reference gateway for
 28 hosted MCP agents plus federated members. Most deterministic cores remain
 private; Security Preflight is published here so buyers can inspect its exact

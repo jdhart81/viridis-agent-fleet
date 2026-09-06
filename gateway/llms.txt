@@ -93,6 +93,9 @@ Hive has no execution free tier. The client previews the exact live contract and
 
 ## Discovery and examples
 
+- Free change-aware Security Preflight: POST https://mcp.viridisconservation.com/security-preflight/watch with inputs and optional baseline_receipt_id. Compare the current manifest, policy, sample inputs and profile binding with a stored signed assessment. UNCHANGED means reuse existing findings; BASELINE_REQUIRED or RECHECK_REQUIRED returns an unpaid quote request. Caller owns scheduling and payment authority. No scan, subscription, or payment is created by this endpoint.
+- Signed public assessment: GET https://mcp.viridisconservation.com/security-preflight/receipts/{receipt_id}. Raw inputs and buyer feedback tokens are not returned by this public resource.
+
 - A2A 1.0 Agent Card: https://mcp.viridisconservation.com/.well-known/agent-card.json
 - A2A HTTP+JSON task endpoint: https://mcp.viridisconservation.com/a2a/message:send — activate https://github.com/google-a2a/a2a-x402/v0.1 in A2A-Extensions. The server returns a durable input-required payment task, settles the caller-supplied x402 v2 payload, then returns the completed task artifact.
 - Human agent catalog: https://mcp.viridisconservation.com/agents

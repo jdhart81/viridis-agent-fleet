@@ -4,6 +4,13 @@ A growth-first, paid Fleet service that turns caller-supplied MCP manifests,
 tool schemas, tool policies, and sample inputs into deterministic checks plus a
 signed, input-redacted `viridis-security-receipt-v1`.
 
+Version 1.2 adds complete input binding for a free change-aware repeat check at
+`POST /security-preflight/watch`. It verifies a stored assessment's signature,
+evidence digest, subject, expiry and scanner version. Unchanged inputs reuse
+existing findings; changed inputs or stale assessments return unpaid quote
+instructions. The caller owns scheduling and payment authority. This endpoint
+does not activate the proposed managed Reliability Watch subscription.
+
 List price is $1 per scan. The fleet's existing one-time x402 introduction can
 quote $0.01 to a new payer wallet. A result can be imported into an existing
 Viridis Agent Market profile only through a separate explicit Market action;

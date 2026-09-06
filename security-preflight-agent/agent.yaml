@@ -1,5 +1,5 @@
 name: "security-preflight"
-version: "1.1.0"
+version: "1.2.0"
 description: "Evidence-bounded MCP manifest and tool-policy security preflight with signed receipts"
 pillar: "security"
 status: "production"

@@ -268,6 +268,42 @@ x402 or cash-escrow rails; the market itself does not custody funds.
 
 ## Verify the outcome
 
+### Repeat Security Preflight only when it is relevant
+
+Retain the complete paid response privately, including `viridis_delivery` and
+the Security Preflight `receipt.receipt_id`. Before a new integration release,
+POST to `https://mcp.viridisconservation.com/security-preflight/watch` with:
+
+```json
+{
+  "baseline_receipt_id": "vsr_REPLACE_WITH_YOUR_RECEIPT_ID",
+  "inputs": {
+    "agent_id": "your-agent",
+    "manifest": {},
+    "policy": {},
+    "sample_inputs": []
+  }
+}
+```
+
+Supply your real current artifacts. Omit `baseline_receipt_id` for a first
+assessment. This endpoint validates inputs and compares signed stored evidence;
+it is free, stateless and never fetches your runtime or executes a paid scan.
+
+- `UNCHANGED`: reuse the existing assessment with its warnings/findings. This
+  does not authorize connecting or executing tools. Do not buy an identical
+  assessment just to create usage.
+- `BASELINE_REQUIRED` or `RECHECK_REQUIRED`: inspect `reasons`, use the returned
+  exact `quote_request`, and apply your own fresh quote and payment mandate.
+  Input changes, expiry, and scanner updates can justify a new assessment.
+- Invalid, unavailable, corrupt or wrong-subject baselines: stop and reconcile;
+  never interpret an error as an unchanged or safe result.
+
+The caller owns scheduling and retains baseline IDs; no managed subscription
+is created. A repeated scan still needs a genuine operator mandate. Public
+assessment retrieval uses `/security-preflight/receipts/{receipt_id}` and
+does not expose the private buyer-feedback token.
+
 - Do not count an unpaid 402, dry-run, listing view, or self-settlement as
   customer revenue.
 - For a paid call, record the route, payer address, amount, transaction hash,
