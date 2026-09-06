@@ -1,0 +1,49 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCP Security Preflight integration guide | Viridis Security</title><meta name="description" content="Connect an agent to Security Preflight, inspect an unpaid x402 quote, and compare changed MCP artifacts with a signed assessment."><link rel="canonical" href="https://mcp.viridis-security.com/security-preflight/quickstart"><style>
+    :root{color-scheme:dark;--bg:#071711;--panel:#10271e;--ink:#effff7;--muted:#b0c9be;--accent:#54e5a1;--line:#305342}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.6 system-ui,sans-serif}a{color:var(--accent);text-underline-offset:.2em}a:focus-visible{outline:3px solid var(--accent);outline-offset:5px}main,nav,footer{max-width:1120px;margin:auto;padding:1.5rem}nav{display:flex;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--line);flex-wrap:wrap}.brand{font-weight:750;letter-spacing:.06em;color:var(--ink);text-decoration:none}.links{display:flex;gap:1.3rem;flex-wrap:wrap}.eyebrow{color:var(--accent);text-transform:uppercase;font-size:.875rem;letter-spacing:.12em}h1{font-size:clamp(2.3rem,5.8vw,4.8rem);line-height:1.07;letter-spacing:-.045em;max-width:900px;margin:1rem 0 1.6rem}h2{font-size:clamp(1.6rem,3vw,2.2rem);line-height:1.2}h3{font-size:1.1rem;margin-top:0}.intro{max-width:740px;color:var(--muted);font-size:1.15rem}.hero{padding:3rem 0 2.5rem}.actions{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin:1.8rem 0}.button{padding:.85rem 1.15rem;background:var(--accent);color:#061b11;font-weight:700;text-decoration:none;border-radius:4px}.price{color:var(--muted);max-width:720px}.price strong{color:var(--ink)}section{padding:2.4rem 0;border-top:1px solid var(--line)}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.3rem}.item{padding-left:1.1rem;border-left:2px solid var(--accent)}.item p{color:var(--muted);margin-bottom:0}.two{display:grid;grid-template-columns:1fr 1fr;gap:2rem}.note{color:var(--muted)}pre{background:var(--panel);border:1px solid var(--line);padding:1.3rem;overflow:auto;font-size:.875rem;line-height:1.7;border-radius:4px}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}p code,li code{overflow-wrap:anywhere}ol,ul{padding-left:1.4rem}li{margin:.5rem 0}footer{border-top:1px solid var(--line);color:var(--muted);font-size:.875rem;padding-bottom:3rem}.skip{position:absolute;left:-10000px}.skip:focus{left:1rem;top:1rem;background:var(--panel);padding:1rem;z-index:1}@media(max-width:720px){.grid,.two{grid-template-columns:1fr}.hero{padding-top:2rem}main,nav,footer{padding-left:1.2rem;padding-right:1.2rem}section{padding:2rem 0}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style></head><body><nav><a class="brand" href="/security-preflight">VIRIDIS SECURITY PREFLIGHT</a><a href="/security-preflight/service.json">Service contract</a></nav><main><header class="hero"><p class="eyebrow">Agent integration</p><h1>Connect. Inspect the quote.<br>Decide before you pay.</h1><p class="intro">Security Preflight checks supplied MCP manifests, schemas, policies, and sample text. It does not connect to or certify a deployed runtime.</p></header><section><h2>Connect an MCP client</h2><pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;viridis-security-preflight&quot;: {
+      &quot;url&quot;: &quot;https://mcp.viridis-security.com/security-preflight/mcp&quot;
+    }
+  }
+}</code></pre><p>Use a client with Streamable HTTP support. Tool discovery is free. The assessment requires a buyer-authorized payment. The existing <code>/mcp</code> endpoint serves Injection Detector separately.</p></section><section id="security-first-call"><h2>Inspect an unpaid HTTP quote</h2><p>Save the public example below as <code>inputs.json</code>, then send it without a payment signature. A valid unpaid request returns HTTP 402. This does not purchase or execute an assessment.</p><pre><code>{
+  &quot;agent_id&quot;: &quot;example-research-agent&quot;,
+  &quot;manifest&quot;: {
+    &quot;endpoint&quot;: &quot;https://agent.example/mcp&quot;,
+    &quot;auth&quot;: &quot;bearer&quot;,
+    &quot;tools&quot;: [
+      {
+        &quot;name&quot;: &quot;read_status&quot;,
+        &quot;input_schema&quot;: {
+          &quot;type&quot;: &quot;object&quot;,
+          &quot;properties&quot;: {
+            &quot;id&quot;: {
+              &quot;type&quot;: &quot;string&quot;
+            }
+          },
+          &quot;required&quot;: [
+            &quot;id&quot;
+          ],
+          &quot;additionalProperties&quot;: false
+        }
+      }
+    ]
+  },
+  &quot;policy&quot;: {
+    &quot;allowed_tools&quot;: [
+      &quot;read_status&quot;
+    ],
+    &quot;denied_tools&quot;: [],
+    &quot;approval_required_tools&quot;: []
+  },
+  &quot;sample_inputs&quot;: [
+    &quot;Summarize the supplied status record.&quot;
+  ]
+}</code></pre><pre><code>curl -i https://mcp.viridis-security.com/x402/security-preflight/security_preflight \
+  -H 'Content-Type: application/json' \
+  --data-binary @inputs.json</code></pre><p>Decode the <code>PAYMENT-REQUIRED</code> response header as Base64 JSON. Check the exact resource URL, amount, recipient, asset, and network. The list price is $1 USDC; an eligible introductory quote may be $0.01. The fresh quote is authoritative.</p><p>Only after your own budget and payment mandate allow it, use an x402 v2 client to sign and retry the same request at this exact URL. Keep your private key in your client. A successful paid result includes signed assessment evidence and a delivery receipt.</p></section><section><h2>Check only when inputs change</h2><pre><code>git clone https://github.com/jdhart81/viridis-agent-fleet.git
+cd viridis-agent-fleet
+python3 scripts/viridis_preflight_watch.py \
+  --base-url https://mcp.viridis-security.com \
+  --inputs examples/security-preflight-inputs.json</code></pre><p>This free call returns <code>BASELINE_REQUIRED</code> without creating a scan or payment. On later checks, use your current caller-owned inputs and add <code>--paid-result saved-paid-result.json</code>. Unchanged inputs retain the assessment and its findings; a relevant change, expiry, or scanner change requires a new quote and a separate purchase decision.</p><p>You own the schedule. This endpoint does not create a monitoring subscription or authorize a runtime action.</p></section><section><h2>Machine-readable contracts</h2><p><a href="/security-preflight/service.json">Service metadata and example inputs</a> · <a href="/security-preflight/openapi.json">OpenAPI</a> · <a href="/llms.txt">Agent guide</a> · <a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/SECURITY_PREFLIGHT_CHANGE_CHECK.md">Receipt and change-check recipe</a></p></section></main><footer><a href="/security-preflight">Security Preflight</a> · <a href="/">All Security services</a> · <a href="/security">Data and security</a></footer></body></html>

@@ -1,0 +1,180 @@
+{
+  "version": "viridis-security-preflight-service-v1",
+  "name": "Viridis Security Preflight",
+  "scanner_version": "1.2.0",
+  "description": "Deterministic security preflight of caller-supplied MCP agent metadata. Checks endpoint/auth declarations, closed tool schemas, high-impact approval policy, policy conflicts, and static injection indicators. Returns a signed, input-redacted receipt. Does not fetch or certify the deployed runtime.",
+  "url": "https://mcp.viridis-security.com/security-preflight",
+  "documentation_url": "https://mcp.viridis-security.com/security-preflight/quickstart",
+  "openapi_url": "https://mcp.viridis-security.com/security-preflight/openapi.json",
+  "mcp": {
+    "url": "https://mcp.viridis-security.com/security-preflight/mcp",
+    "transport": "streamable-http"
+  },
+  "assessment": {
+    "endpoint": "https://mcp.viridis-security.com/x402/security-preflight/security_preflight",
+    "method": "POST",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "description": "Existing or intended lowercase Agent Market profile identifier"
+        },
+        "subject_profile_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Optional current Agent Market profile digest. When supplied, the signed receipt is bound to this exact profile and becomes eligible for explicit Market import."
+        },
+        "manifest": {
+          "type": "object",
+          "description": "Caller-supplied agent manifest; common fields are endpoint, auth, description, instructions, and tools"
+        },
+        "policy": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Optional allowed_tools, denied_tools, and approval_required_tools lists"
+        },
+        "sample_inputs": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional bounded sample text for static injection indicator checks"
+        }
+      },
+      "required": [
+        "agent_id",
+        "manifest"
+      ],
+      "additionalProperties": false
+    },
+    "input_example": {
+      "agent_id": "example-research-agent",
+      "manifest": {
+        "endpoint": "https://agent.example/mcp",
+        "auth": "bearer",
+        "tools": [
+          {
+            "name": "read_status",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      "policy": {
+        "allowed_tools": [
+          "read_status"
+        ],
+        "denied_tools": [],
+        "approval_required_tools": []
+      },
+      "sample_inputs": [
+        "Summarize the supplied status record."
+      ]
+    },
+    "payment": {
+      "protocol": "x402",
+      "version": 2,
+      "network": "eip155:8453",
+      "asset": "USDC",
+      "list_price_usdc": "1.00",
+      "quote_authoritative": true,
+      "quote_header": "PAYMENT-REQUIRED",
+      "eligible_intro_quote_usdc": "0.01",
+      "buyer_authorization_required": true,
+      "auto_pay": false
+    }
+  },
+  "change_check": {
+    "version": "viridis-preflight-watch-v1",
+    "name": "Security Preflight change check",
+    "description": "Compare current supplied artifacts with a prior signed assessment; quote a new scan only when needed.",
+    "endpoint": "https://mcp.viridis-security.com/security-preflight/watch",
+    "method": "POST",
+    "price_minor": 0,
+    "state_changing": false,
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inputs"
+      ],
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "required": [
+            "agent_id",
+            "manifest"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "type": "string"
+            },
+            "manifest": {
+              "type": "object"
+            },
+            "policy": {
+              "type": "object"
+            },
+            "sample_inputs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "subject_profile_sha256": {
+              "type": "string"
+            }
+          }
+        },
+        "baseline_receipt_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^vsr_[a-f0-9]{24}$"
+        }
+      }
+    },
+    "decisions": [
+      "BASELINE_REQUIRED",
+      "UNCHANGED",
+      "RECHECK_REQUIRED"
+    ],
+    "triggers": [
+      "inputs_changed",
+      "assessment_expired",
+      "scanner_changed"
+    ],
+    "public_receipt_template": "https://mcp.viridis-security.com/security-preflight/receipts/{receipt_id}",
+    "buyer_owns_schedule": true,
+    "auto_pay": false,
+    "runtime_tested": false,
+    "managed_subscription_active": false
+  },
+  "scope": {
+    "runtime_tested": false,
+    "runtime_execution_authorized": false,
+    "managed_subscription_active": false
+  },
+  "related_services_url": "https://mcp.viridis-security.com/"
+}

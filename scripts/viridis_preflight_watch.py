@@ -13,7 +13,9 @@ import json
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from viridis_adoption_client import _post, DEFAULT_BASE_URL
+from viridis_adoption_client import _post
+
+DEFAULT_BASE_URL = "https://mcp.viridis-security.com"
 
 
 def _digest(payload):

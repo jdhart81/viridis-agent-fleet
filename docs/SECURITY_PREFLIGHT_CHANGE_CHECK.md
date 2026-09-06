@@ -57,7 +57,7 @@ to execute a tool.
 
 ## Direct HTTP and receipt discovery
 
-Send `POST https://mcp.viridisconservation.com/security-preflight/watch` with
+Send `POST https://mcp.viridis-security.com/security-preflight/watch` with
 JSON `{ "inputs": { ... }, "baseline_receipt_id": "vsr_..." }`; omit the
 baseline on the first check. Unknown fields are rejected. Inputs bind the
 agent ID, manifest, policy, sample contents, and optional profile digest.
@@ -67,8 +67,8 @@ Read a signed, input-redacted assessment at
 the private commercial feedback token. Unknown, corrupted, wrong-subject, or
 unverifiable baselines cannot be used as a valid current assessment.
 
-The [adoption contract](https://mcp.viridisconservation.com/.well-known/agent-adoption.json),
-[OpenAPI document](https://mcp.viridisconservation.com/openapi.json), and paid
+The [service contract](https://mcp.viridis-security.com/security-preflight/service.json),
+[OpenAPI document](https://mcp.viridis-security.com/security-preflight/openapi.json), and paid
 result's `viridis_commerce.change_check` expose this repeat path. Managed
 recurring monitoring subscriptions are not activated by a free change check.
 

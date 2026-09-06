@@ -5,8 +5,8 @@ caller-supplied MCP metadata. It checks endpoint and authentication
 declarations, closed tool schemas, high-impact approval policy, policy
 conflicts, and bounded sample text for injection indicators.
 
-- MCP: `https://mcp.viridisconservation.com/security-preflight/mcp`
-- x402: `https://mcp.viridisconservation.com/x402/security-preflight/security_preflight`
+- MCP: `https://mcp.viridis-security.com/security-preflight/mcp`
+- x402: `https://mcp.viridis-security.com/x402/security-preflight/security_preflight`
 - Official Registry name: `io.github.jdhart81/security-preflight`
 - List price: $1.00 USDC on Base
 - Free calls: zero
@@ -29,7 +29,7 @@ the public receipt store.
 
 ```bash
 curl -sS -X POST \
-  https://mcp.viridisconservation.com/security-preflight/mcp \
+  https://mcp.viridis-security.com/security-preflight/mcp \
   -H 'content-type: application/json' \
   -H 'accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
@@ -42,7 +42,7 @@ MCP client configuration:
   "mcpServers": {
     "viridis-security-preflight": {
       "type": "streamable-http",
-      "url": "https://mcp.viridisconservation.com/security-preflight/mcp"
+      "url": "https://mcp.viridis-security.com/security-preflight/mcp"
     }
   }
 }
@@ -87,7 +87,7 @@ Then request the quote:
 
 ```bash
 curl -i -X POST \
-  https://mcp.viridisconservation.com/x402/security-preflight/security_preflight \
+  https://mcp.viridis-security.com/x402/security-preflight/security_preflight \
   -H 'content-type: application/json' \
   --data @preflight.json
 ```
@@ -127,7 +127,7 @@ client.register_policy(max_amount(10_000))  # $0.01 USDC maximum
 session = x402_requests(client)
 session.headers["X402-Payer-Address"] = account.address
 response = session.post(
-    "https://mcp.viridisconservation.com/x402/"
+    "https://mcp.viridis-security.com/x402/"
     "security-preflight/security_preflight",
     json=payload,
     timeout=120,
@@ -161,7 +161,7 @@ digest, claim boundary, result counts, issue time, and expiry. Retrieve the
 input-redacted record through the free `get_security_receipt` MCP tool or:
 
 ```text
-https://mcp.viridisconservation.com/security-preflight/receipts/{receipt_id}
+https://mcp.viridis-security.com/security-preflight/receipts/{receipt_id}
 ```
 
 Security Preflight has no confirmed external settlement or revenue at this

@@ -58,7 +58,7 @@ control rather than presenting related-party evidence as independent proof.
 - `security-preflight/security_preflight` — `$1.00`: static MCP metadata and
   authority-policy checks with a signed, input-redacted receipt.
 
-Start at the [MCP Security Preflight service page](https://mcp.viridisconservation.com/security-preflight)
+Start at the [MCP Security Preflight service page](https://mcp.viridis-security.com/security-preflight)
 for scope, price, assessment shape, and the change-check workflow.
 
 The [Security Preflight quickstart](docs/SECURITY_PREFLIGHT_QUICKSTART.md)
@@ -75,14 +75,14 @@ Connect this specific service in a client supporting Streamable HTTP:
   "mcpServers": {
     "viridis-security-preflight": {
       "type": "streamable-http",
-      "url": "https://mcp.viridisconservation.com/security-preflight/mcp"
+      "url": "https://mcp.viridis-security.com/security-preflight/mcp"
     }
   }
 }
 ```
 
 The official MCP Registry entry `io.github.jdhart81/security-preflight`
-is published at v1.2.0. Connecting does not authorize a paid call; inspect the
+uses metadata v1.2.1 for the Security domain; the scanner remains v1.2.0. Connecting does not authorize a paid call; inspect the
 quote and apply the buyer's purchase mandate separately.
 
 ## Try it without spending anything

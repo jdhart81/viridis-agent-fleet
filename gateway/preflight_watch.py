@@ -165,7 +165,8 @@ def make_watch_route(cores, public_base):
             return JSONResponse({"error": "service unavailable"}, status_code=503)
         try:
             payload = await request.json()
-            result = plan(core, payload, public_base)
+            from preflight_origin import request_origin
+            result = plan(core, payload, request_origin(request, public_base))
             return JSONResponse(result, headers={"Cache-Control": "no-store"})
         except LookupError:
             return JSONResponse({"error": "baseline receipt not found"}, status_code=404)

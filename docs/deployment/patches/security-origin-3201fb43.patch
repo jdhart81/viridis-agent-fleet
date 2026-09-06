@@ -1,0 +1,115 @@
+--- a/deploy/gateway/x402_http.py
++++ b/deploy/gateway/x402_http.py
+@@ -1319,7 +1319,7 @@
+ 
+ 
+ def _with_commerce_metadata(payload: Any, agent: str, tool: str,
+-                            public_base: str) -> Any:
++                            public_base: str, *, fleet_base: str | None = None) -> Any:
+     """Add continuation metadata only to an explicitly successful result."""
+     if not isinstance(payload, dict) or (agent, tool) not in NEXT_PAID_ROUTES:
+         return payload
+@@ -1328,13 +1328,14 @@
+             or status in {"error", "failed", "failure"}):
+         return payload
+     enriched = dict(payload)
++    fleet_base = fleet_base or public_base
+     commerce = {
+         "version": "viridis-commerce-v1",
+         "current_route": f"{agent}/{tool}",
+         "repeat_purchase": repeat_paid_route(
+             agent, tool, public_base),
+         "next_paid_routes": next_paid_routes(
+-            agent, tool, public_base),
++            agent, tool, fleet_base),
+         "auto_execute": False,
+         "payment_required": True,
+         "buyer_authorization_required": True,
+@@ -1342,7 +1343,7 @@
+                  "executed. Every purchase requires new caller-owned inputs, "
+                  "a fresh unpaid quote, and a separate x402 settlement."),
+     }
+-    recurring = seat_option(agent, public_base)
++    recurring = seat_option(agent, fleet_base)
+     if agent == "security-preflight":
+         from preflight_watch import discovery as watch_discovery
+         commerce["change_check"] = {
+@@ -1354,7 +1355,7 @@
+     if recurring is not None:
+         commerce["seat_option"] = recurring
+     retention = recommended_retention_offer(
+-        agent, tool, public_base)
++        agent, tool, fleet_base)
+     if retention is not None:
+         commerce["recommended_retention_offer"] = retention
+     enriched["viridis_commerce"] = commerce
+@@ -1499,7 +1500,9 @@
+         route = (agent, tool)
+         intro_for_route = intro_enabled() and route not in INTRO_EXEMPT_ROUTES
+         price = price_for_payer(cores, route, list_price, payer_hint)
+-        resource = f"{public_base}/x402/{agent}/{tool}"
++        from preflight_origin import request_origin
++        origin = request_origin(request, public_base, agent)
++        resource = f"{origin}/x402/{agent}/{tool}"
+         meta = X402_HTTP_METADATA.get(route, {
+             "description": f"Viridis {agent} {tool} tool call",
+             "input_schema": {"type": "object", "additionalProperties": True},
+@@ -1666,11 +1669,11 @@
+                            "tx_hash": result["tx_hash"]}
+                 delivery_status = _paid_delivery_status(out)
+                 out = _with_commerce_metadata(
+-                    out, agent, tool, public_base)
++                    out, agent, tool, origin, fleet_base=public_base)
+                 delivery_receipt = None
+                 if delivery_status == "delivered":
+                     out, delivery_receipt = _attach_paid_delivery_receipt(
+-                        out, consumed[key], agent, tool, public_base)
++                        out, consumed[key], agent, tool, origin)
+                 _record_delivery_status(
+                     consumed[key], delivery_status, delivery_receipt)
+                 try:
+@@ -1687,7 +1690,7 @@
+                          500)
+         reqs = dict(x402_rail.build_accepts(agent, price, resource))
+         reqs["description"] = (f"{meta['description']} MCP pointer: "
+-                               f"{public_base}/{agent}/mcp tool={tool}")
++                               f"{origin}/{agent}/mcp tool={tool}")
+         # CDP Bazaar's backwards-compatible v1 discovery hook. It indexes
+         # this after a successful settle; no dashboard registration exists.
+         reqs["outputSchema"] = OUTPUT_SCHEMA
+@@ -1745,11 +1748,11 @@
+                               "(payment settled; contact support with the tx)",
+                    "tx_hash": result["tx_hash"]}
+         delivery_status = _paid_delivery_status(out)
+-        out = _with_commerce_metadata(out, agent, tool, public_base)
++        out = _with_commerce_metadata(out, agent, tool, origin, fleet_base=public_base)
+         delivery_receipt = None
+         if delivery_status == "delivered":
+             out, delivery_receipt = _attach_paid_delivery_receipt(
+-                out, consumed[key], agent, tool, public_base)
++                out, consumed[key], agent, tool, origin)
+         _record_delivery_status(
+             consumed[key], delivery_status, delivery_receipt)
+         try:
+--- a/deploy/gateway/preflight_watch.py
++++ b/deploy/gateway/preflight_watch.py
+@@ -165,7 +165,8 @@
+             return JSONResponse({"error": "service unavailable"}, status_code=503)
+         try:
+             payload = await request.json()
+-            result = plan(core, payload, public_base)
++            from preflight_origin import request_origin
++            result = plan(core, payload, request_origin(request, public_base))
+             return JSONResponse(result, headers={"Cache-Control": "no-store"})
+         except LookupError:
+             return JSONResponse({"error": "baseline receipt not found"}, status_code=404)
+--- a/deploy/gateway/Dockerfile
++++ b/deploy/gateway/Dockerfile
+@@ -53,6 +53,7 @@
+ COPY deploy/gateway/value_decision.py deploy/gateway/
+ COPY deploy/gateway/adoption_loop.py deploy/gateway/
+ COPY deploy/gateway/preflight_watch.py deploy/gateway/
++COPY deploy/gateway/preflight_origin.py deploy/gateway/
+ COPY deploy/gateway/retention_cohorts.py deploy/gateway/
+ COPY deploy/gateway/x402_v2.py deploy/gateway/
+ COPY deploy/gateway/a2a_commerce.py deploy/gateway/

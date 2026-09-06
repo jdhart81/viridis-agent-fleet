@@ -1,0 +1,21 @@
+# Insert inside the existing mcp.viridis-security.com site block.
+
+	# Security Preflight canonical front door. Other MCP products keep their routes.
+	@preflightApi path /security-preflight/mcp /security-preflight/mcp/* /security-preflight/watch /security-preflight/receipts/* /x402/security-preflight/security_preflight /x402/feedback
+	log_skip @preflightApi
+	handle @preflightApi {
+		reverse_proxy https://mcp.viridisconservation.com {
+			header_up Host mcp.viridisconservation.com
+			header_up X-Viridis-Security-Origin https://mcp.viridis-security.com
+			flush_interval -1
+		}
+	}
+	handle /security-preflight {
+		root * /srv/landing
+		rewrite * /security-preflight.html
+		file_server
+	}
+	@preflightPage path /security-preflight /security-preflight/quickstart
+	header @preflightPage Link "<https://mcp.viridis-security.com/security-preflight/service.json>; rel=describedby; type=application/json"
+	redir /security-preflight/ /security-preflight 308
+	redir /security-preflight/quickstart/ /security-preflight/quickstart 308

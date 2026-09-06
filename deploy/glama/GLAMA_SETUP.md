@@ -31,9 +31,9 @@ call succeeded, or that customers adopted the service. Read the current
 manifest and gateway health separately before publishing a live count.
 
 For the focused security service, use the direct Streamable HTTP URL
-`https://mcp.viridisconservation.com/security-preflight/mcp` and the
-[Security Preflight page](https://mcp.viridisconservation.com/security-preflight).
-The official Registry name is `io.github.jdhart81/security-preflight`, v1.2.0.
+`https://mcp.viridis-security.com/security-preflight/mcp` and the
+[Security Preflight page](https://mcp.viridis-security.com/security-preflight).
+The official Registry name is `io.github.jdhart81/security-preflight`; metadata v1.2.1 points to the Security domain (scanner v1.2.0).
 
 ## Steps (the two account actions are yours — Justin)
 

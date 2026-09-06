@@ -1,0 +1,51 @@
+{
+  "release": "security-domain-20260906",
+  "recorded_at": "2026-09-06T16:35:20.786688+00:00",
+  "canonical_product": "https://mcp.viridis-security.com/security-preflight",
+  "canonical_mcp": "https://mcp.viridis-security.com/security-preflight/mcp",
+  "security_frontdoor": "LIVE_RESTART_VERIFIED",
+  "security_existing_mcp_tools": [
+    "detect_injection",
+    "detect_trace_tool_policy"
+  ],
+  "preflight_mcp_tools": [
+    "security_preflight",
+    "get_security_receipt",
+    "describe_agent"
+  ],
+  "fleet_base_image": "sha256:3201fb43b147222b0696155cc3840db9e63a0c35652387c3be304ffe4ea9e6d1",
+  "fleet_candidate_image": "sha256:0636665c3496b3b03dabe2db034e4891d5ececb6399bd93e3923a8c3d356ff0f",
+  "fleet_source_files": [
+    {
+      "path": "deploy/gateway/preflight_origin.py",
+      "sha256": "a5c09996f1ed1f9f029f345cd8a00d0b341cd8fbf09052d6b94b2e08514c3af8"
+    },
+    {
+      "path": "deploy/gateway/x402_http.py",
+      "sha256": "cfd0a2174e56794a4d3e5929ad24ed66425a5b37c5032540d204c3a6e60947dc"
+    },
+    {
+      "path": "deploy/gateway/preflight_watch.py",
+      "sha256": "0e100b35c313d4a157fc05047899e9efbd79fbdeda9d82e02cfb9808a1e3d338"
+    },
+    {
+      "path": "deploy/gateway/Dockerfile",
+      "sha256": "4b2b6f23fac68c6e35925f636fe78355a1765c66c75141b03770bd55ac662e1c"
+    }
+  ],
+  "tests": {
+    "private_fleet_passed": 2221,
+    "private_fleet_suites_clean": 37,
+    "public_client_passed": 22,
+    "security_workflow_checks": 7,
+    "patch_replay": "PASS"
+  },
+  "backup_restore_verified": true,
+  "legacy_quote_origin_preserved": true,
+  "new_quote_origin_verified": true,
+  "scanner_version": "1.2.0",
+  "registry_metadata_revision": "1.2.1",
+  "registry_publication_requires_workflow_readback": true,
+  "payment_attempted": false,
+  "new_revenue_claimed": false
+}

@@ -1,0 +1,253 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Viridis Security Preflight",
+    "version": "1.2.0",
+    "description": "Deterministic security preflight of caller-supplied MCP agent metadata. Checks endpoint/auth declarations, closed tool schemas, high-impact approval policy, policy conflicts, and static injection indicators. Returns a signed, input-redacted receipt. Does not fetch or certify the deployed runtime."
+  },
+  "servers": [
+    {
+      "url": "https://mcp.viridis-security.com"
+    }
+  ],
+  "paths": {
+    "/x402/security-preflight/security_preflight": {
+      "post": {
+        "operationId": "security_preflight",
+        "summary": "Assess caller-supplied MCP artifacts after a buyer-authorized payment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "agent_id": {
+                    "type": "string",
+                    "description": "Existing or intended lowercase Agent Market profile identifier"
+                  },
+                  "subject_profile_sha256": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^[0-9a-f]{64}$",
+                    "description": "Optional current Agent Market profile digest. When supplied, the signed receipt is bound to this exact profile and becomes eligible for explicit Market import."
+                  },
+                  "manifest": {
+                    "type": "object",
+                    "description": "Caller-supplied agent manifest; common fields are endpoint, auth, description, instructions, and tools"
+                  },
+                  "policy": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "description": "Optional allowed_tools, denied_tools, and approval_required_tools lists"
+                  },
+                  "sample_inputs": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional bounded sample text for static injection indicator checks"
+                  }
+                },
+                "required": [
+                  "agent_id",
+                  "manifest"
+                ],
+                "additionalProperties": false
+              },
+              "example": {
+                "agent_id": "example-research-agent",
+                "manifest": {
+                  "endpoint": "https://agent.example/mcp",
+                  "auth": "bearer",
+                  "tools": [
+                    {
+                      "name": "read_status",
+                      "input_schema": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  ]
+                },
+                "policy": {
+                  "allowed_tools": [
+                    "read_status"
+                  ],
+                  "denied_tools": [],
+                  "approval_required_tools": []
+                },
+                "sample_inputs": [
+                  "Summarize the supplied status record."
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Paid assessment with signed redacted evidence and a delivery receipt"
+          },
+          "400": {
+            "description": "Invalid inputs; no payment attempted"
+          },
+          "402": {
+            "description": "Fresh payment terms or a rejected payment; inspect PAYMENT-REQUIRED",
+            "headers": {
+              "PAYMENT-REQUIRED": {
+                "description": "Base64 encoded x402 v2 terms; inspect before signing",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/security-preflight/watch": {
+      "post": {
+        "operationId": "security_preflight_change_check",
+        "summary": "Free stateless comparison; never pays or runs an assessment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "inputs"
+                ],
+                "properties": {
+                  "inputs": {
+                    "type": "object",
+                    "required": [
+                      "agent_id",
+                      "manifest"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "agent_id": {
+                        "type": "string"
+                      },
+                      "manifest": {
+                        "type": "object"
+                      },
+                      "policy": {
+                        "type": "object"
+                      },
+                      "sample_inputs": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "subject_profile_sha256": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "baseline_receipt_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^vsr_[a-f0-9]{24}$"
+                  }
+                }
+              },
+              "example": {
+                "inputs": {
+                  "agent_id": "example-research-agent",
+                  "manifest": {
+                    "endpoint": "https://agent.example/mcp",
+                    "auth": "bearer",
+                    "tools": [
+                      {
+                        "name": "read_status",
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    ]
+                  },
+                  "policy": {
+                    "allowed_tools": [
+                      "read_status"
+                    ],
+                    "denied_tools": [],
+                    "approval_required_tools": []
+                  },
+                  "sample_inputs": [
+                    "Summarize the supplied status record."
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "BASELINE_REQUIRED, UNCHANGED, or RECHECK_REQUIRED"
+          },
+          "400": {
+            "description": "Invalid inputs"
+          },
+          "404": {
+            "description": "Unknown baseline receipt"
+          }
+        }
+      }
+    },
+    "/security-preflight/receipts/{receipt_id}": {
+      "get": {
+        "operationId": "security_preflight_receipt",
+        "summary": "Read signed input-redacted assessment evidence",
+        "parameters": [
+          {
+            "name": "receipt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^vsr_[a-f0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed input-redacted assessment; no feedback token"
+          },
+          "404": {
+            "description": "Receipt not found"
+          }
+        }
+      }
+    }
+  }
+}
