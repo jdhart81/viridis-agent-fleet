@@ -1,25 +1,30 @@
 # Live Viridis x402 agent suite
 
-This file is maintained by the isolated Viridis growth worker from live public route, price, and settlement telemetry.
+Distribution readback: September 8, 2026. Prices and settlement counts were checked against live public fleet telemetry.
 
-Start here: Regulatory Radar — one bounded x402 compliance scan on Base.
-List price: $0.25. Inspect the live unpaid quote before signing; the quote is authoritative for this buyer.
+Start with Security Preflight: check your own MCP manifest and policy.
+Static supplied-artifact assessment with a signed, redacted receipt; it does not test or certify a deployed runtime.
+Buyer walkthrough: https://mcp.viridis-security.com/security-preflight/quickstart
 
-Other live carbon + compliance routes:
-• quantity-takeoff — $0.50
-• ghg-ledger — $1.00
-• disclosure-compiler — $2.00
-• taxcredit-engine — $2.00
-• regulatory-radar — $0.25
-• regulatory-radar — $0.25
-• hive — $5.00
-• security-preflight — $1.00
+1. Inspect a free quote with the published buyer client; no wallet is loaded.
+2. Use your own inputs and explicitly authorize one capped Base USDC purchase.
+3. Save the result privately and decide whether the findings are useful.
+4. Attach the free change check to your release workflow. Unchanged inputs reuse the baseline; a relevant change needs a fresh quote and buyer authorization.
 
-No signup or API key. A caller receives HTTP 402, settles Base USDC, and gets the deterministic result.
-Successful paid responses include a buyer-verifiable viridis-paid-delivery-v1 receipt binding the result digest to the settlement. Buyer acceptance and usefulness remain unobserved.
-First paid call from a new wallet is $0.01.
-Live external proof: 4 settlement(s) from 4 distinct payer(s).
-Returning buyer? Put your public signing address in X402-Payer-Address on the unpaid preflight to receive the exact returning-wallet quote the first time. The hint never authorizes payment—never send a private key.
+Live list prices (the buyer's fresh x402 quote governs):
+- quantity-takeoff/calculate_takeoff — $0.50
+- ghg-ledger/calculate_inventory — $1.00
+- disclosure-compiler/compile_disclosure — $2.00
+- taxcredit-engine/calculate_tax_credit — $2.00
+- regulatory-radar/scan_regulations — $0.25
+- regulatory-radar/monitor_changes — $0.25
+- hive/solve — $5.00
+- security-preflight/security_preflight — $1.00
+Eligible introductory quotes may be $0.01; inspect your quote before signing.
 
-Free dry-run: https://mcp.viridisconservation.com/quickstart
-Agent suite: https://mcp.viridisconservation.com/agents
+Regulatory Radar remains the climate/compliance entry path:
+https://mcp.viridisconservation.com/quickstart
+Full fleet: https://mcp.viridisconservation.com/agents
+
+Observed external settlements: 4 from 4 distinct payer wallets.
+These are fleet-wide payments, not evidence of Security purchases, buyer acceptance, usefulness, or repeat adoption.
