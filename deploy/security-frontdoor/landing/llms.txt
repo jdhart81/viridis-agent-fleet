@@ -1,0 +1,49 @@
+# Viridis MCP
+
+> Aristotle-verified attribution-enforcement services for AI agents. Three live tools at mcp.viridis-security.com: adversarial injection detection (T-IB-02), VulnCanon source scanning (T-IB-05), and Maxwell adaptive proof-of-work defense (T-IB-09). Free tier with 1,000 detect calls + 10 canon scans per month, no credit card. 7/7 corpus theorems formally proven in Lean 4 by Aristotle (Harmonic).
+
+## Security Preflight
+
+- [Product](https://mcp.viridis-security.com/security-preflight): Static checks of caller-supplied MCP manifests, schemas, authority policy, and sample text. Signed, input-redacted assessment receipts. Does not fetch, execute, or certify the runtime.
+- [Integration guide](https://mcp.viridis-security.com/security-preflight/quickstart)
+- [Complete buyer workflow](https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/SECURITY_PREFLIGHT_BUYER_QUICKSTART.md): Dedicated quote-first client, explicit capped purchase, private result retention, and caller-owned release change checks. No automatic payments.
+- [Machine-readable service contract](https://mcp.viridis-security.com/security-preflight/service.json)
+- [Preflight OpenAPI](https://mcp.viridis-security.com/security-preflight/openapi.json)
+- MCP Streamable HTTP: https://mcp.viridis-security.com/security-preflight/mcp
+- Paid assessment: POST https://mcp.viridis-security.com/x402/security-preflight/security_preflight with caller-owned inputs. Inspect the unpaid HTTP 402 PAYMENT-REQUIRED header first. $1 USDC list price; an eligible introductory quote may be $0.01. Fresh quote and buyer mandate govern every payment.
+- Free stateless change check: POST https://mcp.viridis-security.com/security-preflight/watch. Reuse an authentic current assessment only when the supplied artifacts are unchanged; preserve existing findings. This is not a managed subscription.
+- Existing Injection Detector MCP remains at /mcp. Its API-key plans are separate from Preflight x402 payments.
+
+## Services
+
+- [Injection detection](https://mcp.viridis-security.com/v1/injection/detect): Classify untrusted text as clean / suspicious / attack with verdict + probability + bits-at-risk (Adversarial Landauer)
+- [Canon scanner](https://mcp.viridis-security.com/v1/canon/scan): Match source code against the public VulnCanon catalog of AI-agent vulnerability classes
+- [Maxwell challenge](https://mcp.viridis-security.com/v1/maxwell/challenge): Adaptive proof-of-work defense; defender pays log2(1/alpha)× attacker per bit (Growth+ tier)
+
+## API
+
+- [OpenAPI specification](https://mcp.viridis-security.com/openapi.yaml)
+- [AI plugin manifest](https://mcp.viridis-security.com/.well-known/ai-plugin.json)
+- [A2A agent card](https://mcp.viridis-security.com/.well-known/agent.json)
+
+## Pricing
+
+- [Pricing page](https://mcp.viridis-security.com/pricing): Free / Starter $49/mo / Growth $299/mo / Scale $1,499/mo / Enterprise from $50K/yr
+- [Sign up](https://mcp.viridis-security.com/signup): Free tier returns API key immediately, no card
+
+## Open source
+
+- [SDK + Maxwell reference implementation](https://github.com/viridis-security/mcp-services-sdk): Apache-2.0
+- [VulnCanon catalog](https://github.com/viridis-security/vulncanon): Apache-2.0
+- [Maxwell's Defense standalone](https://github.com/viridis-security/maxwells-defense): Apache-2.0
+
+## Verification
+
+7/7 corpus theorems formally proven in Lean 4 via Aristotle by [Harmonic](https://harmonic.fun/):
+T-IB-01 Attribution Conservation, T-IB-02 Adversarial Landauer Inequality, T-IB-03 Envelope Closure, T-IB-04 Composability Attribution, T-IB-05 Canon Compression, T-IB-06 Detection Lower Bound, T-IB-07 Conservation Closure.
+
+## Optional
+
+- [Documentation](https://mcp.viridis-security.com/docs)
+- [Security overview](https://mcp.viridis-security.com/security)
+- [Provider: Viridis North LLC](https://github.com/viridis-security)

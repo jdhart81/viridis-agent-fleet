@@ -6,17 +6,20 @@ workflow—**measure → account → disclose → claim → scan**—plus multi-
 problem solving and MCP security preflight. Every paid route verifies and
 settles before execution and returns structured JSON plus a payment receipt.
 
-The first paid call from a new wallet is currently **$0.01**. Subsequent calls
-use the unchanged list prices below.
-
-**Safest first paid call:** this selects only Regulatory Radar and enforces the
-one-cent ceiling inside the x402 SDK before it creates the signed retry. If
-intro pricing is unavailable, it stops without paying.
+**Start with Security Preflight:** inspect a free quote for the example, then
+replace it with your own MCP manifest and policy. No wallet is loaded and no
+payment is made by this command.
 
 ```bash
-python3 scripts/x402_demo_client.py \
-  --route regulatory-radar --max-payment-usdc 0.01
+python3 scripts/viridis_preflight_buy.py \
+  --inputs examples/security-preflight-inputs.json
 ```
+
+Follow the [complete buyer walkthrough](docs/SECURITY_PREFLIGHT_BUYER_QUICKSTART.md)
+for an explicitly capped purchase, private saved result and free release-event
+change check. Eligible introductory quotes may be $0.01; the fresh quote and
+your spending limit govern. Regulatory Radar remains available through
+`scripts/x402_demo_client.py --route regulatory-radar --max-payment-usdc 0.01`.
 
 **Security plane:** Viridis Security's deeper Injection Detector, Canon Scanner,
 and Maxwell Defense remain on their separate runtime and billing boundary. The

@@ -1,0 +1,5 @@
+
+# Buyer-owned inputs, wallet environment and paid results stay private.
+/inputs.json
+/paid-result*.json
+/.venv-buyer/

@@ -21,4 +21,11 @@ jobs:
           python3 -m unittest \
             scripts/test_workflow_actions_pinned.py \
             scripts/test_publish_mcp_registry_idempotent.py \
-            scripts/test_a2a_quote_client.py
+            scripts/test_a2a_quote_client.py \
+            scripts/test_viridis_preflight_buy.py
+
+      - name: Verify Security buyer with the pinned payment SDK (no network payment)
+        run: |
+          python3 -m venv /tmp/preflight-buyer-tests
+          /tmp/preflight-buyer-tests/bin/pip install 'x402[requests,evm]==2.16.0'
+          /tmp/preflight-buyer-tests/bin/python -m unittest scripts/test_viridis_preflight_buy.py
