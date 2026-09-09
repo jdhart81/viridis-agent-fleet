@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "path": "deploy/gateway/viridis_mcp_gateway.py",
+      "sha256": "9451ffc98687cae105c01ba6be2a32c2d52dbaa7220e20867d38af51c2a14b21"
+    },
+    {
+      "path": "deploy/gateway/llms.txt",
+      "sha256": "0d1ab4b9a46e4bc85eb580afe409a684302cd983a80433449085c5a2263cb567"
+    }
+  ],
+  "base_sources": {
+    "deploy/gateway/viridis_mcp_gateway.py": "2c092651f3a1e6ab684bf8ade91d0fa651c312fc2493889f8561f2c722953eb9",
+    "deploy/gateway/llms.txt": "624f8db42dc6dcc6b92fa3e30822682c76dd4ee305e1b3d4c32446b4ae4f3468"
+  },
+  "base_image": "sha256:0636665c3496b3b03dabe2db034e4891d5ececb6399bd93e3923a8c3d356ff0f",
+  "patch_sha256": "e8e8c7d53bd7bd381cbf45c9542a943a46d5984e99e4dd7cd682f0859510c315",
+  "scope": "Canonical human Security discovery only; legacy protocol paths preserved",
+  "validation": "2253 passed; 37 suites clean; copied-state rehearsal and production restart verified",
+  "application": "Apply only to the exact runtime sources matching base_sources; not the older public gateway wrapper."
+}

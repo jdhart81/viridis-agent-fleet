@@ -128,4 +128,4 @@ Hive has no execution free tier. The client previews the exact live contract and
 
 ## Security Preflight product page
 
-https://mcp.viridisconservation.com/security-preflight — supplied MCP manifest, schema, authority-policy, and sample-text checks; $1 USDC list price, signed assessments, and a free change check. Fresh quotes govern; no runtime fetching or execution.
+https://mcp.viridis-security.com/security-preflight — supplied MCP manifest, schema, authority-policy, and sample-text checks; $1 USDC list price, signed assessments, and a free change check. Fresh quotes govern; no runtime fetching or execution.

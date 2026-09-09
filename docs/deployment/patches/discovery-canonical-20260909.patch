@@ -1,0 +1,18 @@
+--- a/deploy/gateway/viridis_mcp_gateway.py
++++ b/deploy/gateway/viridis_mcp_gateway.py
+@@ -3433,7 +3433,6 @@
+         paths = (
+             "/agents",
+             "/reliability-sprint",
+-            "/security-preflight",
+             "/quickstart",
+             "/seats",
+             "/compliance-snapshot",
+--- a/deploy/gateway/llms.txt
++++ b/deploy/gateway/llms.txt
+@@ -128,4 +128,4 @@
+ 
+ ## Security Preflight product page
+ 
+-https://mcp.viridisconservation.com/security-preflight — supplied MCP manifest, schema, authority-policy, and sample-text checks; $1 USDC list price, signed assessments, and a free change check. Fresh quotes govern; no runtime fetching or execution.
++https://mcp.viridis-security.com/security-preflight — supplied MCP manifest, schema, authority-policy, and sample-text checks; $1 USDC list price, signed assessments, and a free change check. Fresh quotes govern; no runtime fetching or execution.
