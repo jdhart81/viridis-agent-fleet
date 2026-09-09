@@ -1,0 +1,13 @@
+{
+  "release": "2026-09-09-agent-search",
+  "status": "PROMOTED_RESTART_VERIFIED",
+  "base_image": "sha256:d470472f6cd3b3b6c9fcbd741b7a9e1221884204a1137ecf8fbb6c5f9c9e2705",
+  "candidate_image": "sha256:c8308068825e7e187dea0bba60d9905e8e9fd96bca98c6ddde7ccd75c77a85ef",
+  "routing_base_sha256": "1c70bfc8287f748053c96cb53a98b2d2edb71d58d1e4f66eaa21baf88409f055",
+  "routing_sha256": "5e1db8f3dec29b654e4c101e22284a89df72aaa3d3c1e4795609114b2b97df2d",
+  "intent_cases_passed": 24,
+  "paid_routes_audited": 10,
+  "bazaar_indexed_routes_at_readback": 4,
+  "payments_attempted": false,
+  "full_fleet_tests_passed": 2291
+}

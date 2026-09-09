@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "query": "Check my MCP manifest and tool policy",
+      "expected_route": "security-preflight/security_preflight"
+    },
+    {
+      "query": "Review an agent manifest before deployment",
+      "expected_route": "security-preflight/security_preflight"
+    },
+    {
+      "query": "Scan inline source code for vulnerability indicators",
+      "expected_route": "security-preflight/scan_source"
+    },
+    {
+      "query": "Review source code for unsafe patterns",
+      "expected_route": "security-preflight/scan_source"
+    },
+    {
+      "query": "Screen text samples for injection markers",
+      "expected_route": "security-preflight/screen_injection"
+    },
+    {
+      "query": "Check these messages for prompt injection",
+      "expected_route": "security-preflight/screen_injection"
+    },
+    {
+      "query": "Calculate a greenhouse gas inventory",
+      "expected_route": "ghg-ledger/calculate_inventory"
+    },
+    {
+      "query": "Calculate Scope 1 and Scope 2 emissions",
+      "expected_route": "ghg-ledger/calculate_inventory"
+    },
+    {
+      "query": "Calculate material quantities from construction geometry",
+      "expected_route": "quantity-takeoff/calculate_takeoff"
+    },
+    {
+      "query": "Produce a quantity takeoff",
+      "expected_route": "quantity-takeoff/calculate_takeoff"
+    },
+    {
+      "query": "Compile an IFRS S2 climate disclosure draft",
+      "expected_route": "disclosure-compiler/compile_disclosure"
+    },
+    {
+      "query": "Draft a sustainability disclosure",
+      "expected_route": "disclosure-compiler/compile_disclosure"
+    },
+    {
+      "query": "Calculate a clean energy tax credit",
+      "expected_route": "taxcredit-engine/calculate_tax_credit"
+    },
+    {
+      "query": "Estimate the 45V incentive",
+      "expected_route": "taxcredit-engine/calculate_tax_credit"
+    },
+    {
+      "query": "Which climate regulations apply to this company",
+      "expected_route": "regulatory-radar/scan_regulations"
+    },
+    {
+      "query": "Scan energy compliance requirements",
+      "expected_route": "regulatory-radar/scan_regulations"
+    },
+    {
+      "query": "Monitor regulatory changes and compliance deadlines",
+      "expected_route": "regulatory-radar/monitor_changes"
+    },
+    {
+      "query": "Find upcoming regulatory deadlines",
+      "expected_route": "regulatory-radar/monitor_changes"
+    },
+    {
+      "query": "Get a multi-agent reviewed recommendation",
+      "expected_route": "hive/solve"
+    },
+    {
+      "query": "Orchestrate a cross-review synthesis",
+      "expected_route": "hive/solve"
+    },
+    {
+      "query": "Translate hello into French",
+      "expected_route": null
+    },
+    {
+      "query": "Tell me tomorrow weather",
+      "expected_route": null
+    },
+    {
+      "query": "Book a flight to Paris",
+      "expected_route": null
+    },
+    {
+      "query": "Order a pizza",
+      "expected_route": null
+    }
+  ]
+}

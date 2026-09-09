@@ -300,3 +300,6 @@ provides 100 free calls/day and then returns a $2 quote redeemable through
 
 © 2026 Viridis LLC. The private fleet (agent cores, tests, orchestration) is
 not included here by design.
+
+
+See the [agent discovery guide and regression audit](docs/AGENT_DISCOVERY.md) for intent routing, service contracts and external indexing boundaries.

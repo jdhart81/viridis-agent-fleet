@@ -23,7 +23,8 @@ jobs:
             scripts/test_publish_mcp_registry_idempotent.py \
             scripts/test_a2a_quote_client.py \
             scripts/test_viridis_preflight_buy.py \
-            scripts/test_static_security_buyer.py
+            scripts/test_static_security_buyer.py \
+            scripts/test_agent_search_audit.py
 
       - name: Verify Security buyer with the pinned payment SDK (no network payment)
         run: |

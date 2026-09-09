@@ -1,0 +1,22 @@
+--- a/deploy/gateway/value_decision.py
++++ b/deploy/gateway/value_decision.py
+@@ -91,8 +91,8 @@
+         "job": "Screen supplied text samples for deterministic injection indicators.",
+         "outcome": "Redacted pattern matches for up to twenty samples and a signed receipt, without model calls.",
+         "not_for": "Guaranteed attack detection, calibrated probabilities, runtime protection or model-based analysis.",
+-        "keywords": {"screen", "screening", "texts", "samples", "injection"},
+-        "phrases": ("screen injection", "injection screening", "screen text", "text samples"),
++        "keywords": {"screen", "screening", "text", "texts", "samples", "messages", "prompts", "injection"},
++        "phrases": ("screen injection", "injection screening", "screen text", "text samples", "prompt injection", "injection detection"),
+     },
+     ("regulatory-radar", "scan_regulations"): {
+         "job": "Find which climate or energy requirements need review.",
+@@ -216,7 +216,7 @@
+             "schemas", "secure", "security", "tool",
+         },
+         "phrases": (
+-            "agent security", "mcp security", "prompt injection",
++            "agent security", "mcp security",
+             "security preflight", "tool policy",
+         ),
+     },
