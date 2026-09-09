@@ -1,6 +1,6 @@
 # Viridis paid MCP security and evidence tools
 
-Viridis provides eight JSON-in/JSON-out paid routes that agents can discover
+Viridis provides ten JSON-in/JSON-out paid routes that agents can discover
 and buy with x402 v2 and USDC on Base. The recommended first machine purchase
 is Security Preflight: screen a caller-supplied MCP manifest, tool schemas,
 authority policy, and sample inputs before connecting, then retain a signed,
@@ -12,7 +12,9 @@ seventh route is a cost-bounded three-worker Hive solve with independent
 cross-review, escrow settlement, compute accounting, and an audit digest. The
 eighth is a $1 Security Preflight for caller-supplied MCP manifests, tool
 schemas, policies, and sample inputs. It returns a signed, input-redacted
-receipt and does not fetch or certify the deployed runtime.
+receipt and does not fetch or certify the deployed runtime. The ninth and tenth
+routes are bounded source-code scanning and batch injection screening, each
+$1 USDC with no introductory discount and no model calls.
 No signup or API key is required.
 
 ## Activation
@@ -128,4 +130,14 @@ Hive has no execution free tier. The client previews the exact live contract and
 
 ## Security Preflight product page
 
-https://mcp.viridis-security.com/security-preflight — supplied MCP manifest, schema, authority-policy, and sample-text checks; $1 USDC list price, signed assessments, and a free change check. Fresh quotes govern; no runtime fetching or execution.
+https://mcp.viridisconservation.com/security-preflight — supplied MCP manifest, schema, authority-policy, and sample-text checks; $1 USDC list price, signed assessments, and a free change check. Fresh quotes govern; no runtime fetching or execution.
+
+## Bounded Security tools on the fleet
+
+These tools run on the fleet without depending on the separate Security subscription service. They use deterministic rules, no paid model calls, no URL fetching and no execution of supplied code. Results are redacted indicators, not demonstrated exploits or security certification.
+
+- VulnCanon source scan: POST https://mcp.viridisconservation.com/x402/security-preflight/scan_source with agent_id and inline source. Maximum 65536 UTF-8 bytes, 2000 lines, 4096 characters per line. Fixed $1 USDC per scan; excluded from introductory discounts.
+- Injection screening: POST https://mcp.viridisconservation.com/x402/security-preflight/screen_injection with agent_id and texts (1–20 samples, at most 8192 characters each and 65536 UTF-8 bytes total). Fixed $1 USDC per batch; excluded from introductory discounts.
+- MCP: https://mcp.viridisconservation.com/security-preflight/mcp exposes scan_source and screen_injection through existing metered access. Discover exact schemas in /x402/catalog or /openapi.json.
+- First fetch an unpaid quote. A paid result has a signed input-redacted Security receipt and the fleet delivery/feedback contract. Retain results and request another scan only for changed inputs/rules, with a new quote and buyer budget. The manifest-specific change-check endpoint is not a source/text baseline check.
+- Maxwell defense migration is held: no Argon2id defense is offered by these tools.

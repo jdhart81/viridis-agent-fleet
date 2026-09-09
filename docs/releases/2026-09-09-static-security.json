@@ -1,0 +1,83 @@
+{
+  "release": "2026-09-09-static-security",
+  "status": "PROMOTED_RESTART_VERIFIED",
+  "base_image": "sha256:97c26340df2f1596feb3fe07c09e1c8a07c727c9f05020e34d29989c90728550",
+  "candidate_image": "sha256:239b4259555619c4b4f73888fe28d1c4dd474744417e598aaeb99920fbdc1eab",
+  "files": [
+    {
+      "path": "security-preflight-agent/src/core.py",
+      "sha256": "66cd2de8bd25eb6d0cb31cc4c48abbc34329a38b37a34614ca1bec32a4980d45"
+    },
+    {
+      "path": "security-preflight-agent/adapters/mcp_server.py",
+      "sha256": "9491ede7de49094f23024da4aad90c295172f379b29be5e344be2089af2457b6"
+    },
+    {
+      "path": "deploy/gateway/x402_http.py",
+      "sha256": "749f193bd7391937e30bcf2a3888dcf3bed2276c2316af1ba9c42750dee2f974"
+    },
+    {
+      "path": "deploy/gateway/viridis_mcp_gateway.py",
+      "sha256": "dcbd7209fa49c314ab6f8a40772d457606fafb53597b416a903fca0488c11bdf"
+    },
+    {
+      "path": "deploy/gateway/adoption_loop.py",
+      "sha256": "21d395cb2108c3ee92e8a4a5fe32dcf356b804649927da8ba2b6cf8c68605788"
+    },
+    {
+      "path": "deploy/gateway/value_decision.py",
+      "sha256": "1c70bfc8287f748053c96cb53a98b2d2edb71d58d1e4f66eaa21baf88409f055"
+    },
+    {
+      "path": "deploy/gateway/llms.txt",
+      "sha256": "0c1f07aad6d3514aa6e5405f8f26ecac9639f90d4956612efba0502165cac89d"
+    },
+    {
+      "path": "security-preflight-agent/src/static_security/worker.py",
+      "sha256": "e4747d94c4ee707f9cba0781a29a01aebf35dc9537e311cebf9b5959485afe9b"
+    },
+    {
+      "path": "security-preflight-agent/src/static_security/provenance.json",
+      "sha256": "7b5027266695793fdc869ed38b7fd048fbb5443ecac99d80bdbbd7aec28337a4"
+    },
+    {
+      "path": "security-preflight-agent/src/static_security/canon_rules.json",
+      "sha256": "13094e6c4d081b2167dd5770bd0fc552fcb4d4f74c442365ab6af8ed8f7949fb"
+    },
+    {
+      "path": "security-preflight-agent/src/static_security/injection_rules.json",
+      "sha256": "2f5d056f414eeb9f002ceb2be79d1934a012925cf5cba0f9afb09ed2dc8f6bdc"
+    }
+  ],
+  "provenance": {
+    "source_project": "Viridis-Bounty-Hunter- 2.0",
+    "sources": {
+      "canon-scanner/src/canon-data.ts": "98e99304e30d8a19428e1ecbbff618f5f719f838b4cbe6e93ca834bbf403e0c3",
+      "canon-scanner/src/corroboration.ts": "4b17ad0e9f2a4e79efae12a4d77d4d92316c5aa861bd9a1966197e942ad514c1",
+      "injection-detector/src/detector.ts": "f66ba429a97ef456125476272391e15dc629e6646a56dda6c6c726ec60f10db5",
+      "maxwell/src/pow.ts": "594e58f248fa9cfc236b033b0cd54fb989e4032ead21ad809e867e387a489872"
+    },
+    "migration": "bounded Python rule evaluator; no scoring probabilities, theorem guarantees, raw snippets, envelope lookup, provider SDKs or network fetching",
+    "maxwell": "HELD: hosted Argon2id verifier is a SHA-256 scaffold"
+  },
+  "validation": {
+    "fleet_tests_passed": 2268,
+    "fleet_suites": 37,
+    "original_source_parity_fixtures": 8,
+    "copied_state_receipts_survived_restart": 2,
+    "production_restart_verified": true,
+    "mcp_tools": 5,
+    "paid_routes": 10,
+    "live_quotes_usdc": {
+      "scan_source": "1.00",
+      "screen_injection": "1.00"
+    },
+    "payment_attempted": false,
+    "provider_calls_for_static_tools": 0
+  },
+  "boundaries": [
+    "Synthetic and mocked-payment tests do not establish buyer demand, security accuracy or commercial revenue.",
+    "Maxwell defense is held. Separate Security subscription runtime remains halted.",
+    "New scanning implementation and rules remain private."
+  ]
+}

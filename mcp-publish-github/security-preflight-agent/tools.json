@@ -1,6 +1,6 @@
 {
   "server": "security-preflight-agent",
-  "tool_count": 3,
+  "tool_count": 5,
   "tools": [
     {
       "name": "security_preflight",
@@ -8,34 +8,59 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "agent_id": {"type": "string"},
+          "agent_id": {
+            "type": "string"
+          },
           "subject_profile_sha256": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Current Agent Market profile_sha256. Required only for ranking-eligible Market import.",
             "pattern": "^[0-9a-f]{64}$",
             "default": null
           },
-          "manifest": {"type": "object", "additionalProperties": true},
+          "manifest": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "policy": {
-            "type": ["object", "null"],
+            "type": [
+              "object",
+              "null"
+            ],
             "additionalProperties": true,
             "default": null
           },
           "sample_inputs": {
-            "type": ["array", "null"],
-            "items": {"type": "string"},
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
             "default": null
           },
           "payment_ref": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "default": null
           },
           "request_id": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "default": null
           }
         },
-        "required": ["agent_id", "manifest"]
+        "required": [
+          "agent_id",
+          "manifest"
+        ]
       }
     },
     {
@@ -44,9 +69,13 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "receipt_id": {"type": "string"}
+          "receipt_id": {
+            "type": "string"
+          }
         },
-        "required": ["receipt_id"]
+        "required": [
+          "receipt_id"
+        ]
       }
     },
     {
@@ -56,6 +85,47 @@
         "type": "object",
         "properties": {},
         "required": []
+      }
+    },
+    {
+      "name": "scan_source",
+      "description": "$1 bounded inline VulnCanon source scan. Up to 64 KiB, 2000 lines and 4096 characters per line. Indicators, not proven exploits; no model calls, fetching or code execution. Redacted signed receipt. No introductory discount.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "source"
+        ]
+      }
+    },
+    {
+      "name": "screen_injection",
+      "description": "$1 batch of 1\u201320 samples screened for deterministic injection markers. Up to 8192 characters per sample and 64 KiB total. Indicators, not calibrated probabilities or safety guarantees. No model calls or introductory discount.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "texts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "agent_id",
+          "texts"
+        ]
       }
     }
   ]

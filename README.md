@@ -21,8 +21,11 @@ change check. Eligible introductory quotes may be $0.01; the fresh quote and
 your spending limit govern. Regulatory Radar remains available through
 `scripts/x402_demo_client.py --route regulatory-radar --max-payment-usdc 0.01`.
 
-**Security plane:** Viridis Security's deeper Injection Detector, Canon Scanner,
-and Maxwell Defense remain on their separate runtime and billing boundary. The
+**Security tools:** The separate Security subscription runtime is halted.
+Bounded VulnCanon source scanning and batch injection screening now run on the
+fleet for $1 USDC per scan or batch, without model calls or introductory discounts.
+See the [static Security buyer guide](docs/STATIC_SECURITY_BUYER_QUICKSTART.md).
+Maxwell defense remains held pending a real Argon2id implementation. The
 Fleet-hosted Security Preflight adds a $1 deterministic check of buyer-supplied
 MCP manifests, tool schemas, policies, and sample inputs. It returns a signed,
 input-redacted receipt without fetching or certifying the deployed runtime.
@@ -149,7 +152,7 @@ session does not reload the installed skill.
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
 - [Security policy and private vulnerability reporting](SECURITY.md)
 
-The same eight paid skills are available as durable A2A HTTP+JSON tasks using
+The same ten paid skills are available as durable A2A HTTP+JSON tasks using
 the official x402 extension. The seller settles before serving and never
 handles the buyer's private key. The
 [official A2A Python SDK quickstart](docs/integrations/A2A_PYTHON_SDK_QUICKSTART.md)
@@ -167,8 +170,9 @@ paid scan, followed by a separately authorized repeat for a real change. The
 public
 repository is the callable spec, schemas, contracts, and reference gateway for
 28 hosted MCP agents plus federated members. Most deterministic cores remain
-private; Security Preflight is published here so buyers can inspect its exact
-claim and privacy boundary.
+private. The original manifest Security Preflight reference is published here;
+the new source/text engines remain private, with public schemas, buyer
+instructions and release hashes.
 
 By [Viridis LLC](https://viridisconservation.com) — conservation technology.
 
@@ -276,7 +280,7 @@ agent action, with typed input/output schemas.
 ## Status
 
 **LIVE (2026-08-04).** The gateway hosts 28 healthy agents at
-`https://mcp.viridisconservation.com`; eight x402/A2A paid routes are active.
+`https://mcp.viridisconservation.com`; ten x402/A2A paid routes are active.
 Security Preflight is live at `/security-preflight/mcp` and
 `/x402/security-preflight/security_preflight`, and Regulatory Radar's bounded
 dated watch is live at `/x402/regulatory-radar/monitor_changes`. Successful
