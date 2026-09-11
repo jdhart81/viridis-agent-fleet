@@ -1,0 +1,172 @@
+{
+  "kind": "unsigned_local_synthetic_example",
+  "payment_attempted": false,
+  "runtime_tested": false,
+  "customer_evidence": false,
+  "scanner_version": "1.2.0",
+  "core_sha256": "5a01bc3721437af585e69152c36668adf5b9e833f23c1d3a27a3bb497952ab17",
+  "claim_boundary": "Covers only the buyer-supplied manifest, tool schemas, policy, and sample inputs evaluated by deterministic static checks. It does not fetch or test the deployed runtime and does not certify the agent as secure, vulnerability-free, or independently audited.",
+  "cases": [
+    {
+      "case": "before",
+      "synthetic_input": {
+        "agent_id": "my-agent",
+        "manifest": {
+          "endpoint": "https://example.invalid/mcp",
+          "auth": "bearer",
+          "tools": [
+            {
+              "name": "delete_records",
+              "input_schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": true
+              }
+            }
+          ]
+        },
+        "policy": {
+          "allowed_tools": [
+            "delete_records"
+          ]
+        },
+        "sample_inputs": [
+          "ordinary fixture"
+        ]
+      },
+      "counts": {
+        "checks": 6,
+        "passed": 4,
+        "warnings": 1,
+        "findings": 1,
+        "errors": 0
+      },
+      "checks": [
+        {
+          "check_id": "VSP-001",
+          "status": "pass",
+          "severity": "info",
+          "summary": "Manifest declares an HTTPS endpoint.",
+          "evidence_path": "manifest.endpoint"
+        },
+        {
+          "check_id": "VSP-002",
+          "status": "pass",
+          "severity": "info",
+          "summary": "Manifest declares an authentication mode.",
+          "evidence_path": "manifest.auth"
+        },
+        {
+          "check_id": "VSP-003",
+          "status": "warning",
+          "severity": "medium",
+          "summary": "Tool 'delete_records' accepts undeclared input fields.",
+          "evidence_path": "manifest.tools[0].input_schema.additionalProperties"
+        },
+        {
+          "check_id": "VSP-004",
+          "status": "finding",
+          "severity": "high",
+          "summary": "High-impact tools lack an explicit approval requirement: delete_records",
+          "evidence_path": "policy.approval_required_tools"
+        },
+        {
+          "check_id": "VSP-005",
+          "status": "pass",
+          "severity": "info",
+          "summary": "No allow/deny conflict was detected in the supplied policy.",
+          "evidence_path": "policy"
+        },
+        {
+          "check_id": "VSP-006",
+          "status": "pass",
+          "severity": "info",
+          "summary": "No configured static injection indicator matched.",
+          "evidence_path": "manifest.description|manifest.instructions|sample_inputs"
+        }
+      ]
+    },
+    {
+      "case": "after",
+      "synthetic_input": {
+        "agent_id": "my-agent",
+        "manifest": {
+          "endpoint": "https://example.invalid/mcp",
+          "auth": "bearer",
+          "tools": [
+            {
+              "name": "delete_records",
+              "input_schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          ]
+        },
+        "policy": {
+          "allowed_tools": [
+            "delete_records"
+          ],
+          "approval_required_tools": [
+            "delete_records"
+          ]
+        },
+        "sample_inputs": [
+          "ordinary fixture"
+        ]
+      },
+      "counts": {
+        "checks": 6,
+        "passed": 6,
+        "warnings": 0,
+        "findings": 0,
+        "errors": 0
+      },
+      "checks": [
+        {
+          "check_id": "VSP-001",
+          "status": "pass",
+          "severity": "info",
+          "summary": "Manifest declares an HTTPS endpoint.",
+          "evidence_path": "manifest.endpoint"
+        },
+        {
+          "check_id": "VSP-002",
+          "status": "pass",
+          "severity": "info",
+          "summary": "Manifest declares an authentication mode.",
+          "evidence_path": "manifest.auth"
+        },
+        {
+          "check_id": "VSP-003",
+          "status": "pass",
+          "severity": "info",
+          "summary": "Tool 'delete_records' has a closed object input schema.",
+          "evidence_path": "manifest.tools[0].input_schema"
+        },
+        {
+          "check_id": "VSP-004",
+          "status": "pass",
+          "severity": "info",
+          "summary": "All detected high-impact tools require explicit approval.",
+          "evidence_path": "policy.approval_required_tools"
+        },
+        {
+          "check_id": "VSP-005",
+          "status": "pass",
+          "severity": "info",
+          "summary": "No allow/deny conflict was detected in the supplied policy.",
+          "evidence_path": "policy"
+        },
+        {
+          "check_id": "VSP-006",
+          "status": "pass",
+          "severity": "info",
+          "summary": "No configured static injection indicator matched.",
+          "evidence_path": "manifest.description|manifest.instructions|sample_inputs"
+        }
+      ]
+    }
+  ]
+}

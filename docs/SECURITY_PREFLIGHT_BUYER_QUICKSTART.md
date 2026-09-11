@@ -3,6 +3,8 @@
 Security Preflight checks the MCP manifest, tool schemas, policy and samples
 you supply. It does not fetch, execute or certify the deployed service.
 
+First, [inspect a reproducible sample assessment](SECURITY_PREFLIGHT_SAMPLE.md) to decide whether these bounded checks answer your question.
+
 ## 1. Prepare your inputs and inspect a free quote
 
 Use Python 3.10 or newer. From a fresh checkout:

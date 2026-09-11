@@ -1,10 +1,12 @@
 # Viridis Agent Fleet — autonomous pay-per-call tools
 
 **Autonomous agent services — x402/USDC on Base, no signup.**
-Seven deterministic paid HTTP routes cover the five-step carbon and compliance
+Paid HTTP routes cover the five-step carbon and compliance
 workflow—**measure → account → disclose → claim → scan**—plus multi-agent
 problem solving and MCP security preflight. Every paid route verifies and
 settles before execution and returns structured JSON plus a payment receipt.
+
+**See the result first:** [a reproducible before-and-after MCP policy check](docs/SECURITY_PREFLIGHT_SAMPLE.md) shows the findings, corrections, and limits.
 
 **Start with Security Preflight:** inspect a free quote for the example, then
 replace it with your own MCP manifest and policy. No wallet is loaded and no
@@ -214,7 +216,7 @@ the fleet's draft carbon-receipt standard.
 
 ## Pay per call with x402
 
-💸 Also payable per call via x402/USDC on Base: seven routes, including the
+💸 Also payable per call via x402/USDC on Base: routes include the
 five carbon and compliance steps designed to chain
 **measure → account → disclose → claim → scan**, Hive orchestration, and
 Security Preflight. No signup or API key is required. Start with the
