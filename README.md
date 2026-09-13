@@ -27,7 +27,7 @@ your spending limit govern. Regulatory Radar remains available through
 Bounded VulnCanon source scanning and batch injection screening now run on the
 fleet for $1 USDC per scan or batch, without model calls or introductory discounts.
 See the [static Security buyer guide](docs/STATIC_SECURITY_BUYER_QUICKSTART.md).
-Maxwell defense remains held pending a real Argon2id implementation. The
+[Maxwell Defense Rehearsal](https://mcp.viridis-security.com/maxwell-defense) is live at $1 USDC: policy modeling and a local SHA-256 microbenchmark, without active runtime protection or energy-savings claims. Managed Argon2id protection remains unfinished. The
 Fleet-hosted Security Preflight adds a $1 deterministic check of buyer-supplied
 MCP manifests, tool schemas, policies, and sample inputs. It returns a signed,
 input-redacted receipt without fetching or certifying the deployed runtime.
@@ -48,6 +48,8 @@ control rather than presenting related-party evidence as independent proof.
 | Scan | `/x402/regulatory-radar/scan_regulations` | $0.25 | Energy and climate requirements, urgency, and dates | Full chain |
 | Orchestrate | `/x402/hive/solve` | $5.00 | Cost-bounded multi-agent solve with cross-review and an audit receipt | Fleet trust + settlement rails |
 | Secure | `/x402/security-preflight/security_preflight` | $1.00 | Static MCP metadata and authority-policy checks with a signed receipt | Agent Market security posture |
+
+See the [current service discovery map](docs/AGENT_DISCOVERY_2026-09-13.md) for all 11 paid routes, canonical URLs, machine catalogs and quote-only examples.
 
 ## Tools
 
