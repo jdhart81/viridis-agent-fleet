@@ -5,7 +5,7 @@
 # The same image lets any user install the whole fleet in one line.
 FROM python:3.12-slim
 WORKDIR /app
-RUN pip install --no-cache-dir "mcp>=1.2"
+RUN pip install --no-cache-dir "mcp==1.28.1"
 COPY fleet_bridge.py /app/fleet_bridge.py
 COPY fleet_manifest.json /app/fleet_manifest.json
 # Optional override: point at a different gateway origin.
