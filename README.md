@@ -53,6 +53,11 @@ See the [current service discovery map](docs/AGENT_DISCOVERY_2026-09-13.md) for 
 
 ## Tools
 
+- `maxwell-defense/rehearse_defense` — `$1.00`: bounded proof-of-work policy model and local hash microbenchmark; no runtime protection.
+- `security-preflight/scan_source` — `$1.00`: bounded inline source security indicator scan.
+- `security-preflight/screen_injection` — `$1.00`: bounded text injection-indicator screening.
+- `regulatory-radar/monitor_changes` — `$0.25`: bounded regulatory calendar and dated changes.
+
 - `quantity-takeoff/calculate_takeoff` — `$0.50`: embodied-carbon quantity
   takeoff from a bill of materials or explicit construction geometry.
 - `ghg-ledger/calculate_inventory` — `$1.00`: deterministic Scope 1, 2, and 3

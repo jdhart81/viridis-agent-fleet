@@ -40,6 +40,8 @@ MANIFEST_PATH = HERE / "fleet_manifest.json"
 SEP = "__"
 
 ROLE = {
+    "maxwell-defense": "bounded proof-of-work policy rehearsal; no runtime protection",
+    "security-preflight": "static manifest, source and text security checks",
     "identity": "verifiable agent identity + capability discovery",
     "trust": "decay-weighted reputation + trust attestations",
     "escrow": "trustless escrow & settlement (exactly-once)",
@@ -118,7 +120,8 @@ async def forward(path: str, tool: str, args: Dict[str, Any]) -> str:
     """Forward a call to the hosted agent over streamable-http."""
     from mcp import ClientSession
     from mcp.client.streamable_http import streamablehttp_client
-    url = f"{BASE}/{path}/mcp"
+    origin = "https://mcp.viridis-security.com" if path == "maxwell-defense" and BASE == "https://mcp.viridisconservation.com" else BASE
+    url = f"{origin}/{path}/mcp"
     async with streamablehttp_client(
             url, headers=upstream_headers()) as (r, w, _):
         async with ClientSession(r, w) as s:
