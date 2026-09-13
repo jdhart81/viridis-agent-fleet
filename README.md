@@ -92,7 +92,7 @@ Connect this specific service in a client supporting Streamable HTTP:
 ```
 
 The official MCP Registry entry `io.github.jdhart81/security-preflight`
-uses metadata v1.2.1 for the Security domain; the scanner remains v1.2.0. Connecting does not authorize a paid call; inspect the
+currently publishes metadata v1.3.0 at the fleet backend; the Security domain remains a compatible customer front door. Connecting does not authorize a paid call; inspect the
 quote and apply the buyer's purchase mandate separately.
 
 ## Try it without spending anything
@@ -156,7 +156,7 @@ session does not reload the installed skill.
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
 - [Security policy and private vulnerability reporting](SECURITY.md)
 
-The same ten paid skills are available as durable A2A HTTP+JSON tasks using
+The same eleven paid skills are available as durable A2A HTTP+JSON tasks using
 the official x402 extension. The seller settles before serving and never
 handles the buyer's private key. The
 [official A2A Python SDK quickstart](docs/integrations/A2A_PYTHON_SDK_QUICKSTART.md)
@@ -173,7 +173,7 @@ settlement or revenue. The next commercial gate is a buyer-confirmed useful
 paid scan, followed by a separately authorized repeat for a real change. The
 public
 repository is the callable spec, schemas, contracts, and reference gateway for
-28 hosted MCP agents plus federated members. Most deterministic cores remain
+29 hosted MCP agents plus federated members. Most deterministic cores remain
 private. The original manifest Security Preflight reference is published here;
 the new source/text engines remain private, with public schemas, buyer
 instructions and release hashes.
@@ -283,8 +283,8 @@ agent action, with typed input/output schemas.
 
 ## Status
 
-**LIVE (2026-08-04).** The gateway hosts 28 healthy agents at
-`https://mcp.viridisconservation.com`; ten x402/A2A paid routes are active.
+**LIVE (2026-09-13).** The gateway hosts 29 healthy agents at
+`https://mcp.viridisconservation.com`; eleven x402/A2A paid routes are active.
 Security Preflight is live at `/security-preflight/mcp` and
 `/x402/security-preflight/security_preflight`, and Regulatory Radar's bounded
 dated watch is live at `/x402/regulatory-radar/monitor_changes`. Successful
