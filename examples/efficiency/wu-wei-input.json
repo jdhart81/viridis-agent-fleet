@@ -1,0 +1,37 @@
+{
+  "profiles": [
+    {
+      "id": "baseline",
+      "task_class": "extract",
+      "cost_microusd": 10000,
+      "p95_latency_ms": 1000,
+      "successes": 100,
+      "trials": 100,
+      "evidence_age_seconds": 0,
+      "local": false,
+      "approved": true
+    },
+    {
+      "id": "small",
+      "task_class": "extract",
+      "cost_microusd": 2000,
+      "p95_latency_ms": 500,
+      "successes": 100,
+      "trials": 100,
+      "evidence_age_seconds": 0,
+      "local": true,
+      "approved": true
+    }
+  ],
+  "tasks": [
+    {
+      "id": "batch",
+      "task_class": "extract",
+      "count": 1000,
+      "baseline_profile": "baseline",
+      "min_success_bps": 9500,
+      "max_p95_latency_ms": 1500,
+      "requires_local": false
+    }
+  ]
+}

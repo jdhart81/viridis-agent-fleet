@@ -1,0 +1,1 @@
+{"client_hashes_per_second": 100000, "client_p95_budget_ms": 250, "backend_cost_ms": 2000, "peak_requests_per_second": 100}

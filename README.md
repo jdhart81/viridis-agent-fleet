@@ -316,3 +316,5 @@ See the [agent discovery guide and regression audit](docs/AGENT_DISCOVERY.md) fo
 ### Wu Wei Workload Router
 
 $1 USDC for a routing plan covering up to 20 profiles and 50 workload groups. Returns eligible route recommendations and modeled savings after the fee, using caller-supplied evaluations and costs. No workload execution or verified energy savings. [Service details](docs/WU_WEI_ROUTER.md) · [MCP endpoint](https://mcp.viridisconservation.com/wu-wei-router/mcp) · [Service page](https://mcp.viridisconservation.com/agents#wu-wei-router).
+
+[Wu Wei and Maxwell buyer quickstart](docs/EFFICIENCY_BUYER_QUICKSTART.md): inspect live unpaid quotes, supply your own inputs, and enforce an explicit service spending limit.
