@@ -1,0 +1,27 @@
+name: Wu Wei measurement checks
+on:
+  push:
+    paths:
+      - 'scripts/*wu_wei_measure_savings.py'
+      - 'docs/business/WU_WEI_MEASUREMENT_GUIDE.md'
+      - 'docs/business/examples/wu-wei-measurement-template.json'
+      - '.github/workflows/wu-wei-measurement.yml'
+  pull_request:
+    paths:
+      - 'scripts/*wu_wei_measure_savings.py'
+      - 'docs/business/examples/wu-wei-measurement-template.json'
+      - '.github/workflows/wu-wei-measurement.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pytest==8.3.5
+      - run: python -m pytest -q scripts/test_wu_wei_measure_savings.py
+      - run: python scripts/wu_wei_measure_savings.py docs/business/examples/wu-wei-measurement-template.json --output /tmp/wu-wei-report.json
+      - run: python -c "import json; r=json.load(open('/tmp/wu-wei-report.json')); assert r['status']=='INCOMPLETE_EVIDENCE'; assert r['qualified_savings_microusd'] is None"

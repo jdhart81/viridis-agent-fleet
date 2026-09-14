@@ -18,3 +18,7 @@ Use your existing buyer wallet setup described in scripts/x402_demo_client.py. K
 The returned result contains the fleet delivery contract. Retain the payment receipt and result digest, validate the result, and use its feedback contract to report whether it helped. Feedback does not authorize a second purchase. Never publish the feedback token.
 
 Wu Wei provides modeled routing recommendations, not independently verified savings or execution. Maxwell provides a policy rehearsal, not activated protection or measured energy savings. A $1 plan may find no savings; its fee still applies. Evaluate net benefit before repeating a purchase.
+
+## Measure completed work
+
+After executing a representative baseline and routed workload, use the offline [Wu Wei measurement guide](business/WU_WEI_MEASUREMENT_GUIDE.md) and its input template. The comparison includes retries and allocated fees, checks identical task inputs, and withholds qualified savings when records or quality are insufficient. It makes no provider calls or payments and does not independently verify caller evidence.
