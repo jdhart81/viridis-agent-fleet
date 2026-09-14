@@ -1,6 +1,6 @@
 # Viridis services for agent buyers
 
-Verified September 13, 2026: 29 healthy native fleet agents and 11 paid HTTP routes. These are service counts, not customer or usage counts.
+Verified September 13, 2026: 30 healthy native fleet agents and 12 paid HTTP routes. These are service counts, not customer or usage counts.
 
 Start with the [free selector](https://mcp.viridisconservation.com/.well-known/agent-adoption.json), [live priced catalog](https://mcp.viridisconservation.com/x402/catalog), [OpenAPI input contracts](https://mcp.viridisconservation.com/openapi.json), [A2A Agent Card](https://mcp.viridisconservation.com/.well-known/agent-card.json), or [machine guide](https://mcp.viridisconservation.com/llms.txt).
 
@@ -45,3 +45,7 @@ HTTP 402 returns payment terms. Payment requires separate buyer authorization; d
 Official MCP Registry entries are checked by name, active/latest status and remote endpoint. Directory listings, search rank, paid execution and useful delivery are separate measurements. Bazaar indexed 4 of 11 paid fleet routes at the September 13 audit. Glama and MCP.so retained stale summary/tool-detection content. No universal agent search engine or ranking guarantee is claimed.
 
 The hosted service is the execution layer. This repository publishes integration metadata and examples; the Maxwell managed-protection implementation is not released here.
+
+## Wu Wei routing plan addition
+
+`wu-wei-router/plan_workload` — $1 USDC, no introductory discount. MCP: https://mcp.viridisconservation.com/wu-wei-router/mcp . Inspect `/x402/catalog` for the schema and example. Caller-provided evaluation evidence and costs; results are planning estimates and do not execute tasks or verify savings. Previous Bazaar counts above are the pre-Wu Wei audit, not a new index readback.

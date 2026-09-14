@@ -49,7 +49,7 @@ control rather than presenting related-party evidence as independent proof.
 | Orchestrate | `/x402/hive/solve` | $5.00 | Cost-bounded multi-agent solve with cross-review and an audit receipt | Fleet trust + settlement rails |
 | Secure | `/x402/security-preflight/security_preflight` | $1.00 | Static MCP metadata and authority-policy checks with a signed receipt | Agent Market security posture |
 
-See the [current service discovery map](docs/AGENT_DISCOVERY_2026-09-13.md) for all 11 paid routes, canonical URLs, machine catalogs and quote-only examples.
+See the [current service discovery map](docs/AGENT_DISCOVERY_2026-09-13.md) for all 12 paid routes, canonical URLs, machine catalogs and quote-only examples.
 
 ## Tools
 
@@ -161,7 +161,7 @@ session does not reload the installed skill.
 - [Indexed CDP Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329)
 - [Security policy and private vulnerability reporting](SECURITY.md)
 
-The same eleven paid skills are available as durable A2A HTTP+JSON tasks using
+The same twelve paid skills are available as durable A2A HTTP+JSON tasks using
 the official x402 extension. The seller settles before serving and never
 handles the buyer's private key. The
 [official A2A Python SDK quickstart](docs/integrations/A2A_PYTHON_SDK_QUICKSTART.md)
@@ -178,7 +178,7 @@ settlement or revenue. The next commercial gate is a buyer-confirmed useful
 paid scan, followed by a separately authorized repeat for a real change. The
 public
 repository is the callable spec, schemas, contracts, and reference gateway for
-29 hosted MCP agents plus federated members. Most deterministic cores remain
+30 hosted MCP agents plus federated members. Most deterministic cores remain
 private. The original manifest Security Preflight reference is published here;
 the new source/text engines remain private, with public schemas, buyer
 instructions and release hashes.
@@ -288,7 +288,7 @@ agent action, with typed input/output schemas.
 
 ## Status
 
-**LIVE (2026-09-13).** The gateway hosts 29 healthy agents at
+**LIVE (2026-09-13).** The gateway hosts 30 healthy agents at
 `https://mcp.viridisconservation.com`; eleven x402/A2A paid routes are active.
 Security Preflight is live at `/security-preflight/mcp` and
 `/x402/security-preflight/security_preflight`, and Regulatory Radar's bounded
@@ -312,3 +312,7 @@ not included here by design.
 
 
 See the [agent discovery guide and regression audit](docs/AGENT_DISCOVERY.md) for intent routing, service contracts and external indexing boundaries.
+
+### Wu Wei Workload Router
+
+$1 USDC for a routing plan covering up to 20 profiles and 50 workload groups. Returns eligible route recommendations and modeled savings after the fee, using caller-supplied evaluations and costs. No workload execution or verified energy savings. [Service details](docs/WU_WEI_ROUTER.md) · [MCP endpoint](https://mcp.viridisconservation.com/wu-wei-router/mcp) · [Service page](https://mcp.viridisconservation.com/agents#wu-wei-router).

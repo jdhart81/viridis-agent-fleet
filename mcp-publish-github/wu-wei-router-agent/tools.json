@@ -1,0 +1,137 @@
+{
+  "tools": [
+    {
+      "name": "plan_workload",
+      "description": "$1 routing plan for up to 20 profiles and 50 workload groups. Caller-supplied cost and evaluation data; no autonomous execution or verified savings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profiles": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$"
+                },
+                "task_class": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$"
+                },
+                "cost_microusd": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000000
+                },
+                "p95_latency_ms": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 3600000
+                },
+                "successes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000
+                },
+                "trials": {
+                  "type": "integer",
+                  "minimum": 30,
+                  "maximum": 1000000
+                },
+                "evidence_age_seconds": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 604800
+                },
+                "local": {
+                  "type": "boolean"
+                },
+                "approved": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "task_class",
+                "cost_microusd",
+                "p95_latency_ms",
+                "successes",
+                "trials",
+                "evidence_age_seconds",
+                "local",
+                "approved"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "tasks": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$"
+                },
+                "task_class": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$"
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 1000000
+                },
+                "baseline_profile": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$"
+                },
+                "min_success_bps": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9999
+                },
+                "max_p95_latency_ms": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 3600000
+                },
+                "requires_local": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "task_class",
+                "count",
+                "baseline_profile",
+                "min_success_bps",
+                "max_p95_latency_ms",
+                "requires_local"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "profiles",
+          "tasks"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Free scope and price discovery",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}
