@@ -1,8 +1,8 @@
 # Viridis Agent Fleet — liveness heartbeat
 
-- Last verified (UTC): 2026-09-07T09:00:03Z
+- Last verified (UTC): 2026-09-14T09:00:03Z
 - Endpoint: https://mcp.viridisconservation.com/healthz
-- Agents healthy: 28/28
+- Agents healthy: 30/30
 - Discovery: https://mcp.viridisconservation.com/.well-known/ai-catalog.json
 - Registry: https://registry.modelcontextprotocol.io (search `io.github.jdhart81`)
 
