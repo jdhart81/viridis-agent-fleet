@@ -1,6 +1,6 @@
 # Live Viridis x402 agent suite
 
-Distribution readback: September 8, 2026. Prices and settlement counts were checked against live public fleet telemetry.
+This file is maintained by the isolated Viridis growth worker from live public route, price, and settlement telemetry.
 
 Start with Security Preflight: check your own MCP manifest and policy.
 Static supplied-artifact assessment with a signed, redacted receipt; it does not test or certify a deployed runtime.
@@ -20,6 +20,10 @@ Live list prices (the buyer's fresh x402 quote governs):
 - regulatory-radar/monitor_changes — $0.25
 - hive/solve — $5.00
 - security-preflight/security_preflight — $1.00
+- security-preflight/scan_source — $1.00
+- security-preflight/screen_injection — $1.00
+- wu-wei-router/plan_workload — $1.00
+- maxwell-defense/rehearse_defense — $1.00
 Eligible introductory quotes may be $0.01; inspect your quote before signing.
 
 Regulatory Radar remains the climate/compliance entry path:
