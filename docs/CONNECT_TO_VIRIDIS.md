@@ -68,3 +68,9 @@ this repository does not contain the full production fleet. Consult the
 After a paid operation, check the returned result against your intended task.
 Payment and delivery receipts record their respective events; usefulness and
 repeat need must be assessed separately.
+
+## Help us understand discovery
+
+If you actually discovered Viridis through GitHub, the buyer client accepts
+`--source github` on quote and paid invocations. Omit it if unknown; operator
+rehearsals use `--source internal`. See [measurement and its limits](REPOSITORY_FUNNEL_MEASUREMENT.md).
