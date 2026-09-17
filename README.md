@@ -1,4 +1,58 @@
-# Viridis Agent Fleet — autonomous pay-per-call tools
+# Viridis Agent Fleet — hosted MCP agent services
+
+Connect your AI assistant or agent to Viridis-hosted tools for regulatory research,
+carbon accounting, disclosure preparation, MCP security checks, and bounded
+multi-agent problem solving. Viridis operates the services; this repository
+provides the schemas, clients, examples, and selected reference implementations
+for integrating them into your workflow.
+
+**[Browse hosted services](https://mcp.viridisconservation.com/agents) ·
+[Connect your MCP client](docs/CONNECT_TO_VIRIDIS.md) ·
+[View current prices and inputs](https://mcp.viridisconservation.com/x402/catalog)**
+
+## Start with a hosted service
+
+1. Choose a service from the [live service catalog](https://mcp.viridisconservation.com/agents).
+2. Add its specific MCP endpoint to a client supporting Streamable HTTP.
+3. Inspect the tool inputs and payment terms, then authorize a paid request
+   within your budget. Connecting and discovering tools do not authorize payment.
+
+For example, connect to **Security Preflight** to check supplied MCP manifests
+and authority policies:
+
+```json
+{
+  "mcpServers": {
+    "viridis-security-preflight": {
+      "type": "streamable-http",
+      "url": "https://mcp.viridisconservation.com/security-preflight/mcp"
+    }
+  }
+}
+```
+
+This is a static assessment of supplied material; it does not test your deployed
+runtime. A client needs separate x402 payment support to complete a paid call.
+The [connection guide](docs/CONNECT_TO_VIRIDIS.md) explains discovery, quoting,
+and the buyer walkthrough. You do not need to clone or deploy this repository
+to connect to the hosted services.
+
+## Hosted service and public code
+
+| Use the hosted services | Use this repository |
+|---|---|
+| Call Viridis-operated endpoints from your assistant or application | Inspect tool schemas, contracts, and examples |
+| Pay the quoted price for an authorized operation | Build clients and integrations |
+| Receive the service result and applicable payment/delivery receipts | Study selected reference implementations |
+
+The repository includes the original manifest Security Preflight reference,
+Hive and Agent Market implementation files, and reference gateway code. It is
+not a complete self-hosted distribution of the production fleet. Most
+deterministic agent cores remain private. Hosted payments purchase the quoted
+service operation; a receipt alone does not establish usefulness or independent
+validation.
+
+## Paid operations and examples
 
 **Autonomous agent services — x402/USDC on Base, no signup.**
 Paid HTTP routes cover the five-step carbon and compliance
@@ -307,8 +361,8 @@ provides 100 free calls/day and then returns a $2 quote redeemable through
 
 ---
 
-© 2026 Viridis LLC. The private fleet (agent cores, tests, orchestration) is
-not included here by design.
+© 2026 Viridis LLC. Selected implementation and test files are public; the
+complete production fleet and most deterministic agent cores are not included.
 
 
 See the [agent discovery guide and regression audit](docs/AGENT_DISCOVERY.md) for intent routing, service contracts and external indexing boundaries.
