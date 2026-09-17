@@ -77,6 +77,11 @@ change check. Eligible introductory quotes may be $0.01; the fresh quote and
 your spending limit govern. Regulatory Radar remains available through
 `scripts/x402_demo_client.py --route regulatory-radar --max-payment-usdc 0.01`.
 
+Before an agent relies on a manifest assessment, use the
+[offline evidence verifier](docs/AGENT_SECURITY_INTEGRATION.md) to check the
+issuer signature, approved scanner, expiry and exact input binding. A preflight
+pass does not grant tool execution authority or certify runtime safety.
+
 **Security tools:** The separate Security subscription runtime is halted.
 Bounded VulnCanon source scanning and batch injection screening now run on the
 fleet for $1 USDC per scan or batch, without model calls or introductory discounts.
