@@ -21,7 +21,7 @@ class FunnelTests(unittest.TestCase):
         s = build(fixture())
         self.assertEqual(s['github']['external_payers'], 1)
         self.assertIsNone(s['github']['paid_results_delivered'])
-        self.assertIsNone(s['github']['service_selections'])
+        self.assertIsNone(s['github']['service_quote_requests'])
         self.assertEqual(s['github']['repeat_cohorts']['7d']['repeat_rate'], 1)
         self.assertEqual(s['historical_payers_unknown_source'], 1)
 
@@ -49,6 +49,21 @@ class FunnelTests(unittest.TestCase):
     def test_no_raw_identity_output(self):
         h=fixture();h['secret_wallet']='never-export'
         self.assertNotIn('never-export',str(build(h)))
+
+    def test_versioned_source_outcomes_and_quote_counts(self):
+        h=fixture();h['repo_funnel']={'version':'viridis-quote-source-counts-v1','status':'available',
+            'by_acquisition_source':{'github':{'radar/scan':3}}}
+        h['payment_gate']['x402']['http_settlement_telemetry']['source_outcomes']={
+            'version':'viridis-source-outcomes-v1','internal_and_self_excluded':True,
+            'by_acquisition_source':{'github':{'external_settlements':2,'paid_results_delivered':1,
+            'paid_results_failed':0,'paid_results_unknown':1,'buyer_feedback_useful':1}}}
+        g=build(h)['github'];self.assertEqual(g['service_quote_requests'],3)
+        self.assertEqual(g['paid_results_delivered'],1)
+        self.assertEqual(g['buyer_confirmed_useful_results'],1)
+        h['repo_funnel']['status']='incomplete'
+        self.assertIsNone(build(h)['github']['service_quote_requests'])
+        h['payment_gate']['x402']['http_settlement_telemetry']['source_outcomes']['by_acquisition_source']['github']['buyer_feedback_useful']=2
+        self.assertIsNone(build(h)['github']['buyer_confirmed_useful_results'])
 
 
 if __name__ == '__main__': unittest.main()

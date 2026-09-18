@@ -48,16 +48,37 @@ def build(health):
         windows[name] = {'eligible_payers': eligible, 'repeat_payers': repeated,
             'pending_maturity': pending,
             'repeat_rate': repeated / eligible if eligible else None}
+    quotes = mapping(health.get('repo_funnel'))
+    quote_groups = mapping(quotes.get('by_acquisition_source'))
+    github_quotes = mapping(quote_groups.get('github'))
+    quotes_valid = (quotes.get('version') == 'viridis-quote-source-counts-v1'
+                    and quotes.get('status') == 'available'
+                    and isinstance(quotes.get('by_acquisition_source'), dict)
+                    and all(isinstance(g, dict) and all(count(n) is not None for n in g.values())
+                            for g in quote_groups.values()))
+    outcomes = mapping(telemetry.get('source_outcomes'))
+    outcome_groups = mapping(outcomes.get('by_acquisition_source'))
+    outcome_fields = ('external_settlements','paid_results_delivered','paid_results_failed',
+                      'paid_results_unknown','buyer_feedback_useful')
+    outcomes_valid = (outcomes.get('version') == 'viridis-source-outcomes-v1'
+        and outcomes.get('internal_and_self_excluded') is True
+        and isinstance(outcomes.get('by_acquisition_source'), dict)
+        and all(isinstance(g,dict) and all(count(g.get(k)) is not None for k in outcome_fields)
+                and g['paid_results_delivered'] + g['paid_results_failed'] + g['paid_results_unknown'] == g['external_settlements']
+                and g['buyer_feedback_useful'] <= g['paid_results_delivered'] for g in outcome_groups.values()))
+    github_outcomes = mapping(outcome_groups.get('github'))
+    def outcome_count(key):
+        return github_outcomes.get(key, 0) if outcomes_valid else None
     return {
         'schema': 'viridis-repo-funnel-snapshot-v1',
         'captured_at': dt.datetime.now(dt.timezone.utc).isoformat(),
         'source': URL,
         'github': {
             'landing_page_views': count(mapping(funnel.get('acquisition_source_views')).get('github')),
-            'service_selections': None,
+            'service_quote_requests': sum(github_quotes.values()) if quotes_valid else None,
             'external_payers': github_payers,
-            'paid_results_delivered': None,
-            'buyer_confirmed_useful_results': None,
+            'paid_results_delivered': outcome_count('paid_results_delivered'),
+            'buyer_confirmed_useful_results': outcome_count('buyer_feedback_useful'),
             'repeat_cohorts': windows,
         },
         'fleet_totals_not_attributed_to_github': {k: count(total.get(k)) for k in TOTAL_FIELDS},
@@ -65,8 +86,9 @@ def build(health):
         'limits': [
             'Views are requests, not unique visitors; internal visits and automation may be included.',
             'Landing attribution uses the HTTP referrer; payer attribution is a separate buyer-declared label.',
-            'Service selection and source-specific delivery/usefulness are not exposed by the live contract.',
-            'There is no visitor-to-payer join. Do not calculate a visit-to-purchase conversion rate.',
+            'Quote requests represent service choice, include retries, cover HTTP x402 only, and are not unique buyers.',
+            'Source-specific delivery/usefulness are available only when the versioned production contract is present.',
+            'Outcome source is per payment; retention source is the first purchase. There is no visitor-to-payer join or conversion rate.',
             'Null means unavailable or no eligible denominator; it never means zero.',
             'Cumulative counters and rolling retention cohorts must not be summed across captures.',
         ],
@@ -78,7 +100,7 @@ def render(snapshot):
     def show(v): return 'Unavailable' if v is None else str(v)
     lines = ['# GitHub to Fleet measurement', '', 'Captured: ' + snapshot['captured_at'], '',
         '| GitHub-attributed stage | Observed |', '|---|---:|']
-    for key in ('landing_page_views','service_selections','external_payers','paid_results_delivered','buyer_confirmed_useful_results'):
+    for key in ('landing_page_views','service_quote_requests','external_payers','paid_results_delivered','buyer_confirmed_useful_results'):
         lines.append(f'| {key.replace("_", " ")} | {show(g[key])} |')
     lines += ['', '## GitHub payer repeat cohorts', '', '| Window | Eligible payers | Repeat payers | Pending maturity |', '|---|---:|---:|---:|']
     for name, w in g['repeat_cohorts'].items():
