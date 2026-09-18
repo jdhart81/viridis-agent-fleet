@@ -1,14 +1,14 @@
-# Viridis Agent Fleet — hosted MCP agent services
+# Viridis Security — agent security MCP services
 
-Connect your AI assistant or agent to Viridis-hosted tools for regulatory research,
-carbon accounting, disclosure preparation, MCP security checks, and bounded
-multi-agent problem solving. Viridis operates the services; this repository
-provides the schemas, clients, examples, and selected reference implementations
-for integrating them into your workflow.
+Security checks agents can call, with evidence their operators can verify.
+Start with MCP manifest preflight, bounded source-pattern checks and injection
+screening. Viridis hosts the services; this repository provides integration
+clients, schemas, examples and selected reference implementations.
 
-**[Browse hosted services](https://mcp.viridisconservation.com/agents) ·
-[Connect your MCP client](docs/CONNECT_TO_VIRIDIS.md) ·
-[View current prices and inputs](https://mcp.viridisconservation.com/x402/catalog)**
+**[Start with agent security](https://mcp.viridis-security.com/security-preflight/quickstart) ·
+[Connect your agent](docs/CONNECT_TO_VIRIDIS.md) ·
+[Verify assessment evidence](docs/AGENT_SECURITY_INTEGRATION.md) ·
+[Other Fleet services](https://mcp.viridisconservation.com/x402/catalog)**
 
 ## Start with a hosted service
 
@@ -25,7 +25,7 @@ and authority policies:
   "mcpServers": {
     "viridis-security-preflight": {
       "type": "streamable-http",
-      "url": "https://mcp.viridisconservation.com/security-preflight/mcp"
+      "url": "https://mcp.viridis-security.com/security-preflight/mcp"
     }
   }
 }
