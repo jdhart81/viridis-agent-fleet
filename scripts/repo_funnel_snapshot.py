@@ -75,6 +75,7 @@ def build(health):
         'source': URL,
         'github': {
             'landing_page_views': count(mapping(funnel.get('acquisition_source_views')).get('github')),
+            'quote_counter_started_at': quotes.get('started_at') if quotes_valid else None,
             'service_quote_requests': sum(github_quotes.values()) if quotes_valid else None,
             'external_payers': github_payers,
             'paid_results_delivered': outcome_count('paid_results_delivered'),
@@ -85,7 +86,7 @@ def build(health):
         'historical_payers_unknown_source': count(mapping(sources.get('unknown')).get('payer_count')) if valid else None,
         'limits': [
             'Views are requests, not unique visitors; internal visits and automation may be included.',
-            'Landing attribution uses the HTTP referrer; payer attribution is a separate buyer-declared label.',
+            'Landing attribution uses a finite source tag or HTTP referrer; payer attribution is a separate buyer-declared label.',
             'Quote requests represent service choice, include retries, cover HTTP x402 only, and are not unique buyers.',
             'Source-specific delivery/usefulness are available only when the versioned production contract is present.',
             'Outcome source is per payment; retention source is the first purchase. There is no visitor-to-payer join or conversion rate.',
@@ -102,7 +103,7 @@ def render(snapshot):
         '| GitHub-attributed stage | Observed |', '|---|---:|']
     for key in ('landing_page_views','service_quote_requests','external_payers','paid_results_delivered','buyer_confirmed_useful_results'):
         lines.append(f'| {key.replace("_", " ")} | {show(g[key])} |')
-    lines += ['', '## GitHub payer repeat cohorts', '', '| Window | Eligible payers | Repeat payers | Pending maturity |', '|---|---:|---:|---:|']
+    lines += ['', 'Quote counting began: ' + show(g.get('quote_counter_started_at')), '', '## GitHub payer repeat cohorts', '', '| Window | Eligible payers | Repeat payers | Pending maturity |', '|---|---:|---:|---:|']
     for name, w in g['repeat_cohorts'].items():
         lines.append(f'| {name} | {show(w["eligible_payers"])} | {show(w["repeat_payers"])} | {show(w["pending_maturity"])} |')
     lines += ['', '## Fleet totals (not attributed to GitHub)', '']

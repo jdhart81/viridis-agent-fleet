@@ -9,7 +9,7 @@ A failed fetch leaves previous snapshots unchanged.
 
 | Stage | Existing evidence | Limitation |
 |---|---|---|
-| GitHub referral | Landing requests classified as GitHub by HTTP referrer | Not unique people; referrer suppression loses attribution |
+| GitHub referral | Landing requests classified by a finite source tag or GitHub referrer | Not unique people; untagged links can lose referrer attribution |
 | Service choice | Valid unpaid HTTP quote requests, when the versioned counter is deployed | Includes retries; not unique buyers and not MCP/A2A-wide coverage |
 | First purchase | External payer cohort with buyer-declared `github` source | Buyer-declared source is not a tracked visitor identity |
 | Successful delivery | Versioned delivery counts grouped by the payment's declared source | Unavailable on older gateways; not buyer acceptance |
@@ -59,3 +59,5 @@ a visitor-to-payer identity join. No conversion rate is calculated.
 
 Deployment of these contracts is a separate operation from merging this report.
 Rehearse the exact production image with copied state and verified backups first.
+
+GitHub landing-page links carry `?source=github`; this survives suppressed referrer headers. The finite tag is attribution context, not independent identity evidence. Quote counts start at deployment; the report records that start time.
