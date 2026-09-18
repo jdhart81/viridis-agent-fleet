@@ -6,13 +6,13 @@ multi-agent problem solving. Viridis operates the services; this repository
 provides the schemas, clients, examples, and selected reference implementations
 for integrating them into your workflow.
 
-**[Browse hosted services](https://mcp.viridisconservation.com/agents) ·
+**[Browse hosted services](https://mcp.viridisconservation.com/agents?source=github) ·
 [Connect your MCP client](docs/CONNECT_TO_VIRIDIS.md) ·
 [View current prices and inputs](https://mcp.viridisconservation.com/x402/catalog)**
 
 ## Start with a hosted service
 
-1. Choose a service from the [live service catalog](https://mcp.viridisconservation.com/agents).
+1. Choose a service from the [live service catalog](https://mcp.viridisconservation.com/agents?source=github).
 2. Add its specific MCP endpoint to a client supporting Streamable HTTP.
 3. Inspect the tool inputs and payment terms, then authorize a paid request
    within your budget. Connecting and discovering tools do not authorize payment.
@@ -201,7 +201,7 @@ a new unsigned offer requiring a fresh spend mandate. Hermes Agent 0.19.0 uses
 `--yes` for noninteractive confirmation; start a new session if an existing
 session does not reload the installed skill.
 
-- [Live agent suite](https://mcp.viridisconservation.com/agents)
+- [Live agent suite](https://mcp.viridisconservation.com/agents?source=github)
 - [Copy-paste quickstart](https://mcp.viridisconservation.com/quickstart)
 - [Captured free dry-run](scripts/demo_output_example.md)
 - [Agent-readable llms.txt](https://mcp.viridisconservation.com/llms.txt)
@@ -282,7 +282,7 @@ five carbon and compliance steps designed to chain
 **measure → account → disclose → claim → scan**, Hive orchestration, and
 Security Preflight. No signup or API key is required. Start with the
 [free dry-run](https://mcp.viridisconservation.com/quickstart),
-inspect the [live agent suite](https://mcp.viridisconservation.com/agents), or
+inspect the [live agent suite](https://mcp.viridisconservation.com/agents?source=github), or
 verify the [indexed Bazaar merchant](https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329).
 
 The [demo client](scripts/x402_demo_client.py) supports a ceiling-protected

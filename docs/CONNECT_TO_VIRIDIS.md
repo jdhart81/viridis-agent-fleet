@@ -1,7 +1,7 @@
 # Connect to Viridis MCP services
 
 Use Viridis-hosted tools from an MCP client supporting Streamable HTTP. Start
-with the [service catalog](https://mcp.viridisconservation.com/agents) and select
+with the [service catalog](https://mcp.viridisconservation.com/agents?source=github) and select
 one operation that fits your inputs and intended result.
 
 ## Choose a service
