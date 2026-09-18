@@ -109,3 +109,10 @@ not establish usefulness.
 
 [Service contract](https://mcp.viridis-security.com/security-preflight/service.json)
 and [change-check details](SECURITY_PREFLIGHT_CHANGE_CHECK.md).
+
+## Agent integration verification
+
+Before relying on a saved manifest assessment, follow the
+[offline verification guide](AGENT_SECURITY_INTEGRATION.md). The buyer helper's
+delivery hashes do not establish issuer authenticity. The verifier separately
+checks an operator-pinned signing key, scanner policy, expiry and exact inputs.

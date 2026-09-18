@@ -8,7 +8,7 @@ one operation that fits your inputs and intended result.
 
 | Your task | Service | MCP endpoint |
 |---|---|---|
-| Inspect supplied MCP manifests and authority policies | Security Preflight | `https://mcp.viridisconservation.com/security-preflight/mcp` |
+| Check supplied manifests, source patterns and injection indicators | Security Preflight | `https://mcp.viridis-security.com/security-preflight/mcp` |
 | Research supported energy and climate requirements | Regulatory Radar | `https://mcp.viridisconservation.com/regulatory-radar/mcp` |
 | Prepare a greenhouse-gas inventory | GHG Ledger | `https://mcp.viridisconservation.com/ghg-ledger/mcp` |
 | Prepare disclosure evidence and identify gaps | Disclosure Compiler | `https://mcp.viridisconservation.com/disclosure-compiler/mcp` |
@@ -29,7 +29,7 @@ Example configuration (field names can vary by client):
   "mcpServers": {
     "viridis-security-preflight": {
       "type": "streamable-http",
-      "url": "https://mcp.viridisconservation.com/security-preflight/mcp"
+      "url": "https://mcp.viridis-security.com/security-preflight/mcp"
     }
   }
 }
@@ -68,6 +68,8 @@ this repository does not contain the full production fleet. Consult the
 After a paid operation, check the returned result against your intended task.
 Payment and delivery receipts record their respective events; usefulness and
 repeat need must be assessed separately.
+
+For manifest assessments, [verify signed evidence](AGENT_SECURITY_INTEGRATION.md) against your exact inputs before relying on it. The manifest verifier deliberately rejects source-scan and text-screening receipt contracts.
 
 ## Help us understand discovery
 

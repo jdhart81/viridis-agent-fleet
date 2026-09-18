@@ -30,5 +30,5 @@ jobs:
       - name: Verify Security buyer with the pinned payment SDK (no network payment)
         run: |
           python3 -m venv /tmp/preflight-buyer-tests
-          /tmp/preflight-buyer-tests/bin/pip install 'x402[requests,evm]==2.16.0'
-          /tmp/preflight-buyer-tests/bin/python -m unittest scripts/test_viridis_preflight_buy.py
+          /tmp/preflight-buyer-tests/bin/pip install 'x402[requests,evm]==2.16.0' 'cryptography==46.0.5'
+          /tmp/preflight-buyer-tests/bin/python -m unittest scripts/test_viridis_preflight_buy.py scripts/test_viridis_security_verify.py

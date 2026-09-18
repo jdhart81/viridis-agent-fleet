@@ -1,14 +1,14 @@
-# Viridis Agent Fleet — hosted MCP agent services
+# Viridis Security — agent security MCP services
 
-Connect your AI assistant or agent to Viridis-hosted tools for regulatory research,
-carbon accounting, disclosure preparation, MCP security checks, and bounded
-multi-agent problem solving. Viridis operates the services; this repository
-provides the schemas, clients, examples, and selected reference implementations
-for integrating them into your workflow.
+Security checks agents can call, with evidence their operators can verify.
+Start with MCP manifest preflight, bounded source-pattern checks and injection
+screening. Viridis hosts the services; this repository provides integration
+clients, schemas, examples and selected reference implementations.
 
-**[Browse hosted services](https://mcp.viridisconservation.com/agents?source=github) ·
-[Connect your MCP client](docs/CONNECT_TO_VIRIDIS.md) ·
-[View current prices and inputs](https://mcp.viridisconservation.com/x402/catalog)**
+**[Start with agent security](https://mcp.viridis-security.com/security-preflight/quickstart?source=github) ·
+[Connect your agent](docs/CONNECT_TO_VIRIDIS.md) ·
+[Verify assessment evidence](docs/AGENT_SECURITY_INTEGRATION.md) ·
+[Other Fleet services](https://mcp.viridisconservation.com/agents?source=github)**
 
 ## Start with a hosted service
 
@@ -25,7 +25,7 @@ and authority policies:
   "mcpServers": {
     "viridis-security-preflight": {
       "type": "streamable-http",
-      "url": "https://mcp.viridisconservation.com/security-preflight/mcp"
+      "url": "https://mcp.viridis-security.com/security-preflight/mcp"
     }
   }
 }
@@ -76,6 +76,11 @@ for an explicitly capped purchase, private saved result and free release-event
 change check. Eligible introductory quotes may be $0.01; the fresh quote and
 your spending limit govern. Regulatory Radar remains available through
 `scripts/x402_demo_client.py --route regulatory-radar --max-payment-usdc 0.01`.
+
+Before an agent relies on a manifest assessment, use the
+[offline evidence verifier](docs/AGENT_SECURITY_INTEGRATION.md) to check the
+issuer signature, approved scanner, expiry and exact input binding. A preflight
+pass does not grant tool execution authority or certify runtime safety.
 
 **Security tools:** The separate Security subscription runtime is halted.
 Bounded VulnCanon source scanning and batch injection screening now run on the
