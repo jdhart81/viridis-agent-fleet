@@ -1,7 +1,7 @@
 # Connect to Viridis MCP services
 
 Use Viridis-hosted tools from an MCP client supporting Streamable HTTP. Start
-with the [service catalog](https://mcp.viridisconservation.com/agents) and select
+with the [service catalog](https://mcp.viridisconservation.com/agents?source=github) and select
 one operation that fits your inputs and intended result.
 
 ## Choose a service
@@ -70,3 +70,9 @@ Payment and delivery receipts record their respective events; usefulness and
 repeat need must be assessed separately.
 
 For manifest assessments, [verify signed evidence](AGENT_SECURITY_INTEGRATION.md) against your exact inputs before relying on it. The manifest verifier deliberately rejects source-scan and text-screening receipt contracts.
+
+## Help us understand discovery
+
+If you actually discovered Viridis through GitHub, the buyer client accepts
+`--source github` on quote and paid invocations. Omit it if unknown; operator
+rehearsals use `--source internal`. See [measurement and its limits](REPOSITORY_FUNNEL_MEASUREMENT.md).
