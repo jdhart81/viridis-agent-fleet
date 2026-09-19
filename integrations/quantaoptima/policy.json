@@ -1,0 +1,24 @@
+{
+  "schema": "viridis-external-integration-boundary.v1",
+  "name": "quantaoptima",
+  "source_repository": "https://github.com/jdhart81/quantaoptima",
+  "reviewed_source_commit": "7abfc6a",
+  "latest_published_version": "0.4.0",
+  "reviewed_candidate_version": "0.4.1",
+  "candidate_release_status": "unreleased",
+  "fleet_role": "external_optional_dependency",
+  "hosted_by_fleet": false,
+  "listed_as_paid_fleet_route": false,
+  "public_sales_enabled": false,
+  "production_fulfillment_verified": false,
+  "approved_entrypoints": [
+    "quantaoptima-server",
+    "python -m quantaoptima.server"
+  ],
+  "retired_entrypoints": [
+    "python -m mcp_server.server",
+    "SETUP_MCP.sh"
+  ],
+  "claim_boundary": "Authenticates explicitly recorded data; does not prove execution, identity, completeness, automatic capture, compliance, or optimality.",
+  "external_action_authority": "none"
+}
