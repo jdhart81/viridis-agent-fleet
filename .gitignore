@@ -3,3 +3,7 @@
 /inputs.json
 /paid-result*.json
 /.venv-buyer/
+/feedback-*.json
+/.viridis-private/
+__pycache__/
+.pytest_cache/

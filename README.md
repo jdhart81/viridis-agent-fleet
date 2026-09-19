@@ -62,6 +62,11 @@ settles before execution and returns structured JSON plus a payment receipt.
 
 **See the result first:** [a reproducible before-and-after MCP policy check](docs/SECURITY_PREFLIGHT_SAMPLE.md) shows the findings, corrections, and limits.
 
+**Integrate one real workflow:** the [operator pilot guide](docs/SECURITY_PREFLIGHT_PILOT.md)
+connects the free example, a capped assessment, verified release checks and
+buyer-chosen feedback. It also explains how to request a recurring service scope
+when your workflow needs managed operation.
+
 **Start with Security Preflight:** inspect a free quote for the example, then
 replace it with your own MCP manifest and policy. No wallet is loaded and no
 payment is made by this command.
