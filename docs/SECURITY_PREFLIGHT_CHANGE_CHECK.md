@@ -55,6 +55,31 @@ and payment authority belong to the buyer. Neither this helper nor the free
 endpoint signs, pays, subscribes, or treats a static assessment as permission
 to execute a tool.
 
+## Use a verified gate in a release pipeline
+
+The default command is diagnostic: exit 0 means the comparison completed,
+including when it returns `RECHECK_REQUIRED`. Use `--ci` when the result must
+control a pipeline step. Install `cryptography==46.0.5` and provision the
+[operator-approved trust policy](AGENT_SECURITY_INTEGRATION.md) first.
+
+```sh
+python3 scripts/viridis_preflight_watch.py \
+  --inputs current-inputs.json --paid-result paid-result.json \
+  --ci --trust trust.json
+```
+
+| Exit | Meaning |
+|---|---|
+| 0 | Inputs are unchanged and the saved, current, operator-approved signed assessment passes |
+| 2 | A baseline, changed input, expiry, scanner change or authenticated finding requires review |
+| 1 | The response, saved evidence or trust policy is invalid, unavailable or contradictory |
+
+Treat **every nonzero exit** as a stopped gate. A successful gate is one input
+to your application's remaining controls; it does not authorize tool execution.
+CI output contains only a bounded summary, never the current input body or
+private feedback token. The command never buys a replacement assessment.
+See the [manual pipeline template](../examples/security-preflight-release-check.yml).
+
 ## Direct HTTP and receipt discovery
 
 Send `POST https://mcp.viridis-security.com/security-preflight/watch` with
