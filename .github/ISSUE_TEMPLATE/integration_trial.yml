@@ -1,0 +1,76 @@
+name: Integration trial
+description: Report whether a public or synthetic Fleet workflow produced a useful result.
+title: "[Integration trial]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a public issue. Use public or synthetic inputs only. Never include wallet keys, credentials, private manifests, paid-result files or feedback tokens. Use private vulnerability reporting for security-sensitive findings.
+  - type: dropdown
+    id: path
+    attributes:
+      label: Which path did you try?
+      options:
+        - Free local Security Preflight sample
+        - Hosted Security Preflight quote only
+        - Hosted Security Preflight paid assessment
+        - MCP connection or tool discovery
+        - Another documented Fleet service
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Was this a first or repeat use?
+      options:
+        - First use
+        - Repeat use for a real change or different task
+        - Maintainer or automated test
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What decision or task were you trying to complete?
+      description: Describe the intended outcome, not only the command you ran.
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: What happened?
+      options:
+        - Produced a useful result
+        - Produced a result that was not useful
+        - Blocked before a result
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: What helped or blocked you?
+      description: Include sanitized steps, expected behavior, actual behavior and tool versions. Do not paste a complete paid response.
+    validations:
+      required: true
+  - type: textarea
+    id: next
+    attributes:
+      label: What would make this worth using again?
+      description: If this was repeat use, describe the new change or task that created the repeat need.
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where did you discover the project? (optional)
+      options:
+        - Prefer not to say / unknown
+        - GitHub
+        - MCP Registry
+        - Coinbase Bazaar or x402 discovery
+        - Shared example or direct introduction
+        - Other
+  - type: checkboxes
+    id: followup
+    attributes:
+      label: May maintainers follow up in this public issue?
+      options:
+        - label: Yes, I can answer a clarifying question or test a focused fix.
