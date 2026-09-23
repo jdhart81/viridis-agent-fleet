@@ -1,0 +1,10 @@
+{
+  "slug": "hartjustin6/disclosure-compiler",
+  "display_name": "Viridis Disclosure Compiler",
+  "description": "Deterministic, cited ESRS E1, IFRS S2, TNFD, and non-presumptive SEC climate-rule disclosure drafts with verified GHG lineage and notary-ready audit hashes.",
+  "repository": "https://github.com/jdhart81/viridis-agent-fleet",
+  "homepage": "https://mcp.viridisconservation.com",
+  "remote_url": "https://mcp.viridisconservation.com/disclosure-compiler/mcp",
+  "visibility": "public",
+  "pricing": "10 free disclosure drafts/day, then $2.00 per draft via redeem_payment. B2B energy, climate, and compliance seats become coverage-ready with this service; Checkout still depends on separately approved Stripe Price IDs."
+}

@@ -1,0 +1,40 @@
+name: "agent-erc8004-bridge-agent"
+version: "0.1.0"
+description: "The MCP-native bridge to ERC-8004 (on-chain agent identity/reputation/validation, EF+Google+Coinbase, 170k+ agents): resolve registrations, score feedback with decay-weighted math, bind on-chain identities to DIDs, export unsigned attestations. No keys, no chain writes."
+pillar: "rails"
+status: "mvp"
+owner: "justin@viridisconservation.com"
+a2a_role: "identity-bridge"
+
+thesis_connection: |
+  Strategic pivot from the 2026-07-10 offering review: ERC-8004 (ratified
+  Jan 2026, mainnet Feb 2026, 170k+ registered agents) commoditizes
+  standalone identity/trust registries — so Viridis becomes the standard's
+  most useful off-chain surface instead of its competitor. The bridge rides
+  the largest agent-identity network to create demand for the whole fleet:
+  every resolved ERC-8004 agent is a candidate counterparty for our escrow,
+  metering, covenant, and offset rails. Trust framing stays Intelligence
+  Bound-consistent: reputation as decay-weighted information. Safety posture
+  is absolute: no key custody, no chain writes, refuse key material on sight.
+
+revenue_model: |
+  Free reads (resolve/score) drive adoption — the most-installable tool we
+  can ship into a 170k-agent network. Paid tiers: bulk feedback import +
+  scoring API for marketplaces ($499-$2,499/mo by volume), attestation
+  export packs for agents that want portable Viridis trust scores anchored
+  on-chain, and binding-verification services for platforms reconciling
+  MCP-native and on-chain identity. Near-term path: Smithery listing ->
+  free resolve/score usage -> volume operators hit the metered tier.
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [import_registration, resolve, import_feedback, score, bind,
+          export_attestation, verify, list]
+
+invariants: "B1-B8 (see src/core.py docstring); one test per invariant"
+
+deploy_targets:
+  - mcp (adapters/mcp_server.py; mounted at /erc8004/mcp on the gateway)

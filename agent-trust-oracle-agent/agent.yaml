@@ -1,0 +1,43 @@
+name: "agent-trust-oracle-agent"
+version: "0.1.1"
+description: "Reputation & tamper-evident trust attestations for the agent-to-agent economy. Answers 'can this agent be trusted with authority?' via a decay-weighted, bounded reputation score and signed attestations."
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "trust"
+
+thesis_connection: |
+  Direct embodiment of the Viridis Security mission — make AI agents safe to
+  trust with real authority. Trust is modeled as information: reputation is the
+  decay-weighted log-odds of good behavior, consistent with the Intelligence
+  Bound / Adversarial Landauer framing (attribution as thermodynamic cost).
+  Security incidents weigh heaviest. Composes with ShenDao (governance) and
+  OTA (truth verification) as upstream signal sources.
+
+revenue_model: |
+  Attestation issuance fees (per signed trust attestation).
+  Reputation-query subscription for agent operators and marketplaces
+  ($499-$2,499/mo by query volume). Enterprise trust-policy licensing for
+  agent platforms that need a governance-grade reputation layer.
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [record_outcome, score, query, attest, verify_attestation, history]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-identity-registry-agent (subject identity)"
+  - "agent-escrow-agent (dispute outcomes feed reputation)"
+
+invariants:
+  - "T1 score in [0,1]"
+  - "T2 unknown agent -> neutral prior 0.5"
+  - "T3 monotone in evidence"
+  - "T4 time decay (half-life)"
+  - "T5/T6 tamper-evident attestation chain + verification"

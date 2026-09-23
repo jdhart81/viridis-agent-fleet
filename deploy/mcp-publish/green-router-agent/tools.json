@@ -1,0 +1,95 @@
+{
+  "server": "green-router-agent",
+  "tool_count": 6,
+  "tools": [
+    {
+      "name": "quote_footprint",
+      "description": "FREE: honest energy/carbon footprint for an agent workload \u2014\n{backend_id? (frontier_cloud | efficient_cloud | local_small),\ntotal_tokens, output_tokens, calls?, success_score?,\ngrid_gco2e_per_kwh?, pue?, custom_backend? {id, wh_per_1k_tokens}}.\nReturns joules, gCO2e, useful bits, the retirement mass a certificate\nwould carry, every model assumption with its source, and the Landauer\ncontext (GR1/GR2).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workload": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "workload"
+        ]
+      }
+    },
+    {
+      "name": "green_route",
+      "description": "FREE: rank compute backends by carbon for this workload \u2014 the\ngreenest eligible path and the gCO2e saved per call. Carbon only\n(GR6); pair with /neurogenesis/mcp route_task for quality-floor\nrouting.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workload": {
+            "type": "object"
+          },
+          "allowed_backends": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "workload"
+        ]
+      }
+    },
+    {
+      "name": "certify",
+      "description": "PAID ($0.50 after free tier): compute the workload footprint, then\nRETIRE the required verified offset mass through the fleet's own\nclearinghouse \u2014 Verra provenance rides into the certificate; no\nretirement, no certificate (GR3, fail-closed). Returns a\nmachine-verifiable certificate anyone can check for free (GR4).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workload": {
+            "type": "object"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "workload"
+        ]
+      }
+    },
+    {
+      "name": "verify_green_certificate",
+      "description": "FREE forever (GR5): recompute a certificate's footprint from its\nstored workload, compare against the certified numbers, and surface\nthe clearinghouse purchase_id for the independent x402-C\nverify_retirement check on /offsets/mcp.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "certificate_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "certificate_id"
+        ]
+      }
+    },
+    {
+      "name": "list_green_certificates",
+      "description": "FREE: the certificate ledger \u2014 counts, total grams retired, total\nclearinghouse cost (honest books, GR8).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "default": 50
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

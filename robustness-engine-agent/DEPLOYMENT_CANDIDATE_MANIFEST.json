@@ -1,0 +1,23 @@
+{
+  "schema_version": "2.0",
+  "state": "ARISTOTLE_AUDITED_PAPER_RECONCILED_DEPLOYMENT_CANDIDATE",
+  "engine_version": "0.6.0",
+  "service_version": "0.6.0",
+  "formal_state": "ARISTOTLE_AUDITED_VERIFIED_ZERO_SORRY",
+  "paper_pdf_sha256": "4bc3ee0497d12800b2e525f70af465f93d083da0f20c27d2d01ea4cacb5df408",
+  "paper_manifest_sha256": "be2f56b9e4bd97d75ee99ade12d14265056ce3bfc4a45bd02972277c3cd79074",
+  "lean_source_sha256": "ef373a04b19dff71bf02632d0e4134879069c31ab716e5f669483ab33c18802f",
+  "aristotle_audit_sha256": "fc5e6c7d21fcb3c3c2ec5ab5b06dc3590ae0aab99600fa375c9a31fca562a98e",
+  "formal_receipt_sha256": "1a25f28dd1b5dd942903805a25a2a67798afd395eb27afc7209de779844241b3",
+  "engine_receipt_sha256": "a2caee5151e52864e859f04e60a49cbee85441f64841370b8c442ac768f01bc2",
+  "canon_candidate_sha256": "c39d8ccf395bf827675c7369fcd3911f5c6f379967239d977eb6365e63ee2a45",
+  "service_source_sha256": "6f1e0fdfb24e1670a1444f818ccfb4a8efa8df3bc899914699ad123634fa79a5",
+  "deployment_artifact_digest": null,
+  "rollback_plan_sha256": "c8669fc728871781d7cf82bbad197296078ab7a3cf861c5d5ea00b9212c077e7",
+  "production_deployed": false,
+  "paper_reconciled": true,
+  "canon_candidate_reconciled": true,
+  "canon_admitted": false,
+  "publication_authority": false,
+  "note": "Build-time manifest preserved to prove the candidate image failed closed before the production digest was known."
+}

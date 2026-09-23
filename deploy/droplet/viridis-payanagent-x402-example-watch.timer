@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll exact Viridis Payan x402-example bids every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Persistent=true
+RandomizedDelaySec=10
+Unit=viridis-payanagent-x402-example-watch.service
+
+[Install]
+WantedBy=timers.target

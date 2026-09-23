@@ -1,0 +1,101 @@
+{
+  "server": "wavefunction-search-agent",
+  "tool_count": 5,
+  "tools": [
+    {
+      "name": "intake",
+      "description": "Distill a user's dialogue into an intention wavefunction (explicit\nintentions + confidence). dialogue: [{role, content}, ...].",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "dialogue": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_id",
+          "dialogue"
+        ]
+      }
+    },
+    {
+      "name": "collapse",
+      "description": "Collapse the user's wavefunction into an actionable commitment,\nweighted by stake.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "stake_amount": {
+            "type": "number",
+            "default": 100.0
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      }
+    },
+    {
+      "name": "find_matches",
+      "description": "Match the user's collapsed intention to constitutionally-aligned\nagents/collectives, ranked by alignment score.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      }
+    },
+    {
+      "name": "register_collective",
+      "description": "Register an agent/collective into the match index (mission +\ndomain profile + constitutional alignment scores + capacity).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collective_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "mission": {
+            "type": "string"
+          },
+          "domain_profile": {
+            "type": "object"
+          },
+          "constitutional_scores": {
+            "type": "object"
+          },
+          "capacity": {
+            "type": "integer",
+            "default": 10
+          }
+        },
+        "required": [
+          "collective_id",
+          "name",
+          "mission"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

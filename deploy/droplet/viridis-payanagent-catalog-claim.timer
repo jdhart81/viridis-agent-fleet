@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch for Payan verificationBody deployment and claim five Viridis offers
+
+[Timer]
+OnBootSec=2m
+OnUnitActiveSec=10m
+RandomizedDelaySec=1m
+Persistent=true
+Unit=viridis-payanagent-catalog-claim.service
+
+[Install]
+WantedBy=timers.target

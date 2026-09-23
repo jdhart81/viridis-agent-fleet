@@ -1,0 +1,5 @@
+FROM viridis-stable:base-reliability-sprint-discovery-20260901
+
+COPY viridis_mcp_gateway.py /fleet/deploy/gateway/viridis_mcp_gateway.py
+COPY llms.txt /fleet/deploy/gateway/llms.txt
+

@@ -1,0 +1,128 @@
+# Security Preflight buyer path candidate — 2026-08-06
+
+## Decision
+
+`SOURCE_CANDIDATE_READY / HOLD_PUBLICATION_AND_PRODUCTION`
+
+The smallest evidence-backed commercial move is to turn the fresh Security
+Preflight quote exposure into a complete buyer path. The live service already
+returned one unpaid 402 to a distinct caller, but the official demo client did
+not expose the route. That refusal may be an automated directory probe rather
+than buyer intent. The public guides also advertised a Regulatory Radar watch
+selector that the client did not implement.
+
+This candidate closes both dead ends without moving money or weakening the
+payment, security, or revenue claim boundaries.
+
+## Candidate changes
+
+- `scripts/x402_demo_client.py`
+  - adds `--route security-preflight` with a complete, closed-schema safe
+    example;
+  - supports unpaid quote inspection with `--dry-run`;
+  - retains the mandatory explicit ceiling for any single-route paid attempt;
+  - adds the already-advertised `--route regulatory-watch` selector;
+  - leaves the default five-route workflow unchanged.
+- `deploy/gateway/quickstart.html`
+  - adds a dedicated Security Preflight no-spend and one-attempt buyer path;
+  - states the $1.00 list price, buyer-controlled ceiling, and live-quote
+    authority;
+  - states that the product performs static checks of caller-supplied artifacts
+    and does not fetch or certify a runtime.
+- `deploy/gateway/agents.html`
+  - adds a direct Security Preflight quote-inspection call to action;
+  - embeds the repaired cache-busted Gold402 badge;
+  - preserves the adjacent disclosure that the directory verdict is not an
+    endorsement, runtime audit, paid usage, or revenue;
+  - reports the card's exact `Independent grade pending` boundary.
+- four MCP publish manifests now match the already-running source versions:
+  - Wavefunction Search `0.2.0` in both trees;
+  - Subscriptions `0.1.1` in both trees.
+
+## Live no-spend verification
+
+The exact candidate client made unsigned POST requests to the two live routes.
+Both returned HTTP 402; neither created a payment signature or attempted a
+settlement.
+
+Security Preflight:
+
+- route: `/x402/security-preflight/security_preflight`;
+- exact scheme on `eip155:8453`;
+- official Base USDC asset:
+  `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`;
+- payee: `0xfEf2e570b645EB720Ee6c589d27450810982f329`;
+- observed fresh quote: `10000` atomic USDC (`$0.01`);
+- list price retained by the client: `1000000` atomic USDC (`$1.00`).
+
+Regulatory Radar watch:
+
+- route: `/x402/regulatory-radar/monitor_changes`;
+- same exact scheme, network, asset, and payee;
+- observed fresh quote: `10000` atomic USDC (`$0.01`);
+- list price retained by the client: `250000` atomic USDC (`$0.25`).
+
+An initial Security Preflight probe correctly failed with HTTP 400 because the
+example included the gateway-owned internal `action`. The candidate removed
+that field, and the repeated live no-spend probe passed. The regression test
+now asserts that callers never send `action`.
+
+## Verification
+
+- focused activation and Hermes buyer tests: `29 passed`;
+- broader x402, A2A, shared-contract, activation, and buyer tests:
+  `127 passed`;
+- full fleet after historical-control reconciliation:
+  `2091 passed`, `0 failed`, `0 errors`, `36/36 clean`;
+- local version coherence after manifest repair:
+  `FLEET COHERENCE PASS — 27 agents, local`;
+- clean public-main patch tests: `8 passed, 3 deselected`;
+- public-main patch: local commit `ee2b479` on
+  `codex/security-preflight-buyer-path-20260806`;
+- public-main patch was prepared from clean remote commit `38de8e1` and was not
+  pushed.
+
+The five earlier full-suite failures had one pre-existing release-control root
+cause. The historical Regulatory Radar promotion bundle pinned
+`gateway_runtime_parity.py` at SHA-256 `7c907d...`; two later normalization
+changes produced `6b43fa...`. The exact historical bytes were recovered from
+the dated execution record, independently reproduced at `7c907d...`, and
+archived under the 2026-07-26 release history. The original historical path is
+again byte-identical, while the hardened 2026-08-04 helper remains distinct at
+`6b43fa...`. No historical manifest, receipt, or pinned hash was rewritten.
+
+This reconciliation cleared all 230 droplet tests, all 136 script tests, and
+the complete 2,091-test fleet gate. A stale Glama assertion was also aligned to
+the already-coherent Subscriptions `0.1.1` publish manifest.
+
+## Exact source identities
+
+- demo client:
+  `eb71c466ad17c81d36e3f03c5ba308a4a0f8922337cef5116cc604deab87252d`;
+- hosted quickstart:
+  `3ea80610cbc8b74d971d1b91841fbd34bfc8fa68691071f379baace1f19dd2fc`;
+- hosted agent page:
+  `089d60fec369597cd5356740fab9cafe24c0097237236290d9473045a7dc9be5`;
+- activation tests:
+  `963bd8d11f1e09dc2783200e20b2d4f45a30fc6a83fda95cbd354b711202c30a`;
+- Wavefunction publish manifest, both trees:
+  `02154b4b9ef7f435c38f1c0db8a103d7395b8b576eab212b4ef2421e512131ef`;
+- Subscriptions publish manifest, both trees:
+  `6223b8dbaf34f5dc7ed452af0aefa16408834a166f5bb80be16ee8136cc0f1e9`.
+
+## Commercial and authorization boundary
+
+This work creates no revenue and does not convert the observed refusal into a
+buyer. Verified commercial truth remains four external payers, four external
+settlements, `$0.28` lifetime external x402 revenue, zero repeats, zero exact
+delivered or receipted paid results, and zero Security Preflight settlements.
+
+No production deployment, GitHub push, pull request, outbound message, badge
+announcement, payment, or commercial counter update occurred. Publication must
+use the clean prepared commit rather than the dirty, diverged local public
+checkout. Production must use a new state-safe candidate and promotion receipt;
+the historical Gold402 promotion transaction must not be reused.
+
+The next commercial proof remains one independent Security Preflight payment
+with a versioned delivered receipt. Until then, the new buyer path is a tested
+conversion candidate, not adoption or earnings.

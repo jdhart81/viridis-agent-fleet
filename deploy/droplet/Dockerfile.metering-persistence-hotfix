@@ -1,0 +1,8 @@
+ARG BASE_IMAGE=viridis-stable:latest
+FROM ${BASE_IMAGE}
+
+# Keep the release surgically scoped to the shared metering-durability fix.
+# The base image is the already-running, independently verified fleet image;
+# only these two reviewed gateway files are replaced.
+COPY deploy/gateway/payment_gate.py /fleet/deploy/gateway/payment_gate.py
+COPY deploy/gateway/viridis_mcp_gateway.py /fleet/deploy/gateway/viridis_mcp_gateway.py

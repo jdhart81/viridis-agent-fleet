@@ -1,0 +1,55 @@
+name: "agent-compute-ledger-agent"
+version: "0.3.0"
+description: "Compute-is-carbon cost/energy ledger for agent work: joules, gCO2e, and Landauer-limit efficiency per unit of agent cognition, with content-addressed attestations."
+pillar: "impact"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "accounting"
+
+thesis_connection: |
+  The literal P-variable accounting layer of the Intelligence Bound
+  (dI/dt <= P*D / kB*T*ln2): every unit of agent cognition is physical work,
+  and this ledger prices it in joules and grams of CO2. Landauer-floor
+  validation makes thermodynamics an input validator - physically impossible
+  workload claims are rejected. Bridges the fleet to Viridis conservation
+  (agent carbon disclosure feeds regulatory-radar's CSRD/TNFD reports) and to
+  the Verdigraph 'compute is carbon' framing.
+
+revenue_model: |
+  Carbon-disclosure reports for agent operators (AI scope-2-style accounting;
+  CSRD-adjacent buyers with dates and budgets, sold through
+  regulatory-radar-agent). Per-attestation fees for verifiable green-compute
+  claims. Efficiency benchmarking subscription (Landauer scores) for agent
+  marketplaces that want an energy label on listed agents.
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [record_work, footprint, attest, verify_attestation, verify_chain, list_entries, record_inventory, get_inventory, list_inventories, verify_inventory_chain]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-metering-agent (metered usage is the work this ledger energy-prices)"
+  - "regulatory-radar-agent (footprints feed CSRD/TNFD disclosure reports)"
+  - "agent-identity-registry-agent (energy label on registry listings)"
+
+invariants:
+  - "L1 append-only, hash-chained ledger; tamper detected"
+  - "L2 energy_j = power_w * duration_s; positive finite inputs"
+  - "L3 deterministic carbon: (energy_j / 3.6e6) * grid_intensity"
+  - "L4 Landauer floor enforced: energy below bit_ops*kB*T*ln2 rejected; efficiency in (0,1]"
+  - "L5 content-addressed attestations; verify recomputes"
+  - "L6 conservative aggregation: totals equal exact sums"
+  - "L7 idempotent on entry_id - never double-counted"
+  - "L8 unknown account/entry -> error envelope, never a crash"
+  - "I1 inventory records stay separate from compute footprints"
+  - "I2 inventory mass_g is an exact non-negative integer"
+  - "I3 inventories commit to validated content and factor-pack digests"
+  - "I4 inventory records are independently append-only and hash-chained"
+  - "I5 inventory_id is idempotent only for identical integrity payloads; conflicts fail closed"
+  - "I6 malformed or unknown inventory lineage fails loud"

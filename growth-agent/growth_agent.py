@@ -74,6 +74,25 @@ CHAIN_ORDER = (
     "regulatory-radar/scan_regulations",
 )
 
+REPEAT_BUYER_CTA = (
+    "Returning buyer? Put your public signing address in "
+    "X402-Payer-Address on the unpaid preflight to receive the exact "
+    "returning-wallet quote the first time. The hint never authorizes "
+    "payment—never send a private key."
+)
+PAID_DELIVERY_RECEIPT_VERSION = "viridis-paid-delivery-v1"
+PAID_DELIVERY_RECEIPT_COPY = (
+    "Successful paid responses include a buyer-verifiable "
+    f"{PAID_DELIVERY_RECEIPT_VERSION} receipt binding the result digest to the "
+    "settlement. Buyer acceptance and usefulness remain unobserved."
+)
+REGULATORY_RADAR_ROUTE = "regulatory-radar/scan_regulations"
+REGULATORY_RADAR_WATCH_ROUTE = "regulatory-radar/monitor_changes"
+REGULATORY_RADAR_REPEAT_CAMPAIGN = "regulatory_radar_repeat"
+REGULATORY_RADAR_REPEAT_AUTHORIZATION = (
+    "authorize outbound: Regulatory Radar repeat purchase"
+)
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -144,12 +163,34 @@ class FleetSnapshot:
         required_metrics = {
             "settlements_total", "external_settlements",
             "distinct_external_payers", "external_revenue_atomic",
-            "first_external_settlement",
+            "repeat_external_purchases", "first_external_settlement",
+            "external_paid_results_delivered",
+            "external_paid_results_failed",
+            "external_paid_results_receipted",
+            "external_paid_results_unknown",
         }
         if not isinstance(total, dict) or not required_metrics.issubset(total):
             raise GrowthError("live x402 conversion metrics are incomplete")
         if not isinstance(per_route, dict):
             raise GrowthError("live x402 route conversion metrics are missing")
+        delivery_metrics = {
+            key: total.get(key) for key in (
+                "external_paid_results_delivered",
+                "external_paid_results_failed",
+                "external_paid_results_receipted",
+                "external_paid_results_unknown",
+            )
+        }
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in delivery_metrics.values()
+        ):
+            raise GrowthError("live paid-delivery metrics are invalid")
+        if (
+            delivery_metrics["external_paid_results_receipted"]
+            > delivery_metrics["external_paid_results_delivered"]
+        ):
+            raise GrowthError("live paid-delivery metrics are inconsistent")
         routes = []
         for item in raw_routes:
             if not isinstance(item, dict):
@@ -219,6 +260,76 @@ class LiveFleetClient:
             raise GrowthError(f"live {label} is not an object")
         return result
 
+    def _read_text(self, url: str, *, label: str) -> str:
+        request = urllib.request.Request(
+            url, headers={"Accept": "text/plain,text/html",
+                          "User-Agent": "viridis-growth-agent/1"})
+        try:
+            with self.opener(request, timeout=10) as response:
+                status = int(getattr(response, "status", 200))
+                payload = response.read(2_000_000)
+        except Exception as exc:
+            raise GrowthError(
+                f"live {label} read failed: {type(exc).__name__}") from exc
+        if status != 200:
+            raise GrowthError(f"live {label} returned HTTP {status}")
+        try:
+            return payload.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise GrowthError(f"live {label} is not UTF-8") from exc
+
+    def verify_repeat_campaign_surfaces(
+            self, snapshot: FleetSnapshot) -> dict:
+        watch = next((
+            item for item in snapshot.routes
+            if f"{item['agent']}/{item['tool']}" ==
+            REGULATORY_RADAR_WATCH_ROUTE
+        ), None)
+        if watch is None:
+            raise GrowthError("repeat campaign dated-watch route is not live")
+        if (
+            int(watch["price_minor"]) != 25
+            or int(watch["amount_atomic_usdc"]) != 250_000
+        ):
+            raise GrowthError(
+                "repeat campaign dated-watch price contract changed")
+        parsed = urllib.parse.urlsplit(snapshot.quickstart_url)
+        if parsed.scheme != "https" or not parsed.netloc:
+            raise GrowthError("repeat campaign quickstart URL is not HTTPS")
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        surfaces = {
+            "quickstart": self._read_text(
+                snapshot.quickstart_url, label="repeat quickstart"),
+            "llms": self._read_text(
+                f"{origin}/llms.txt", label="repeat llms"),
+            "buyer_skill": self._read_text(
+                f"{origin}/.well-known/skills/viridis-paid-tools/SKILL.md",
+                label="repeat buyer skill"),
+        }
+        for name, content in surfaces.items():
+            if (
+                "--route regulatory-watch --max-payment-usdc 0.25"
+                not in content
+            ):
+                raise GrowthError(
+                    f"live {name} omits the repeat campaign command")
+            lowered = content.lower()
+            if "one fresh" not in lowered:
+                raise GrowthError(
+                    f"live {name} omits the fresh-purchase boundary")
+            if "curated" not in lowered or "source" not in lowered:
+                raise GrowthError(
+                    f"live {name} omits the curated-source boundary")
+            if "live external regulatory feed" not in lowered:
+                raise GrowthError(
+                    f"live {name} omits the no-live-feed boundary")
+        if 'id="radar-watch-call"' not in surfaces["quickstart"]:
+            raise GrowthError("live quickstart dated-watch anchor is missing")
+        return {
+            name: hashlib.sha256(content.encode()).hexdigest()
+            for name, content in surfaces.items()
+        }
+
     def fetch(self, *, now: datetime) -> FleetSnapshot:
         separator = "&" if "?" in self.health_url else "?"
         url = f"{self.health_url}{separator}growth_ts={int(now.timestamp())}"
@@ -237,15 +348,24 @@ class LiveFleetClient:
             for item in raw_work:
                 if not isinstance(item, dict):
                     continue
-                required = {"work_id", "title", "budget_minor", "currency"}
+                required = {
+                    "work_id", "title", "budget_minor", "currency",
+                    "funding_status",
+                }
                 if not required.issubset(item):
+                    continue
+                # Market inventory is not paid demand until its funding has
+                # been independently verified. Unknown and future statuses
+                # fail closed so outbound copy cannot overstate demand.
+                if str(item["funding_status"]).strip().upper() != "VERIFIED":
                     continue
                 budget = int(item["budget_minor"])
                 if budget <= 0 or str(item["currency"]).upper() != "USD":
                     continue
                 jobs.append({key: item.get(key) for key in (
                     "work_id", "title", "description", "budget_minor",
-                    "currency", "required_capabilities", "delivery_deadline")})
+                    "currency", "funding_status", "required_capabilities",
+                    "delivery_deadline")})
             jobs.sort(key=lambda item: (-int(item["budget_minor"]),
                                         str(item["work_id"])))
             return FleetSnapshot(
@@ -372,44 +492,153 @@ def _money(price_minor: int) -> str:
 
 
 def render_content(snapshot: FleetSnapshot) -> str:
-    # When paid work is available, reserve the finite posting budget for the
-    # exact job ids/budgets agents need in order to act. Route descriptions are
-    # still sourced and validated elsewhere, but repeating five long product
-    # descriptions alongside three jobs can exceed Discord's safe limit.
-    compact_routes = bool(snapshot.open_work and snapshot.market_url)
-    lines = [
-        "Live x402 carbon + compliance agent workflow on Base:",
-        "measure → account → disclose → claim → scan", "",
-    ]
-    for route in snapshot.routes:
-        route_line = f"• {route['agent']} — {_money(route['price_minor'])}"
-        if not compact_routes:
-            route_line += f": {route['description']}"
-        lines.append(route_line)
-    lines.extend(["", "No signup or API key. A caller receives HTTP 402, "
-                  "settles Base USDC, and gets the deterministic result."])
-    if snapshot.intro_enabled:
-        lines.append("First paid call from a new wallet is $0.01.")
-    external = int(snapshot.metrics.get("external_settlements") or 0)
-    payers = int(snapshot.metrics.get("distinct_external_payers") or 0)
-    if external:
-        lines.append(f"Live external proof: {external} settlement(s) from "
-                     f"{payers} distinct payer(s).")
-    if snapshot.open_work and snapshot.market_url:
-        lines.extend(["", "Open paid work for outside agents:"])
-        for job in snapshot.open_work[:3]:
-            title = str(job["title"]).strip()
-            if len(title) > 96:
-                title = title[:93].rstrip() + "..."
-            lines.append(
-                f"• {_money(int(job['budget_minor']))} — {title} "
-                f"({job['work_id']})")
-        lines.append(f"Discover and bid: {snapshot.market_url}")
-    lines.extend(["", f"Free dry-run: {snapshot.quickstart_url}",
-                  f"Agent suite: {snapshot.agents_url}"])
-    content = "\n".join(lines)
+    # When independently verified funded work is available, reserve the finite
+    # posting budget for the exact job ids/budgets agents need in order to act.
+    # Route descriptions are still sourced and validated elsewhere, but
+    # repeating five long product descriptions alongside three jobs can exceed
+    # Discord's safe limit.
+    def build(*, compact_routes: bool) -> str:
+        lines = [
+            "Start here: Regulatory Radar — one bounded x402 compliance scan "
+            "on Base.",
+            "List price: $0.25. Inspect the live unpaid quote before signing; "
+            "the quote is authoritative for this buyer.", "",
+            "Other live carbon + compliance routes:",
+        ]
+        for route in snapshot.routes:
+            route_line = f"• {route['agent']} — {_money(route['price_minor'])}"
+            if not compact_routes:
+                route_line += f": {route['description']}"
+            lines.append(route_line)
+        lines.extend(["", "No signup or API key. A caller receives HTTP 402, "
+                      "settles Base USDC, and gets the deterministic result."])
+        lines.append(PAID_DELIVERY_RECEIPT_COPY)
+        if snapshot.intro_enabled:
+            lines.append("First paid call from a new wallet is $0.01.")
+        external = int(snapshot.metrics.get("external_settlements") or 0)
+        payers = int(snapshot.metrics.get("distinct_external_payers") or 0)
+        if external:
+            lines.append(f"Live external proof: {external} settlement(s) from "
+                         f"{payers} distinct payer(s).")
+            lines.append(REPEAT_BUYER_CTA)
+        if snapshot.open_work and snapshot.market_url:
+            lines.extend(["",
+                          "Independently funded work for outside agents:"])
+            for job in snapshot.open_work[:3]:
+                title = str(job["title"]).strip()
+                if len(title) > 96:
+                    title = title[:93].rstrip() + "..."
+                lines.append(
+                    f"• {_money(int(job['budget_minor']))} — {title} "
+                    f"({job['work_id']})")
+            lines.append(f"Discover and bid: {snapshot.market_url}")
+        lines.extend(["", f"Free dry-run: {snapshot.quickstart_url}",
+                      f"Agent suite: {snapshot.agents_url}"])
+        return "\n".join(lines)
+
+    compact_for_work = bool(snapshot.open_work and snapshot.market_url)
+    content = build(compact_routes=compact_for_work)
+    if len(content) > 1900 and not compact_for_work:
+        # A growing live suite must not turn a safe no-send cycle into an
+        # operational failure merely because descriptions no longer fit.
+        content = build(compact_routes=True)
     if len(content) > 1900:
         raise GrowthError("generated content exceeds safe Discord length")
+    return content
+
+
+def render_owned_discovery(snapshot: FleetSnapshot) -> str:
+    """Keep the owned buyer guide aligned with the shipped Security entry path."""
+    security = next((route for route in snapshot.routes
+                     if route['agent'] == 'security-preflight'
+                     and route['tool'] == 'security_preflight'), None)
+    if security is None:
+        return render_content(snapshot)
+    lines = [
+        "Start with Security Preflight: check your own MCP manifest and policy.",
+        "Static supplied-artifact assessment with a signed, redacted receipt; "
+        "it does not test or certify a deployed runtime.",
+        "Buyer walkthrough: https://mcp.viridis-security.com/security-preflight/quickstart",
+        "",
+        "1. Inspect a free quote with the published buyer client; no wallet is loaded.",
+        "2. Use your own inputs and explicitly authorize one capped Base USDC purchase.",
+        "3. Save the result privately and decide whether the findings are useful.",
+        "4. Attach the free change check to your release workflow. Unchanged inputs "
+        "reuse the baseline; a relevant change needs a fresh quote and buyer authorization.",
+        "",
+        "Live list prices (the buyer's fresh x402 quote governs):",
+    ]
+    for route in snapshot.routes:
+        lines.append(f"- {route['agent']}/{route['tool']} — {_money(route['price_minor'])}")
+    if snapshot.intro_enabled:
+        lines.append("Eligible introductory quotes may be $0.01; inspect your quote before signing.")
+    lines.extend([
+        "",
+        "Regulatory Radar remains the climate/compliance entry path:",
+        snapshot.quickstart_url,
+        f"Full fleet: {snapshot.agents_url}",
+        "",
+        f"Observed external settlements: {int(snapshot.metrics.get('external_settlements') or 0)} "
+        f"from {int(snapshot.metrics.get('distinct_external_payers') or 0)} distinct payer wallets.",
+        "These are fleet-wide payments, not evidence of Security purchases, "
+        "buyer acceptance, usefulness, or repeat adoption.",
+    ])
+    return '\n'.join(lines)
+
+
+def render_regulatory_radar_repeat(snapshot: FleetSnapshot) -> str:
+    """Render the one-shot retention campaign from live route truth only."""
+    scan = next((
+        item for item in snapshot.routes
+        if f"{item['agent']}/{item['tool']}" == REGULATORY_RADAR_ROUTE
+    ), None)
+    watch = next((
+        item for item in snapshot.routes
+        if f"{item['agent']}/{item['tool']}" ==
+        REGULATORY_RADAR_WATCH_ROUTE
+    ), None)
+    if scan is None:
+        raise GrowthError("repeat campaign source scan route is not live")
+    if watch is None:
+        raise GrowthError("repeat campaign dated-watch route is not live")
+    if (
+        int(watch["price_minor"]) != 25
+        or int(watch["amount_atomic_usdc"]) != 250_000
+    ):
+        raise GrowthError("repeat campaign dated-watch price contract changed")
+    metrics = snapshot.route_metrics.get(REGULATORY_RADAR_ROUTE)
+    if not isinstance(metrics, dict):
+        raise GrowthError("repeat campaign route metrics are missing")
+    if int(metrics.get("external_settlements") or 0) <= 0:
+        raise GrowthError("repeat campaign has no external buyer evidence")
+    if (
+        int(snapshot.metrics.get("repeat_external_purchases") or 0) > 0
+        or int(metrics.get("repeat_external_purchases") or 0) > 0
+    ):
+        raise GrowthError("repeat campaign target is already achieved")
+    quickstart = snapshot.quickstart_url.rstrip("/")
+    content = "\n".join([
+        "Previously used Viridis Regulatory Radar? If the result was useful "
+        "you can now inspect one new dated window over the curated, "
+        "source-linked dataset: recently effective requirements plus "
+        "effective dates and deadlines approaching inside the selected "
+        "window. The buyer path makes exactly one fresh-quote call and "
+        "hard-stops above the $0.25 list price:",
+        "",
+        "python3 scripts/x402_demo_client.py --route regulatory-watch "
+        "--max-payment-usdc 0.25",
+        "",
+        "Use the same locally controlled Base wallet. The client sends only "
+        "its public address on the unpaid preflight; the fresh 402 is "
+        "authoritative and every payment requires a new wallet signature. "
+        "No subscription, automatic retry, later-call authority, or "
+        "private-key sharing. This is not a scheduled monitor or live "
+        "external regulatory feed.",
+        "",
+        f"Guide: {quickstart}#radar-watch-call",
+    ])
+    if len(content) > 1900:
+        raise GrowthError("repeat campaign exceeds safe Discord length")
     return content
 
 
@@ -490,6 +719,8 @@ def validate_generated_content(content: str, snapshot: FleetSnapshot) -> str:
                  f"{payers} distinct payer(s).")
         if proof not in candidate:
             raise GrowthError("model copy altered live conversion proof")
+        if REPEAT_BUYER_CTA not in candidate:
+            raise GrowthError("model copy omitted repeat-buyer guidance")
     found_prices = set(re.findall(r"\$[0-9]+\.[0-9]{2}", candidate))
     if found_prices != required_prices:
         raise GrowthError("model copy introduced or omitted a dollar amount")
@@ -502,6 +733,8 @@ def validate_generated_content(content: str, snapshot: FleetSnapshot) -> str:
         raise GrowthError("model copy introduced a prohibited claim")
     if "x402" not in lowered or "base" not in lowered or "usdc" not in lowered:
         raise GrowthError("model copy omitted the payment rail")
+    if PAID_DELIVERY_RECEIPT_COPY not in candidate:
+        raise GrowthError("model copy omitted the paid-delivery receipt boundary")
     return candidate
 
 
@@ -562,8 +795,11 @@ class OpenAIGrowthHarness:
             "framing of the supplied required_factual_copy for the supplied "
             "policy-cleared target. Preserve every route name, exact dollar "
             "amount, open-job ID and budget, live proof sentence, URL, "
-            "x402/Base/USDC claim, and intro "
-            "offer exactly. Do not invent results, customers, certifications, "
+            "x402/Base/USDC claim, repeat-buyer guidance, and intro "
+            "offer exactly. "
+            "Preserve the exact paid-delivery receipt sentence, including "
+            "the unobserved buyer-acceptance and usefulness boundary. "
+            "Do not invent results, customers, certifications, "
             "discounts, deadlines, compliance guarantees, or legal claims. "
             "Return one concise post plus a short strategy note. You have no "
             "authority to post, move money, change prices, or add targets."
@@ -887,6 +1123,17 @@ class GrowthAgent:
     def enabled(self) -> bool:
         return _enabled(self.environ.get("GROWTH_AGENT_ENABLED", "0"))
 
+    @property
+    def campaign(self) -> str:
+        return str(self.environ.get("GROWTH_CAMPAIGN") or "").strip()
+
+    @property
+    def campaign_authorized(self) -> bool:
+        return (
+            str(self.environ.get("GROWTH_CAMPAIGN_AUTHORIZATION") or "")
+            == REGULATORY_RADAR_REPEAT_AUTHORIZATION
+        )
+
     def credentials(self) -> dict:
         return {name: self.environ.get(name, "")
                 for name in POSTING_CREDENTIAL_ENV}
@@ -897,6 +1144,9 @@ class GrowthAgent:
 
     def _render_for_target(self, snapshot: FleetSnapshot, target: dict,
                            *, now: datetime) -> tuple[str, dict]:
+        if target.get("platform") == "github_owned_content":
+            return render_owned_discovery(snapshot), {
+                "mode": "deterministic", "reason": "owned_buyer_walkthrough"}
         deterministic = render_content(snapshot)
         if not self.openai_enabled:
             return deterministic, {"mode": "deterministic", "reason": "disabled"}
@@ -1003,6 +1253,12 @@ class GrowthAgent:
             elif target.get("policy_cleared") is not True:
                 reason = "policy_not_cleared"
                 eligible = False
+            elif (
+                self.campaign
+                and self.campaign not in tuple(target.get("campaigns") or ())
+            ):
+                reason = "campaign_not_allowed"
+                eligible = False
             elif (target.get("credential_env")
                   and not str(self.environ.get(
                       str(target["credential_env"])) or "")):
@@ -1053,6 +1309,10 @@ class GrowthAgent:
             target = target_map.get(result["target_id"], {
                 "id": result["target_id"], "channel": result["channel"],
                 "route": attempt["payload"].get("attribution_scope")})
+            target = {
+                **target,
+                "route": attempt["payload"].get("attribution_scope"),
+            }
             try:
                 scope, current = metrics_for_target(snapshot, target)
             except GrowthError:
@@ -1102,23 +1362,72 @@ class GrowthAgent:
         if not dry_run and not self.enabled:
             return {"status": "disabled", "enabled": False,
                     "message": "GROWTH_AGENT_ENABLED is off; no network or send"}
+        campaign = self.campaign
+        if campaign and campaign != REGULATORY_RADAR_REPEAT_CAMPAIGN:
+            return {"status": "unsupported_campaign", "campaign": campaign,
+                    "send_attempted": False}
+        if campaign and not dry_run and not self.campaign_authorized:
+            return {
+                "status": "campaign_not_authorized",
+                "campaign": campaign,
+                "required_authorization":
+                    REGULATORY_RADAR_REPEAT_AUTHORIZATION,
+                "send_attempted": False,
+            }
         snapshot = self.client.fetch(now=now)
+        surface_receipt = None
+        if campaign:
+            surface_receipt = self.client.verify_repeat_campaign_surfaces(
+                snapshot)
         if not dry_run:
             self.observe_outcomes(snapshot, now=now)
+        if campaign and (
+            int(snapshot.metrics.get("repeat_external_purchases") or 0) > 0
+            or int((snapshot.route_metrics.get(
+                REGULATORY_RADAR_ROUTE) or {}).get(
+                    "repeat_external_purchases") or 0) > 0
+        ):
+            return {"status": "campaign_complete", "campaign": campaign,
+                    "send_attempted": False}
         plan = self.plan_targets(now=now)
         selected = next((item for item in plan if item["eligible"]), None)
+        if selected is not None and campaign:
+            selected = {**selected, "route": REGULATORY_RADAR_WATCH_ROUTE}
         preview_target = selected or (plan[0] if plan else None)
         target_for_content = preview_target or {
             "id": "no-target", "channel": "no eligible target"}
-        if selected is None and not dry_run:
-            content = render_content(snapshot)
+        if dry_run:
+            # A preview can never earn revenue, so it must never create paid
+            # model usage even if GROWTH_OPENAI_ENABLED drifts on.
+            content = (
+                render_regulatory_radar_repeat(snapshot)
+                if campaign else render_content(snapshot)
+            )
+            model_result = {
+                "mode": "deterministic",
+                "reason": "dry_run_no_api",
+            }
+        elif selected is None:
+            content = (
+                render_regulatory_radar_repeat(snapshot)
+                if campaign else render_content(snapshot)
+            )
             model_result = {"mode": "deterministic",
                             "reason": "no_eligible_target"}
         else:
-            content, model_result = self._render_for_target(
-                snapshot, target_for_content, now=now)
+            if campaign:
+                content = render_regulatory_radar_repeat(snapshot)
+                model_result = {
+                    "mode": "deterministic",
+                    "reason": "campaign_copy_locked",
+                }
+            else:
+                content, model_result = self._render_for_target(
+                    snapshot, target_for_content, now=now)
         if dry_run:
             return {"status": "dry_run", "enabled": self.enabled,
+                    "campaign": campaign or None,
+                    "surface_receipt": surface_receipt,
                     "target": preview_target, "content": content,
                     "model": model_result,
                     "snapshot_signature": snapshot.signature(),
@@ -1140,6 +1449,8 @@ class GrowthAgent:
              "attribution_scope": attribution_scope,
              "snapshot_signature": snapshot.signature(),
              "policy_cleared": True,
+             "campaign": campaign or None,
+             "surface_receipt": surface_receipt,
              "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
              "model": model_result},
             occurred_at=now, attempt_id=attempt_id)   # FA-I7: BEFORE send

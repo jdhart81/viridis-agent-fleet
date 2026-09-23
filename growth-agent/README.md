@@ -44,6 +44,28 @@ attempt. Durable high-water marks prevent one settlement from being credited
 to multiple older posts for the same route. Suite-wide owned content uses the
 total bucket and is explicitly logged as correlation, never causal proof.
 
+## Bounded repeat-purchase campaign
+
+`GROWTH_CAMPAIGN=regulatory_radar_repeat` selects one policy-cleared owned
+Discord target that explicitly allows this campaign. Its copy is
+deterministic and locked to the live $0.25 Regulatory Radar route; it never
+calls the model. Before any send, the worker:
+
+- requires existing external Regulatory Radar buyer evidence;
+- stops if a genuine repeat purchase already exists;
+- fetches `/quickstart`, `/llms.txt`, and the well-known buyer skill and
+  requires the exact one-attempt $0.25 command plus no-later-authority
+  boundary on all three;
+- attributes only against
+  `regulatory-radar/scan_regulations`, never the fleet-wide bucket; and
+- requires the exact runtime latch
+  `GROWTH_CAMPAIGN_AUTHORIZATION=authorize outbound: Regulatory Radar repeat purchase`.
+
+Dry-run mode previews the exact message and surface receipt without requiring
+that authorization, writing an attempt, invoking a model, or sending. The
+authorization latch is intentionally separate from
+`GROWTH_AGENT_ENABLED`; neither setting alone can post the campaign.
+
 ## Dry run
 
 ```sh

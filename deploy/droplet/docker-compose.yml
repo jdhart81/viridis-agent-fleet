@@ -1,0 +1,63 @@
+services:
+  gateway:
+    image: viridis-stable:latest
+    restart: always
+    env_file:
+      - ../../.env    # production secrets (chmod 600, never committed)
+      - path: ../../private/hive-market-signer.env
+        required: false
+      - path: ../../private/hive-market-lifecycle.env
+        required: false
+    environment:
+      - PUBLIC_BASE=https://mcp.viridisconservation.com
+      - STATE_DB=/data/viridis_state.db
+      - SEAT_CONSERVATION_PLEDGE_PERCENT=${SEAT_CONSERVATION_PLEDGE_PERCENT:-0}
+      - HUB_KERNEL_REQUIRED=1
+      - HUB_EVENT_SECRET=${HUB_EVENT_SECRET}
+      - VIRIDIS_STATE_AUTH_MODE=${VIRIDIS_STATE_AUTH_MODE:-enforce}
+      - VIRIDIS_STATE_AUTH_TOKENS_JSON=${VIRIDIS_STATE_AUTH_TOKENS_JSON}
+    volumes:
+      - gateway_state:/data   # persistence: escrows/identities/ledger survive restarts
+    expose:
+      - "8402"
+
+  agent-market-network:
+    image: viridis-agent-market-network:latest
+    restart: always
+    env_file:
+      - path: ../../.env.market
+        required: false
+    environment:
+      - MARKET_PUBLIC_BASE=https://mcp.viridisconservation.com/network
+      - MARKET_STATE_DB=/state/agent_market_network.sqlite3
+      - MARKET_SEED_PROFILES=/app/seed_profiles.json
+      - MARKET_HUB_REQUIRED=1
+      - MARKET_HUB_URL=http://gateway:8402/internal/hub/events
+      - HUB_EVENT_SECRET=${HUB_EVENT_SECRET}
+      - MARKET_OPERATOR_WRITE_KEYS_JSON=${MARKET_OPERATOR_WRITE_KEYS_JSON:-}
+    depends_on:
+      - gateway
+    volumes:
+      - agent_market_state:/state
+    expose:
+      - "8410"
+
+  caddy:
+    image: caddy:2
+    restart: always
+    depends_on:
+      - gateway
+      - agent-market-network
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
+  gateway_state:
+  agent_market_state:

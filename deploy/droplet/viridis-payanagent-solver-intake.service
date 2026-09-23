@@ -1,0 +1,19 @@
+[Unit]
+Description=Read-only Viridis PayanAgent solver intake monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/viridis-fleet
+ExecStart=/usr/bin/python3 /root/viridis-fleet/monitor_payan_mcp_child_solver_request_20260804.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/root/viridis-fleet/payanagent-evidence
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+

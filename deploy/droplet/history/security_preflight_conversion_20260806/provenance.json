@@ -1,0 +1,104 @@
+{
+  "deploy/droplet/gateway_runtime_parity_hardened_20260804.py": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "controls/gateway_runtime_parity_hardened_20260804.py",
+    "sha256": "6b43fa30e510bb460ce137a6dc95b43e0df6f4287ba02ccda432f92c317dfc8b"
+  },
+  "deploy/droplet/gateway_state_backup.py": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-candidate-20260806.tar.gz",
+    "archive_sha256": "45d19d930bc2736aad562ef780cddf6d13efa745e26f83687413d8dd4d3f0db7",
+    "member": "build-context/deploy/droplet/gateway_state_backup.py",
+    "sha256": "a4d1ae3ae6959d3c2a9c2aca9a88b5359d9d7b9daa5ec2eca3df15c547b8a101"
+  },
+  "deploy/droplet/history/regulatory_radar_gateway_wedge_20260726/gateway_runtime_parity.py": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "history/regulatory-radar-gateway-wedge-20260726/gateway_runtime_parity.py",
+    "sha256": "7c907daba1264bb26de0da6803f85a7bdbf55ffaec484bac12729da421bd87d3"
+  },
+  "deploy/droplet/stage_security_preflight_conversion_candidate_20260806.sh": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-candidate-20260806.tar.gz",
+    "archive_sha256": "45d19d930bc2736aad562ef780cddf6d13efa745e26f83687413d8dd4d3f0db7",
+    "member": "stage_security_preflight_conversion_candidate_20260806.sh",
+    "sha256": "8ceb359110a1532228b1420386ea044e9db3fd9fa4a78e707a07a0538493a3ab"
+  },
+  "deploy/droplet/test_stage_security_preflight_conversion_candidate_20260806.py": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-candidate-20260806.tar.gz",
+    "archive_sha256": "45d19d930bc2736aad562ef780cddf6d13efa745e26f83687413d8dd4d3f0db7",
+    "member": "verification/test_stage_security_preflight_conversion_candidate_20260806.py",
+    "sha256": "ea0e38ece97ea49a3d488ef90bb1d792fba7cf472f3e76886d30253d2e48785a"
+  },
+  "deploy/gateway/Dockerfile.security-preflight-conversion-candidate-20260806": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-candidate-20260806.tar.gz",
+    "archive_sha256": "45d19d930bc2736aad562ef780cddf6d13efa745e26f83687413d8dd4d3f0db7",
+    "member": "build-context/deploy/gateway/Dockerfile.security-preflight-conversion-candidate-20260806",
+    "sha256": "b5ec1686a389f0142a7c37700359c565e1cd9f8f697a2bc8ae4eda4282b604cc"
+  },
+  "deploy/gateway/agents.html": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-candidate-20260806.tar.gz",
+    "archive_sha256": "45d19d930bc2736aad562ef780cddf6d13efa745e26f83687413d8dd4d3f0db7",
+    "member": "build-context/deploy/gateway/agents.html",
+    "sha256": "089d60fec369597cd5356740fab9cafe24c0097237236290d9473045a7dc9be5"
+  },
+  "deploy/gateway/quickstart.html": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-candidate-20260806.tar.gz",
+    "archive_sha256": "45d19d930bc2736aad562ef780cddf6d13efa745e26f83687413d8dd4d3f0db7",
+    "member": "build-context/deploy/gateway/quickstart.html",
+    "sha256": "3ea80610cbc8b74d971d1b91841fbd34bfc8fa68691071f379baace1f19dd2fc"
+  },
+  "deploy/gateway/test_wave9_activation.py": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "verification/test_wave9_activation.py",
+    "sha256": "963bd8d11f1e09dc2783200e20b2d4f45a30fc6a83fda95cbd354b711202c30a"
+  },
+  "deploy/glama/test_subscription_publish_contract.py": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "verification/test_subscription_publish_contract.py",
+    "sha256": "ea1c76a17d5e8e6ab1e6c2839cb9ae79e200d3c6bd95bc2794620adb0b18b2a8"
+  },
+  "deploy/mcp-publish-github/subscriptions-agent/server.json": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "coherence/mcp-publish-github/subscriptions-agent/server.json",
+    "sha256": "6223b8dbaf34f5dc7ed452af0aefa16408834a166f5bb80be16ee8136cc0f1e9"
+  },
+  "deploy/mcp-publish-github/wavefunction-search-agent/server.json": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "coherence/mcp-publish-github/wavefunction-search-agent/server.json",
+    "sha256": "02154b4b9ef7f435c38f1c0db8a103d7395b8b576eab212b4ef2421e512131ef"
+  },
+  "deploy/mcp-publish/subscriptions-agent/server.json": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "coherence/mcp-publish/subscriptions-agent/server.json",
+    "sha256": "6223b8dbaf34f5dc7ed452af0aefa16408834a166f5bb80be16ee8136cc0f1e9"
+  },
+  "deploy/mcp-publish/wavefunction-search-agent/server.json": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "coherence/mcp-publish/wavefunction-search-agent/server.json",
+    "sha256": "02154b4b9ef7f435c38f1c0db8a103d7395b8b576eab212b4ef2421e512131ef"
+  },
+  "docs/deployment/SECURITY_PREFLIGHT_BUYER_PATH_CANDIDATE_2026-08-06.md": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "evidence/SECURITY_PREFLIGHT_BUYER_PATH_CANDIDATE_2026-08-06.md",
+    "sha256": "7ebc693b0e6becfdedb067a62dcb251140106162b7357e559d1167c5a6ff8989"
+  },
+  "docs/deployment/patches/security-preflight-buyer-path-ee2b479.patch": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "public/security-preflight-buyer-path-ee2b479.patch",
+    "sha256": "df4d873597f4ff72606510787a755698ddb707cb0bfd26368b4245150737dfbd"
+  },
+  "scripts/x402_demo_client.py": {
+    "archive": "docs/deployment/bundles/security-preflight-conversion-source-20260806.tar.gz",
+    "archive_sha256": "08f17ac2c82aedaa6327cc32a32d134b7d508023691233a053cd7401f824ee27",
+    "member": "public/scripts/x402_demo_client.py",
+    "sha256": "eb71c466ad17c81d36e3f03c5ba308a4a0f8922337cef5116cc604deab87252d"
+  }
+}

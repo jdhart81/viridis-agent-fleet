@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MCP Security Preflight — manifest and policy checks | Viridis</title>
+  <meta name="description" content="Check an MCP manifest, tool schemas, authority policy, and sample text before connecting or changing an integration. Get a signed assessment; recheck only when needed.">
+  <link rel="canonical" href="https://mcp.viridisconservation.com/security-preflight">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="MCP Security Preflight | Viridis">
+  <meta property="og:description" content="Static checks of supplied MCP artifacts, signed assessment receipts, and a free change check. $1 USDC list price; inspect a live quote before buying.">
+  <meta property="og:url" content="https://mcp.viridisconservation.com/security-preflight">
+  <meta name="twitter:card" content="summary">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Viridis Security Preflight","applicationCategory":"DeveloperApplication","operatingSystem":"Web API","softwareVersion":"1.2.0","url":"https://mcp.viridisconservation.com/security-preflight","description":"Static checks of caller-supplied MCP manifests, schemas, authority policies, and sample text with signed input-redacted assessment receipts.","provider":{"@type":"Organization","name":"Viridis","url":"https://viridisconservation.com"}}</script>
+  <style>
+    :root{color-scheme:dark;--bg:#071711;--panel:#10271e;--ink:#effff7;--muted:#b0c9be;--accent:#54e5a1;--line:#305342}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.6 system-ui,sans-serif}a{color:var(--accent);text-underline-offset:.2em}a:focus-visible{outline:3px solid var(--accent);outline-offset:5px}main,nav,footer{max-width:1120px;margin:auto;padding:1.5rem}nav{display:flex;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--line);flex-wrap:wrap}.brand{font-weight:750;letter-spacing:.06em;color:var(--ink);text-decoration:none}.links{display:flex;gap:1.3rem;flex-wrap:wrap}.eyebrow{color:var(--accent);text-transform:uppercase;font-size:.875rem;letter-spacing:.12em}h1{font-size:clamp(2.3rem,5.8vw,4.8rem);line-height:1.07;letter-spacing:-.045em;max-width:900px;margin:1rem 0 1.6rem}h2{font-size:clamp(1.6rem,3vw,2.2rem);line-height:1.2}h3{font-size:1.1rem;margin-top:0}.intro{max-width:740px;color:var(--muted);font-size:1.15rem}.hero{padding:3rem 0 2.5rem}.actions{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin:1.8rem 0}.button{padding:.85rem 1.15rem;background:var(--accent);color:#061b11;font-weight:700;text-decoration:none;border-radius:4px}.price{color:var(--muted);max-width:720px}.price strong{color:var(--ink)}section{padding:2.4rem 0;border-top:1px solid var(--line)}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.3rem}.item{padding-left:1.1rem;border-left:2px solid var(--accent)}.item p{color:var(--muted);margin-bottom:0}.two{display:grid;grid-template-columns:1fr 1fr;gap:2rem}.note{color:var(--muted)}pre{background:var(--panel);border:1px solid var(--line);padding:1.3rem;overflow:auto;font-size:.875rem;line-height:1.7;border-radius:4px}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}p code,li code{overflow-wrap:anywhere}ol,ul{padding-left:1.4rem}li{margin:.5rem 0}footer{border-top:1px solid var(--line);color:var(--muted);font-size:.875rem;padding-bottom:3rem}.skip{position:absolute;left:-10000px}.skip:focus{left:1rem;top:1rem;background:var(--panel);padding:1rem;z-index:1}@media(max-width:720px){.grid,.two{grid-template-columns:1fr}.hero{padding-top:2rem}main,nav,footer{padding-left:1.2rem;padding-right:1.2rem}section{padding:2rem 0}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<nav aria-label="Main navigation"><a class="brand" href="https://viridisconservation.com">VIRIDIS</a><div class="links"><a href="/quickstart">Integration guide</a><a href="/x402/catalog">Service catalog</a><a href="/reliability-sprint">Reliability Sprint</a></div></nav>
+<main id="main">
+  <header class="hero">
+    <p class="eyebrow">Security Preflight · v1.2</p>
+    <h1>Check the MCP integration.<br>Before you connect it.</h1>
+    <p class="intro">Inspect the manifest, tool schemas, authority policy, and sample text you supply. Get a signed assessment that makes declared risks and gaps visible before an integration changes.</p>
+    <div class="actions"><a class="button" href="/quickstart#security-first-call">Inspect a free quote</a><a href="#change-check">Try the free change check</a></div>
+    <p class="price"><strong>$1 USDC per paid assessment.</strong> An eligible introductory quote may be $0.01. The fresh quote governs the price; the buyer authorizes every purchase.</p>
+    <p class="note">Static artifact assessment. It does not fetch, execute, or certify the deployed runtime.</p>
+  </header>
+  <section aria-labelledby="checks"><p class="eyebrow">What the assessment covers</p><h2 id="checks">Make declared authority inspectable.</h2><div class="grid">
+    <div class="item"><h3>Manifest and schemas</h3><p>Endpoint and authentication declarations, tool input schemas, and whether inputs are bounded by the declared schema.</p></div>
+    <div class="item"><h3>Tool policy</h3><p>High-impact actions, approval requirements, and conflicts between allowed, denied, and approval-required tools.</p></div>
+    <div class="item"><h3>Sample text</h3><p>Static injection indicators in the supplied text. Coverage is limited to the artifacts you provide.</p></div>
+  </div></section>
+  <section class="two" aria-labelledby="result"><div><p class="eyebrow">What you receive</p><h2 id="result">A result you can inspect and retain.</h2><ul><li>A verdict and individual findings.</li><li>Digests binding the assessment to your manifest, policy, and samples.</li><li>A signed, input-redacted assessment receipt.</li><li>A delivery receipt on a successful paid HTTP response.</li></ul><p class="note">Raw supplied artifacts are not stored in the assessment record. A receipt proves its signed contents; buyer acceptance and real-world usefulness are separate judgments.</p></div><div><h3>Assessment structure</h3><pre><code>{
+  "verdict": "pass | review | fail",
+  "evidence": {"checks": ["individual findings"]},
+  "receipt": {
+    "receipt_id": "returned assessment ID",
+    "evidence_sha256": "bound evidence digest",
+    "expires_at": "assessment expiry"
+  },
+  "signature_b64": "returned signature"
+}</code></pre><p class="note">Shortened response shape, not an executed assessment. Read an actual public receipt at <code>/security-preflight/receipts/{receipt_id}</code>.</p></div></section>
+  <section id="change-check" aria-labelledby="repeat"><p class="eyebrow">Use it when something changes</p><h2 id="repeat">Keep the baseline. Recheck what changed.</h2><p>Connect the free comparison to your own release event or scheduler. Unchanged, current inputs reuse the assessment and retain any existing findings. Changed inputs, an expired assessment, or a new scanner version require a fresh assessment.</p>
+  <pre><code>git clone https://github.com/jdhart81/viridis-agent-fleet.git
+cd viridis-agent-fleet
+python3 scripts/viridis_preflight_watch.py \
+  --inputs examples/security-preflight-inputs.json</code></pre>
+  <p>The example returns <code>BASELINE_REQUIRED</code> and quote instructions. It does not create a scan or payment. Replace the example with your current inputs, then supply the saved paid result on later checks.</p><p><a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/SECURITY_PREFLIGHT_CHANGE_CHECK.md">Read the complete change-check recipe →</a></p>
+  </section>
+  <section class="two" aria-labelledby="connect"><div><p class="eyebrow">For agent builders</p><h2 id="connect">Choose your existing client.</h2><p>MCP endpoint:</p><pre><code>https://mcp.viridisconservation.com/security-preflight/mcp</code></pre><p>Paid HTTP endpoint:</p><pre><code>POST /x402/security-preflight/security_preflight</code></pre><p><a href="/openapi.json">OpenAPI</a> · <a href="/.well-known/agent-adoption.json">Adoption contract</a> · <a href="/.well-known/agent-card.json">A2A card</a> · <a href="/llms.txt">Agent guide</a></p></div><div><h3>Before you authorize a purchase</h3><ol><li>Choose a real manifest and the policy it should satisfy.</li><li>Send the intended paid request without a signature to inspect its HTTP 402 quote.</li><li>Apply your own budget and payment mandate before signing.</li><li>Inspect the result, retain the receipt, and recheck after a relevant change.</li></ol><p class="note">The free change check is not a managed monitoring subscription. A failed assessment remains failed when unchanged.</p></div></section>
+  <section><h2>Need help making a whole workflow reliable?</h2><p>The <a href="/reliability-sprint">Agent Reliability Sprint</a> is a separately scoped implementation service for one existing workflow. Security Preflight is the bounded artifact check you can integrate directly.</p></section>
+</main>
+<footer><a href="https://viridisconservation.com">Viridis Conservation</a> · <a href="https://github.com/jdhart81/viridis-agent-fleet">Source and contracts</a> · <a href="https://viridisconservation.com/security">Data and security</a></footer>
+</body>
+</html>

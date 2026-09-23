@@ -1,0 +1,25 @@
+[Unit]
+Description=Watch exact Viridis Payan x402-example bids for buyer acceptance
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/viridis-fleet
+ExecStart=/usr/bin/python3 /root/viridis-fleet/monitor_payan_x402_example_bids_20260804.py
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/root/viridis-fleet/payanagent-evidence
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+TimeoutStartSec=90
+
+[Install]
+WantedBy=multi-user.target

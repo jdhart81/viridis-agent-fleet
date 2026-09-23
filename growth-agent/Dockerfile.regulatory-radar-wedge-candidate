@@ -1,0 +1,7 @@
+# Separate local candidate for the non-serving growth worker. The imported
+# production base is byte-matched before the worker and its policy allowlist
+# are overlaid.
+ARG BASE_IMAGE=viridis-production-import:growth-e1e734-source-equivalent
+FROM ${BASE_IMAGE}
+COPY --chown=0:0 growth-agent/growth_agent.py /app/growth_agent.py
+COPY --chown=0:0 growth-agent/targets.json /app/targets.json

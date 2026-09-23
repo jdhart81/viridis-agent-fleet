@@ -133,6 +133,14 @@ class ValidationError(ValueError):
 # --------------------------------------------------------------------------- #
 class GreenRouterCore(AgentCore):
     """Carbon-accounted routing + real-retirement certification."""
+    KNOWN_ACTIONS = frozenset({
+        "quote_footprint", "green_route", "certify",
+        "verify_certificate", "list_certificates", "describe",
+    })
+    READ_ACTIONS = frozenset({
+        "quote_footprint", "green_route", "verify_certificate",
+        "list_certificates", "describe",
+    })
 
     def __init__(self, config: Optional[AgentConfig] = None):
         super().__init__(config or AgentConfig(name="green-router-agent"))
@@ -183,7 +191,9 @@ class GreenRouterCore(AgentCore):
         if isinstance(custom, dict):
             bid = str(custom.get("id") or "").strip()
             wh = custom.get("wh_per_1k_tokens")
-            if not bid or not isinstance(wh, (int, float)) or wh < 0:
+            if (not bid or isinstance(wh, bool)
+                    or not isinstance(wh, (int, float))
+                    or not math.isfinite(float(wh)) or wh < 0):
                 raise ValidationError(
                     "custom_backend needs {id, wh_per_1k_tokens >= 0, "
                     "note?} — you declare your own backend's energy, we "
@@ -203,6 +213,20 @@ class GreenRouterCore(AgentCore):
                          "caller-declared grid intensity") \
             if workload.get("grid_gco2e_per_kwh") is not None else GridModel()
         pue = workload.get("pue")
+        if (workload.get("grid_gco2e_per_kwh") is not None
+                and (isinstance(workload["grid_gco2e_per_kwh"], bool)
+                     or not math.isfinite(
+                         float(workload["grid_gco2e_per_kwh"]))
+                     or float(workload["grid_gco2e_per_kwh"]) < 0)):
+            raise ValidationError(
+                "grid_gco2e_per_kwh must be finite and non-negative",
+                field="grid_gco2e_per_kwh")
+        if (pue is not None
+                and (isinstance(pue, bool)
+                     or not math.isfinite(float(pue))
+                     or float(pue) < 1.0)):
+            raise ValidationError(
+                "pue must be finite and at least 1.0", field="pue")
         facility = FacilityModel(float(pue), "caller-declared PUE") \
             if pue is not None else FacilityModel()
         acct = ThermodynamicAccountant(backends=backends, grid=grid,
@@ -232,6 +256,12 @@ class GreenRouterCore(AgentCore):
                                   field="calls", value=calls,
                                   constraint="1..10000000")
         score = workload.get("success_score", 1.0)
+        if (isinstance(score, bool)
+                or not isinstance(score, (int, float))
+                or not math.isfinite(float(score))):
+            raise ValidationError(
+                "success_score must be a finite number",
+                field="success_score", value=score)
         acct, backend_id = self._accountant(workload)
         one = acct.account_inference(backend_id, total, out, float(score))
         be = acct.backends[backend_id]

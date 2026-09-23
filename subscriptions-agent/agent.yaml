@@ -1,0 +1,25 @@
+name: "subscriptions-agent"
+version: "0.1.1"
+description: "Deterministic B2B monthly-seat, privacy-safe acquisition funnel, bearer-account, quota, overage, and MRR infrastructure"
+pillar: "revenue-infrastructure"
+status: "production-with-explicit-approved-catalog-override"
+owner: "justin@viridis.earth"
+revenue_model: "Monthly human-buyer seats under incumbent SaaS, with 1,000 included calls and exact per-call overage"
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["docker"]
+dependencies:
+  services: ["Stripe-hosted Checkout", "Stripe-hosted Billing Portal"]
+  agents: ["agent-metering-agent"]
+env_vars: []
+capabilities:
+  inputs: ["verified Stripe subscription reference", "bearer account key", "account and plan identifiers"]
+  outputs: ["hosted human-action links", "aggregate non-PII acquisition-source telemetry", "subscription entitlement", "exact quota and overage usage", "aggregate MRR"]
+security:
+  stripe_secret_handling: "none; injected stripe_payments verifier/link provider only"
+  account_key_storage: "SHA-256 plus last four; plaintext returned once"
+  money_movement: "none; prepare-to-the-click only"
+reference_data:
+  path: "data/plan_catalog.v0.2.0.json"
+  effective_as_of: "2026-07-13"
+  state: "fail-closed baked fallback; production selects an approved versioned catalog only through VIRIDIS_PLAN_CATALOG"

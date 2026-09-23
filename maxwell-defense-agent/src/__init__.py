@@ -1,0 +1,1 @@
+"""Maxwell Defense fleet candidate."""

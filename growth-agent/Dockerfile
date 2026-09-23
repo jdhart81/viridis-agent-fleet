@@ -10,5 +10,7 @@ USER viridis-growth
 VOLUME ["/state"]
 ENV GROWTH_AGENT_ENABLED=0 \
     GROWTH_AGENT_INTERVAL_SECONDS=86400 \
+    GROWTH_CAMPAIGN= \
+    GROWTH_CAMPAIGN_AUTHORIZATION= \
     GROWTH_STATE_DB=/state/viridis_growth.sqlite3
 CMD ["python3", "main.py"]

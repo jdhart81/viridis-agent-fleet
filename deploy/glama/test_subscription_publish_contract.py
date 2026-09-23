@@ -1,0 +1,53 @@
+"""Offline publication contract for the subscriptions MCP surface."""
+
+import json
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = ROOT / "deploy" / "mcp-publish-github" / "subscriptions-agent"
+SMITHERY = ROOT / "deploy" / "smithery" / "subscriptions-agent" / "listing.json"
+GLAMA = ROOT / "deploy" / "glama" / "fleet_manifest.json"
+
+
+def _json(path: Path) -> dict:
+    return json.loads(path.read_text())
+
+
+def test_official_registry_manifest_targets_live_auxiliary_surface():
+    server = _json(PACKAGE / "server.json")
+    assert server["name"] == "io.github.jdhart81/subscriptions"
+    assert server["version"] == "0.1.1"
+    assert server["remotes"] == [{
+        "type": "streamable-http",
+        "url": "https://mcp.viridisconservation.com/subscriptions/mcp",
+    }]
+
+
+def test_tool_schemas_are_complete_and_never_accept_a_bearer_key():
+    package = _json(PACKAGE / "tools.json")
+    assert package["tool_count"] == 10
+    assert package["tool_count"] == len(package["tools"])
+    schemas = json.dumps([
+        tool["inputSchema"] for tool in package["tools"]
+    ]).lower()
+    assert "account_key" not in schemas
+    assert "authorization" not in schemas
+
+
+def test_glama_manifest_matches_the_generated_official_tool_package():
+    package = _json(PACKAGE / "tools.json")
+    glama = _json(GLAMA)
+    assert len(glama) == 29
+    assert sum(len(tools) for tools in glama.values()) == 216
+    assert {tool["name"] for tool in glama["subscriptions"]} == {
+        tool["name"] for tool in package["tools"]
+    }
+
+
+def test_smithery_scaffold_is_public_but_honest_about_activation_gate():
+    listing = _json(SMITHERY)
+    assert listing["slug"] == "hartjustin6/subscriptions"
+    assert listing["visibility"] == "public"
+    assert listing["remote_url"].endswith("/subscriptions/mcp")
+    assert "Checkout remains disabled" in listing["pricing"]

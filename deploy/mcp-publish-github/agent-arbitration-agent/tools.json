@@ -1,0 +1,146 @@
+{
+  "server": "agent-arbitration-agent",
+  "tool_count": 8,
+  "tools": [
+    {
+      "name": "file_case",
+      "description": "File a dispute over an escrow. Opens the evidence window. Parties must\nbe distinct; amount is in minor currency units (cents).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "escrow_id": {
+            "type": "string"
+          },
+          "claimant": {
+            "type": "string"
+          },
+          "respondent": {
+            "type": "string"
+          },
+          "amount_minor": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "escrow_id",
+          "claimant",
+          "respondent",
+          "amount_minor"
+        ]
+      }
+    },
+    {
+      "name": "submit_evidence",
+      "description": "Submit evidence while the case is open. kind: delivery_proof (weight 3),\nlog (2), or statement (1). Only the named parties may submit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "case_id": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "case_id",
+          "party",
+          "kind"
+        ]
+      }
+    },
+    {
+      "name": "set_trust_scores",
+      "description": "Attach trust-oracle reputation scores (party -> [0,1]) as ruling inputs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "case_id": {
+            "type": "string"
+          },
+          "scores": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "case_id",
+          "scores"
+        ]
+      }
+    },
+    {
+      "name": "rule",
+      "description": "Issue the deterministic ruling: allocates 100% of the disputed amount\nfrom evidence weights + trust scores, and emits an escrow instruction\n(release/refund). Exactly-once \u2014 re-ruling returns the existing ruling.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "case_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_id"
+        ]
+      }
+    },
+    {
+      "name": "verify_ruling",
+      "description": "Recompute the ruling from its cited evidence + trust inputs and check\nit matches the stored allocation (machine-checkable justice).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "case_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_id"
+        ]
+      }
+    },
+    {
+      "name": "get_case",
+      "description": "Fetch the full case record, including any ruling.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "case_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_id"
+        ]
+      }
+    },
+    {
+      "name": "list_cases",
+      "description": "List cases, optionally filtered by state (FILED|EVIDENCE_OPEN|RULED).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Fleet-standard self-description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

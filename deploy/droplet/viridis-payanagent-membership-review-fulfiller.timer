@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll the Viridis Payan membership-review bid for acceptance
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+RandomizedDelaySec=30
+Unit=viridis-payanagent-membership-review-fulfiller.service
+
+[Install]
+WantedBy=timers.target

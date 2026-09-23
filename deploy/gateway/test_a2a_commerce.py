@@ -1,0 +1,456 @@
+#!/usr/bin/env python3
+"""AC1-AC6: A2A discovery, paid task flow, and fail-closed posture."""
+import asyncio
+import base64
+import json
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+import a2a_commerce                                             # noqa: E402
+import x402_http                                                # noqa: E402
+import x402_rail                                                # noqa: E402
+import x402_v2                                                  # noqa: E402
+from payment_gate import GATE_ATTR                              # noqa: E402
+from state_store import StateStore                              # noqa: E402
+
+
+class Request:
+    def __init__(self, body=None, headers=None, task_id=""):
+        self._body = body or {}
+        self.headers = headers or {}
+        self.path_params = {"id": task_id}
+
+    async def json(self):
+        return self._body
+
+
+class Core:
+    def __init__(self):
+        self.calls = []
+        setattr(self, GATE_ATTR, {"consumed_x402": {}})
+        self._gate_inner = self.process
+
+    def process(self, payload):
+        self.calls.append(payload)
+        return {"status": "success", "received": payload}
+
+
+def run(call):
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(call)
+    finally:
+        loop.close()
+
+
+def body(response):
+    return json.loads(response.body)
+
+
+def arm(monkeypatch):
+    monkeypatch.setenv("X402_ENABLED", "1")
+    monkeypatch.setenv("X402_V2_ENABLED", "1")
+    monkeypatch.setenv("VIRIDIS_X402_ADDRESS", "0xViridis")
+    monkeypatch.setenv("X402_FACILITATOR_URL", "https://fac.test")
+    monkeypatch.setenv("X402_V2_NETWORK", x402_v2.BASE_MAINNET_CAIP2)
+    monkeypatch.setenv("X402_V2_ASSET", x402_rail.BASE_MAINNET_USDC)
+    monkeypatch.delenv("X402_INTRO_ENABLED", raising=False)
+
+
+def request_body(task_id="", payload=None, args=None,
+                 skill_id="regulatory-radar.scan_regulations"):
+    message = {
+        "messageId": "msg-1" if not task_id else "msg-2",
+        "role": "ROLE_USER",
+        "parts": [{"data": {
+            "skillId": skill_id,
+            "input": args or {"jurisdiction": "EU", "sector": "energy"},
+        }}],
+    }
+    if task_id:
+        message["taskId"] = task_id
+        message["parts"] = [{"text": "payment authorization"}]
+        message["metadata"] = {
+            "x402.payment.status": "payment-submitted",
+            "x402.payment.payload": payload,
+        }
+    return {"message": message}
+
+
+def extension_headers():
+    return {"a2a-extensions": a2a_commerce.EXTENSION_URI}
+
+
+def signed(requirement, nonce="0x" + "ab" * 32):
+    return {
+        "x402Version": 2,
+        "resource": requirement["resource"],
+        "accepted": requirement["accepts"][0],
+        "payload": {
+            "signature": "0xsigned",
+            "authorization": {
+                "from": "0xBuyer", "to": "0xViridis",
+                "value": requirement["accepts"][0]["amount"],
+                "validAfter": "0", "validBefore": "9999999999",
+                "nonce": nonce,
+            },
+        },
+        "extensions": requirement["extensions"],
+    }
+
+
+class Facilitator:
+    def __init__(self, valid=True, settled=True):
+        self.valid = valid
+        self.settled = settled
+        self.calls = []
+
+    def __call__(self, url, envelope, config):
+        phase = url.rsplit("/", 1)[-1]
+        self.calls.append(phase)
+        ext = base64.b64encode(json.dumps(
+            {"bazaar": {"status": "accepted"}}).encode()).decode()
+        if phase == "verify":
+            return ({"isValid": self.valid,
+                     "invalidReason": None if self.valid else "bad_signature"},
+                    {"extension-responses": ext})
+        return ({"success": self.settled,
+                 "errorReason": None if self.settled else "failed",
+                 "transaction": "0xa2asettled" if self.settled else ""},
+                {"extension-responses": ext})
+
+
+def build(tmp_path):
+    core = Core()
+    cores = {"regulatory-radar": core}
+    store = StateStore(str(tmp_path / "state.db"))
+    return (*a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test"), core, store, cores)
+
+
+def test_agent_card_is_a2a_1_and_declares_required_x402():
+    card = a2a_commerce.agent_card("https://mcp.test")
+    assert card["supportedInterfaces"] == [{
+        "url": "https://mcp.test/a2a", "protocolBinding": "HTTP+JSON",
+        "protocolVersion": "1.0"}]
+    assert card["capabilities"]["extensions"][0] == {
+        "uri": a2a_commerce.EXTENSION_URI,
+        "description": "x402 v2 exact settlement on Base mainnet USDC; settle before serve.",
+        "required": True, "params": {"x402Version": 2}}
+    assert len(card["skills"]) == 11
+    assert all(skill["metadata"]["amountAtomicUsdc"] for skill in card["skills"])
+    watch = next(
+        skill for skill in card["skills"]
+        if skill["id"] == "regulatory-radar.monitor_changes")
+    assert watch["metadata"]["amountAtomicUsdc"] == "250000"
+    assert watch["metadata"]["inputSchema"]["properties"][
+        "lookback_days"]["maximum"] == 365
+    assert "not a live external regulatory feed" in watch[
+        "description"].lower()
+    security = next(
+        skill for skill in card["skills"]
+        if skill["id"] == "security-preflight.security_preflight")
+    assert security["metadata"]["amountAtomicUsdc"] == "1000000"
+    assert security["metadata"]["inputSchema"]["required"] == [
+        "agent_id", "manifest"]
+
+
+def test_hive_a2a_is_full_price_and_preflights_before_task(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "1")
+    core = Core()
+    preflights = []
+    core._paid_preflight = (
+        lambda payload: preflights.append(payload) or None)
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-state.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+    args = {"problem": "Choose a reviewed energy strategy.",
+            "budget_minor": 500, "depth": 0, "redundancy": 2,
+            "fee_bps": 0}
+
+    challenge = run(send(Request(request_body(
+        args=args, skill_id="hive.solve"), extension_headers())))
+
+    assert challenge.status_code == 200
+    task = body(challenge)["task"]
+    required = task["metadata"]["x402.payment.required"]
+    assert required["accepts"][0]["amount"] == "5000000"
+    assert preflights == [{"action": "solve", **args}]
+    assert core.calls == []
+
+
+def test_hive_a2a_provider_unavailable_before_task_or_payment(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    core = Core()
+    core._paid_preflight = lambda _payload: {
+        "status": "error", "error_type": "ServiceUnavailable",
+        "message": "hive solver provider is not configured"}
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-unavailable.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+
+    refused = run(send(Request(request_body(
+        args={"problem": "p", "budget_minor": 500},
+        skill_id="hive.solve"), extension_headers())))
+
+    assert refused.status_code == 503
+    assert core.calls == []
+    assert a2a_commerce.TASKS_KEY not in getattr(core, GATE_ATTR)
+
+
+def test_hive_a2a_rechecks_provider_before_settlement(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    core = Core()
+    decisions = [None, {
+        "status": "error", "error_type": "ServiceUnavailable",
+        "message": "provider became unavailable"}]
+    core._paid_preflight = lambda _payload: decisions.pop(0)
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-recheck.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+    args = {"problem": "Choose a reviewed energy strategy.",
+            "budget_minor": 500}
+    challenge = run(send(Request(request_body(
+        args=args, skill_id="hive.solve"), extension_headers())))
+    task = body(challenge)["task"]
+    required = task["metadata"]["x402.payment.required"]
+
+    refused = run(send(Request(request_body(
+        task["id"], signed(required), skill_id="hive.solve"),
+        extension_headers())))
+
+    assert refused.status_code == 503
+    assert fake.calls == []
+    assert core.calls == []
+    assert getattr(core, GATE_ATTR)["consumed_x402"] == {}
+
+
+def test_missing_extension_and_kill_switch_fail_before_task(tmp_path, monkeypatch):
+    arm(monkeypatch)
+    _, send, _, core, _, _ = build(tmp_path)
+    missing = run(send(Request(request_body())))
+    assert missing.status_code == 400 and core.calls == []
+    monkeypatch.setenv("X402_V2_ENABLED", "0")
+    disabled = run(send(Request(request_body(), extension_headers())))
+    assert disabled.status_code == 503 and core.calls == []
+
+
+def test_payment_task_persists_then_settles_before_one_execution(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    _, send, get_task, core, store, cores = build(tmp_path)
+    challenge_headers = {
+        **extension_headers(),
+        "x-viridis-acquisition-source": "OpenClaw",
+    }
+    challenge = run(send(Request(request_body(), challenge_headers)))
+    assert challenge.status_code == 200 and core.calls == []
+    task = body(challenge)["task"]
+    assert task["status"]["state"] == "TASK_STATE_INPUT_REQUIRED"
+    required = task["status"]["message"]["metadata"]["x402.payment.required"]
+    assert required["accepts"][0]["amount"] == "250000"
+    payload = signed(required)
+    completed = run(send(Request(
+        request_body(task["id"], payload), extension_headers())))
+    result = body(completed)["task"]
+    assert result["status"]["state"] == "TASK_STATE_COMPLETED"
+    artifact = result["artifacts"][0]["parts"][0]["data"]
+    assert artifact["status"] == "success"
+    delivery = artifact["viridis_delivery"]
+    assert delivery["version"] == "viridis-paid-delivery-v1"
+    assert delivery["route"] == "regulatory-radar/scan_regulations"
+    assert delivery["settlement"]["transaction"] == "0xa2asettled"
+    assert delivery["feedback"]["endpoint"] == (
+        "https://mcp.test/x402/feedback")
+    assert len(delivery["feedback"]["feedback_token"]) >= 32
+    artifact_without_receipt = dict(artifact)
+    artifact_without_receipt.pop("viridis_delivery")
+    assert delivery["result_sha256"] == (
+        x402_http._canonical_json_sha256(artifact_without_receipt))
+    commerce = artifact["viridis_commerce"]
+    assert commerce["current_route"] == (
+        "regulatory-radar/scan_regulations")
+    assert commerce["auto_execute"] is False
+    assert commerce["payment_required"] is True
+    assert commerce["buyer_authorization_required"] is True
+    repeat = commerce["repeat_purchase"]
+    assert repeat["endpoint"] == (
+        "https://mcp.test/x402/regulatory-radar/scan_regulations")
+    assert repeat["mcp_endpoint"] == (
+        "https://mcp.test/regulatory-radar/mcp")
+    assert repeat["price_minor"] == 25
+    assert repeat["amount_atomic_usdc"] == "250000"
+    assert repeat["required_buyer_inputs"] == ["jurisdiction"]
+    assert repeat["quote"]["authoritative_source"] == (
+        "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_value_source"] == (
+        "caller_public_signing_address")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is True
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
+    assert fake.calls == ["verify", "settle"] and len(core.calls) == 1
+    record = next(iter(getattr(core, GATE_ATTR)["consumed_x402"].values()))
+    assert record["surface"] == "a2a-x402-v2"
+    assert record["tx_hash"] == "0xa2asettled"
+    assert record["delivery_status"] == "delivered"
+    assert record["delivery_receipt"] == delivery
+    assert len(record["feedback_token_sha256"]) == 64
+    assert record["acquisition_source"] == "openclaw"
+    polled = run(get_task(Request(task_id=task["id"])))
+    assert body(polled)["task"]["status"]["state"] == "TASK_STATE_COMPLETED"
+    replay = run(send(Request(
+        request_body(task["id"], payload), extension_headers())))
+    assert body(replay)["task"]["status"]["state"] == "TASK_STATE_COMPLETED"
+    assert body(replay)["task"]["artifacts"][0]["parts"][0]["data"][
+        "viridis_commerce"]["repeat_purchase"]["price_minor"] == 25
+    assert fake.calls == ["verify", "settle"] and len(core.calls) == 1
+    restored = Core()
+    assert store.restore("regulatory-radar", restored)
+    restored_task = getattr(
+        restored, GATE_ATTR)[a2a_commerce.TASKS_KEY][task["id"]]
+    assert restored_task["status"]["state"] == "TASK_STATE_COMPLETED"
+    assert restored_task["artifacts"][0]["parts"][0]["data"][
+        "viridis_commerce"]["repeat_purchase"]["price_minor"] == 25
+    metrics = x402_http.settlement_metrics({
+        "regulatory-radar": getattr(core, GATE_ATTR)})["total"]
+    assert metrics["external_settlements"] == 1
+    assert metrics["external_paid_results_delivered"] == 1
+    assert metrics["external_paid_results_receipted"] == 1
+
+
+def test_hive_completed_a2a_artifact_preserves_fixed_price_repeat_contract(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    monkeypatch.setenv("X402_INTRO_ENABLED", "1")
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    core = Core()
+    core._paid_preflight = lambda _payload: None
+    cores = {"hive": core}
+    store = StateStore(str(tmp_path / "hive-completed.db"))
+    _, send, _ = a2a_commerce.make_a2a_handlers(
+        cores, store, "https://mcp.test")
+    args = {
+        "problem": "Choose a reviewed energy strategy.",
+        "budget_minor": 500,
+        "depth": 0,
+        "redundancy": 2,
+        "fee_bps": 0,
+    }
+    challenge = run(send(Request(request_body(
+        args=args, skill_id="hive.solve"), extension_headers())))
+    task = body(challenge)["task"]
+    requirement = task["metadata"]["x402.payment.required"]
+
+    completed = run(send(Request(
+        request_body(task["id"], signed(requirement),
+                     skill_id="hive.solve"),
+        extension_headers())))
+
+    result = body(completed)["task"]
+    assert result["status"]["state"] == "TASK_STATE_COMPLETED"
+    commerce = result["artifacts"][0]["parts"][0]["data"][
+        "viridis_commerce"]
+    repeat = commerce["repeat_purchase"]
+    assert commerce["current_route"] == "hive/solve"
+    assert repeat["endpoint"] == "https://mcp.test/x402/hive/solve"
+    assert repeat["mcp_endpoint"] == "https://mcp.test/hive/mcp"
+    assert repeat["price_minor"] == 500
+    assert repeat["amount_atomic_usdc"] == "5000000"
+    assert repeat["input_schema"]["properties"]["budget_minor"] == {
+        "type": "integer", "const": 500}
+    assert repeat["quote"]["authoritative_source"] == (
+        "repeat_route_unpaid_http_402")
+    assert repeat["quote"]["payer_hint_required_for_exact_quote"] is False
+    assert repeat["quote"]["payer_hint_authorizes_payment"] is False
+    assert commerce["auto_execute"] is False
+    assert commerce["payment_required"] is True
+    assert commerce["buyer_authorization_required"] is True
+    assert fake.calls == ["verify", "settle"]
+    assert len(core.calls) == 1
+
+
+def test_verify_failure_and_bad_schema_never_execute(tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = Facilitator(valid=False)
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    _, send, _, core, _, _ = build(tmp_path)
+    invalid = run(send(Request(request_body(args={"sector": "energy"}),
+                               extension_headers())))
+    assert invalid.status_code == 400 and core.calls == []
+    challenge = run(send(Request(request_body(), extension_headers())))
+    task = body(challenge)["task"]
+    required = task["status"]["message"]["metadata"]["x402.payment.required"]
+    failed = run(send(Request(request_body(task["id"], signed(required)),
+                              extension_headers())))
+    assert failed.status_code == 402
+    assert fake.calls == ["verify"] and core.calls == []
+
+
+def test_unsupported_jurisdiction_fails_before_a2a_task_or_quote(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    _, send, _, core, store, _ = build(tmp_path)
+
+    refused = run(send(Request(request_body(args={
+        "jurisdiction": "new-york", "sector": "energy"}),
+        extension_headers())))
+
+    assert refused.status_code == 400
+    assert body(refused)["title"] == "Invalid skill input"
+    assert body(refused)["detail"] == (
+        "jurisdiction must be one of AU, CA (Canada), EU, GLOBAL, JP, SG, UK, "
+        "US, or CALIFORNIA/US-CA")
+    assert fake.calls == []
+    assert core.calls == []
+    assert a2a_commerce.TASKS_KEY not in getattr(core, GATE_ATTR)
+
+    restored = Core()
+    assert store.restore("regulatory-radar", restored) is False
+
+
+def test_california_alias_creates_unpaid_task_with_canonical_input(
+        tmp_path, monkeypatch):
+    arm(monkeypatch)
+    fake = Facilitator()
+    monkeypatch.setattr(x402_v2, "_facilitator_post", fake)
+    _, send, _, core, _, _ = build(tmp_path)
+
+    challenge = run(send(Request(request_body(args={
+        "jurisdiction": "US-CA", "sector": "energy"}),
+        extension_headers())))
+
+    assert challenge.status_code == 200
+    task = body(challenge)["task"]
+    assert task["status"]["state"] == "TASK_STATE_INPUT_REQUIRED"
+    assert task["metadata"]["viridis.input"] == {
+        "jurisdiction": "california", "sector": "energy"}
+    assert fake.calls == []
+    assert core.calls == []
+
+
+def test_task_response_echoes_current_and_extension_headers(tmp_path, monkeypatch):
+    arm(monkeypatch)
+    card, send, _, _, _, _ = build(tmp_path)
+    response = run(card(Request()))
+    assert response.media_type == a2a_commerce.MEDIA_TYPE
+    assert response.headers["a2a-version"] == "1.0"
+    assert response.headers["a2a-extensions"] == a2a_commerce.EXTENSION_URI
+    challenge = run(send(Request(request_body(), {
+        "x-a2a-extensions": a2a_commerce.EXTENSION_URI})))
+    assert challenge.status_code == 200

@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll the exact Viridis PayanAgent bid for buyer acceptance
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+RandomizedDelaySec=30
+Unit=viridis-payanagent-fulfiller.service
+
+[Install]
+WantedBy=timers.target

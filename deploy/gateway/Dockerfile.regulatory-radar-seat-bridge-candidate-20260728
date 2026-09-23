@@ -1,0 +1,9 @@
+# Local candidate only. The base is an exact local import of the live
+# 28-agent gateway image. The build changes only x402_http.py and does not
+# carry production credentials, state, or runtime configuration.
+ARG BASE_IMAGE=viridis-production-import:gateway-9dc219-current-20260728
+FROM ${BASE_IMAGE}
+COPY --chown=0:0 scripts/apply_regulatory_radar_seat_bridge_overlay_20260728.py /tmp/apply-seat-bridge.py
+RUN python3 /tmp/apply-seat-bridge.py \
+    --path /fleet/deploy/gateway/x402_http.py \
+    && rm /tmp/apply-seat-bridge.py

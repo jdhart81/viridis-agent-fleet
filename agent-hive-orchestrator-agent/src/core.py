@@ -45,7 +45,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 logger = logging.getLogger("agent-hive-orchestrator")
 
-VERSION = "0.1.0"
+VERSION = "0.1.4"
 MAX_DEPTH = 3
 MAX_BUDGET_MINOR = 10_000_000  # $100k ceiling per job
 MAX_SUBTASKS = 64
@@ -855,10 +855,15 @@ class HiveOrchestratorCore:
                            "H7-thermodynamic-accounting", "H8-fail-safe",
                            "H9-recompute-in-verify", "H10-standalone-honesty"],
             "rails_mode": self.rails_mode,
-            "pricing": {"model": "premium per solve; sub-hires settle "
-                                 "through escrow at solver list price",
-                        "free_per_day": 3, "usd_per_solve": 5.00,
-                        "free_scope": "per caller, UTC day"},
+            "pricing": {
+                "model": ("premium per solve; sub-hires settle through "
+                          "escrow at solver list price"),
+                "free_per_day": 0,
+                "usd_per_solve": 5.00,
+                "free_scope": (
+                    "no free model-backed execution; read-only tools and "
+                    "unpaid preflight remain free"),
+            },
             "outputs": {"status": "str (ok|error)", "data": "dict"},
         }
 

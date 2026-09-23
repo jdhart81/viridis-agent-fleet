@@ -1,0 +1,5 @@
+FROM viridis-stable:base-reliability-sprint-native-20260901
+
+COPY viridis_mcp_gateway.py /fleet/deploy/gateway/viridis_mcp_gateway.py
+COPY reliability_sprint.html /fleet/deploy/gateway/reliability_sprint.html
+

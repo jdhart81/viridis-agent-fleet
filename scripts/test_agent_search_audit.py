@@ -29,6 +29,13 @@ class SearchAuditTests(unittest.TestCase):
         merchant['pagination']['total']=2
         self.assertEqual(a.inventory(merchant,{'a/b'})['status'],'unavailable')
 
+    def test_maxwell_index_requires_canonical_security_resource(self):
+        key='maxwell-defense/rehearse_defense'
+        merchant={'pagination':{'total':1},'resources':[{'resource':a.BASE+'/x402/'+key}]}
+        self.assertEqual(a.inventory(merchant,{key})['indexed_count'],0)
+        merchant['resources'][0]['resource']=a.SECURITY+'/x402/'+key
+        self.assertEqual(a.inventory(merchant,{key})['indexed_count'],1)
+
     def test_unconfigured_destination_cannot_be_fetched(self):
         with self.assertRaises(ValueError):a.fetch('https://untrusted.example/')
 

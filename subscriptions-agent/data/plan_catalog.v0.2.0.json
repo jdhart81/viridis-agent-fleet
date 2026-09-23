@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "pack_version": "0.2.0",
+  "effective_as_of": "2026-07-13",
+  "currency": "usd",
+  "default_included_calls_per_month": 1000,
+  "lifecycle_policy": {
+    "entitling_status": "active",
+    "non_entitling_statuses": [
+      "past_due",
+      "canceled",
+      "expired"
+    ],
+    "past_due_grace": "none",
+    "period_end_semantics": "exclusive"
+  },
+  "plans": [
+    {
+      "id": "energy-seat",
+      "name": "Energy Seat",
+      "price_minor": 24900,
+      "interval": "month",
+      "covered_agents": [
+        "disclosure-compiler",
+        "ghg-ledger",
+        "taxcredit-engine"
+      ],
+      "included_calls_per_month": 1000,
+      "overage": "per_call_rate",
+      "stripe_price_id": null,
+      "approval_status": "draft",
+      "checkout_enabled": false,
+      "coverage_ready": true,
+      "coverage_note": "all covered agents are mounted; owner approval and Stripe Price remain required",
+      "incumbent_anchor": "$300-500/hr advisory; $2k-10k/analysis"
+    },
+    {
+      "id": "taxcredit-seat",
+      "name": "Tax Credit Seat",
+      "price_minor": 14900,
+      "interval": "month",
+      "covered_agents": [
+        "taxcredit-engine"
+      ],
+      "included_calls_per_month": 1000,
+      "overage": "per_call_rate",
+      "stripe_price_id": null,
+      "approval_status": "draft",
+      "checkout_enabled": false,
+      "coverage_ready": true,
+      "coverage_note": "covered agent is mounted; owner approval and Stripe Price remain required",
+      "incumbent_anchor": "energy tax advisory"
+    },
+    {
+      "id": "climate-seat",
+      "name": "Climate Seat",
+      "price_minor": 14900,
+      "interval": "month",
+      "covered_agents": [
+        "disclosure-compiler",
+        "ghg-ledger"
+      ],
+      "included_calls_per_month": 1000,
+      "overage": "per_call_rate",
+      "stripe_price_id": null,
+      "approval_status": "draft",
+      "checkout_enabled": false,
+      "coverage_ready": true,
+      "coverage_note": "all covered agents are mounted; owner approval and Stripe Price remain required",
+      "incumbent_anchor": "$299/mo-$5k/yr carbon SaaS"
+    },
+    {
+      "id": "compliance-seat",
+      "name": "Compliance Seat",
+      "price_minor": 14900,
+      "interval": "month",
+      "covered_agents": [
+        "disclosure-compiler",
+        "regulatory-radar"
+      ],
+      "included_calls_per_month": 1000,
+      "overage": "per_call_rate",
+      "stripe_price_id": null,
+      "approval_status": "draft",
+      "checkout_enabled": false,
+      "coverage_ready": true,
+      "coverage_note": "all covered agents are mounted; owner approval and Stripe Price remain required",
+      "incumbent_anchor": "$400/mo entry RegTech"
+    },
+    {
+      "id": "ghg-seat",
+      "name": "GHG Seat",
+      "price_minor": 9900,
+      "interval": "month",
+      "covered_agents": [
+        "ghg-ledger"
+      ],
+      "included_calls_per_month": 1000,
+      "overage": "per_call_rate",
+      "stripe_price_id": null,
+      "approval_status": "draft",
+      "checkout_enabled": false,
+      "coverage_ready": true,
+      "coverage_note": "covered agent is mounted; owner approval and Stripe Price remain required",
+      "incumbent_anchor": "carbon SaaS entry"
+    }
+  ],
+  "sources": [
+    {
+      "id": "viridis-pricing-doctrine-2026-07-13",
+      "title": "Viridis Fleet Pricing",
+      "path": "docs/deployment/PRICING.md",
+      "accessed": "2026-07-13"
+    },
+    {
+      "id": "builder-spec-2026-07-13",
+      "title": "B2B seat-tier builder specification",
+      "path": "docs/deployment/SOL_TASK_b2b-seat-tier_build.md",
+      "accessed": "2026-07-13",
+      "authority": "non-authoritative product configuration pending owner confirmation"
+    },
+    {
+      "id": "disclosure-compiler-release-2026-07-13",
+      "title": "Disclosure Compiler fleet release specification",
+      "path": "docs/deployment/REVENUE_TOOLS_BUILD_LIST.md",
+      "accessed": "2026-07-13",
+      "authority": "coverage-readiness record only; does not approve pricing or checkout"
+    }
+  ],
+  "configuration_notice": "All covered agents are mounted. Stripe recurring Price IDs remain intentionally null and every plan remains draft with checkout disabled. Checkout fails closed until Justin creates and approves recurring Prices and a later catalog version records that approval. Monthly prices and the 1,000-call quota remain doctrine-aligned defaults pending owner confirmation."
+}

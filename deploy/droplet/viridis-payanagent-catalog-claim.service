@@ -1,0 +1,18 @@
+[Unit]
+Description=Claim five verified Viridis Payan catalog rows after feature deployment
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/viridis-fleet
+ExecStart=/usr/bin/python3 /root/viridis-fleet/auto_claim_payanagent_catalog_offers_20260804.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/root/viridis-fleet/payanagent-evidence
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true

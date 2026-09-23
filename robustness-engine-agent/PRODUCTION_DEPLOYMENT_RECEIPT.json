@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0",
+  "deployment_id": "robustness-engine-agent-0.6.0-20260807",
+  "state": "PRODUCTION_DEPLOYED_VERIFIED",
+  "verified_at_utc": "2026-08-07T19:53:05Z",
+  "target": {
+    "host_role": "Viridis agent-fleet production droplet",
+    "public_domain": "mcp.viridisconservation.com",
+    "compose_project": "robustness-engine-service",
+    "compose_directory": "/root/robustness-engine-service",
+    "container": "viridis-robustness-engine",
+    "network": "viridis-fleet_default",
+    "network_alias": "robustness-engine-agent",
+    "endpoint": "http://robustness-engine-agent:8080",
+    "visibility": "INTERNAL_FLEET_ONLY",
+    "public_route_added": false,
+    "host_port_published": false
+  },
+  "deployment_artifact_digest": "sha256:a47e1c34cc89c716e5b03784f3ae964818493ce40acbc186b94d2f63122744c2",
+  "local_build_config_digest": "sha256:f537e2b78b79240147a8fbb206922ae3551bd4836d9db38b61261c62bc707ff9",
+  "image_archive_sha256": "7cd4bf73f19ceec784331dffaef659f1e095b68793a210bd79b80b619c0e38d3",
+  "artifacts_sha256": {
+    "SERVICE_SOURCE_MANIFEST.json": "6f1e0fdfb24e1670a1444f818ccfb4a8efa8df3bc899914699ad123634fa79a5",
+    "DEPLOYMENT_CANDIDATE_MANIFEST.json": "baf30596f1aa46419bf8bc1bfe3533884d686c8d2fed18a652b4da4794c080c9",
+    "DEPLOYMENT_ACTIVATION_MANIFEST.json": "39f6544f9ff5aefee2afe0f38216d9d164c451185d5f6129850578f0b8c45d1f",
+    "RELEASE_MANIFEST.json": "fa026a7b9d3d20b237e8699c1eae1f59b60a1df27a15443bbc453c970daf4d2f",
+    "docker-compose.production.yml": "67a0f8b1ef0e04deb204c290abd57dfcce4a4e3d1f95aa240ef2aa0c963b3776",
+    "ROLLBACK_PLAN.md": "c8669fc728871781d7cf82bbad197296078ab7a3cf861c5d5ea00b9212c077e7"
+  },
+  "runtime": {
+    "container_created_at_utc": "2026-08-07T19:48:01.379705466Z",
+    "container_started_after_drill_at_utc": "2026-08-07T19:50:18.87422348Z",
+    "container_status": "running",
+    "container_health": "healthy",
+    "restart_policy": "unless-stopped",
+    "read_only_root_filesystem": true,
+    "capabilities_dropped": ["ALL"],
+    "no_new_privileges": true,
+    "restart_count_after_drill": 0
+  },
+  "verification": {
+    "service_source_manifest": "17_FILES_0_MISMATCHES",
+    "focused_service_tests": "5_PASS_0_FAIL",
+    "authoritative_isolated_fleet_runner": "2136_PASS_0_FAIL_0_ERROR_37_OF_37_CLEAN",
+    "release_manifest_valid_for_final": true,
+    "internal_gateway_reachability": "PASS",
+    "canonical_evaluation": {
+      "service_status": "ok",
+      "decision_status": "DECISION",
+      "selected_candidate": "split_control_recovery",
+      "record_sha256": "cb45c00a79c72c43fb86995097ae61c19be9fb08a37eae014ed80e230d4ee3cf",
+      "executed": false
+    },
+    "existing_gateway_healthy": true,
+    "existing_market_healthy": true,
+    "existing_security_services_healthy": true
+  },
+  "health": "PASS",
+  "rollback_verified": true,
+  "rollback": {
+    "method": "stop and restart only the new Compose service from the retained immutable image",
+    "started_at_utc": "2026-08-07T19:50:17Z",
+    "finished_at_utc": "2026-08-07T19:50:25Z",
+    "measured_rto_seconds": 8,
+    "same_image_after_restart": true,
+    "existing_services_unchanged_and_healthy": true,
+    "persistent_volumes_touched": false
+  },
+  "boundaries": {
+    "decision_execution": "DISABLED",
+    "public_canon_admitted": false,
+    "publication_authority": false,
+    "license": "unassigned",
+    "revenue_asserted": false,
+    "observed_benefit_asserted": false
+  }
+}

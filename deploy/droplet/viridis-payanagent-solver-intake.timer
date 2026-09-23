@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll the Viridis PayanAgent solver intake every five minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30s
+Persistent=true
+Unit=viridis-payanagent-solver-intake.service
+
+[Install]
+WantedBy=timers.target

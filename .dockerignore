@@ -44,3 +44,7 @@ Agent harvest /**
 *.bak_n*
 .DS_Store
 **/.DS_Store
+
+# Signed Cliff Check release exclusions (never enter build context).
+Agent harvest /secrets/
+production-backups/2026-08-06/**/production-after-stage.json

@@ -1,0 +1,196 @@
+{
+  "case_id": "municipal-heat-001",
+  "case_version": "0.1",
+  "model_id": "synthetic-heat-model-v1",
+  "lineage": {
+    "artifacts": [
+      {
+        "artifact_id": "sha256:6f79e3acbca5d5a0fd2885738d43f7139b2fe29daf51a90cc64ebe8440dc3fe6",
+        "kind": "MODEL",
+        "manifest": {
+          "model_id": "synthetic-heat-model-v1",
+          "version": "1.0.0",
+          "provenance": "Synthetic reference fixture; no empirical validation"
+        },
+        "parent_ids": [],
+        "recall": null
+      },
+      {
+        "artifact_id": "sha256:9d3843a84b994a048a1de2d818aa53ca8ef94581233f216d66e1545f863e9433",
+        "kind": "ADAPTER",
+        "manifest": {
+          "adapter_id": "municipal-heat-fixture-adapter",
+          "version": "1.0.0",
+          "contract": "Translate the synthetic municipal heat fixture into the domain-independent outcome schema"
+        },
+        "parent_ids": [
+          "sha256:6f79e3acbca5d5a0fd2885738d43f7139b2fe29daf51a90cc64ebe8440dc3fe6"
+        ],
+        "recall": null
+      }
+    ],
+    "model_artifact_id": "sha256:6f79e3acbca5d5a0fd2885738d43f7139b2fe29daf51a90cc64ebe8440dc3fe6",
+    "adapter_artifact_ids": [
+      "sha256:9d3843a84b994a048a1de2d818aa53ca8ef94581233f216d66e1545f863e9433"
+    ],
+    "required_artifact_ids": [
+      "sha256:6f79e3acbca5d5a0fd2885738d43f7139b2fe29daf51a90cc64ebe8440dc3fe6",
+      "sha256:9d3843a84b994a048a1de2d818aa53ca8ef94581233f216d66e1545f863e9433"
+    ]
+  },
+  "assessments": [
+    { "candidate_id": "central_cooling_centers", "scenario_id": "ordinary_heatwave", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.6, "confidence": 0.82, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "ordinary_heatwave", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.95, "confidence": 0.78, "evidence_refs": ["service_model"] },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "grid_outage_heatwave", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "hour_48", "observed_value": 0.9, "confidence": 0.78, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "grid_outage_heatwave", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "hour_48", "observed_value": 0.82, "confidence": 0.74, "evidence_refs": ["service_model"] },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "smoke_heat_compound", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.95, "confidence": 0.75, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "smoke_heat_compound", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.8, "confidence": 0.73, "evidence_refs": ["service_model"] },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "transit_disruption", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "hour_24", "observed_value": 0.8, "confidence": 0.77, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "transit_disruption", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "hour_24", "observed_value": 0.81, "confidence": 0.72, "evidence_refs": ["service_model"] },
+
+    { "candidate_id": "distributed_passive_network", "scenario_id": "ordinary_heatwave", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.65, "confidence": 0.82, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "ordinary_heatwave", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.9, "confidence": 0.78, "evidence_refs": ["service_model"] },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "grid_outage_heatwave", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "hour_48", "observed_value": 0.9, "confidence": 0.78, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "grid_outage_heatwave", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "hour_48", "observed_value": 0.86, "confidence": 0.75, "evidence_refs": ["service_model"] },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "smoke_heat_compound", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.82, "confidence": 0.75, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "smoke_heat_compound", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.84, "observed_interval": { "lower": 0.82, "upper": 0.86, "basis": "Synthetic service-access range" }, "confidence": 0.74, "evidence_refs": ["service_model"] },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "transit_disruption", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "hour_24", "observed_value": 0.7, "confidence": 0.77, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "transit_disruption", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "hour_24", "observed_value": 0.88, "confidence": 0.75, "evidence_refs": ["service_model"] },
+
+    { "candidate_id": "alert_only", "scenario_id": "ordinary_heatwave", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.9, "confidence": 0.82, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "alert_only", "scenario_id": "ordinary_heatwave", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.82, "confidence": 0.78, "evidence_refs": ["service_model"] },
+    { "candidate_id": "alert_only", "scenario_id": "grid_outage_heatwave", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "hour_48", "observed_value": 1.4, "confidence": 0.78, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "alert_only", "scenario_id": "grid_outage_heatwave", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "hour_48", "observed_value": 0.5, "confidence": 0.74, "evidence_refs": ["service_model"] },
+    { "candidate_id": "alert_only", "scenario_id": "smoke_heat_compound", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 1.8, "confidence": 0.75, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "alert_only", "scenario_id": "smoke_heat_compound", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "event_peak", "observed_value": 0.4, "confidence": 0.73, "evidence_refs": ["service_model"] },
+    { "candidate_id": "alert_only", "scenario_id": "transit_disruption", "invariant_id": "high_risk_health_index", "stakeholder_id": "high_risk_residents", "scale": "municipal", "time_point": "hour_24", "observed_value": 1.2, "confidence": 0.77, "evidence_refs": ["heat_model"] },
+    { "candidate_id": "alert_only", "scenario_id": "transit_disruption", "invariant_id": "cooling_access_fraction", "stakeholder_id": "residents", "scale": "municipal", "time_point": "hour_24", "observed_value": 0.65, "confidence": 0.72, "evidence_refs": ["service_model"] }
+  ],
+  "trajectories": [
+    {
+      "candidate_id": "central_cooling_centers",
+      "scenario_id": "smoke_heat_compound",
+      "invariant_id": "high_risk_health_index",
+      "stakeholder_id": "high_risk_residents",
+      "scale": "municipal",
+      "basis": "Synthetic ten-day compound-event trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0.7, "evidence_refs": ["heat_model"] },
+        { "elapsed_hours": 72, "observed_value": 0.95, "observed_interval": { "lower": 0.9, "upper": 0.98, "basis": "Synthetic heat-health envelope" }, "evidence_refs": ["heat_model"] },
+        { "elapsed_hours": 240, "observed_value": 0.8, "evidence_refs": ["heat_model"] }
+      ]
+    },
+    {
+      "candidate_id": "central_cooling_centers",
+      "scenario_id": "smoke_heat_compound",
+      "invariant_id": "cooling_access_fraction",
+      "stakeholder_id": "residents",
+      "scale": "municipal",
+      "basis": "Synthetic ten-day compound-event trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0.95, "evidence_refs": ["service_model"] },
+        { "elapsed_hours": 72, "observed_value": 0.82, "observed_interval": { "lower": 0.8, "upper": 0.84, "basis": "Synthetic service envelope" }, "evidence_refs": ["service_model"] },
+        { "elapsed_hours": 240, "observed_value": 0.9, "evidence_refs": ["service_model"] }
+      ]
+    },
+    {
+      "candidate_id": "distributed_passive_network",
+      "scenario_id": "smoke_heat_compound",
+      "invariant_id": "high_risk_health_index",
+      "stakeholder_id": "high_risk_residents",
+      "scale": "municipal",
+      "basis": "Synthetic ten-day compound-event trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0.68, "evidence_refs": ["heat_model"] },
+        { "elapsed_hours": 72, "observed_value": 0.82, "observed_interval": { "lower": 0.78, "upper": 0.86, "basis": "Synthetic heat-health envelope" }, "evidence_refs": ["heat_model"] },
+        { "elapsed_hours": 240, "observed_value": 0.72, "evidence_refs": ["heat_model"] }
+      ]
+    },
+    {
+      "candidate_id": "distributed_passive_network",
+      "scenario_id": "smoke_heat_compound",
+      "invariant_id": "cooling_access_fraction",
+      "stakeholder_id": "residents",
+      "scale": "municipal",
+      "basis": "Synthetic ten-day compound-event trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0.9, "evidence_refs": ["service_model"] },
+        { "elapsed_hours": 72, "observed_value": 0.84, "observed_interval": { "lower": 0.82, "upper": 0.86, "basis": "Synthetic service envelope" }, "evidence_refs": ["service_model"] },
+        { "elapsed_hours": 240, "observed_value": 0.88, "evidence_refs": ["service_model"] }
+      ]
+    },
+    {
+      "candidate_id": "alert_only",
+      "scenario_id": "smoke_heat_compound",
+      "invariant_id": "high_risk_health_index",
+      "stakeholder_id": "high_risk_residents",
+      "scale": "municipal",
+      "basis": "Synthetic ten-day compound-event trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0.9, "evidence_refs": ["heat_model"] },
+        { "elapsed_hours": 72, "observed_value": 1.8, "evidence_refs": ["heat_model"] },
+        { "elapsed_hours": 240, "observed_value": 1.1, "evidence_refs": ["heat_model"] }
+      ]
+    },
+    {
+      "candidate_id": "alert_only",
+      "scenario_id": "smoke_heat_compound",
+      "invariant_id": "cooling_access_fraction",
+      "stakeholder_id": "residents",
+      "scale": "municipal",
+      "basis": "Synthetic ten-day compound-event trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0.85, "evidence_refs": ["service_model"] },
+        { "elapsed_hours": 72, "observed_value": 0.4, "evidence_refs": ["service_model"] },
+        { "elapsed_hours": 240, "observed_value": 0.7, "evidence_refs": ["service_model"] }
+      ]
+    }
+  ],
+  "dependencies": [
+    { "id": "regional_energy_system", "name": "Regional energy supply", "kind": "resource", "parent_ids": [], "failure_modes": ["regional fuel and electricity scarcity"], "evidence_refs": ["service_model"] },
+    { "id": "municipal_operations", "name": "Municipal emergency operations", "kind": "organization", "parent_ids": [], "failure_modes": ["staffing or command disruption"], "evidence_refs": ["service_model"] },
+    { "id": "regional_grid", "name": "Regional electricity grid", "kind": "service", "parent_ids": ["regional_energy_system"], "failure_modes": ["outage", "load shedding"], "evidence_refs": ["service_model"] },
+    { "id": "liquid_fuel", "name": "Liquid-fuel supply", "kind": "resource", "parent_ids": ["regional_energy_system"], "failure_modes": ["fuel shortage", "distribution interruption"], "evidence_refs": ["service_model"] },
+    { "id": "transit_network", "name": "Municipal transit network", "kind": "service", "parent_ids": ["municipal_operations"], "failure_modes": ["road closure", "vehicle shortage"], "evidence_refs": ["service_model"] },
+    { "id": "central_staff", "name": "Central facility staff", "kind": "organization", "parent_ids": ["municipal_operations"], "failure_modes": ["staff shortage", "facility access loss"], "evidence_refs": ["service_model"] },
+    { "id": "building_envelope", "name": "Retrofitted building envelope", "kind": "component", "parent_ids": [], "failure_modes": ["thermal performance loss"], "evidence_refs": ["service_model"] },
+    { "id": "local_maintenance", "name": "Local building maintenance", "kind": "organization", "parent_ids": [], "failure_modes": ["repair capacity loss"], "evidence_refs": ["community_review"] },
+    { "id": "microgrids", "name": "Neighborhood microgrids", "kind": "service", "parent_ids": [], "failure_modes": ["islanding failure", "storage depletion"], "evidence_refs": ["service_model"] },
+    { "id": "community_staff", "name": "Neighborhood hub staff", "kind": "organization", "parent_ids": [], "failure_modes": ["local staffing shortage"], "evidence_refs": ["community_review"] },
+    { "id": "cargo_bikes", "name": "Cargo-bike outreach fleet", "kind": "component", "parent_ids": [], "failure_modes": ["fleet loss", "route obstruction"], "evidence_refs": ["service_model"] },
+    { "id": "public_health_workers", "name": "Distributed public-health workers", "kind": "organization", "parent_ids": [], "failure_modes": ["workforce depletion"], "evidence_refs": ["community_review"] },
+    { "id": "telecom_network", "name": "Public telecommunications network", "kind": "service", "parent_ids": ["regional_grid"], "failure_modes": ["network outage", "power loss"], "evidence_refs": ["service_model"] }
+  ],
+  "fallback_paths": [
+    { "candidate_id": "central_cooling_centers", "path_id": "central_facilities", "dependency_ids": ["regional_grid", "transit_network", "central_staff"] },
+    { "candidate_id": "central_cooling_centers", "path_id": "shuttle_backup", "dependency_ids": ["liquid_fuel", "transit_network", "central_staff"] },
+    { "candidate_id": "distributed_passive_network", "path_id": "passive_safe_rooms", "dependency_ids": ["building_envelope", "local_maintenance"] },
+    { "candidate_id": "distributed_passive_network", "path_id": "neighborhood_hubs", "dependency_ids": ["microgrids", "community_staff"] },
+    { "candidate_id": "distributed_passive_network", "path_id": "mobile_outreach", "dependency_ids": ["cargo_bikes", "public_health_workers"] },
+    { "candidate_id": "alert_only", "path_id": "public_warning", "dependency_ids": ["telecom_network", "regional_grid"] }
+  ],
+  "recovery": [
+    { "candidate_id": "central_cooling_centers", "scenario_id": "ordinary_heatwave", "detection_time_hours": 2, "containment_time_hours": 8, "recovery_time_hours": 12, "switching_cost": 1, "irreversibility": 0.6 },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "grid_outage_heatwave", "detection_time_hours": 0.5, "containment_time_hours": 16, "recovery_time_hours": 72, "switching_cost": 4, "irreversibility": 0.6 },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "smoke_heat_compound", "detection_time_hours": 4, "containment_time_hours": 18, "recovery_time_hours": 96, "switching_cost": 4, "irreversibility": 0.6 },
+    { "candidate_id": "central_cooling_centers", "scenario_id": "transit_disruption", "detection_time_hours": 1, "containment_time_hours": 12, "recovery_time_hours": 48, "switching_cost": 3, "irreversibility": 0.6 },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "ordinary_heatwave", "detection_time_hours": 1, "containment_time_hours": 4, "recovery_time_hours": 8, "switching_cost": 1, "irreversibility": 0.2 },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "grid_outage_heatwave", "detection_time_hours": 0.5, "containment_time_hours": 6, "recovery_time_hours": 24, "switching_cost": 2, "irreversibility": 0.2 },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "smoke_heat_compound", "detection_time_hours": 2, "containment_time_hours": 8, "recovery_time_hours": 36, "switching_cost": 2, "irreversibility": 0.2 },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "transit_disruption", "detection_time_hours": 1, "containment_time_hours": 5, "recovery_time_hours": 18, "switching_cost": 1, "irreversibility": 0.2 },
+    { "candidate_id": "alert_only", "scenario_id": "ordinary_heatwave", "detection_time_hours": 6, "containment_time_hours": 24, "recovery_time_hours": 48, "switching_cost": 1, "irreversibility": 0.1 },
+    { "candidate_id": "alert_only", "scenario_id": "grid_outage_heatwave", "detection_time_hours": 2, "containment_time_hours": 48, "recovery_time_hours": 120, "switching_cost": 6, "irreversibility": 0.1 },
+    { "candidate_id": "alert_only", "scenario_id": "smoke_heat_compound", "detection_time_hours": 8, "containment_time_hours": 72, "recovery_time_hours": 168, "switching_cost": 8, "irreversibility": 0.1 },
+    { "candidate_id": "alert_only", "scenario_id": "transit_disruption", "detection_time_hours": 4, "containment_time_hours": 36, "recovery_time_hours": 96, "switching_cost": 4, "irreversibility": 0.1 }
+  ],
+  "externalities": [
+    { "candidate_id": "central_cooling_centers", "scenario_id": "transit_disruption", "stakeholder_id": "high_risk_residents", "description": "Access-control and centralized transport requirements exclude part of the priority population", "measure": "normalized exclusion severity", "magnitude": 0.9, "basis": "Affected-community review on a declared zero-to-one severity scale", "prohibited": true, "evidence_refs": ["community_review"] },
+    { "candidate_id": "distributed_passive_network", "scenario_id": "ordinary_heatwave", "stakeholder_id": "residents", "description": "Neighborhood volunteers carry additional event workload", "measure": "normalized unpaid-work burden", "magnitude": 0.1, "basis": "Affected-community review on a declared zero-to-one severity scale", "prohibited": false, "evidence_refs": ["community_review"] },
+    { "candidate_id": "alert_only", "scenario_id": "grid_outage_heatwave", "stakeholder_id": "high_risk_residents", "description": "Protective burden shifts to households with the fewest private resources", "measure": "normalized household burden", "magnitude": 0.8, "basis": "Affected-community review on a declared zero-to-one severity scale", "prohibited": false, "evidence_refs": ["community_review"] }
+  ],
+  "candidate_metrics": [
+    { "candidate_id": "central_cooling_centers", "name": "annual_cost_musd", "value": 30, "value_interval": { "lower": 28, "upper": 34, "basis": "Synthetic lifecycle-cost range" }, "direction": "minimize", "unit": "million USD", "evidence_refs": ["service_model"] },
+    { "candidate_id": "distributed_passive_network", "name": "annual_cost_musd", "value": 45, "value_interval": { "lower": 42, "upper": 50, "basis": "Synthetic lifecycle-cost range" }, "direction": "minimize", "unit": "million USD", "evidence_refs": ["service_model"] },
+    { "candidate_id": "alert_only", "name": "annual_cost_musd", "value": 5, "value_interval": { "lower": 4, "upper": 7, "basis": "Synthetic lifecycle-cost range" }, "direction": "minimize", "unit": "million USD", "evidence_refs": ["service_model"] }
+  ]
+}

@@ -1,0 +1,285 @@
+From ee2b47987bdb952d2ce2fbace597d3febfa94800 Mon Sep 17 00:00:00 2001
+From: Jdhart82 <globalsoilintelligenceproject@gmail.com>
+Date: Thu, 6 Aug 2026 12:23:54 -0700
+Subject: [PATCH] Add Security Preflight buyer path
+
+---
+ docs/QUICKSTART_FIRST_CALL.md    | 32 +++++++++++
+ gateway/test_wave9_activation.py | 67 +++++++++++++++++++++++
+ scripts/x402_demo_client.py      | 92 ++++++++++++++++++++++++++++++--
+ 3 files changed, 187 insertions(+), 4 deletions(-)
+
+diff --git a/docs/QUICKSTART_FIRST_CALL.md b/docs/QUICKSTART_FIRST_CALL.md
+index 42126a6..03fe1bf 100644
+--- a/docs/QUICKSTART_FIRST_CALL.md
++++ b/docs/QUICKSTART_FIRST_CALL.md
+@@ -77,6 +77,38 @@ x402 SDK payment selector that creates the signed retry. If the wallet already
+ used its intro or the price is otherwise above $0.01, it stops without paying.
+ Keep the private key outside prompts, repositories, tool arguments, and logs.
+ 
++## Inspect Security Preflight before paying
++
++Security Preflight statically checks the MCP manifest, tool schemas, policy,
++and sample inputs supplied by the caller. It does not fetch or certify the live
++runtime. Inspect its complete example request and exact live 402 without
++signing or paying:
++
++```bash
++python3 scripts/x402_demo_client.py \
++  --dry-run --route security-preflight
++```
++
++To authorize exactly one paid attempt when a fresh wallet quote is at or below
++one cent:
++
++```bash
++export X402_BUYER_PRIVATE_KEY='0x...'
++python3 scripts/x402_demo_client.py \
++  --route security-preflight --max-payment-usdc 0.01
++```
++
++The fresh HTTP 402 is authoritative. The client stops before payment if the
++quote exceeds the buyer's ceiling. The ordinary list price is $1.00, and every
++later call requires a new quote and new buyer authorization.
++
++The same client now supports the advertised bounded dated watch:
++
++```bash
++python3 scripts/x402_demo_client.py \
++  --dry-run --route regulatory-watch
++```
++
+ ## Canonical Regulatory Radar strict-v2 fixture
+ 
+ Use this exact request when recording or validating the paid Regulatory Radar
+diff --git a/gateway/test_wave9_activation.py b/gateway/test_wave9_activation.py
+index 666e41d..186e107 100644
+--- a/gateway/test_wave9_activation.py
++++ b/gateway/test_wave9_activation.py
+@@ -13,6 +13,8 @@ import pytest
+ 
+ HERE = Path(__file__).resolve().parent
+ ROOT = HERE.parents[1]
++if not (ROOT / "scripts").exists():  # public mirror: gateway/ at root
++    ROOT = HERE.parent
+ sys.path.insert(0, str(HERE))
+ 
+ 
+@@ -32,6 +34,8 @@ class FakeBuyer:
+         "disclosure-compiler": "2000000",
+         "taxcredit-engine": "2000000",
+         "regulatory-radar": "250000",
++        "security-preflight": "1000000",
++        "hive": "5000000",
+     }
+ 
+     def __init__(self):
+@@ -64,6 +68,15 @@ class FakeBuyer:
+             "taxcredit-engine": {"credit": "45V",
+                                  "audit_sha256": "tax-audit"},
+             "regulatory-radar": {"total_regulations": 4},
++            "security-preflight": {
++                "verdict": "pass",
++                "receipt": {"receipt_id": "vsr_demo"},
++            },
++            "hive": {
++                "job_id": "job-hive-demo",
++                "audit_sha256": "hive-audit",
++                "synthesis": {"recommendation": "prioritize controls"},
++            },
+         }[agent]
+         return {"status": 200, "headers": {"PAYMENT-RESPONSE": "receipt"},
+                 "body": {"status": "ok", "data": data}}
+@@ -136,6 +149,60 @@ def test_demo_client_single_route_limit_refuses_before_payment():
+     assert buyer.payments == []
+ 
+ 
++def test_demo_client_advertised_watch_route_is_selectable_and_bounded():
++    demo = _load_demo()
++    buyer = FakeBuyer()
++    result = demo.run_workflow(
++        "https://mcp.test",
++        buyer,
++        steps=demo.select_steps("regulatory-watch"),
++        max_payment_atomic=250_000,
++    )
++    assert [agent for agent, _ in buyer.payments] == ["regulatory-radar"]
++    assert buyer.payments[0][1] == {
++        "jurisdiction": "US",
++        "topics": ["emissions", "climate"],
++        "lookback_days": 90,
++    }
++    assert result["workflow"] == "watch"
++    assert result["list_total_atomic_usdc"] == 250_000
++
++
++def test_demo_client_security_preflight_dry_run_is_complete_and_never_pays():
++    demo = _load_demo()
++    buyer = FakeBuyer()
++    result = demo.run_workflow(
++        "https://mcp.test",
++        buyer,
++        dry_run=True,
++        steps=demo.select_steps("security-preflight"),
++    )
++    assert [agent for agent, _ in buyer.challenges] == ["security-preflight"]
++    assert buyer.payments == []
++    payload = buyer.challenges[0][1]
++    assert "action" not in payload
++    assert payload["agent_id"] == "buyer-security-demo"
++    assert payload["manifest"]["tools"][0]["input_schema"][
++        "additionalProperties"] is False
++    assert payload["policy"]["allowed_tools"] == ["read_status"]
++    assert result["workflow"] == "secure"
++    assert result["list_total_atomic_usdc"] == 1_000_000
++
++
++def test_demo_client_security_preflight_ceiling_refuses_before_payment():
++    demo = _load_demo()
++    buyer = FakeBuyer()
++    with pytest.raises(RuntimeError, match="no payment attempted"):
++        demo.run_workflow(
++            "https://mcp.test",
++            buyer,
++            steps=demo.select_steps("security-preflight"),
++            max_payment_atomic=10_000,
++        )
++    assert [agent for agent, _ in buyer.challenges] == ["security-preflight"]
++    assert buyer.payments == []
++
++
+ def test_demo_client_payment_limit_is_exact_usdc():
+     demo = _load_demo()
+     assert demo._usdc_to_atomic("0.01") == 10_000
+diff --git a/scripts/x402_demo_client.py b/scripts/x402_demo_client.py
+index 875e6c0..cc780b2 100755
+--- a/scripts/x402_demo_client.py
++++ b/scripts/x402_demo_client.py
+@@ -12,6 +12,20 @@ Single paid Regulatory Radar call (new-wallet intro is currently $0.01):
+   python3 scripts/x402_demo_client.py \
+     --route regulatory-radar --max-payment-usdc 0.01
+ 
++Inspect Security Preflight without paying (prints the live quote only):
++  python3 scripts/x402_demo_client.py \
++    --dry-run --route security-preflight
++
++Single paid Security Preflight call (new-wallet intro is currently $0.01):
++  export X402_BUYER_PRIVATE_KEY='0x...'
++  python3 scripts/x402_demo_client.py \
++    --route security-preflight --max-payment-usdc 0.01
++
++Single paid reviewed Hive solve (fixed $5.00; no execution free tier):
++  export X402_BUYER_PRIVATE_KEY='0x...'
++  python3 scripts/x402_demo_client.py \
++    --route hive --max-payment-usdc 5.00
++
+ Paid Base-mainnet run (wallet needs Base USDC; never paste the key in code):
+   export X402_BUYER_PRIVATE_KEY='0x...'
+   python3 scripts/x402_demo_client.py
+@@ -130,6 +144,59 @@ def _radar_input(outputs: dict) -> dict:
+             "query": f"{credit} clean energy tax credit emissions disclosure"}
+ 
+ 
++def _radar_watch_input(_: dict) -> dict:
++    return {
++        "jurisdiction": "US",
++        "topics": ["emissions", "climate"],
++        "lookback_days": 90,
++    }
++
++
++def _security_preflight_input(_: dict) -> dict:
++    return {
++        "agent_id": "buyer-security-demo",
++        "manifest": {
++            "endpoint": "https://buyer.example/mcp",
++            "auth": "bearer",
++            "tools": [{
++                "name": "read_status",
++                "input_schema": {
++                    "type": "object",
++                    "properties": {"id": {"type": "string"}},
++                    "required": ["id"],
++                    "additionalProperties": False,
++                },
++            }],
++        },
++        "policy": {
++            "allowed_tools": ["read_status"],
++            "denied_tools": [],
++            "approval_required_tools": [],
++        },
++        "sample_inputs": ["summarize this ordinary record"],
++    }
++
++
++def _hive_input(_: dict) -> dict:
++    return {
++        "problem": (
++            "Compare demand flexibility and equipment-efficiency upgrades "
++            "for an industrial site. Return a reviewed recommendation, key "
++            "assumptions, and the highest-risk uncertainties."
++        ),
++        "budget_minor": 500,
++        "subtasks": [
++            "Assess technical feasibility and operational constraints.",
++            "Assess economics, implementation risk, and evidence gaps.",
++        ],
++        "depth": 0,
++        "redundancy": 2,
++        "accept_threshold": 0.6,
++        "seed": 0,
++        "fee_bps": 0,
++    }
++
++
+ STEPS = (
+     Step("measure", "quantity-takeoff", "calculate_takeoff", "$0.50", 500_000,
+          _takeoff_input),
+@@ -143,13 +210,30 @@ STEPS = (
+          _radar_input),
+ )
+ 
++HIVE_STEP = Step(
++    "orchestrate", "hive", "solve", "$5.00", 5_000_000, _hive_input)
++RADAR_WATCH_STEP = Step(
++    "watch", "regulatory-radar", "monitor_changes", "$0.25", 250_000,
++    _radar_watch_input)
++SECURITY_PREFLIGHT_STEP = Step(
++    "secure", "security-preflight", "security_preflight", "$1.00",
++    1_000_000, _security_preflight_input)
++SELECTABLE_ROUTES = {
++    **{step.agent: (step,) for step in STEPS},
++    "regulatory-watch": (RADAR_WATCH_STEP,),
++    "security-preflight": (SECURITY_PREFLIGHT_STEP,),
++    "hive": (HIVE_STEP,),
++}
++SELECTABLE_STEPS = STEPS + (
++    RADAR_WATCH_STEP, SECURITY_PREFLIGHT_STEP, HIVE_STEP)
++
+ 
+ def select_steps(route: Optional[str] = None) -> tuple[Step, ...]:
+-    """Return the full workflow or exactly one explicitly selected route."""
++    """Return the five-step workflow or one explicitly selected paid route."""
+     if route is None:
+         return STEPS
+-    selected = tuple(step for step in STEPS if step.agent == route)
+-    if not selected:
++    selected = SELECTABLE_ROUTES.get(route)
++    if selected is None:
+         raise ValueError(f"unknown route: {route}")
+     return selected
+ 
+@@ -347,7 +431,7 @@ def main(argv: Optional[list[str]] = None) -> int:
+     parser.add_argument("--dry-run", action="store_true",
+                         help="print live 402 requirements without paying")
+     parser.add_argument(
+-        "--route", choices=tuple(step.agent for step in STEPS),
++        "--route", choices=tuple(SELECTABLE_ROUTES),
+         help="call exactly one route instead of the five-route workflow")
+     parser.add_argument(
+         "--max-payment-usdc", type=_usdc_to_atomic, metavar="USDC",
+-- 
+2.47.1
+
+

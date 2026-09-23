@@ -1,0 +1,138 @@
+{
+ "schema_version": "1.0",
+ "pack_version": "0.3.1",
+ "effective_as_of": "2026-07-27",
+ "currency": "usd",
+ "default_included_calls_per_month": 1000,
+ "lifecycle_policy": {
+  "entitling_status": "active",
+  "non_entitling_statuses": [
+   "past_due",
+   "canceled",
+   "expired"
+  ],
+  "past_due_grace": "none",
+  "period_end_semantics": "exclusive"
+ },
+ "plans": [
+  {
+   "id": "energy-seat",
+   "name": "Energy Seat",
+   "price_minor": 24900,
+   "interval": "month",
+   "covered_agents": [
+    "disclosure-compiler",
+    "ghg-ledger",
+    "taxcredit-engine"
+   ],
+   "included_calls_per_month": 1000,
+   "overage": "per_call_rate",
+   "stripe_price_id": "price_1TtW3EDTpwaqE8SsY84gwMZm",
+   "approval_status": "approved",
+   "checkout_enabled": true,
+   "coverage_ready": true,
+   "coverage_note": "all covered agents are mounted; owner-approved active monthly Stripe Price configured",
+   "incumbent_anchor": "$300-500/hr advisory; $2k-10k/analysis"
+  },
+  {
+   "id": "taxcredit-seat",
+   "name": "Tax Credit Seat",
+   "price_minor": 14900,
+   "interval": "month",
+   "covered_agents": [
+    "taxcredit-engine"
+   ],
+   "included_calls_per_month": 1000,
+   "overage": "per_call_rate",
+   "stripe_price_id": "price_1TtW3FDTpwaqE8Ss1dJNWrrG",
+   "approval_status": "approved",
+   "checkout_enabled": true,
+   "coverage_ready": true,
+   "coverage_note": "covered agent is mounted; owner-approved active monthly Stripe Price configured",
+   "incumbent_anchor": "energy tax advisory"
+  },
+  {
+   "id": "climate-seat",
+   "name": "Climate Seat",
+   "price_minor": 14900,
+   "interval": "month",
+   "covered_agents": [
+    "disclosure-compiler",
+    "ghg-ledger"
+   ],
+   "included_calls_per_month": 1000,
+   "overage": "per_call_rate",
+   "stripe_price_id": "price_1TtW3FDTpwaqE8Ss6CicwvSe",
+   "approval_status": "approved",
+   "checkout_enabled": true,
+   "coverage_ready": true,
+   "coverage_note": "all covered agents are mounted; owner-approved active monthly Stripe Price configured",
+   "incumbent_anchor": "$299/mo-$5k/yr carbon SaaS"
+  },
+  {
+   "id": "compliance-seat",
+   "name": "Compliance Seat",
+   "price_minor": 14900,
+   "interval": "month",
+   "covered_agents": [
+    "disclosure-compiler",
+    "regulatory-radar"
+   ],
+   "included_calls_per_month": 1000,
+   "overage": "per_call_rate",
+   "stripe_price_id": "price_1TtW3GDTpwaqE8SsIbqgzS6T",
+   "approval_status": "approved",
+   "checkout_enabled": true,
+   "coverage_ready": true,
+   "coverage_note": "all covered agents are mounted; owner-approved active monthly Stripe Price configured",
+   "incumbent_anchor": "$400/mo entry RegTech"
+  },
+  {
+   "id": "ghg-seat",
+   "name": "GHG Seat",
+   "price_minor": 9900,
+   "interval": "month",
+   "covered_agents": [
+    "ghg-ledger"
+   ],
+   "included_calls_per_month": 1000,
+   "overage": "per_call_rate",
+   "stripe_price_id": "price_1TtW3GDTpwaqE8SsEapXz1an",
+   "approval_status": "approved",
+   "checkout_enabled": true,
+   "coverage_ready": true,
+   "coverage_note": "covered agent is mounted; owner-approved active monthly Stripe Price configured",
+   "incumbent_anchor": "carbon SaaS entry"
+  }
+ ],
+ "sources": [
+  {
+   "id": "viridis-pricing-doctrine-2026-07-13",
+   "title": "Viridis Fleet Pricing",
+   "path": "docs/deployment/PRICING.md",
+   "accessed": "2026-07-13"
+  },
+  {
+   "id": "builder-spec-2026-07-13",
+   "title": "B2B seat-tier builder specification",
+   "path": "docs/deployment/SOL_TASK_b2b-seat-tier_build.md",
+   "accessed": "2026-07-13",
+   "authority": "non-authoritative product configuration pending owner confirmation"
+  },
+  {
+   "id": "disclosure-compiler-release-2026-07-13",
+   "title": "Disclosure Compiler fleet release specification",
+   "path": "docs/deployment/REVENUE_TOOLS_BUILD_LIST.md",
+   "accessed": "2026-07-13",
+   "authority": "coverage-readiness record only; does not approve pricing or checkout"
+  },
+  {
+   "id": "stripe-live-catalog-readback-2026-07-27",
+   "title": "Connected Stripe live product and Price readback",
+   "path": "docs/deployment/SUBSCRIPTION_CATALOG_TRUTH_REPAIR_CANDIDATE_2026-07-27.md",
+   "accessed": "2026-07-27",
+   "authority": "read-only verification of active monthly Price contracts; not checkout, subscription, payment, or revenue evidence"
+  }
+ ],
+ "configuration_notice": "All five covered plans have owner-approved active monthly Stripe Prices and 1,000 included calls. Checkout is ready only while the exact catalog and restricted Stripe-hosted link provider are attached; the buyer must still complete Stripe Checkout. A page view, link creation, or catalog entry is not a subscription, payment, or revenue event."
+}

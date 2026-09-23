@@ -1,0 +1,353 @@
+{
+  "schema_version": "viridis.ghg.factor-packs.v1",
+  "pack_version": "2026.07.13-v0.1.0",
+  "effective_as_of": "2026-07-13",
+  "disclaimer": "Deterministic activity-data calculation only. Not assurance, legal, accounting, lifecycle-analysis, regulatory-compliance, or filing advice. Results cover only supplied activities and do not establish inventory completeness, organizational boundaries, materiality, or ESRS compliance.",
+  "gwp_profile": {
+    "id": "ipcc_ar6_gwp100_v0.1.0",
+    "horizon_years": 100,
+    "values": {
+      "co2": "1",
+      "ch4_fossil": "29.8",
+      "ch4_non_fossil": "27.2",
+      "n2o": "273",
+      "hfc_32": "771",
+      "hfc_134a": "1526"
+    },
+    "source_id": "ipcc-ar6-wgi-ch7-table-7-15",
+    "note": "AR6 GWP-100 central values. Methane distinguishes fossil and non-fossil origin."
+  },
+  "scope3_categories": {
+    "category_1_purchased_goods_and_services": "Purchased goods and services",
+    "category_2_capital_goods": "Capital goods",
+    "category_3_fuel_and_energy_related_activities": "Fuel- and energy-related activities",
+    "category_4_upstream_transportation_and_distribution": "Upstream transportation and distribution",
+    "category_5_waste_generated_in_operations": "Waste generated in operations",
+    "category_6_business_travel": "Business travel",
+    "category_7_employee_commuting": "Employee commuting",
+    "category_8_upstream_leased_assets": "Upstream leased assets",
+    "category_9_downstream_transportation_and_distribution": "Downstream transportation and distribution",
+    "category_10_processing_of_sold_products": "Processing of sold products",
+    "category_11_use_of_sold_products": "Use of sold products",
+    "category_12_end_of_life_treatment_of_sold_products": "End-of-life treatment of sold products",
+    "category_13_downstream_leased_assets": "Downstream leased assets",
+    "category_14_franchises": "Franchises",
+    "category_15_investments": "Investments"
+  },
+  "unit_conversions": {
+    "energy_mmbtu": {
+      "mmbtu": "1",
+      "therm": "0.1",
+      "kwh": "0.00341214163312794",
+      "btu": "0.000001"
+    },
+    "electricity_mwh": {
+      "mwh": "1",
+      "kwh": "0.001",
+      "wh": "0.000001"
+    },
+    "volume_us_gallon": {
+      "gallon_us": "1",
+      "litre": "0.264172052358148",
+      "liter": "0.264172052358148"
+    },
+    "mass_kg": {
+      "kg": "1",
+      "g": "0.001",
+      "lb": "0.45359237",
+      "metric_tonne": "1000",
+      "short_ton": "907.18474"
+    },
+    "mass_short_ton": {
+      "short_ton": "1",
+      "metric_tonne": "1.10231131092439",
+      "kg": "0.00110231131092439"
+    },
+    "distance_vehicle_mile": {
+      "vehicle_mile": "1",
+      "mile": "1",
+      "km": "0.621371192237334"
+    },
+    "currency_usd": {
+      "usd": "1"
+    }
+  },
+  "sources": [
+    {
+      "id": "ipcc-ar6-wgi-ch7-table-7-15",
+      "authority": "IPCC AR6 Working Group I, Chapter 7, Table 7.15",
+      "title": "Emission metrics for selected species",
+      "publisher": "Intergovernmental Panel on Climate Change",
+      "date": "2021",
+      "url": "https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_Chapter07.pdf"
+    },
+    {
+      "id": "epa-ghg-factor-hub-2025",
+      "authority": "EPA 2025 GHG Emission Factors Hub",
+      "title": "Emission Factors for Greenhouse Gas Inventories, Tables 1, 2, 5, 9, 10, and 11",
+      "publisher": "United States Environmental Protection Agency",
+      "date": "2025-01-15",
+      "url": "https://www.epa.gov/system/files/documents/2025-01/ghg-emission-factors-hub-2025.pdf"
+    },
+    {
+      "id": "epa-egrid2023-ar6-faq",
+      "authority": "EPA eGRID2023 FAQ, question 16",
+      "title": "CO2e output emission rates under alternative IPCC GWP profiles",
+      "publisher": "United States Environmental Protection Agency",
+      "date": "2025",
+      "url": "https://www.epa.gov/egrid/frequent-questions-about-egrid"
+    },
+    {
+      "id": "desnz-ghg-conversion-factors-2025",
+      "authority": "UK Government GHG Conversion Factors for Company Reporting 2025",
+      "title": "Conversion factors 2025: flat file",
+      "publisher": "UK Department for Energy Security and Net Zero",
+      "date": "2025-06-10",
+      "url": "https://www.gov.uk/government/publications/greenhouse-gas-reporting-conversion-factors-2025"
+    },
+    {
+      "id": "ghg-protocol-corporate-and-scope3",
+      "authority": "GHG Protocol Corporate and Scope 3 Standards",
+      "title": "Corporate Value Chain Scope 3 Standard",
+      "publisher": "GHG Protocol",
+      "date": "2011",
+      "url": "https://ghgprotocol.org/corporate-value-chain-scope-3-standard"
+    },
+    {
+      "id": "ghg-protocol-scope2-guidance",
+      "authority": "GHG Protocol Scope 2 Guidance",
+      "title": "Scope 2 Guidance",
+      "publisher": "GHG Protocol",
+      "date": "2015",
+      "url": "https://ghgprotocol.org/scope-2-guidance"
+    },
+    {
+      "id": "eu-esrs-e1",
+      "authority": "Commission Delegated Regulation (EU) 2023/2772, ESRS E1",
+      "title": "European Sustainability Reporting Standards",
+      "publisher": "European Union",
+      "date": "2023-12-22",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023R2772"
+    },
+    {
+      "id": "viridis-builder-spec-spend-factor-v0.1.0",
+      "authority": "Non-authoritative Viridis builder-spec pin",
+      "title": "MVP purchased-goods spend factor for deterministic integration testing",
+      "publisher": "Viridis",
+      "date": "2026-07-13",
+      "url": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/deployment/SOL_TASK_ghg-ledger_build.md",
+      "note": "Not an EPA, DEFRA, IPCC, GHG Protocol, or ESRS factor. Callers should prefer supplier-specific factors."
+    }
+  ],
+  "classification_map": {
+    "stationary_combustion_natural_gas": {"scope": "scope_1", "category": "stationary_combustion", "scope3_category": null},
+    "stationary_combustion_diesel": {"scope": "scope_1", "category": "stationary_combustion", "scope3_category": null},
+    "stationary_combustion_propane": {"scope": "scope_1", "category": "stationary_combustion", "scope3_category": null},
+    "mobile_combustion_gasoline": {"scope": "scope_1", "category": "mobile_combustion", "scope3_category": null},
+    "mobile_combustion_diesel": {"scope": "scope_1", "category": "mobile_combustion", "scope3_category": null},
+    "refrigerant_hfc_32": {"scope": "scope_1", "category": "fugitive_emissions", "scope3_category": null},
+    "refrigerant_hfc_134a": {"scope": "scope_1", "category": "fugitive_emissions", "scope3_category": null},
+    "purchased_electricity": {"scope": "scope_2", "category": "purchased_electricity", "scope3_category": null},
+    "purchased_goods_spend": {"scope": "scope_3", "category": "purchased_goods_and_services", "scope3_category": "category_1_purchased_goods_and_services"},
+    "waste_landfilled_mixed_msw": {"scope": "scope_3", "category": "waste_generated_in_operations", "scope3_category": "category_5_waste_generated_in_operations"},
+    "business_travel_passenger_car": {"scope": "scope_3", "category": "business_travel", "scope3_category": "category_6_business_travel"}
+  },
+  "factors": {
+    "epa_2025_stationary_natural_gas": {
+      "activity_type": "stationary_combustion_natural_gas",
+      "unit": "mmbtu",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_1",
+      "category": "stationary_combustion",
+      "scope3_category": null,
+      "conversion_group": "energy_mmbtu",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"co2": "53.06", "ch4_fossil": "0.001", "n2o": "0.0001"}},
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15"]
+    },
+    "epa_2025_stationary_diesel": {
+      "activity_type": "stationary_combustion_diesel",
+      "unit": "gallon_us",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_1",
+      "category": "stationary_combustion",
+      "scope3_category": null,
+      "conversion_group": "volume_us_gallon",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"co2": "10.21", "ch4_fossil": "0.00041", "n2o": "0.00008"}},
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15"]
+    },
+    "epa_2025_stationary_propane": {
+      "activity_type": "stationary_combustion_propane",
+      "unit": "gallon_us",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_1",
+      "category": "stationary_combustion",
+      "scope3_category": null,
+      "conversion_group": "volume_us_gallon",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"co2": "5.72", "ch4_fossil": "0.00027", "n2o": "0.00005"}},
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15"]
+    },
+    "epa_2025_mobile_gasoline_co2": {
+      "activity_type": "mobile_combustion_gasoline",
+      "unit": "gallon_us",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_1",
+      "category": "mobile_combustion",
+      "scope3_category": null,
+      "conversion_group": "volume_us_gallon",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"co2": "8.78", "ch4_fossil": "0.00227", "n2o": "0.00001"}},
+      "applicability": {
+        "id": "epa_nonroad_four_stroke_gasoline_2025",
+        "requires": {
+          "mobile_source_class": "nonroad_four_stroke"
+        },
+        "description": "EPA Table 2 fuel CO2 plus Table 5 non-road four-stroke gasoline CH4/N2O. Other vehicle classes and model years are outside this MVP."
+      },
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025"]
+    },
+    "epa_2025_mobile_diesel_co2": {
+      "activity_type": "mobile_combustion_diesel",
+      "unit": "gallon_us",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_1",
+      "category": "mobile_combustion",
+      "scope3_category": null,
+      "conversion_group": "volume_us_gallon",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"co2": "10.21", "ch4_fossil": "0.00651", "n2o": "0.00017"}},
+      "applicability": {
+        "id": "epa_nonroad_diesel_2025",
+        "requires": {
+          "mobile_source_class": "nonroad"
+        },
+        "description": "EPA Table 2 fuel CO2 plus Table 5 non-road diesel CH4/N2O. Other vehicle classes and model years are outside this MVP."
+      },
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025"]
+    },
+    "ipcc_ar6_refrigerant_hfc32": {
+      "activity_type": "refrigerant_hfc_32",
+      "unit": "kg",
+      "region": "GLOBAL",
+      "year": 2021,
+      "scope": "scope_1",
+      "category": "fugitive_emissions",
+      "scope3_category": null,
+      "conversion_group": "mass_kg",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"hfc_32": "1"}},
+      "source_id": "ipcc-ar6-wgi-ch7-table-7-15",
+      "source_ids": ["ipcc-ar6-wgi-ch7-table-7-15"]
+    },
+    "ipcc_ar6_refrigerant_hfc134a": {
+      "activity_type": "refrigerant_hfc_134a",
+      "unit": "kg",
+      "region": "GLOBAL",
+      "year": 2021,
+      "scope": "scope_1",
+      "category": "fugitive_emissions",
+      "scope3_category": null,
+      "conversion_group": "mass_kg",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"hfc_134a": "1"}},
+      "source_id": "ipcc-ar6-wgi-ch7-table-7-15",
+      "source_ids": ["ipcc-ar6-wgi-ch7-table-7-15"]
+    },
+    "epa_egrid2023_us_total_ar6": {
+      "activity_type": "purchased_electricity",
+      "unit": "mwh",
+      "region": "US",
+      "year": 2023,
+      "scope": "scope_2",
+      "category": "purchased_electricity",
+      "scope3_category": null,
+      "conversion_group": "electricity_mwh",
+      "co2e_or_gas_breakdown": {"kind": "direct_co2e", "value": "771.05", "mass_unit": "lb", "gas_resolution": "direct_co2e_only"},
+      "source_id": "epa-egrid2023-ar6-faq",
+      "source_ids": ["epa-egrid2023-ar6-faq"]
+    },
+    "epa_egrid2023_camx_ar6": {
+      "activity_type": "purchased_electricity",
+      "unit": "mwh",
+      "region": "US-CAMX",
+      "year": 2023,
+      "scope": "scope_2",
+      "category": "purchased_electricity",
+      "scope3_category": null,
+      "conversion_group": "electricity_mwh",
+      "co2e_or_gas_breakdown": {"kind": "direct_co2e", "value": "430.05", "mass_unit": "lb", "gas_resolution": "direct_co2e_only"},
+      "source_id": "epa-egrid2023-ar6-faq",
+      "source_ids": ["epa-egrid2023-ar6-faq"]
+    },
+    "epa_egrid2023_erct_ar6": {
+      "activity_type": "purchased_electricity",
+      "unit": "mwh",
+      "region": "US-ERCT",
+      "year": 2023,
+      "scope": "scope_2",
+      "category": "purchased_electricity",
+      "scope3_category": null,
+      "conversion_group": "electricity_mwh",
+      "co2e_or_gas_breakdown": {"kind": "direct_co2e", "value": "736.75", "mass_unit": "lb", "gas_resolution": "direct_co2e_only"},
+      "source_id": "epa-egrid2023-ar6-faq",
+      "source_ids": ["epa-egrid2023-ar6-faq"]
+    },
+    "desnz_2025_uk_grid_location": {
+      "activity_type": "purchased_electricity",
+      "unit": "kwh",
+      "region": "UK",
+      "year": 2025,
+      "scope": "scope_2",
+      "category": "purchased_electricity",
+      "scope3_category": null,
+      "conversion_group": "electricity_mwh",
+      "co2e_or_gas_breakdown": {"kind": "direct_co2e", "value": "0.177", "mass_unit": "kg", "gas_resolution": "direct_co2e_only", "coverage_note": "Publisher-precomputed direct CO2e."},
+      "source_id": "desnz-ghg-conversion-factors-2025",
+      "source_ids": ["desnz-ghg-conversion-factors-2025"]
+    },
+    "builder_2026_purchased_goods_spend": {
+      "activity_type": "purchased_goods_spend",
+      "unit": "usd",
+      "region": "US",
+      "year": 2026,
+      "scope": "scope_3",
+      "category": "purchased_goods_and_services",
+      "scope3_category": "category_1_purchased_goods_and_services",
+      "conversion_group": "currency_usd",
+      "co2e_or_gas_breakdown": {"kind": "direct_co2e", "value": "0.400", "mass_unit": "kg", "gas_resolution": "direct_co2e_only", "coverage_note": "Non-authoritative builder-spec spend factor. Prefer supplier-specific product factors."},
+      "source_id": "viridis-builder-spec-spend-factor-v0.1.0",
+      "source_ids": ["viridis-builder-spec-spend-factor-v0.1.0", "ghg-protocol-corporate-and-scope3"]
+    },
+    "epa_2025_waste_mixed_msw_landfill": {
+      "activity_type": "waste_landfilled_mixed_msw",
+      "unit": "short_ton",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_3",
+      "category": "waste_generated_in_operations",
+      "scope3_category": "category_5_waste_generated_in_operations",
+      "conversion_group": "mass_short_ton",
+      "co2e_or_gas_breakdown": {"kind": "direct_co2e", "value": "580", "mass_unit": "kg", "gas_resolution": "direct_co2e_only"},
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ghg-protocol-corporate-and-scope3"]
+    },
+    "epa_2025_business_travel_passenger_car": {
+      "activity_type": "business_travel_passenger_car",
+      "unit": "vehicle_mile",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_3",
+      "category": "business_travel",
+      "scope3_category": "category_6_business_travel",
+      "conversion_group": "distance_vehicle_mile",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"co2": "0.297", "ch4_fossil": "0.0000059", "n2o": "0.0000053"}},
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15", "ghg-protocol-corporate-and-scope3"]
+    }
+  }
+}

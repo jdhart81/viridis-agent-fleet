@@ -1,0 +1,9 @@
+# Local candidate only. BASE_IMAGE is the exact running production gateway
+# imported read-only; this layer intentionally changes only the two human and
+# two machine-facing buyer-path documents.
+ARG BASE_IMAGE=viridis-production-import:gateway-6e9828-source-equivalent
+FROM ${BASE_IMAGE}
+COPY --chown=0:0 deploy/gateway/agents.html /fleet/deploy/gateway/agents.html
+COPY --chown=0:0 deploy/gateway/quickstart.html /fleet/deploy/gateway/quickstart.html
+COPY --chown=0:0 deploy/gateway/llms.txt /fleet/deploy/gateway/llms.txt
+COPY --chown=0:0 integrations/viridis-paid-tools/SKILL.md /fleet/integrations/viridis-paid-tools/SKILL.md

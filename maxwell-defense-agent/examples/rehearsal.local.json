@@ -1,0 +1,50 @@
+{
+  "execution": "local_unpaid_fixture",
+  "report": {
+    "status": "ok",
+    "service": "maxwell-defense",
+    "version": "0.1.0",
+    "decision": "SHADOW_TRIAL_RECOMMENDED",
+    "input_sha256": "69ae4d56b0e0ca8a00f44e091530dd45f9199fda185d30e74651019eb89b0445",
+    "policy": {
+      "scheme": "maxwell-sha256-v1",
+      "difficulty_bits": 13,
+      "ttl_seconds": 60,
+      "max_body_bytes": 65536,
+      "enforcement_enabled": false,
+      "client_max_attempts": 1048576,
+      "client_max_seconds": 0.25,
+      "placement": "after authenticated identity and quotas, before costly tool work",
+      "bypass": "only server-verified entitlement with independent quota; never a client trust header",
+      "replay_capacity_required_at_declared_peak": 6000,
+      "single_host_reference_capacity_max": 100000,
+      "shared_store_required": false
+    },
+    "modeled_client": {
+      "expected_hash_attempts": 8192,
+      "p95_hash_attempts": 24540,
+      "p95_ms": 245.4,
+      "basis": "buyer-declared hashes/second; independent uniform hash model"
+    },
+    "measured_local": {
+      "sha256_samples": 8192,
+      "mean_hash_microseconds": 0.3218,
+      "scope": "hash microbenchmark only; excludes network, HMAC, body hashing and replay database"
+    },
+    "declared_backend": {
+      "cost_ms": 2000,
+      "peak_requests_per_second": 100
+    },
+    "acceptance_checks": [
+      "Measure full verify p95 including shared replay storage",
+      "Measure supported clients and respect their solve budgets",
+      "Confirm legitimate completion and latency under controlled load",
+      "Confirm invalid, expired, cross-request and replay proofs never reach expensive work",
+      "Verify edge connection, body, issuance and rate limits",
+      "Measure net backend work avoided before claiming savings"
+    ],
+    "protection_activated": false,
+    "energy_savings_measured": false,
+    "claim_boundary": "A policy rehearsal and local SHA-256 microbenchmark, not deployed protection, an energy measurement, an audit, or an availability guarantee. Client timings are modeled from buyer-supplied throughput; SHA-256 permits hardware acceleration."
+  }
+}

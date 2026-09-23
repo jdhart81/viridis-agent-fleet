@@ -1,0 +1,9 @@
+name: maxwell-defense
+version: 0.1.0
+status: production_rehearsal_service
+pillar: security
+description: Bounded defense-policy rehearsal with a request-bound proof-of-work reference guard
+revenue_model: Fixed $1 per rehearsal through existing fleet payment rails
+env_vars:
+  - MAXWELL_FLEET_ENABLED
+claim_boundary: Rehearsal does not activate protection or measure energy savings. Reference guard requires deployment-specific validation.

@@ -1,0 +1,25 @@
+[Unit]
+Description=Fulfill the exact Viridis Payan membership-review bid
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/viridis-fleet
+ExecStart=/usr/bin/python3 /root/viridis-fleet/payan_membership_review_fulfiller_20260804.py fulfill-payan-membership-review-viridis-fleet
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/root/viridis-fleet/payanagent-state/membership-review
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,563 @@
+{
+  "server": "neurogenesis-agent",
+  "tool_count": 14,
+  "tools": [
+    {
+      "name": "create_agent",
+      "description": "Create a developmental agent from a digital genome:\n{agent_name, purpose, initial_nodes (unique, >=1), fitness_metrics\n(>=1), optional growth_rules / safety_axioms}. Returns agent_id +\ninitial graph summary.",
+      "inputSchema": {
+        "properties": {
+          "genome": {
+            "additionalProperties": true,
+            "title": "Genome",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "genome"
+        ],
+        "title": "create_agentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "create_agentOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "submit_evaluation",
+      "description": "Evolve an agent with one task outcome: {task_id, task_type,\nsuccess_score in [0,1], optional accuracy/user_satisfaction/\ncost_efficiency/safety_score/notes/used_nodes/used_edges}. Success\nstrengthens the used edges, failure weakens them; growth and pruning\nfollow the genome's rules under its safety axioms (NG1). Returns the\nnew developmental-ledger events.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "evaluation": {
+            "additionalProperties": true,
+            "title": "Evaluation",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "agent_id",
+          "evaluation"
+        ],
+        "title": "submit_evaluationArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "submit_evaluationOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_agent",
+      "description": "Full current state: genome, cognitive graph (nodes/edges with\nweights and trust), and summary counts.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "get_agentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "get_agentOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_agents",
+      "description": "All developmental agents on this mount, with summary counts.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_agentsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "list_agentsOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "best_next_steps",
+      "description": "Routing recommendation: the strongest next cognitive steps from a\ngiven node, by learned edge weight and trust.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "from_node": {
+            "title": "From Node",
+            "type": "string"
+          },
+          "limit": {
+            "default": 3,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id",
+          "from_node"
+        ],
+        "title": "best_next_stepsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "best_next_stepsOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_ledger",
+      "description": "The append-only developmental ledger: every growth, pruning, and\nevaluation event with reasons (NG3 \u2014 returned verbatim).",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "get_ledgerArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "get_ledgerOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "export_state",
+      "description": "Portable state document for an agent (import_state recreates it\nanywhere \u2014 including a self-hosted verdigraph-neurogenesis).",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "export_stateArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "export_stateOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "import_state",
+      "description": "Recreate an agent from an export_state document.",
+      "inputSchema": {
+        "properties": {
+          "state": {
+            "additionalProperties": true,
+            "title": "State",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "import_stateArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "import_stateOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "delete_agent",
+      "description": "Remove a developmental agent from this mount.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "delete_agentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "delete_agentOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "register_compute_profile",
+      "description": "Register a caller-owned Wu Wei execution profile: reuse/cache,\ndeterministic rule, local model, tool/workflow, or cloud model. Profiles\ncan declare quality, reliability, capabilities, token costs, latency,\nlocality, energy rates or average power, carbon intensity, and cache\nconfidence/age. Routing never invents capacity or energy evidence.",
+      "inputSchema": {
+        "properties": {
+          "profile": {
+            "additionalProperties": true,
+            "title": "Profile",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "title": "register_compute_profileArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "register_compute_profileOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "route_task",
+      "description": "Choose the least-burden eligible route for a task. Hard constraints\ninclude quality, reliability, locality, capabilities, context, cost,\nlatency, and energy. Optional baselines quantify predicted savings.\nExplicit allow_defer/value/urgency fields may produce a no-work decision;\nno result is then claimed. Returns a hash-bound decision receipt.",
+      "inputSchema": {
+        "properties": {
+          "task": {
+            "additionalProperties": true,
+            "title": "Task",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "title": "route_taskArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "route_taskOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "record_route_outcome",
+      "description": "Attach one observed outcome to a Wu Wei decision. Actual cost,\nlatency, and energy are optional and remain explicitly unknown when\nomitted. One append-only, hash-bound outcome is allowed per decision.",
+      "inputSchema": {
+        "properties": {
+          "decision_id": {
+            "title": "Decision Id",
+            "type": "string"
+          },
+          "success_score": {
+            "title": "Success Score",
+            "type": "number"
+          },
+          "actual_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actual Cost Usd"
+          },
+          "actual_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actual Latency Ms"
+          },
+          "actual_energy_wh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actual Energy Wh"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "decision_id",
+          "success_score"
+        ],
+        "title": "record_route_outcomeArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "record_route_outcomeOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "compute_efficiency_report",
+      "description": "Free read: decision/outcome receipts, route modes, compute avoided,\npredicted savings, predicted-vs-observed cost/latency/energy coverage,\nand Landauer-floor context. Estimates and observations stay distinct.",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "default": 50,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "compute_efficiency_reportArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "compute_efficiency_reportOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "describe_agentOutput",
+        "type": "object"
+      }
+    }
+  ]
+}

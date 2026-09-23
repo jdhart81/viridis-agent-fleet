@@ -1,0 +1,33 @@
+services:
+  robustness-engine:
+    image: viridis/robustness-engine-agent:0.6.0-audited-20260807
+    container_name: viridis-robustness-engine
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      ROBUSTNESS_SERVICE_RELEASE_MODE: final
+      ROBUSTNESS_RELEASE_MANIFEST_PATH: /release/RELEASE_MANIFEST.json
+      ROBUSTNESS_DEPLOYED_ARTIFACT_DIGEST: sha256:a47e1c34cc89c716e5b03784f3ae964818493ce40acbc186b94d2f63122744c2
+    volumes:
+      - ./RELEASE_MANIFEST.json:/release/RELEASE_MANIFEST.json:ro
+    expose:
+      - "8080"
+    networks:
+      fleet:
+        aliases:
+          - robustness-engine-agent
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+networks:
+  fleet:
+    external: true
+    name: viridis-fleet_default

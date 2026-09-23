@@ -1,0 +1,25 @@
+mcp.viridisconservation.com {
+	handle /googleaf96b525bb3d46d2.html {
+		respond "google-site-verification: googleaf96b525bb3d46d2.html" 200
+	}
+	@preflightHuman {
+		path /security-preflight /security-preflight/
+		method GET HEAD
+	}
+	redir @preflightHuman https://mcp.viridis-security.com{uri} 308
+	handle /.well-known/agent-market.json {
+		reverse_proxy agent-market-network:8410
+	}
+	handle_path /network/* {
+		reverse_proxy agent-market-network:8410
+	}
+	handle /internal/* {
+		respond 404
+	}
+	handle {
+		request_body {
+			max_size 1MB
+		}
+		reverse_proxy gateway:8402
+	}
+}

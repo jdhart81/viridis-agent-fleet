@@ -76,6 +76,26 @@ async def security_preflight(
 
 
 @mcp.tool()
+async def scan_source(agent_id: str, source: str) -> str:
+    """$1 bounded inline VulnCanon source scan; indicators, not proven exploits.
+
+    At most 64 KiB, 2000 lines, 4096 characters per line. No model calls,
+    repository fetching or code execution. Returns a redacted signed receipt.
+    """
+    return await _run({"action": "scan_source", "agent_id": agent_id, "source": source})
+
+
+@mcp.tool()
+async def screen_injection(agent_id: str, texts: List[str]) -> str:
+    """$1 batch of 1–20 text samples screened for deterministic injection markers.
+
+    Maximum 64 KiB total. Heuristic indicators, not calibrated probabilities
+    or a guarantee of safety. No model calls or automatic follow-on purchase.
+    """
+    return await _run({"action": "screen_injection", "agent_id": agent_id, "texts": texts})
+
+
+@mcp.tool()
 async def get_security_receipt(receipt_id: str) -> str:
     """Read a previously issued public, input-redacted receipt."""
     return await _run({"action": "get_receipt", "receipt_id": receipt_id})

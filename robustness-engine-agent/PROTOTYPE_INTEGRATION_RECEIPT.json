@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "receipt_id": "RobustnessEngineAgent-v0.6-prototype-2026-08-07",
+  "state": "LOCAL_FLEET_SOURCE_ADOPTED_NOT_PRODUCTION_DEPLOYED",
+  "engine_version": "0.6.0",
+  "service_version": "0.6.0",
+  "service_files_sha256": {
+    "agent.yaml": "a0afb70947274696da1f9a5e66e088674972b144b02c4a08241fc308ef50044f",
+    "src/core.py": "d2cfc17326650fad1809f24c81d361eae049eb3450e5fde1faca515e29ad0196",
+    "adapters/fastapi_server.py": "2a95a9483a81544cce792b06f73eac1c78da1ec5f4138e9de5477cdc46444d85",
+    "Dockerfile": "a0f093f7751dc9ba302d347266bb995a859c1a1ad9486f5097ecac2326235b2a",
+    "tests/test_core.py": "ec79adc52c188c6ef337729a11df93d51e9e0e6c13b70844b40399ca996ba7f6",
+    "RELEASE_MANIFEST.json": "79e589b1228d343c3b9e26b73faba052dc2b8ddbfe905dbe05e8d61797666462",
+    "README.md": "12cb1b0e42406f836116c963b5b2899e33579028fbc0db40f62f310f70fe5875",
+    "DEPLOYMENT_GUIDE.md": "009afefcb61862de2e43283ead9aae8abac38e303b2bbaeb0f588b60b94b601d"
+  },
+  "kernel_receipt": "receipts/ROBUSTNESS_ENGINE_V06_BUILD_RECEIPT.json",
+  "kernel_receipt_sha256": "a2caee5151e52864e859f04e60a49cbee85441f64841370b8c442ac768f01bc2",
+  "verification": {
+    "targeted_service_tests": "5_PASS_0_FAIL",
+    "http_smoke": "PASS_HEALTH_200_DESCRIBE_200_EVALUATE_200_INVALID_JSON_400_OVERSIZED_413_NONEXECUTING",
+    "prototype_container": {
+      "build": "PASS",
+      "base_image": "python:3.12-slim@sha256:229a2c5bfa27522db7815ea81f9bed70af17ccb9de9fc7ad142b1877b5830d36",
+      "local_image_id": "sha256:1ac2905f704e7ddb915028773e79432fd4ace88eaa962c44475c706b962b0ecd",
+      "healthcheck": "HEALTHY",
+      "canonical_evaluation_http": 200,
+      "canonical_evaluation_record_sha256": "cb45c00a79c72c43fb86995097ae61c19be9fb08a37eae014ed80e230d4ee3cf",
+      "container_removed_after_smoke": true,
+      "registry_pushed": false,
+      "production_deployed": false
+    },
+    "authoritative_isolated_fleet_runner": "2136_PASS_0_FAIL_0_ERROR_37_OF_37_CLEAN",
+    "fleet_copy_hash_match": true,
+    "prototype_health_contract": "PASS_WITH_CHUNKED_BODY_CAP_AND_EXPLICIT_REQUEST_ID_BOUND",
+    "final_mode_health_contract": "INTENTIONALLY_DEGRADED_UNTIL_ALL_FINAL_GATES_PASS"
+  },
+  "boundaries": {
+    "executes_selected_action": false,
+    "network_calls_required": false,
+    "secrets_required": false,
+    "aristotle_audited": false,
+    "paper_reconciled": false,
+    "production_deployed": false,
+    "revenue_generated": false
+  }
+}

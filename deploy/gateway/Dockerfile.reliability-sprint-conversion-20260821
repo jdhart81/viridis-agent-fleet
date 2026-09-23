@@ -1,0 +1,12 @@
+# Narrow buyer-conversion overlay. The release transaction must first prove
+# that BASE_IMAGE resolves to the exact healthy production image.
+ARG BASE_IMAGE=viridis-stable:reliability-sprint-base-20260821
+FROM ${BASE_IMAGE}
+
+COPY --chown=0:0 deploy/gateway/agents_reliability_sprint.html /fleet/deploy/gateway/agents.html
+COPY --chown=0:0 deploy/gateway/reliability_sprint.html /fleet/deploy/gateway/reliability_sprint.html
+COPY --chown=0:0 deploy/gateway/reliability_sprint_llms_intro.txt /fleet/deploy/gateway/reliability_sprint_llms_intro.txt
+COPY --chown=0:0 deploy/gateway/reliability_sprint_overlay.py /fleet/deploy/gateway/reliability_sprint_overlay.py
+COPY --chown=0:0 deploy/gateway/value_decision.py /fleet/deploy/gateway/value_decision.py
+
+CMD ["python3", "deploy/gateway/reliability_sprint_overlay.py", "--port", "8402"]

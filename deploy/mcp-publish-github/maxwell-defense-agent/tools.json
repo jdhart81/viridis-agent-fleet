@@ -1,0 +1,69 @@
+[
+  {
+    "name": "rehearse_defense",
+    "description": "$1 bounded policy rehearsal. Returns a model and local hash measurement.\n\n    Does not activate endpoint protection or establish energy savings.\n    ",
+    "inputSchema": {
+      "properties": {
+        "client_hashes_per_second": {
+          "title": "Client Hashes Per Second",
+          "type": "integer"
+        },
+        "client_p95_budget_ms": {
+          "title": "Client P95 Budget Ms",
+          "type": "integer"
+        },
+        "backend_cost_ms": {
+          "title": "Backend Cost Ms",
+          "type": "integer"
+        },
+        "peak_requests_per_second": {
+          "title": "Peak Requests Per Second",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "client_hashes_per_second",
+        "client_p95_budget_ms",
+        "backend_cost_ms",
+        "peak_requests_per_second"
+      ],
+      "title": "rehearse_defenseArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "properties": {
+        "result": {
+          "title": "Result",
+          "type": "string"
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "title": "rehearse_defenseOutput",
+      "type": "object"
+    }
+  },
+  {
+    "name": "describe_agent",
+    "description": "Free scope and price discovery.",
+    "inputSchema": {
+      "properties": {},
+      "title": "describe_agentArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "properties": {
+        "result": {
+          "title": "Result",
+          "type": "string"
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "title": "describe_agentOutput",
+      "type": "object"
+    }
+  }
+]

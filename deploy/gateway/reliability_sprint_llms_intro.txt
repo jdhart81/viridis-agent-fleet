@@ -1,0 +1,18 @@
+# Viridis Agent Reliability Sprint
+
+Primary buyer outcome: make one existing AI-agent or automation workflow
+production-ready, bounded, tested, observable, and verifiably delivered.
+
+- Introductory fixed price: $995 USD.
+- Delivery target: five business days after complete scope and independently verified live funding.
+- Scope: one workflow and up to two existing systems or APIs.
+- Includes: written acceptance tests, human approval gates for irreversible actions, security and tool-policy preflight, automated tests, logs and failure handling, a deployable handoff, and one content-addressed delivery receipt.
+- Human offer and no-spend fit check: https://mcp.viridisconservation.com/reliability-sprint
+- Free machine fit endpoint: POST https://mcp.viridisconservation.com/x402/decide with decision_type WORKFLOW.
+
+Early-offer truth: no buyer order, accepted Sprint delivery, usefulness
+receipt, repeat order, active Reliability Watch subscription, MRR, or customer
+testimonial is claimed yet. A fit-screen result is not an offer, payment
+authorization, or work start.
+
+## Supporting pay-per-call tools

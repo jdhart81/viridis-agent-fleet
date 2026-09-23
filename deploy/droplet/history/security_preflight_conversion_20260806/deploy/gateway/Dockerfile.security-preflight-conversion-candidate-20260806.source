@@ -1,0 +1,6 @@
+# Static conversion overlay. The staging transaction verifies that BASE_IMAGE
+# resolves to the exact healthy production image before this file is used.
+ARG BASE_IMAGE=viridis-stable:gold402-listing-20260804
+FROM ${BASE_IMAGE}
+COPY --chown=0:0 deploy/gateway/agents.html /fleet/deploy/gateway/agents.html
+COPY --chown=0:0 deploy/gateway/quickstart.html /fleet/deploy/gateway/quickstart.html

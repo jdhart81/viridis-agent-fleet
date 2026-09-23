@@ -1,0 +1,12 @@
+# Local candidate only. The base is an exact local import of the live
+# 28-agent gateway image. The build adds the paid-success seat bridge and
+# prevents a copied snapshot from overriding deployment-local receipt storage.
+ARG BASE_IMAGE=viridis-production-import:gateway-9dc219-current-20260728
+FROM ${BASE_IMAGE}
+COPY --chown=0:0 scripts/apply_regulatory_radar_seat_bridge_overlay_20260728.py /tmp/apply-seat-bridge.py
+COPY --chown=0:0 scripts/apply_candidate_state_restore_boundary_20260728.py /tmp/apply-state-boundary.py
+RUN python3 /tmp/apply-seat-bridge.py \
+    --path /fleet/deploy/gateway/x402_http.py \
+    && python3 /tmp/apply-state-boundary.py \
+    --path /fleet/deploy/gateway/state_store.py \
+    && rm /tmp/apply-seat-bridge.py /tmp/apply-state-boundary.py

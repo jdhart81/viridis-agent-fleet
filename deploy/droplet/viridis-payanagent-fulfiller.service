@@ -1,0 +1,22 @@
+[Unit]
+Description=Viridis exact PayanAgent bid fulfiller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /root/viridis-fleet/payanagent/payanagent_fulfiller.py fulfill-exact-payanagent-bid-viridis-fleet
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/root/viridis-fleet/payanagent-state
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

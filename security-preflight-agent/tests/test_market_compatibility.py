@@ -1,11 +1,9 @@
 import asyncio
 import base64
 import importlib.util
-import inspect
 import sys
 from pathlib import Path
 
-import pytest
 from cryptography.hazmat.primitives import serialization
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -60,18 +58,11 @@ def test_signed_receipt_imports_exactly_once_with_common_control(signing_key):
         },
         "sample_inputs": [],
     }
-    signed = asyncio.run(SecurityPreflightCore().process(payload))
     public_raw = signing_key.public_key().public_bytes(
         serialization.Encoding.Raw,
         serialization.PublicFormat.Raw,
     )
     market_module = _load_market_module()
-    if "trusted_security_receipt_keys" not in inspect.signature(
-            market_module.build).parameters:
-        pytest.skip(
-            "the public Agent Market mirror predates production receipt "
-            "import; production compatibility is covered by the deployment "
-            "release gate")
     market = market_module.build(
         db_path=":memory:",
         seed_path=str(MARKET_SEED_PATH),
@@ -80,6 +71,22 @@ def test_signed_receipt_imports_exactly_once_with_common_control(signing_key):
                 base64.urlsafe_b64encode(public_raw).decode().rstrip("="),
         },
     )
+    market.seed_owned_profiles([{
+        "agent_id": "viridis-security-preflight",
+        "name": "Viridis Security Preflight",
+        "description": (
+            "Operator-owned deterministic security preflight receipt issuer."),
+        "capabilities": ["agent-security", "mcp-security"],
+        "representative_queries": ["check an MCP agent manifest"],
+        "endpoint": (
+            "https://mcp.viridisconservation.com/security-preflight/mcp"),
+        "payment": {},
+        "operator_entity": "ViridisNorth LLC",
+    }])
+    target = market._profile_row("viridis-security-injection-detector")
+    assert target is not None
+    payload["subject_profile_sha256"] = target["profile_sha256"]
+    signed = asyncio.run(SecurityPreflightCore().process(payload))
     request = {
         "action": "import_security_receipt",
         "receipt": signed["receipt"],

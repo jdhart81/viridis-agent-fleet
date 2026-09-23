@@ -1,0 +1,465 @@
+#!/usr/bin/env python3
+"""Viridis x402 buyer demo: measure -> account -> disclose -> claim -> scan.
+
+Install (demo machine only; this SDK is NOT in the gateway image):
+  python3 -m pip install "x402[requests,evm]==2.16.0"
+
+Free discovery run (prints every live 402 challenge; moves no money):
+  python3 scripts/x402_demo_client.py --dry-run
+
+Single paid Regulatory Radar call (new-wallet intro is currently $0.01):
+  export X402_BUYER_PRIVATE_KEY='0x...'
+  python3 scripts/x402_demo_client.py \
+    --route regulatory-radar --max-payment-usdc 0.01
+
+Inspect Security Preflight without paying (prints the live quote only):
+  python3 scripts/x402_demo_client.py \
+    --dry-run --route security-preflight
+
+Single paid Security Preflight call (new-wallet intro is currently $0.01):
+  export X402_BUYER_PRIVATE_KEY='0x...'
+  python3 scripts/x402_demo_client.py \
+    --route security-preflight --max-payment-usdc 0.01
+
+Single paid reviewed Hive solve (fixed $5.00; no execution free tier):
+  export X402_BUYER_PRIVATE_KEY='0x...'
+  python3 scripts/x402_demo_client.py \
+    --route hive --max-payment-usdc 5.00
+
+Paid Base-mainnet run (wallet needs Base USDC; never paste the key in code):
+  export X402_BUYER_PRIVATE_KEY='0x...'
+  python3 scripts/x402_demo_client.py
+
+The five list prices total $5.75 USDC ($0.50 + $1 + $2 + $2 + $0.25).
+x402-intro-v1 is active: a new wallet's first route is $0.01, so this ordered
+same-wallet chain totals $5.26. An unpaid dry run never consumes the intro;
+the summary therefore distinguishes independent preflight quotes from the
+amount one wallet would actually settle across the chain.
+
+CDP Bazaar merchant inventory:
+https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329
+"""
+from __future__ import annotations
+
+import argparse
+import base64
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
+from typing import Any, Callable, Optional
+
+
+DEFAULT_BASE_URL = "https://mcp.viridisconservation.com"
+BAZAAR_MERCHANT_URL = (
+    "https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant"
+    "?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329")
+
+
+@dataclass(frozen=True)
+class Step:
+    name: str
+    agent: str
+    tool: str
+    value: str
+    list_amount_atomic: int
+    build_input: Callable[[dict], dict]
+
+    def url(self, base_url: str) -> str:
+        return f"{base_url.rstrip('/')}/x402/{self.agent}/{self.tool}"
+
+
+def _takeoff_input(_: dict) -> dict:
+    return {"items": [{
+        "id": "demo-slab", "assembly": "concrete_slab",
+        "unit_system": "imperial",
+        "dimensions": {
+            "length": {"value": "20", "unit": "ft"},
+            "width": {"value": "30", "unit": "ft"},
+            "thickness": {"value": "4", "unit": "in"},
+        },
+    }], "options": {"project_id": "x402-demo"}}
+
+
+def _ghg_input(outputs: dict) -> dict:
+    takeoff = outputs.get("measure", {})
+    takeoff_data = takeoff.get("data", takeoff) if isinstance(takeoff, dict) else {}
+    return {
+        "activities": [{
+            "id": "demo-grid-electricity",
+            "activity_type": "purchased_electricity",
+            "quantity": "1000", "unit": "kwh", "region": "US",
+            "year": 2023,
+        }],
+        "options": {
+            "project_id": "x402-demo",
+            "source_takeoff_audit_sha256": takeoff_data.get("audit_sha256"),
+        },
+    }
+
+
+def _disclosure_input(outputs: dict) -> dict:
+    account = outputs.get("account")
+    ghg_result = (account.get("data", account)
+                  if isinstance(account, dict) else account)
+    return {
+        "framework": "esrs-e1",
+        "company_facts": {
+            "company_name": "Example Climate Works",
+            "reporting_period": "2026",
+            "transition_plan": {"status": "board-approved",
+                                "target_year": 2035},
+            "climate_targets": {"scope": "Scopes 1-3",
+                                "target": "50% by 2035"},
+        },
+        "ghg_result": ghg_result,
+        "options": {"applicability": {
+            "framework": "esrs-e1", "applies": True,
+            "reason": "demo company is preparing an ESRS E1 disclosure",
+            "source": "buyer",
+        }},
+    }
+
+
+def _tax_input(outputs: dict) -> dict:
+    disclosure = outputs.get("disclose", {})
+    data = disclosure.get("data", disclosure) if isinstance(disclosure, dict) else {}
+    return {
+        "credit": "45V",
+        "facts": {
+            "tax_year": 2026,
+            "source_disclosure_audit_sha256": data.get("audit_sha256"),
+        },
+    }
+
+
+def _radar_input(outputs: dict) -> dict:
+    tax = outputs.get("claim", {})
+    data = tax.get("data", tax) if isinstance(tax, dict) else {}
+    credit = data.get("credit", "45V")
+    return {"jurisdiction": "US", "sector": "energy",
+            "query": f"{credit} clean energy tax credit emissions disclosure"}
+
+
+def _radar_watch_input(_: dict) -> dict:
+    return {
+        "jurisdiction": "US",
+        "topics": ["emissions", "climate"],
+        "lookback_days": 90,
+    }
+
+
+def _security_preflight_input(_: dict) -> dict:
+    return {
+        "agent_id": "buyer-security-demo",
+        "manifest": {
+            "endpoint": "https://buyer.example/mcp",
+            "auth": "bearer",
+            "tools": [{
+                "name": "read_status",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"id": {"type": "string"}},
+                    "required": ["id"],
+                    "additionalProperties": False,
+                },
+            }],
+        },
+        "policy": {
+            "allowed_tools": ["read_status"],
+            "denied_tools": [],
+            "approval_required_tools": [],
+        },
+        "sample_inputs": ["summarize this ordinary record"],
+    }
+
+
+def _hive_input(_: dict) -> dict:
+    return {
+        "problem": (
+            "Compare demand flexibility and equipment-efficiency upgrades "
+            "for an industrial site. Return a reviewed recommendation, key "
+            "assumptions, and the highest-risk uncertainties."
+        ),
+        "budget_minor": 500,
+        "subtasks": [
+            "Assess technical feasibility and operational constraints.",
+            "Assess economics, implementation risk, and evidence gaps.",
+        ],
+        "depth": 0,
+        "redundancy": 2,
+        "accept_threshold": 0.6,
+        "seed": 0,
+        "fee_bps": 0,
+    }
+
+
+STEPS = (
+    Step("measure", "quantity-takeoff", "calculate_takeoff", "$0.50", 500_000,
+         _takeoff_input),
+    Step("account", "ghg-ledger", "calculate_inventory", "$1.00", 1_000_000,
+         _ghg_input),
+    Step("disclose", "disclosure-compiler", "compile_disclosure", "$2.00", 2_000_000,
+         _disclosure_input),
+    Step("claim", "taxcredit-engine", "calculate_tax_credit", "$2.00", 2_000_000,
+         _tax_input),
+    Step("scan", "regulatory-radar", "scan_regulations", "$0.25", 250_000,
+         _radar_input),
+)
+
+HIVE_STEP = Step(
+    "orchestrate", "hive", "solve", "$5.00", 5_000_000, _hive_input)
+RADAR_WATCH_STEP = Step(
+    "watch", "regulatory-radar", "monitor_changes", "$0.25", 250_000,
+    _radar_watch_input)
+SECURITY_PREFLIGHT_STEP = Step(
+    "secure", "security-preflight", "security_preflight", "$1.00",
+    1_000_000, _security_preflight_input)
+SELECTABLE_ROUTES = {
+    **{step.agent: (step,) for step in STEPS},
+    "regulatory-watch": (RADAR_WATCH_STEP,),
+    "security-preflight": (SECURITY_PREFLIGHT_STEP,),
+    "hive": (HIVE_STEP,),
+}
+SELECTABLE_STEPS = STEPS + (
+    RADAR_WATCH_STEP, SECURITY_PREFLIGHT_STEP, HIVE_STEP)
+
+
+def select_steps(route: Optional[str] = None) -> tuple[Step, ...]:
+    """Return the five-step workflow or one explicitly selected paid route."""
+    if route is None:
+        return STEPS
+    selected = SELECTABLE_ROUTES.get(route)
+    if selected is None:
+        raise ValueError(f"unknown route: {route}")
+    return selected
+
+
+def _usdc_to_atomic(value: str) -> int:
+    """Argparse converter for an exact positive USDC amount."""
+    try:
+        amount = Decimal(value)
+    except (InvalidOperation, ValueError) as exc:
+        raise argparse.ArgumentTypeError(
+            "must be a positive USDC amount with at most 6 decimals") from exc
+    atomic = amount * Decimal(1_000_000)
+    if amount <= 0 or atomic != atomic.to_integral_value():
+        raise argparse.ArgumentTypeError(
+            "must be a positive USDC amount with at most 6 decimals")
+    return int(atomic)
+
+
+def _json_response(status: int, headers: Any, raw: bytes) -> dict:
+    try:
+        body = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        body = {"raw": raw.decode("utf-8", errors="replace")}
+    return {"status": status, "headers": dict(headers), "body": body}
+
+
+def _raw_post(url: str, payload: dict, timeout: int,
+              payer_address: str = "") -> dict:
+    headers = {"Content-Type": "application/json",
+               "Accept": "application/json"}
+    if payer_address:
+        headers["X402-Payer-Address"] = payer_address
+    request = urllib.request.Request(
+        url, data=json.dumps(payload).encode("utf-8"), headers=headers,
+        method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return _json_response(response.status, response.headers,
+                                  response.read())
+    except urllib.error.HTTPError as exc:
+        return _json_response(exc.code, exc.headers, exc.read())
+
+
+def _payment_required(response: dict) -> dict:
+    headers = {str(k).lower(): v for k, v in response["headers"].items()}
+    encoded = headers.get("payment-required")
+    if encoded:
+        padding = "=" * (-len(encoded) % 4)
+        return json.loads(base64.b64decode(encoded + padding).decode("utf-8"))
+    body = response.get("body") or {}
+    if body.get("accepts"):
+        return body
+    raise RuntimeError("402 response did not include PAYMENT-REQUIRED/accepts")
+
+
+def _amount_atomic(required: dict) -> int:
+    accepted = required["accepts"][0]
+    return int(accepted.get("amount", accepted.get("maxAmountRequired")))
+
+
+def _display_challenge(step: Step, required: dict) -> None:
+    accepted = required["accepts"][0]
+    amount = _amount_atomic(required)
+    print(f"\n[{step.name}] HTTP 402 from {step.agent}/{step.tool}")
+    print(json.dumps({
+        "scheme": accepted.get("scheme"),
+        "network": accepted.get("network"),
+        "asset": accepted.get("asset"),
+        "amount_atomic": str(amount),
+        "amount_usdc": f"{amount / 1_000_000:.2f}",
+        "payTo": accepted.get("payTo"),
+    }, indent=2))
+
+
+class LiveBuyer:
+    """Raw 402 inspection plus the official x402 SDK's requests adapter."""
+
+    def __init__(self, private_key: str, timeout: int,
+                 max_payment_atomic: Optional[int] = None):
+        try:
+            import requests
+            from eth_account import Account
+            from x402 import max_amount, x402ClientSync
+            from x402.http.clients import x402_requests
+            from x402.mechanisms.evm.exact import ExactEvmScheme
+        except ImportError as exc:
+            raise RuntimeError(
+                'Paid mode requires: pip install "x402[requests,evm]==2.16.0"'
+            ) from exc
+        self.timeout = timeout
+        self.account = Account.from_key(private_key)
+        client = x402ClientSync()
+        client.register("eip155:*", ExactEvmScheme(self.account))
+        if max_payment_atomic is not None:
+            # Enforce the ceiling inside the SDK payment selector that creates
+            # the signed retry, not only against our earlier preview quote.
+            client.register_policy(max_amount(max_payment_atomic))
+        self.session = x402_requests(client)
+        self.session.headers.update({
+            "Accept": "application/json",
+            "X402-Payer-Address": self.account.address,
+        })
+        self._requests = requests
+
+    def challenge(self, url: str, payload: dict) -> dict:
+        return _raw_post(url, payload, self.timeout, self.account.address)
+
+    def pay(self, url: str, payload: dict) -> dict:
+        response = self.session.post(url, json=payload, timeout=self.timeout)
+        return {"status": response.status_code,
+                "headers": dict(response.headers),
+                "body": response.json()}
+
+
+class DryRunBuyer:
+    def __init__(self, timeout: int):
+        self.timeout = timeout
+
+    def challenge(self, url: str, payload: dict) -> dict:
+        return _raw_post(url, payload, self.timeout)
+
+    def pay(self, url: str, payload: dict) -> dict:  # pragma: no cover
+        raise AssertionError("dry-run never pays")
+
+
+def run_workflow(base_url: str, buyer: Any, dry_run: bool = False,
+                 steps: Optional[tuple[Step, ...]] = None,
+                 max_payment_atomic: Optional[int] = None) -> dict:
+    active_steps = STEPS if steps is None else tuple(steps)
+    if not active_steps:
+        raise ValueError("at least one route is required")
+    outputs: dict = {}
+    total_atomic = 0
+    quoted_amounts = []
+    for step in active_steps:
+        payload = step.build_input(outputs)
+        challenge = buyer.challenge(step.url(base_url), payload)
+        if challenge["status"] != 402:
+            raise RuntimeError(
+                f"{step.name}: expected HTTP 402, got {challenge['status']}")
+        required = _payment_required(challenge)
+        _display_challenge(step, required)
+        quoted = _amount_atomic(required)
+        quoted_amounts.append(quoted)
+        total_atomic += quoted
+        if dry_run:
+            outputs[step.name] = {"dry_run": True, "input": payload}
+            continue
+        if (max_payment_atomic is not None
+                and quoted > max_payment_atomic):
+            raise RuntimeError(
+                f"{step.agent}: quoted payment {quoted} atomic USDC exceeds "
+                f"the {max_payment_atomic} atomic limit; no payment attempted")
+        paid = buyer.pay(step.url(base_url), payload)
+        if paid["status"] != 200:
+            raise RuntimeError(
+                f"{step.name}: paid request returned {paid['status']}: "
+                f"{json.dumps(paid['body'], sort_keys=True)}")
+        outputs[step.name] = paid["body"]
+        print(f"[{step.name}] settled and returned:")
+        print(json.dumps(paid["body"], indent=2, sort_keys=True))
+    list_total = sum(step.list_amount_atomic for step in active_steps)
+    expected_same_wallet = list_total
+    if (quoted_amounts
+            and quoted_amounts[0] < active_steps[0].list_amount_atomic):
+        expected_same_wallet = (
+            list_total - active_steps[0].list_amount_atomic
+            + quoted_amounts[0])
+    summary = {
+        "workflow": " -> ".join(step.name for step in active_steps),
+        "selected_routes": [step.agent for step in active_steps],
+        "dry_run": dry_run,
+        "list_total_atomic_usdc": list_total,
+        "list_total_usdc": f"{list_total / 1_000_000:.2f}",
+        "quoted_total_atomic_usdc": total_atomic,
+        "quoted_total_usdc": f"{total_atomic / 1_000_000:.2f}",
+        "same_wallet_expected_total_atomic_usdc": expected_same_wallet,
+        "same_wallet_expected_total_usdc": (
+            f"{expected_same_wallet / 1_000_000:.2f}"),
+        "preflight_note": (
+            "Dry-run challenges are independent and never consume the "
+            "new-wallet intro. One wallet receives the intro once; later "
+            "calls use list price." if dry_run else
+            "Paid totals are the amounts actually settled."),
+        "outputs": outputs,
+    }
+    print("\nComposed workflow output:")
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return summary
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Run or inspect one route or the full Viridis x402 workflow")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="print live 402 requirements without paying")
+    parser.add_argument(
+        "--route", choices=tuple(SELECTABLE_ROUTES),
+        help="call exactly one route instead of the five-route workflow")
+    parser.add_argument(
+        "--max-payment-usdc", type=_usdc_to_atomic, metavar="USDC",
+        help="fail before payment if any live quote exceeds this amount")
+    parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
+    parser.add_argument("--timeout", type=int, default=30)
+    args = parser.parse_args(argv)
+    if args.route and not args.dry_run and args.max_payment_usdc is None:
+        parser.error(
+            "single-route paid mode requires --max-payment-usdc")
+    if args.dry_run:
+        buyer = DryRunBuyer(args.timeout)
+    else:
+        private_key = os.environ.get("X402_BUYER_PRIVATE_KEY", "").strip()
+        if not private_key:
+            parser.error("paid mode requires X402_BUYER_PRIVATE_KEY")
+        buyer = LiveBuyer(
+            private_key, args.timeout,
+            max_payment_atomic=args.max_payment_usdc)
+    selected = select_steps(args.route)
+    label = args.route or "five-route workflow"
+    print(f"Viridis x402 {label} at {args.base_url}")
+    print(f"Bazaar: {BAZAAR_MERCHANT_URL}")
+    run_workflow(
+        args.base_url, buyer, args.dry_run, steps=selected,
+        max_payment_atomic=args.max_payment_usdc)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

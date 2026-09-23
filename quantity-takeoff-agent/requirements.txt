@@ -1,0 +1,1 @@
+# Runtime calculation path is stdlib-only. The fleet image provides mcp.

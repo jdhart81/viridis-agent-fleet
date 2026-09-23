@@ -10,6 +10,12 @@ from pathlib import Path
 BASE = 'https://mcp.viridisconservation.com'
 MERCHANT = 'https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=0xfEf2e570b645EB720Ee6c589d27450810982f329'
 ROOT = Path(__file__).resolve().parents[1]
+SECURITY = 'https://mcp.viridis-security.com'
+
+def canonical_endpoint(key):
+    origin = SECURITY if key == 'maxwell-defense/rehearse_defense' else BASE
+    return origin + '/x402/' + key
+
 
 
 def fetch(url, body=None):
@@ -44,7 +50,7 @@ def contracts(catalog, api):
         key = row['agent']+'/'+row['tool']; issues=[]
         if key in seen: raise ValueError('Duplicate catalog route')
         seen.add(key)
-        endpoint = BASE+'/x402/'+key
+        endpoint = canonical_endpoint(key)
         if row.get('endpoint') != endpoint: issues.append('endpoint_mismatch')
         if not row.get('description'): issues.append('missing_description')
         if type(row.get('price_minor')) is not int or row['price_minor'] < 0: issues.append('invalid_price')
@@ -65,7 +71,7 @@ def inventory(merchant, expected):
     if type(total) is not int or total != len(resources):
         return {'status':'unavailable','reason':'incomplete_merchant_pagination'}
     present = {r.get('resource') for r in resources}
-    missing = sorted(key for key in expected if BASE+'/x402/'+key not in present)
+    missing = sorted(key for key in expected if canonical_endpoint(key) not in present)
     return {'status':'gap' if missing else 'pass','expected_count':len(expected),
             'indexed_count':len(expected)-len(missing),'missing_routes':missing,
             'indexing_is_ranking_or_demand':False}

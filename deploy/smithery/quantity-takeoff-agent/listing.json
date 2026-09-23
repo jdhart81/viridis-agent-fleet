@@ -1,0 +1,10 @@
+{
+  "slug": "hartjustin6/quantity-takeoff",
+  "display_name": "Viridis Quantity Takeoff",
+  "description": "Deterministic construction material takeoffs with locked waste factors, conservative purchase rounding, and notary-ready audit hashes.",
+  "repository": "https://github.com/jdhart81/viridis-agent-fleet",
+  "homepage": "https://mcp.viridisconservation.com",
+  "remote_url": "https://mcp.viridisconservation.com/quantity-takeoff/mcp",
+  "visibility": "public",
+  "pricing": "10 free takeoffs/day, then $0.50 per takeoff via redeem_payment. B2B construction seats are planned."
+}

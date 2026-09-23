@@ -1,0 +1,1002 @@
+"""
+RegulatoryRadarCore: Environmental regulation monitoring, compliance scoring, and opportunity detection.
+
+Scans global regulatory landscape, assesses company compliance gaps, and identifies business opportunities
+from regulatory changes. Generates TNFD and CSRD reports aligned with international standards.
+"""
+
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Optional, Dict, List, Tuple
+from enum import Enum
+
+from .validation import (
+    validate_scan_input,
+    validate_compliance_assessment_input,
+    validate_monitor_changes_input,
+    ValidationError,
+    ValidationWarning,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class Jurisdiction(Enum):
+    """Major regulatory jurisdictions."""
+    EU = "eu"
+    UK = "uk"
+    US = "us"
+    CANADA = "ca"
+    AUSTRALIA = "au"
+    JAPAN = "jp"
+    SINGAPORE = "sg"
+    GLOBAL = "global"
+
+
+class Sector(Enum):
+    """Industry sectors with distinct regulatory profiles."""
+    AGRICULTURE = "agriculture"
+    ENERGY = "energy"
+    FORESTRY = "forestry"
+    FISHERIES = "fisheries"
+    MANUFACTURING = "manufacturing"
+    FINANCIAL_SERVICES = "financial_services"
+    CONSUMER_GOODS = "consumer_goods"
+    TECHNOLOGY = "technology"
+
+
+class ComplianceLevel(Enum):
+    """Compliance status levels."""
+    COMPLIANT = "compliant"
+    PARTIAL = "partial"
+    NON_COMPLIANT = "non_compliant"
+    NOT_APPLICABLE = "not_applicable"
+
+
+@dataclass
+class Regulation:
+    """Single regulatory requirement."""
+    id: str
+    name: str
+    jurisdiction: Jurisdiction
+    sector: Optional[Sector]
+    effective_date: datetime
+    reporting_deadline: Optional[datetime]
+    requirements: List[str]
+    penalties: str
+    standards: List[str]  # e.g., ["TNFD", "CSRD", "EU Taxonomy"]
+    description: str
+    resource_link: Optional[str] = None
+
+    def days_until_deadline(self) -> Optional[int]:
+        """Days remaining until reporting deadline."""
+        if not self.reporting_deadline:
+            return None
+        return (self.reporting_deadline - datetime.utcnow()).days
+
+
+@dataclass
+class ComplianceGap:
+    """Single compliance gap for a company."""
+    regulation_id: str
+    regulation_name: str
+    requirement: str
+    gap_description: str
+    remediation_steps: List[str]
+    estimated_effort_hours: int
+    deadline_days: int
+    risk_level: str  # "critical", "high", "medium", "low"
+
+
+@dataclass
+class RegulatoryOpportunity:
+    """Business opportunity from regulatory change."""
+    jurisdiction: Jurisdiction
+    sector: Sector
+    opportunity_type: str  # e.g., "new_mandate", "compliance_gap", "carbon_pricing"
+    description: str
+    affected_companies_estimated: int
+    viridis_fit_score: float  # 0-1: how well Viridis solves this
+    market_size_estimate: str  # "$XXM annually"
+    timeline_months: int
+
+
+@dataclass
+class ComplianceAssessment:
+    """Complete compliance assessment for a company."""
+    company_name: str
+    jurisdiction: Jurisdiction
+    sector: Sector
+    assessment_date: datetime
+    overall_compliance_level: ComplianceLevel
+    compliance_percentage: float  # 0-100
+    applicable_regulations: List[Regulation]
+    gaps: List[ComplianceGap]
+    priority_actions: List[str]
+    summary: str
+
+
+@dataclass
+class TNFDReport:
+    """TNFD-aligned disclosure report."""
+    company_name: str
+    report_date: datetime
+    governance: Dict[str, str]  # Board oversight, management structure, etc.
+    strategy: Dict[str, str]  # Business model, impacts, dependencies
+    risk_management: Dict[str, str]  # Identification, assessment, integration
+    metrics_targets: Dict[str, str]  # KPIs, science-based targets
+    executive_summary: str
+
+
+@dataclass
+class CSRDReport:
+    """CSRD-aligned sustainability report."""
+    company_name: str
+    report_date: datetime
+    governance_and_organization: Dict[str, str]
+    strategy_and_value_creation: Dict[str, str]
+    double_materiality_assessment: Dict[str, List[str]]
+    metrics_and_targets: Dict[str, str]
+    action_plans: Dict[str, List[str]]
+    executive_summary: str
+
+
+@dataclass
+class RegulatoryForecast:
+    """Prediction of upcoming regulatory changes."""
+    jurisdiction: Jurisdiction
+    forecast_period_months: int
+    likely_changes: List[Dict[str, str]]
+    confidence_level: str  # "high", "medium", "low"
+    political_signals: List[str]
+    consultation_status: Dict[str, str]  # regulation -> "draft", "public_comment", "finalization"
+    recommendation: str
+
+
+@dataclass
+class RegulatorAlertConfig:
+    """Configuration for alert generation."""
+    jurisdictions: List[Jurisdiction]
+    sectors: List[Sector]
+    alert_types: List[str] = field(default_factory=lambda: ["new_regulation", "deadline_approaching", "standard_update"])
+    days_before_deadline: int = 90
+
+
+class RegulatoryDatabase:
+    """In-memory regulatory knowledge base with key global regulations."""
+
+    def __init__(self):
+        """Initialize with major global environmental regulations."""
+        self.regulations: Dict[str, Regulation] = self._build_database()
+
+    def _build_database(self) -> Dict[str, Regulation]:
+        """
+        Build comprehensive regulatory database.
+
+        Delegated to src/data/regulations.py (Night 20, queue #3).
+        Dataset updates no longer require touching core logic — edit
+        regulatory-radar-agent/src/data/regulations.py instead.
+        """
+        from .data.regulations import build_regulations
+        return build_regulations(Regulation, Jurisdiction, Sector, datetime)
+
+    def get_regulations_by_jurisdiction(self, jurisdiction: Jurisdiction) -> List[Regulation]:
+        """Get all regulations applicable to a jurisdiction."""
+        return [
+            reg for reg in self.regulations.values()
+            if reg.jurisdiction == jurisdiction or reg.jurisdiction == Jurisdiction.GLOBAL
+        ]
+
+    def get_regulations_by_sector(self, sector: Sector) -> List[Regulation]:
+        """Get all regulations applicable to a sector."""
+        return [
+            reg for reg in self.regulations.values()
+            if reg.sector is None or reg.sector == sector
+        ]
+
+    def get_urgent_regulations(self, days_threshold: int = 180) -> List[Regulation]:
+        """Get regulations with approaching deadlines."""
+        urgent = []
+        for reg in self.regulations.values():
+            if reg.reporting_deadline:
+                days_left = reg.days_until_deadline()
+                if days_left is not None and days_left <= days_threshold:
+                    urgent.append(reg)
+        return sorted(urgent, key=lambda r: r.reporting_deadline or datetime.max)
+
+
+class RegulatoryRadarCore:
+    """
+    Core intelligence engine for regulatory monitoring and compliance assessment.
+    """
+
+    def __init__(self, debug: bool = False):
+        """Initialize the regulatory radar with knowledge base."""
+        self.config_debug = debug
+        self.db = RegulatoryDatabase()
+        logger.setLevel(logging.DEBUG if debug else logging.INFO)
+
+    async def process(self, input_data: dict) -> dict:
+        """
+        Fleet-standard process() router with input validation.
+
+        Actions:
+        - "scan": Scan regulations for a jurisdiction/sector
+        - "assess": Assess company compliance against applicable regulations
+
+        Input validation is enforced via src.validation before business logic.
+        ValidationError → structured error response with field detail.
+        """
+        action = input_data.get("action", "scan")
+
+        try:
+            validation_warnings = []
+
+            if action == "scan":
+                validated = validate_scan_input(input_data)
+                validation_warnings = [
+                    str(w) for w in validated.pop("_validation_warnings", [])
+                ]
+                jurisdiction = Jurisdiction(validated["jurisdiction"])
+                sector = Sector(validated["sector"]) if validated.get("sector") else None
+                result = await self.scan_regulations(
+                    jurisdiction=jurisdiction,
+                    sector=sector,
+                    query=validated.get("query"),
+                )
+            elif action == "assess":
+                validated = validate_compliance_assessment_input(input_data)
+                validation_warnings = [
+                    str(w) for w in validated.pop("_validation_warnings", [])
+                ]
+                jurisdiction = Jurisdiction(validated["jurisdiction"])
+                sector = Sector(validated["sector"]) if validated.get("sector") else None
+                result = await self.assess_compliance(
+                    company_name=validated["company_name"],
+                    jurisdiction=jurisdiction,
+                    sector=sector,
+                    current_practices=input_data.get("current_practices", {}),
+                )
+            elif action == "monitor_changes":
+                validated = validate_monitor_changes_input(input_data)
+                validation_warnings = [
+                    str(w) for w in validated.pop("_validation_warnings", [])
+                ]
+                jurisdiction = Jurisdiction(validated["jurisdiction"])
+                result = await self.monitor_changes(
+                    jurisdiction=jurisdiction,
+                    topics=validated["topics"],
+                    active_projects=validated["active_projects"],
+                    lookback_days=validated["lookback_days"],
+                )
+            else:
+                return {
+                    "status": "error",
+                    "message": (
+                        f"Unknown action: {action}. "
+                        "Supported: scan, assess, monitor_changes"
+                    ),
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+
+            # Normalize result to dict
+            if hasattr(result, '__dict__') and not isinstance(result, dict):
+                result = {"result": str(result)}
+            elif not isinstance(result, dict):
+                result = {"result": result}
+
+            if validation_warnings:
+                result["validation_warnings"] = validation_warnings
+            result["status"] = result.get("status", "success")
+            result["timestamp"] = datetime.utcnow().isoformat()
+            return result
+
+        except ValidationError as ve:
+            logger.warning(f"RegulatoryRadar validation rejected: {ve}")
+            return {
+                "status": "error",
+                "error_type": "ValidationError",
+                "field": ve.field,
+                "value": str(ve.value),
+                "constraint": ve.constraint,
+                "message": str(ve),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        except Exception as e:
+            logger.error(f"RegulatoryRadar process error: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "error_type": "InternalError",
+                "message": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+
+    async def health(self) -> dict:
+        """Health check — fleet standard interface."""
+        return {
+            "status": "ok",
+            "agent": "regulatory-radar-agent",
+            "timestamp": datetime.utcnow().isoformat(),
+            "capabilities": [
+                "scan_regulations",
+                "assess_compliance",
+                "monitor_changes",
+            ],
+        }
+
+    def describe(self) -> dict:
+        """Describe agent capabilities — fleet standard interface."""
+        return {
+            "name": "regulatory-radar-agent",
+            "description": "Environmental regulation monitoring, compliance scoring, and opportunity detection.",
+            "pillar": "infrastructure",
+            "capabilities": [
+                "regulatory_scan",
+                "compliance_assessment",
+                "change_monitoring",
+                "tnfd_csrd_reporting",
+            ],
+            "inputs": [
+                "jurisdiction", "sector", "company_name", "current_practices",
+                "topics", "active_projects", "lookback_days",
+            ],
+            "outputs": [
+                "regulations", "compliance_score", "gaps", "recommendations",
+                "changes", "alert_level",
+            ],
+        }
+
+    async def scan_regulations(
+        self,
+        jurisdiction: Jurisdiction,
+        sector: Optional[Sector] = None,
+        query: Optional[str] = None,
+    ) -> Dict[str, any]:
+        """
+        Scan regulations applicable to jurisdiction and sector.
+
+        Args:
+            jurisdiction: Target jurisdiction (EU, US, UK, etc.)
+            sector: Optional industry sector filter
+            query: Optional text search filter
+
+        Returns:
+            Dictionary with applicable regulations and summary
+        """
+        try:
+            # Get base regulations for jurisdiction
+            regs = self.db.get_regulations_by_jurisdiction(jurisdiction)
+
+            # Filter by sector if provided
+            if sector:
+                regs = [r for r in regs if r.sector is None or r.sector == sector]
+
+            # Filter by text query if provided
+            if query:
+                query_lower = query.lower()
+                regs = [
+                    r for r in regs
+                    if query_lower in r.name.lower()
+                    or query_lower in r.description.lower()
+                    or any(query_lower in req.lower() for req in r.requirements)
+                ]
+
+            urgent = [r for r in regs if r.days_until_deadline() and r.days_until_deadline() <= 180]
+
+            result = {
+                "jurisdiction": jurisdiction.value,
+                "sector": sector.value if sector else None,
+                "total_regulations": len(regs),
+                "urgent_count": len(urgent),
+                "regulations": [
+                    {
+                        "id": r.id,
+                        "name": r.name,
+                        "effective_date": r.effective_date.isoformat(),
+                        "deadline": r.reporting_deadline.isoformat() if r.reporting_deadline else None,
+                        "days_until_deadline": r.days_until_deadline(),
+                        "standards": r.standards,
+                        "requirements_count": len(r.requirements),
+                    }
+                    for r in sorted(regs, key=lambda x: x.reporting_deadline or datetime.max)
+                ],
+                "scan_timestamp": datetime.utcnow().isoformat(),
+            }
+
+            logger.info(f"Scanned {len(regs)} regulations for {jurisdiction.value}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error scanning regulations: {str(e)}")
+            raise
+
+    async def assess_compliance(
+        self,
+        company_name: str,
+        jurisdiction: Jurisdiction,
+        sector: Sector,
+        current_practices: Dict[str, bool],
+    ) -> ComplianceAssessment:
+        """
+        Assess company's compliance against applicable regulations.
+
+        Args:
+            company_name: Company identifier
+            jurisdiction: Where company operates
+            sector: Industry sector
+            current_practices: Dict of {"practice_name": bool} for current implementations
+
+        Returns:
+            ComplianceAssessment with gaps and recommendations
+        """
+        try:
+            applicable_regs = self.db.get_regulations_by_jurisdiction(jurisdiction)
+            applicable_regs = [r for r in applicable_regs if r.sector is None or r.sector == sector]
+
+            gaps: List[ComplianceGap] = []
+            compliant_count = 0
+
+            for reg in applicable_regs:
+                # Simple compliance check: map requirements to practices
+                reg_compliant = all(
+                    current_practices.get(req.lower().replace(" ", "_"), False)
+                    for req in reg.requirements
+                )
+
+                if not reg_compliant:
+                    missing_reqs = [
+                        req for req in reg.requirements
+                        if not current_practices.get(req.lower().replace(" ", "_"), False)
+                    ]
+
+                    gap = ComplianceGap(
+                        regulation_id=reg.id,
+                        regulation_name=reg.name,
+                        requirement=" | ".join(missing_reqs[:2]),
+                        gap_description=f"Missing {len(missing_reqs)} of {len(reg.requirements)} requirements",
+                        remediation_steps=[
+                            f"Implement {req}" for req in missing_reqs[:3]
+                        ],
+                        estimated_effort_hours=40 * len(missing_reqs),
+                        deadline_days=max(1, reg.days_until_deadline() or 365),
+                        risk_level="critical" if reg.days_until_deadline() and reg.days_until_deadline() < 90
+                        else "high" if reg.days_until_deadline() and reg.days_until_deadline() < 180
+                        else "medium",
+                    )
+                    gaps.append(gap)
+                else:
+                    compliant_count += 1
+
+            compliance_percentage = (compliant_count / len(applicable_regs) * 100) if applicable_regs else 0
+
+            overall_level = (
+                ComplianceLevel.COMPLIANT if compliance_percentage >= 90
+                else ComplianceLevel.PARTIAL if compliance_percentage >= 50
+                else ComplianceLevel.NON_COMPLIANT
+            )
+
+            priority_actions = [
+                f"[CRITICAL] {g.regulation_name}: Due in {g.deadline_days} days"
+                for g in sorted(gaps, key=lambda x: x.deadline_days)[:3]
+            ]
+
+            assessment = ComplianceAssessment(
+                company_name=company_name,
+                jurisdiction=jurisdiction,
+                sector=sector,
+                assessment_date=datetime.utcnow(),
+                overall_compliance_level=overall_level,
+                compliance_percentage=round(compliance_percentage, 1),
+                applicable_regulations=applicable_regs,
+                gaps=gaps,
+                priority_actions=priority_actions,
+                summary=f"{company_name} is {overall_level.value} with environmental regulations. "
+                        f"{len(gaps)} compliance gaps identified, estimated {sum(g.estimated_effort_hours for g in gaps)} hours to remediate."
+            )
+
+            logger.info(f"Compliance assessment for {company_name}: {compliance_percentage:.1f}%")
+            return assessment
+
+        except Exception as e:
+            logger.error(f"Error assessing compliance: {str(e)}")
+            raise
+
+    async def monitor_changes(
+        self,
+        jurisdiction: Jurisdiction,
+        topics: Optional[List[str]] = None,
+        active_projects: Optional[List] = None,
+        lookback_days: int = 30,
+    ) -> Dict[str, any]:
+        """
+        Monitor regulatory changes — MISSION.md §3 value function #3.
+
+        Implements the continuous T↓ channel: surfaces new regulations,
+        amendments, and proposed rules that may affect active projects.
+
+        Composes regulatory_forecast() (forward-looking signal) with
+        urgent-deadline scan from RegulatoryDatabase (backward-looking
+        baseline of recently effective regs).
+
+        Args:
+            jurisdiction: Target jurisdiction
+            topics: Optional topic filters (informational; future enrichment)
+            active_projects: Optional list of project ids/dicts to flag against
+            lookback_days: Window for "recently changed" detection [1, 365]
+
+        Returns:
+            Dict with:
+              - changes: list of detected changes (type, summary, deadline,
+                impact_on_projects, action_required)
+              - alert_level: aggregated severity
+              - recommended_actions: prioritized actions
+              - jurisdiction, lookback_days, monitored_topics, project_count
+        """
+        try:
+            now = datetime.utcnow()
+            window_start = now - timedelta(days=lookback_days)
+
+            # Get all regulations for jurisdiction (incl. GLOBAL)
+            regs = self.db.get_regulations_by_jurisdiction(jurisdiction)
+
+            # Topic filter (substring match against name/description/standards)
+            if topics:
+                topics_lower = [t.lower() for t in topics]
+                def _topic_match(r: Regulation) -> bool:
+                    blob = " ".join([
+                        r.name.lower(),
+                        r.description.lower(),
+                        " ".join(s.lower() for s in r.standards),
+                    ])
+                    return any(t in blob for t in topics_lower)
+                regs = [r for r in regs if _topic_match(r)]
+
+            # Project IDs for impact tagging
+            project_ids: List[str] = []
+            if active_projects:
+                for p in active_projects:
+                    if isinstance(p, dict):
+                        pid = p.get("project_id") or p.get("id")
+                        if pid:
+                            project_ids.append(str(pid))
+                    else:
+                        project_ids.append(str(p))
+
+            changes: List[Dict[str, any]] = []
+
+            for reg in regs:
+                days_to_deadline = reg.days_until_deadline()
+                effective_recently = reg.effective_date >= window_start
+                upcoming = days_to_deadline is not None and 0 <= days_to_deadline <= lookback_days
+
+                if not (effective_recently or upcoming):
+                    continue
+
+                if effective_recently and reg.effective_date <= now:
+                    change_type = "new_regulation"
+                elif upcoming:
+                    change_type = "deadline_approaching"
+                else:
+                    change_type = "proposed_rule"
+
+                action_required = (
+                    days_to_deadline is not None and days_to_deadline <= 90
+                ) or change_type == "new_regulation"
+
+                # Per-change alert_level — mirrors aggregate severity bands so
+                # downstream consumers (Carbon-Bridge, Proof-of-Conservation)
+                # can route each change without re-deriving urgency. Invariant:
+                # max(per-change alert_level) == aggregate alert_level when
+                # `changes` is non-empty. Nightkeeper 2026-04-21 (queue #5).
+                if days_to_deadline is not None and days_to_deadline <= 30:
+                    change_alert_level = "critical"
+                elif days_to_deadline is not None and days_to_deadline <= 90:
+                    change_alert_level = "high"
+                else:
+                    change_alert_level = "medium"
+
+                changes.append({
+                    "type": change_type,
+                    "regulation_id": reg.id,
+                    "regulation_name": reg.name,
+                    "effective_date": reg.effective_date.isoformat(),
+                    "deadline": reg.reporting_deadline.isoformat() if reg.reporting_deadline else None,
+                    "days_until_deadline": days_to_deadline,
+                    "summary": reg.description,
+                    "standards": reg.standards,
+                    "impact_on_projects": list(project_ids),
+                    "action_required": action_required,
+                    "alert_level": change_alert_level,
+                })
+
+            # Aggregate alert level from urgency
+            critical = sum(
+                1 for c in changes
+                if c.get("days_until_deadline") is not None
+                and c["days_until_deadline"] <= 30
+            )
+            high = sum(
+                1 for c in changes
+                if c.get("days_until_deadline") is not None
+                and 30 < c["days_until_deadline"] <= 90
+            )
+            if critical > 0:
+                alert_level = "critical"
+            elif high > 0:
+                alert_level = "high"
+            elif changes:
+                alert_level = "medium"
+            else:
+                alert_level = "low"
+
+            recommended_actions: List[str] = []
+            for c in sorted(
+                changes,
+                key=lambda x: x.get("days_until_deadline") or 9_999,
+            )[:5]:
+                if c["action_required"]:
+                    recommended_actions.append(
+                        f"[{c['type'].upper()}] {c['regulation_name']}: "
+                        f"{c.get('days_until_deadline', '∞')}d to deadline — review compliance gap"
+                    )
+
+            result = {
+                "jurisdiction": jurisdiction.value,
+                "lookback_days": lookback_days,
+                "monitored_topics": topics or [],
+                "project_count": len(project_ids),
+                "change_count": len(changes),
+                "alert_level": alert_level,
+                "changes": sorted(
+                    changes,
+                    key=lambda x: x.get("days_until_deadline") or 9_999,
+                ),
+                "recommended_actions": recommended_actions,
+                "monitored_at": now.isoformat(),
+            }
+
+            logger.info(
+                f"monitor_changes: {len(changes)} changes for {jurisdiction.value} "
+                f"(lookback={lookback_days}d, alert={alert_level})"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Error in monitor_changes: {e}")
+            raise
+
+    async def detect_opportunities(
+        self,
+        jurisdiction: Jurisdiction,
+        sector: Sector,
+    ) -> List[RegulatoryOpportunity]:
+        """
+        Identify business opportunities from regulatory changes.
+
+        Args:
+            jurisdiction: Target jurisdiction
+            sector: Target industry sector
+
+        Returns:
+            List of RegulatoryOpportunity objects
+        """
+        try:
+            applicable_regs = self.db.get_regulations_by_jurisdiction(jurisdiction)
+            applicable_regs = [r for r in applicable_regs if r.sector is None or r.sector == sector]
+
+            opportunities: List[RegulatoryOpportunity] = []
+
+            for reg in applicable_regs:
+                # Assess Viridis fit based on regulation type
+                viridis_fit = 0.0
+                if any(std in reg.standards for std in ["TNFD", "CSRD", "EU Taxonomy"]):
+                    viridis_fit = 0.85  # High fit for biodiversity/sustainability reporting
+                elif "carbon" in reg.name.lower() or "Article 6" in reg.name:
+                    viridis_fit = 0.75  # High fit for carbon markets
+                elif "biodiversity" in reg.name.lower() or "bng" in reg.id.lower():
+                    viridis_fit = 0.9  # Excellent fit for biodiversity verification
+
+                if viridis_fit > 0.6:
+                    opp_type = "compliance_gap" if viridis_fit > 0.8 else "carbon_pricing"
+                    estimated_companies = {"EU": 50000, "UK": 15000, "US": 100000, "GLOBAL": 500000}.get(
+                        jurisdiction.value.upper(), 10000
+                    )
+
+                    opportunity = RegulatoryOpportunity(
+                        jurisdiction=jurisdiction,
+                        sector=sector,
+                        opportunity_type=opp_type,
+                        description=f"{reg.name} creates demand for {opp_type.replace('_', ' ')} solutions",
+                        affected_companies_estimated=estimated_companies,
+                        viridis_fit_score=viridis_fit,
+                        market_size_estimate=f"${int(estimated_companies * 0.05)}M annually",
+                        timeline_months=max(1, (reg.days_until_deadline() or 365) // 30),
+                    )
+                    opportunities.append(opportunity)
+
+            logger.info(f"Identified {len(opportunities)} opportunities in {jurisdiction.value}/{sector.value}")
+            return sorted(opportunities, key=lambda x: x.viridis_fit_score, reverse=True)
+
+        except Exception as e:
+            logger.error(f"Error detecting opportunities: {str(e)}")
+            raise
+
+    async def generate_tnfd_report(
+        self,
+        company_name: str,
+        governance_data: Dict[str, str],
+        strategy_data: Dict[str, str],
+        risk_data: Dict[str, str],
+        biodiversity_score: float,
+    ) -> TNFDReport:
+        """
+        Generate TNFD-aligned disclosure report.
+
+        Args:
+            company_name: Company identifier
+            governance_data: Board, committees, management structure
+            strategy_data: Business model, impacts, dependencies
+            risk_data: Identified risks, assessments
+            biodiversity_score: Current biodiversity impact score (0-1)
+
+        Returns:
+            TNFDReport object
+        """
+        try:
+            report = TNFDReport(
+                company_name=company_name,
+                report_date=datetime.utcnow(),
+                governance=governance_data or {
+                    "board_oversight": "Board-level sustainability committee established",
+                    "management_structure": "Chief Sustainability Officer role created",
+                    "accountability": "ESG metrics tied to executive compensation",
+                },
+                strategy=strategy_data or {
+                    "business_model": "Integrated nature-positive practices into core operations",
+                    "nature_dependencies": "Assessed supply chain biodiversity risks",
+                    "time_horizons": "Short (0-2y), Medium (2-5y), Long-term (5-10y)",
+                },
+                risk_management=risk_data or {
+                    "identification": "Nature-related risk assessment completed",
+                    "assessment": "PESTLE analysis of regulatory, market, operational risks",
+                    "integration": "Risks integrated into enterprise risk management",
+                },
+                metrics_targets={
+                    "current_biodiversity_score": f"{biodiversity_score:.2f}/1.0",
+                    "2030_target": "Increase by 30%",
+                    "2050_target": "Nature-positive (>1.0)",
+                    "key_indicators": "Species presence, ecosystem health, habitat extent",
+                },
+                executive_summary=(
+                    f"{company_name} has assessed nature-related risks and opportunities across "
+                    f"operations and value chain. Current biodiversity score: {biodiversity_score:.2f}/1.0. "
+                    f"Strategic priorities: governance strengthening, supply chain resilience, "
+                    f"science-based targets aligned with Kunming-Montreal GBF."
+                )
+            )
+
+            logger.info(f"Generated TNFD report for {company_name}")
+            return report
+
+        except Exception as e:
+            logger.error(f"Error generating TNFD report: {str(e)}")
+            raise
+
+    async def generate_csrd_report(
+        self,
+        company_name: str,
+        environmental_data: Dict[str, str],
+        governance_data: Dict[str, str],
+        materiality_impacts: List[str],
+        materiality_financial: List[str],
+    ) -> CSRDReport:
+        """
+        Generate CSRD-aligned sustainability report.
+
+        Args:
+            company_name: Company identifier
+            environmental_data: GHG, water, waste metrics
+            governance_data: Board structure, ethics, compliance
+            materiality_impacts: Material sustainability impacts
+            materiality_financial: Financially material sustainability factors
+
+        Returns:
+            CSRDReport object
+        """
+        try:
+            report = CSRDReport(
+                company_name=company_name,
+                report_date=datetime.utcnow(),
+                governance_and_organization=governance_data or {
+                    "board_composition": "Board includes sustainability expertise",
+                    "ethics_and_compliance": "Code of conduct, whistleblower policy",
+                    "stakeholder_engagement": "Regular stakeholder consultation process",
+                },
+                strategy_and_value_creation={
+                    "business_model": "Value creation aligned with sustainability",
+                    "opportunities": "Transition to sustainable practices creates competitive advantage",
+                    "risks": "Climate, regulatory, market transition risks assessed",
+                },
+                double_materiality_assessment={
+                    "impact_materiality": materiality_impacts or ["GHG emissions", "Biodiversity", "Water use"],
+                    "financial_materiality": materiality_financial or ["Climate risk", "Transition costs", "Regulatory"],
+                },
+                metrics_and_targets=environmental_data or {
+                    "scope_1_2_emissions": "Baseline established, 50% reduction target by 2030",
+                    "biodiversity_metric": "Land use impact assessed, positive targets set",
+                    "water_consumption": "Efficiency improvements, circular economy targets",
+                },
+                action_plans={
+                    "climate_transition": ["Renewable energy transition", "Supply chain decarbonization"],
+                    "biodiversity": ["Ecosystem restoration", "Sustainable sourcing"],
+                    "governance": ["Enhanced reporting", "Stakeholder accountability"],
+                },
+                executive_summary=(
+                    f"{company_name} has completed double materiality assessment identifying "
+                    f"{len(materiality_impacts)} impact-material and {len(materiality_financial)} "
+                    f"financial-material sustainability factors. CSRD compliance roadmap: "
+                    f"Assurance year 1, full ESRS reporting year 2, continuous improvement framework."
+                )
+            )
+
+            logger.info(f"Generated CSRD report for {company_name}")
+            return report
+
+        except Exception as e:
+            logger.error(f"Error generating CSRD report: {str(e)}")
+            raise
+
+    async def regulatory_forecast(
+        self,
+        jurisdiction: Jurisdiction,
+        forecast_months: int = 12,
+    ) -> RegulatoryForecast:
+        """
+        Forecast upcoming regulatory changes.
+
+        Args:
+            jurisdiction: Target jurisdiction
+            forecast_months: Forecast period in months
+
+        Returns:
+            RegulatoryForecast with predictions and signals
+        """
+        try:
+            urgent_regs = self.db.get_urgent_regulations(days_threshold=forecast_months * 30)
+
+            likely_changes = [
+                {
+                    "regulation": reg.name,
+                    "expected_finalization": (reg.reporting_deadline or datetime.utcnow() + timedelta(days=180)).isoformat(),
+                    "impact": f"Affects {reg.requirements[0] if reg.requirements else 'sustainability reporting'}"
+                }
+                for reg in urgent_regs[:5]
+            ]
+
+            political_signals = [
+                "Global momentum toward nature-based solutions (Kunming-Montreal GBF adoption)",
+                "EU regulatory expansion (CSRD broadening to more sectors)",
+                "US climate focus despite political variations",
+                "Article 6 carbon market activation (international cooperation)",
+            ]
+
+            forecast = RegulatoryForecast(
+                jurisdiction=jurisdiction,
+                forecast_period_months=forecast_months,
+                likely_changes=likely_changes,
+                confidence_level="high" if len(likely_changes) > 0 else "medium",
+                political_signals=political_signals,
+                consultation_status={
+                    "tnfd_adoption": "active_implementation",
+                    "csrd_expansion": "finalization_phase",
+                    "article_6_markets": "operational_phase",
+                },
+                recommendation=(
+                    "Prioritize TNFD and CSRD compliance: largest market impact. "
+                    "Evaluate Article 6 carbon market participation for revenue generation. "
+                    "Monitor national biodiversity strategies for sector-specific requirements."
+                )
+            )
+
+            logger.info(f"Generated forecast for {jurisdiction.value}")
+            return forecast
+
+        except Exception as e:
+            logger.error(f"Error generating forecast: {str(e)}")
+            raise
+
+    async def generate_alerts(
+        self,
+        watchlist: List[Tuple[Jurisdiction, Sector]],
+        alert_config: Optional[RegulatorAlertConfig] = None,
+    ) -> Dict[str, any]:
+        """
+        Generate regulatory alerts for watchlisted jurisdictions/sectors.
+
+        Args:
+            watchlist: List of (jurisdiction, sector) tuples to monitor
+            alert_config: Alert configuration
+
+        Returns:
+            Dictionary with generated alerts
+        """
+        try:
+            config = alert_config or RegulatorAlertConfig(
+                jurisdictions=[Jurisdiction.EU, Jurisdiction.US],
+                sectors=[Sector.FORESTRY, Sector.AGRICULTURE],
+            )
+
+            alerts = []
+
+            for jurisdiction, sector in watchlist:
+                regs = self.db.get_regulations_by_jurisdiction(jurisdiction)
+                regs = [r for r in regs if r.sector is None or r.sector == sector]
+
+                for reg in regs:
+                    days_left = reg.days_until_deadline()
+                    if days_left and days_left <= config.days_before_deadline:
+                        alerts.append({
+                            "type": "deadline_approaching",
+                            "jurisdiction": jurisdiction.value,
+                            "sector": sector.value,
+                            "regulation": reg.name,
+                            "days_remaining": days_left,
+                            "severity": "critical" if days_left < 30 else "high" if days_left < 90 else "medium",
+                            "action": f"Begin {reg.name} compliance implementation immediately"
+                        })
+
+                    if "new" in reg.name.lower() or reg.effective_date > datetime.utcnow() - timedelta(days=90):
+                        alerts.append({
+                            "type": "new_regulation",
+                            "jurisdiction": jurisdiction.value,
+                            "sector": sector.value,
+                            "regulation": reg.name,
+                            "effective_date": reg.effective_date.isoformat(),
+                            "severity": "high",
+                            "action": f"Review {reg.name} requirements and impact assessment"
+                        })
+
+            result = {
+                "alert_count": len(alerts),
+                "critical_count": sum(1 for a in alerts if a.get("severity") == "critical"),
+                "high_count": sum(1 for a in alerts if a.get("severity") == "high"),
+                "alerts": sorted(alerts, key=lambda x: x.get("days_remaining", 999))[:10],
+                "generated_timestamp": datetime.utcnow().isoformat(),
+            }
+
+            logger.info(f"Generated {len(alerts)} alerts")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error generating alerts: {str(e)}")
+            raise
+
+    async def health(self) -> Dict[str, any]:
+        """Health check endpoint."""
+        return {
+            "status": "ok",
+            "agent": "regulatory-radar",
+            "version": "0.1.0",
+            "regulations_in_db": len(self.db.regulations),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    def describe(self) -> Dict[str, any]:
+        """Describe agent capabilities."""
+        return {
+            "name": "regulatory-radar",
+            "version": "0.1.0",
+            "description": "Environmental regulation monitoring, compliance scoring, and opportunity detection",
+            "capabilities": [
+                "scan_regulations",
+                "assess_compliance",
+                "detect_opportunities",
+                "generate_tnfd_report",
+                "generate_csrd_report",
+                "regulatory_forecast",
+                "generate_alerts",
+            ],
+            "inputs": ["jurisdiction", "industry_sector", "company_profile", "regulation_query"],
+            "outputs": ["compliance_assessment", "regulatory_alert", "opportunity_signal", "tnfd_report"],
+        }

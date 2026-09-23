@@ -40,8 +40,6 @@ MANIFEST_PATH = HERE / "fleet_manifest.json"
 SEP = "__"
 
 ROLE = {
-    "maxwell-defense": "bounded proof-of-work policy rehearsal; no runtime protection",
-    "security-preflight": "static manifest, source and text security checks",
     "identity": "verifiable agent identity + capability discovery",
     "trust": "decay-weighted reputation + trust attestations",
     "escrow": "trustless escrow & settlement (exactly-once)",
@@ -69,6 +67,7 @@ ROLE = {
     "verdigraph": "verifiable cognition: deterministic content-addressed brain_id for any agent file",
     "neurogenesis": "developmental agents: genome -> evaluation-driven growth with safety axioms + audit ledger",
     "green-router": "carbon-accounted agent compute: free footprint quotes + carbon routing; certificates = real verified offset retirement",
+    "security-preflight": "static MCP agent security checks with signed input-redacted receipts",
     "viridisos": "ViridisOS — theorem-backed conservation certification. Certify a parcel against a gate-passed canon theorem and receive a 'Certified by ViridisOS' mark; bind did:viridis identities; price the unified protocol toll. Staging preview; non-authoritative until the K3 swap.",
 }
 
@@ -120,8 +119,7 @@ async def forward(path: str, tool: str, args: Dict[str, Any]) -> str:
     """Forward a call to the hosted agent over streamable-http."""
     from mcp import ClientSession
     from mcp.client.streamable_http import streamablehttp_client
-    origin = "https://mcp.viridis-security.com" if path == "maxwell-defense" and BASE == "https://mcp.viridisconservation.com" else BASE
-    url = f"{origin}/{path}/mcp"
+    url = f"{BASE}/{path}/mcp"
     async with streamablehttp_client(
             url, headers=upstream_headers()) as (r, w, _):
         async with ClientSession(r, w) as s:

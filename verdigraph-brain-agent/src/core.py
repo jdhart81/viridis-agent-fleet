@@ -99,6 +99,10 @@ class ValidationError(ValueError):
 # --------------------------------------------------------------------------- #
 class VerdigraphBrainCore(AgentCore):
     """Deterministic brain compilation + machine-checkable verification."""
+    KNOWN_ACTIONS = frozenset({
+        "build", "verify", "detect_format", "describe",
+    })
+    READ_ACTIONS = frozenset({"verify", "detect_format", "describe"})
 
     def __init__(self, config: Optional[AgentConfig] = None):
         super().__init__(config or AgentConfig(name="verdigraph-brain-agent"))

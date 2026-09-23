@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import main as scheduler
 from growth_agent import (
     ALLOWED_CREDENTIAL_ENV,
     FleetSnapshot,
@@ -16,10 +17,18 @@ from growth_agent import (
     GitHubOwnedContentAdapter,
     GrowthAgent,
     GrowthError,
+    LiveFleetClient,
     ModelUsage,
     OutboundLog,
+    PAID_DELIVERY_RECEIPT_COPY,
+    PAID_DELIVERY_RECEIPT_VERSION,
+    REPEAT_BUYER_CTA,
+    REGULATORY_RADAR_REPEAT_AUTHORIZATION,
+    REGULATORY_RADAR_REPEAT_CAMPAIGN,
     SmitheryMetadataAdapter,
+    render_regulatory_radar_repeat,
     render_content,
+    render_owned_discovery,
     validate_generated_content,
 )
 
@@ -27,9 +36,9 @@ from growth_agent import (
 NOW = datetime(2026, 7, 20, 18, 0, tzinfo=timezone.utc)
 
 
-def snapshot(*, external=1, payers=1, intro=False,
-             route_external=None):
-    routes = (
+def snapshot(*, external=1, payers=1, repeats=0, intro=False,
+             route_external=None, watch_live=True):
+    routes = [
         {
             "agent": "quantity-takeoff",
             "tool": "calculate_takeoff",
@@ -46,10 +55,21 @@ def snapshot(*, external=1, payers=1, intro=False,
             "amount_atomic_usdc": 250_000,
             "description": "Energy and climate compliance regulation scan.",
         },
-    )
+    ]
+    if watch_live:
+        routes.append({
+            "agent": "regulatory-radar",
+            "tool": "monitor_changes",
+            "endpoint": "/x402/regulatory-radar/monitor_changes",
+            "price_minor": 25,
+            "amount_atomic_usdc": 250_000,
+            "description": (
+                "Bounded source-linked regulatory deadline and date watch."),
+        })
     route_counts = {
         "quantity-takeoff/calculate_takeoff": 0,
         "regulatory-radar/scan_regulations": external,
+        **({"regulatory-radar/monitor_changes": 0} if watch_live else {}),
     }
     if route_external is not None:
         route_counts.update(route_external)
@@ -60,6 +80,10 @@ def snapshot(*, external=1, payers=1, intro=False,
             "self_settlements": 0,
             "external_settlements": count,
             "distinct_external_payers": min(count, payers),
+            "repeat_external_purchases": (
+                min(repeats, count)
+                if route == "regulatory-radar/scan_regulations" else 0
+            ),
             "external_revenue_atomic": count * 250_000,
             "first_external_settlement": (
                 {"tx_hash": f"0xfirst-{route}",
@@ -67,13 +91,18 @@ def snapshot(*, external=1, payers=1, intro=False,
                 if count else None),
         }
     return FleetSnapshot(
-        routes=routes,
+        routes=tuple(routes),
         metrics={
             "settlements_total": external,
             "self_settlements": 0,
             "external_settlements": external,
             "distinct_external_payers": payers,
+            "repeat_external_purchases": repeats,
             "external_revenue_atomic": external * 250_000,
+            "external_paid_results_delivered": 0,
+            "external_paid_results_failed": 0,
+            "external_paid_results_receipted": 0,
+            "external_paid_results_unknown": external,
             "first_external_settlement": (
                 {"tx_hash": "0xfirst", "timestamp": "2026-07-20T00:00:00Z"}
                 if external else None
@@ -91,10 +120,42 @@ class FakeClient:
     def __init__(self, value):
         self.value = value
         self.calls = 0
+        self.surface_calls = 0
 
     def fetch(self, *, now):
         self.calls += 1
         return self.value
+
+    def verify_repeat_campaign_surfaces(self, value):
+        assert value is self.value
+        self.surface_calls += 1
+        return {
+            "quickstart": "a" * 64,
+            "llms": "b" * 64,
+            "buyer_skill": "c" * 64,
+        }
+
+
+class JsonResponse:
+    def __init__(self, payload, status=200):
+        self.payload = json.dumps(payload).encode()
+        self.status = status
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def read(self, limit):
+        assert len(self.payload) <= limit
+        return self.payload
+
+
+class TextResponse(JsonResponse):
+    def __init__(self, payload, status=200):
+        self.payload = str(payload).encode()
+        self.status = status
 
 
 class NeverClient:
@@ -148,6 +209,38 @@ class FakeGitHubTokenProvider:
         return self.value
 
 
+class FailingCycleAgent:
+    def __init__(self, exc):
+        self.exc = exc
+        self.calls = []
+
+    def run_once(self, *, dry_run):
+        self.calls.append(dry_run)
+        raise self.exc
+
+
+def test_scheduler_survives_expected_live_read_failure():
+    agent = FailingCycleAgent(GrowthError(
+        "live fleet health read failed: HTTPError"))
+
+    result = scheduler.run_cycle(agent, dry_run=False)
+
+    assert agent.calls == [False]
+    assert result == {
+        "status": "cycle_failed",
+        "error_type": "GrowthError",
+        "message": "live fleet health read failed: HTTPError",
+        "send_attempted": False,
+    }
+
+
+def test_scheduler_does_not_hide_unexpected_programming_errors():
+    agent = FailingCycleAgent(RuntimeError("bug"))
+
+    with pytest.raises(RuntimeError, match="bug"):
+        scheduler.run_cycle(agent, dry_run=True)
+
+
 def target(**updates):
     item = {
         "id": "cleared-discord",
@@ -159,6 +252,7 @@ def target(**updates):
         "cooldown_days": 14,
         "base_weight": 1.0,
         "route": "regulatory-radar/scan_regulations",
+        "campaigns": [REGULATORY_RADAR_REPEAT_CAMPAIGN],
     }
     item.update(updates)
     return item
@@ -182,11 +276,228 @@ def agent(tmp_path, *, client=None, targets=None, adapter=None, environ=None,
 
 def test_live_snapshot_drives_prices_and_intro_copy():
     content = render_content(snapshot(external=2, payers=2, intro=True))
+    assert content.startswith("Start here: Regulatory Radar")
+    assert "one bounded x402 compliance scan on Base" in content
+    assert "Inspect the live unpaid quote before signing" in content
     assert "quantity-takeoff — $0.50" in content
     assert "regulatory-radar — $0.25" in content
     assert "First paid call from a new wallet is $0.01." in content
     assert "2 settlement(s) from 2 distinct payer(s)" in content
+    assert REPEAT_BUYER_CTA in content
+    assert "X402-Payer-Address" in content
+    assert "never send a private key" in content
+    assert PAID_DELIVERY_RECEIPT_VERSION in content
+    assert "Buyer acceptance and usefulness remain unobserved." in content
     assert "https://example.test/quickstart" in content
+
+
+def test_owned_discovery_requires_live_security_and_preserves_route_identity():
+    from dataclasses import replace
+    base = snapshot(intro=True)
+    assert render_owned_discovery(base) == render_content(base)
+    live = replace(base, routes=base.routes + ({
+        "agent": "security-preflight", "tool": "security_preflight",
+        "price_minor": 175,
+    },))
+    content = render_owned_discovery(live)
+    assert "security-preflight/quickstart" in content
+    assert "security-preflight/security_preflight — $1.75" in content
+    assert "regulatory-radar/scan_regulations — $0.25" in content
+    assert "regulatory-radar/monitor_changes — $0.25" in content
+    assert "may be $0.01" in content
+    assert "not evidence of Security purchases" in content
+
+
+def test_owned_discovery_does_not_invoke_model_or_change_discord(tmp_path):
+    from dataclasses import replace
+    live = replace(snapshot(), routes=snapshot().routes + ({
+        "agent": "security-preflight", "tool": "security_preflight",
+        "price_minor": 100,
+    },))
+    class ForbiddenWriter:
+        def generate(self, *args, **kwargs):
+            raise AssertionError("owned copy must not call a model")
+    worker, _, _ = agent(tmp_path, copywriter=ForbiddenWriter(), environ={
+        "GROWTH_OPENAI_ENABLED": "1"})
+    content, metadata = worker._render_for_target(
+        live, {"platform": "github_owned_content"}, now=NOW)
+    assert content == render_owned_discovery(live)
+    assert metadata["reason"] == "owned_buyer_walkthrough"
+    assert "$0.01" not in content
+    assert render_content(snapshot()).startswith("Start here: Regulatory Radar")
+
+
+def test_live_market_only_promotes_independently_verified_funding():
+    base = snapshot(external=1)
+    health = {
+        "status": "ok",
+        "payment_gate": {
+            "x402": {
+                "enabled": True,
+                "http_front_door": list(base.routes),
+                "http_settlement_telemetry": {
+                    "total": base.metrics,
+                    "per_route": base.route_metrics,
+                },
+                "intro_pricing": {"enabled": False},
+            },
+        },
+        "human_surfaces": {
+            "agents": base.agents_url,
+            "quickstart": base.quickstart_url,
+        },
+    }
+    catalog = {
+        "open_work": [
+            {
+                "work_id": "work_unverified",
+                "title": "Unverified listing",
+                "budget_minor": 5000,
+                "currency": "USD",
+                "funding_status": "UNVERIFIED",
+            },
+            {
+                "work_id": "work_missing_status",
+                "title": "Unknown funding listing",
+                "budget_minor": 4000,
+                "currency": "USD",
+            },
+            {
+                "work_id": "work_verified",
+                "title": "Verified funded listing",
+                "budget_minor": 2500,
+                "currency": "USD",
+                "funding_status": "VERIFIED",
+            },
+        ],
+    }
+
+    def opener(request, timeout):
+        assert timeout == 10
+        if request.full_url.startswith("https://example.test/health?"):
+            return JsonResponse(health)
+        if request.full_url.startswith("https://example.test/catalog?"):
+            return JsonResponse(catalog)
+        raise AssertionError(f"unexpected URL: {request.full_url}")
+
+    live = LiveFleetClient(
+        health_url="https://example.test/health",
+        market_catalog_url="https://example.test/catalog",
+        opener=opener,
+    ).fetch(now=NOW)
+
+    assert [job["work_id"] for job in live.open_work] == ["work_verified"]
+    assert live.open_work[0]["funding_status"] == "VERIFIED"
+    content = render_content(live)
+    assert "Independently funded work for outside agents:" in content
+    assert "work_verified" in content
+    assert "work_unverified" not in content
+    assert "work_missing_status" not in content
+
+
+def test_live_market_with_only_unverified_inventory_claims_no_paid_work():
+    base = snapshot(external=1)
+    health = {
+        "status": "ok",
+        "payment_gate": {
+            "x402": {
+                "enabled": True,
+                "http_front_door": list(base.routes),
+                "http_settlement_telemetry": {
+                    "total": base.metrics,
+                    "per_route": base.route_metrics,
+                },
+                "intro_pricing": {"enabled": False},
+            },
+        },
+    }
+    catalog = {
+        "open_work": [{
+            "work_id": "work_unverified",
+            "title": "Unverified listing",
+            "budget_minor": 5000,
+            "currency": "USD",
+            "funding_status": "UNVERIFIED",
+        }],
+    }
+
+    def opener(request, timeout):
+        del timeout
+        payload = (health if "/health?" in request.full_url else catalog)
+        return JsonResponse(payload)
+
+    live = LiveFleetClient(
+        health_url="https://example.test/health",
+        market_catalog_url="https://example.test/catalog",
+        opener=opener,
+    ).fetch(now=NOW)
+    content = render_content(live)
+
+    assert live.open_work == ()
+    assert "paid work" not in content.lower()
+    assert "work_unverified" not in content
+    assert "$50.00" not in content
+
+
+def test_repeat_campaign_surface_gate_reads_all_public_buyer_paths():
+    live = snapshot()
+    urls = []
+    machine = (
+        "--route regulatory-watch --max-payment-usdc 0.25\n"
+        "exactly one fresh paid attempt over the curated, source-linked "
+        "dataset\n"
+        "not a subscription or live external regulatory feed"
+    )
+
+    def opener(request, timeout):
+        assert timeout == 10
+        urls.append(request.full_url)
+        if request.full_url.endswith("/quickstart"):
+            return TextResponse(
+                '<h3 id="radar-watch-call">Watch</h3>\n' + machine)
+        return TextResponse(machine)
+
+    receipt = LiveFleetClient(opener=opener).verify_repeat_campaign_surfaces(
+        live)
+
+    assert urls == [
+        "https://example.test/quickstart",
+        "https://example.test/llms.txt",
+        "https://example.test/.well-known/skills/"
+        "viridis-paid-tools/SKILL.md",
+    ]
+    assert set(receipt) == {"quickstart", "llms", "buyer_skill"}
+    assert all(len(value) == 64 for value in receipt.values())
+
+
+def test_repeat_campaign_surface_gate_fails_closed_on_stale_machine_copy():
+    live = snapshot()
+
+    def opener(request, timeout):
+        del timeout
+        if request.full_url.endswith("/quickstart"):
+            return TextResponse(
+                '<h3 id="radar-watch-call">Watch</h3>\n'
+                "--route regulatory-watch --max-payment-usdc 0.25\n"
+                "exactly one fresh paid attempt over the curated, "
+                "source-linked dataset\n"
+                "not a subscription or live external regulatory feed"
+            )
+        return TextResponse("old new-wallet-only instructions")
+
+    with pytest.raises(GrowthError, match="omits the repeat campaign command"):
+        LiveFleetClient(opener=opener).verify_repeat_campaign_surfaces(live)
+
+
+def test_repeat_campaign_fails_before_surface_reads_when_watch_is_not_live():
+    live = snapshot(watch_live=False)
+
+    with pytest.raises(
+            GrowthError, match="dated-watch route is not live"):
+        LiveFleetClient(
+            opener=lambda *args, **kwargs: pytest.fail(
+                "surface reads must wait for the live watch route")
+        ).verify_repeat_campaign_surfaces(live)
 
 
 def test_open_market_work_is_promoted_with_exact_live_budget_and_id():
@@ -201,6 +512,7 @@ def test_open_market_work_is_promoted_with_exact_live_budget_and_id():
                     "title": "Build a LangGraph adapter",
                     "budget_minor": 2500, "currency": "USD"},))
     content = render_content(live)
+    assert "Independently funded work for outside agents:" in content
     assert "$25.00 — Build a LangGraph adapter (work_abc12345)" in content
     assert live.market_url in content
     assert validate_generated_content(content, live) == content
@@ -245,6 +557,38 @@ def test_full_live_market_content_stays_within_posting_limit():
     assert validate_generated_content(content, live) == content
 
 
+def test_large_live_suite_without_verified_work_compacts_to_posting_limit():
+    base = snapshot(external=1)
+    routes = tuple(
+        {
+            "agent": f"agent-{index}",
+            "tool": f"tool-{index}",
+            "endpoint": f"/x402/agent-{index}/tool-{index}",
+            "price_minor": 25 + index,
+            "amount_atomic_usdc": (25 + index) * 10_000,
+            "description": "Detailed deterministic climate workflow " * 20,
+        }
+        for index in range(6)
+    )
+    live = FleetSnapshot(
+        routes=routes, metrics=base.metrics,
+        route_metrics=base.route_metrics, intro_enabled=False,
+        agents_url=base.agents_url, quickstart_url=base.quickstart_url,
+        captured_at=base.captured_at,
+        market_url="https://mcp.viridisconservation.com/network/catalog",
+        open_work=())
+
+    content = render_content(live)
+
+    assert len(content) <= 1900
+    assert "Detailed deterministic climate workflow" not in content
+    for route in routes:
+        assert route["agent"] in content
+        assert f"${route['price_minor'] / 100:.2f}" in content
+    assert "paid work" not in content.lower()
+    assert validate_generated_content(content, live) == content
+
+
 def test_generated_copy_validator_refuses_price_or_claim_drift():
     live = snapshot(external=2, payers=2, intro=True)
     content = render_content(live)
@@ -253,6 +597,18 @@ def test_generated_copy_validator_refuses_price_or_claim_drift():
         validate_generated_content(content.replace("$0.50", "$0.40"), live)
     with pytest.raises(GrowthError, match="prohibited claim"):
         validate_generated_content(content + "\nGuaranteed compliance.", live)
+    with pytest.raises(GrowthError, match="omitted repeat-buyer guidance"):
+        validate_generated_content(content.replace(REPEAT_BUYER_CTA, ""), live)
+    with pytest.raises(GrowthError, match="paid-delivery receipt boundary"):
+        validate_generated_content(
+            content.replace(PAID_DELIVERY_RECEIPT_COPY, ""), live)
+
+
+def test_repeat_buyer_guidance_requires_live_external_proof():
+    content = render_content(snapshot(external=0, payers=0))
+    assert REPEAT_BUYER_CTA not in content
+    assert validate_generated_content(content, snapshot(
+        external=0, payers=0)) == content
 
 
 def test_live_snapshot_refuses_incomplete_or_unhealthy_health():
@@ -263,6 +619,28 @@ def test_live_snapshot_refuses_incomplete_or_unhealthy_health():
         FleetSnapshot.from_health(
             {"status": "ok", "payment_gate": {"x402": {"enabled": False}}},
             captured_at=NOW.isoformat())
+
+    base = snapshot()
+    total = dict(base.metrics)
+    total.pop("external_paid_results_receipted")
+    health = {
+        "status": "ok",
+        "payment_gate": {"x402": {
+            "enabled": True,
+            "http_front_door": list(base.routes),
+            "http_settlement_telemetry": {
+                "total": total,
+                "per_route": base.route_metrics,
+            },
+        }},
+    }
+    with pytest.raises(GrowthError, match="conversion metrics are incomplete"):
+        FleetSnapshot.from_health(health, captured_at=NOW.isoformat())
+
+    total["external_paid_results_receipted"] = 1
+    total["external_paid_results_delivered"] = 0
+    with pytest.raises(GrowthError, match="paid-delivery metrics are inconsistent"):
+        FleetSnapshot.from_health(health, captured_at=NOW.isoformat())
 
 
 def test_default_off_stops_before_network_or_send(tmp_path):
@@ -282,6 +660,153 @@ def test_dry_run_generates_and_selects_without_logging_or_send(tmp_path):
     assert result["send_attempted"] is False
     assert "First paid call" not in result["content"]
     assert client.calls == 1
+    assert adapter.calls == []
+    assert log.entries() == []
+
+
+def test_repeat_campaign_dry_run_is_exact_bounded_and_model_free(tmp_path):
+    copywriter = RecordingHarness(fail=True)
+    worker, log, adapter = agent(
+        tmp_path,
+        copywriter=copywriter,
+        environ={
+            "GROWTH_AGENT_ENABLED": "1",
+            "GROWTH_OPENAI_ENABLED": "1",
+            "GROWTH_OPENAI_API_KEY": "must-not-be-used",
+            "GROWTH_CAMPAIGN": REGULATORY_RADAR_REPEAT_CAMPAIGN,
+        },
+    )
+
+    result = worker.run_once(dry_run=True)
+
+    assert result["status"] == "dry_run"
+    assert result["campaign"] == REGULATORY_RADAR_REPEAT_CAMPAIGN
+    assert result["target"]["route"] == \
+        "regulatory-radar/monitor_changes"
+    assert "--route regulatory-watch --max-payment-usdc 0.25" \
+        in result["content"]
+    assert "exactly one fresh-quote call" in result["content"]
+    assert "No subscription, automatic retry, later-call authority" \
+        in result["content"]
+    assert result["content"].endswith(
+        "https://example.test/quickstart#radar-watch-call")
+    assert result["model"] == {
+        "mode": "deterministic",
+        "reason": "dry_run_no_api",
+    }
+    assert copywriter.calls == []
+    assert adapter.calls == []
+    assert log.entries() == []
+
+
+def test_repeat_campaign_requires_exact_authorization_before_network(tmp_path):
+    worker, log, adapter = agent(
+        tmp_path,
+        client=NeverClient(),
+        environ={
+            "GROWTH_AGENT_ENABLED": "1",
+            "GROWTH_CAMPAIGN": REGULATORY_RADAR_REPEAT_CAMPAIGN,
+            "GROWTH_CAMPAIGN_AUTHORIZATION": "almost",
+        },
+    )
+
+    result = worker.run_once()
+
+    assert result == {
+        "status": "campaign_not_authorized",
+        "campaign": REGULATORY_RADAR_REPEAT_CAMPAIGN,
+        "required_authorization": REGULATORY_RADAR_REPEAT_AUTHORIZATION,
+        "send_attempted": False,
+    }
+    assert adapter.calls == []
+    assert log.entries() == []
+
+
+def test_repeat_campaign_uses_one_allowlisted_target_and_route_attribution(
+        tmp_path):
+    blocked_for_campaign = target(
+        id="other-owned-channel",
+        base_weight=10,
+        campaigns=[],
+    )
+    allowed = target(id="repeat-owned-channel", route="*", base_weight=1)
+    worker, log, adapter = agent(
+        tmp_path,
+        targets=[blocked_for_campaign, allowed],
+        environ={
+            "GROWTH_AGENT_ENABLED": "1",
+            "GROWTH_CAMPAIGN": REGULATORY_RADAR_REPEAT_CAMPAIGN,
+            "GROWTH_CAMPAIGN_AUTHORIZATION":
+                REGULATORY_RADAR_REPEAT_AUTHORIZATION,
+            "GROWTH_DISCORD_BOT_TOKEN": "bot-test",
+            "GROWTH_OPENAI_ENABLED": "1",
+            "GROWTH_OPENAI_API_KEY": "must-not-be-used",
+        },
+    )
+
+    result = worker.run_once()
+
+    assert result["status"] == "sent"
+    assert result["target"] == "repeat-owned-channel"
+    assert len(adapter.calls) == 1
+    assert adapter.calls[0][0]["route"] == \
+        "regulatory-radar/monitor_changes"
+    attempt = log.entries("send_attempt")[0]
+    assert attempt["payload"]["campaign"] == \
+        REGULATORY_RADAR_REPEAT_CAMPAIGN
+    assert attempt["payload"]["attribution_scope"] == \
+        "regulatory-radar/monitor_changes"
+    plan = worker.plan_targets(now=NOW)
+    other = next(item for item in plan
+                 if item["id"] == "other-owned-channel")
+    assert other["reason"] == "campaign_not_allowed"
+
+
+def test_repeat_campaign_stops_when_live_repeat_exists(tmp_path):
+    worker, log, adapter = agent(
+        tmp_path,
+        client=FakeClient(snapshot(external=2, payers=1, repeats=1)),
+        environ={
+            "GROWTH_AGENT_ENABLED": "1",
+            "GROWTH_CAMPAIGN": REGULATORY_RADAR_REPEAT_CAMPAIGN,
+            "GROWTH_CAMPAIGN_AUTHORIZATION":
+                REGULATORY_RADAR_REPEAT_AUTHORIZATION,
+            "GROWTH_DISCORD_BOT_TOKEN": "bot-test",
+        },
+    )
+
+    result = worker.run_once()
+
+    assert result == {
+        "status": "campaign_complete",
+        "campaign": REGULATORY_RADAR_REPEAT_CAMPAIGN,
+        "send_attempted": False,
+    }
+    assert adapter.calls == []
+    assert log.entries() == []
+
+
+def test_dry_run_never_calls_paid_copywriter_when_openai_flag_drifts(tmp_path):
+    copywriter = RecordingHarness(fail=True)
+    worker, log, adapter = agent(
+        tmp_path,
+        copywriter=copywriter,
+        environ={
+            "GROWTH_AGENT_ENABLED": "1",
+            "GROWTH_OPENAI_ENABLED": "1",
+            "GROWTH_OPENAI_API_KEY": "must-not-be-used",
+        },
+    )
+
+    result = worker.run_once(dry_run=True)
+
+    assert result["status"] == "dry_run"
+    assert result["model"] == {
+        "mode": "deterministic",
+        "reason": "dry_run_no_api",
+    }
+    assert result["send_attempted"] is False
+    assert copywriter.calls == []
     assert adapter.calls == []
     assert log.entries() == []
 

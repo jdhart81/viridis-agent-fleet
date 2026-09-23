@@ -1,0 +1,14 @@
+name: viridisos
+version: "1.0.0"
+line: "Certification / OS"
+revenue_model: >
+  Free rail in staging (dev-HMAC preview: certificates are non-authoritative and are NOT charged).
+  At K3 go-live: verification (viridis_verify_mark) and identity (viridis_bind_did) remain FREE rails
+  (network commitment device); certification (viridis_certify, viridis_certify_envelope) becomes
+  PRICED via the unified protocol margin (esc-fee-v1 tier schedule) plus the settlement take-rate;
+  viridis_compute_toll is a free pricing utility.
+thesis_connection: >
+  The certification layer of the Intelligence Bound thesis: every certificate traces to a gate-passed,
+  machine-checked canon theorem (A-1), unifying conservation certificates and agent attestations under
+  one trust root / one mark / one toll (viridis-root-v1). Verification is the free network engine; the
+  mark plus the trust root are the moat.

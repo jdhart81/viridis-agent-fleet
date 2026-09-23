@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "service": "robustness-engine-agent",
+  "service_version": "0.6.0",
+  "source_state": "ARISTOTLE_AUDITED_PAPER_RECONCILED_DEPLOYMENT_CANDIDATE",
+  "base_image": "python:3.12-slim@sha256:229a2c5bfa27522db7815ea81f9bed70af17ccb9de9fc7ad142b1877b5830d36",
+  "files_sha256": {
+    "Dockerfile": "8ac8beddacb1d893cc16ddf379b6d13b163aa28c8e07610faf96f889cd0ac111",
+    "requirements.lock": "e6da2b8d55c41a3ab68e950222923d532089595071f85fcfda885564601f9733",
+    "src/core.py": "09db7edd05fc29f52e101bb08fa134c4da64eaa86314e209669091e1b46581b9",
+    "adapters/fastapi_server.py": "2a95a9483a81544cce792b06f73eac1c78da1ec5f4138e9de5477cdc46444d85",
+    "agent.yaml": "da8817ca15cd304b4ebc47f77e6d3e38a87fa0559b0a7058bd4494776fc79cba",
+    "ROLLBACK_PLAN.md": "c8669fc728871781d7cf82bbad197296078ab7a3cf861c5d5ea00b9212c077e7",
+    "vendor/robustness_engine/__init__.py": "62b0229930bd1902f3bddc5a0cee3b6e4431e17a52fafce2fd2f39b89e00b04d",
+    "vendor/robustness_engine/canonical.py": "4b29d5466de7d232b2fed7c160eccfc5dbd5df7f4dc46092a56c57395a015a99",
+    "vendor/robustness_engine/cli.py": "2f5f8d3de88d43841e32bbb84cdec8c85b8e32522a6bb29717819b70ae446a8b",
+    "vendor/robustness_engine/engine.py": "0ed98dba1c1a786fae97c00c652f5d07680d6b3084271f845ef7992747cad7d9",
+    "vendor/robustness_engine/lineage.py": "2df099cf748b68ca6ff63820ef76188c2776b67f8d34e0186b3b01aedc9583f3",
+    "vendor/robustness_engine/trajectory.py": "35a427da6cf93d282803813edeb8cedddc516a9cb7af57ba05b96c0006b0ff89",
+    "vendor/robustness_engine/uncertainty.py": "e50df6023d3379f4fdd7297181bc8108b6ebe52aa1449c214db41df3d61a79f5",
+    "vendor/robustness_engine/validation.py": "55bfb82d697a379769cc66db0270fd95039d948d5720c8a80800f82431f59c59",
+    "schemas/decision-case.schema.json": "19741ce2f6b51aff2165e7f233fad61d8cd2004374a5dacf7140be5bed380910",
+    "schemas/decision-record.schema.json": "e609776c5991d25a0aa6f07857c0ceb03a667ead1cd8f0255eb1c872f7af4ffc",
+    "schemas/outcome-bundle.schema.json": "b531db677a454628dffa0f89c1ee8a0ad79b8d84dbb8985def50c2d68f024590"
+  },
+  "excluded_self_referential_artifacts": [
+    "RELEASE_MANIFEST.json",
+    "deployment receipt"
+  ]
+}

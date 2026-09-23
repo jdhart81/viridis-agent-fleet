@@ -1,0 +1,103 @@
+"""Hermes is a remote buyer of Viridis services, never a fleet runtime."""
+from pathlib import Path
+
+import yaml
+
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+if not (ROOT / "integrations").exists():  # public mirror: gateway/ at root
+    ROOT = HERE.parent
+GATEWAY = ROOT / "deploy" / "gateway"
+if not (GATEWAY / "quickstart.html").exists():  # public mirror layout
+    GATEWAY = ROOT / "gateway"
+
+
+def _read(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def test_hermes_skill_is_remote_only_and_covers_every_serving_paid_route():
+    skill = _read(ROOT / "integrations" / "viridis-paid-tools" / "SKILL.md")
+    assert "name: viridis-paid-tools" in skill
+    assert "https://mcp.viridisconservation.com/network/mcp" in skill
+    for agent, tool in (
+        ("quantity-takeoff", "calculate_takeoff"),
+        ("ghg-ledger", "calculate_inventory"),
+        ("disclosure-compiler", "compile_disclosure"),
+        ("taxcredit-engine", "calculate_tax_credit"),
+        ("regulatory-radar", "scan_regulations"),
+        ("regulatory-radar", "monitor_changes"),
+        ("hive", "solve"),
+        ("security-preflight", "security_preflight"),
+    ):
+        assert f"/x402/{agent}/{tool}" in skill
+    lowered = skill.lower()
+    assert "never install or run it on viridis production" in lowered
+    assert "never send a private key to viridis" in lowered
+    assert "make exactly one paid attempt" in lowered
+    assert "discovery/search" in skill
+    assert "viridis_commerce.next_paid_routes" in skill
+    assert "viridis_commerce.repeat_purchase" in skill
+    assert "`input_schema`, `input_example`" in skill
+    assert "`required_buyer_inputs`, and `quote`" in skill
+    assert "quote.authoritative_source" in skill
+    assert "funding_status: UNVERIFIED" in skill
+    assert "confirm_work_funding" in skill
+    assert "funding_status: VERIFIED" in skill
+    assert "pip install hermes" not in lowered
+    assert "hermes setup" not in lowered
+    assert "hermes-agent.nousresearch.com/install" not in lowered
+
+
+def test_hermes_catalog_candidate_is_keyless_read_first_remote_mcp():
+    path = (ROOT / "integrations" / "hermes-catalog" /
+            "viridis-agent-market" / "manifest.yaml")
+    manifest = yaml.safe_load(_read(path))
+    assert manifest["manifest_version"] == 1
+    assert manifest["name"] == "viridis-agent-market"
+    assert manifest["transport"] == {
+        "type": "http",
+        "url": "https://mcp.viridisconservation.com/network/mcp",
+    }
+    assert manifest["auth"] == {"type": "none"}
+    assert manifest["tools"]["default_enabled"] == [
+        "network_status",
+        "describe_network",
+        "search_agents",
+        "search_work",
+        "get_work",
+        "list_security_attestations",
+    ]
+    assert "private keys on the caller's machine" in manifest["post_install"]
+
+
+def test_hosted_and_long_form_quickstarts_link_the_same_buyer_artifacts():
+    hosted = _read(GATEWAY / "quickstart.html")
+    long_form = _read(ROOT / "docs" / "QUICKSTART_FIRST_CALL.md")
+    buyer = _read(
+        ROOT / "docs" / "integrations" / "HERMES_BUYER_QUICKSTART.md")
+    for content in (hosted, long_form, buyer):
+        assert "hermes mcp add viridis-market" in content
+        assert "https://mcp.viridisconservation.com/network/mcp" in content
+        assert ".well-known/skills/viridis-paid-tools" in content
+        assert "--source well-known" in content
+        assert "--yes" in content
+        assert "--now" not in content
+
+
+def test_buyer_skill_and_guide_cover_bounded_dated_watch_path():
+    skill = _read(
+        ROOT / "integrations" / "viridis-paid-tools" / "SKILL.md")
+    guide = _read(
+        ROOT / "docs" / "integrations" / "HERMES_BUYER_QUICKSTART.md")
+
+    for surface in (skill, guide):
+        assert "--route regulatory-watch" in surface
+        assert "regulatory-radar/monitor_changes" in surface
+        assert "not a scheduled monitor" in surface
+        assert "exactly one new paid attempt" in surface
+        assert "250,000-atomic-USDC ceiling" in surface or \
+            "250000-atomic ceiling" in surface
+        assert "authorize any later purchase" in surface or \
+            "authorize a later purchase" in surface

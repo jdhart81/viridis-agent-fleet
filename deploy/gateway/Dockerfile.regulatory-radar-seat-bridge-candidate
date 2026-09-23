@@ -1,0 +1,6 @@
+# Local candidate only. BASE_IMAGE is the verified production-equivalent
+# gateway imported read-only. This layer changes only the paid-success
+# commerce envelope; it does not rebuild or sweep in held agent releases.
+ARG BASE_IMAGE=viridis-production-import:gateway-6e9828-source-equivalent
+FROM ${BASE_IMAGE}
+COPY --chown=0:0 deploy/gateway/x402_http.py /fleet/deploy/gateway/x402_http.py

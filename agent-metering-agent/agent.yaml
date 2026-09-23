@@ -1,0 +1,47 @@
+name: "agent-metering-agent"
+version: "0.2.0"
+description: "Usage metering + SLA accounting for agent services: the meter behind the x402/HTTP-402 micropayment idiom. Counts the work honestly so escrow knows how much to settle and trust knows whether promises were kept."
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "metering"
+
+thesis_connection: |
+  The A2A rails (identity -> trust -> escrow) tell agents WHO to hire and HOW
+  to pay; the meter tells them HOW MUCH. Honest, tamper-evident usage
+  accounting is trust infrastructure - it feeds SLA outcomes into
+  agent-trust-oracle-agent and frozen invoices into agent-escrow-agent.
+  Directly extends Energy AI's proven x402 idiom (idempotent on event_id,
+  prepaid/metered billing) into a sellable primitive.
+
+revenue_model: |
+  Metering-as-a-service for agent providers: bps on metered volume or flat
+  $99-$499/mo per provider. SLA-report subscriptions for consumers who need
+  proof their supplier kept its promises. Bundled with escrow settlement
+  (meter -> invoice -> escrow release) as the fleet's settlement stack.
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [create_meter, record_usage, usage_summary, sla_report, close_period, verify_chain, list_meters]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-escrow-agent (frozen invoices become escrow amounts)"
+  - "agent-trust-oracle-agent (SLA outcomes are reputation signals)"
+  - "agent-compute-ledger-agent (metered work is energy-accounted)"
+
+invariants:
+  - "M1 meter is append-only; events immutable, count monotone"
+  - "M2 positive finite quantity; unit fixed per meter"
+  - "M3 deterministic billing: amount_minor = ceil(qty * price_minor_per_unit)"
+  - "M4 idempotent on event_id (x402 toolCallId idiom) - never double-billed"
+  - "M5 tamper-evident event hash chain"
+  - "M6 sla_report is pure: success_rate vs sla_target, no mutation"
+  - "M7 close_period exactly-once; no empty invoices"
+  - "M8 unknown meter/event -> error envelope, never a crash"
