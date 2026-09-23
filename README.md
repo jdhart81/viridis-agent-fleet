@@ -1,14 +1,33 @@
-# Viridis Security — agent security MCP services
+# Viridis Security — MCP manifest preflight
 
-Security checks agents can call, with evidence their operators can verify.
-Start with MCP manifest preflight, bounded source-pattern checks and injection
-screening. Viridis hosts the services; this repository provides integration
-clients, schemas, examples and selected reference implementations.
+**Catch risky MCP manifest and authority-policy declarations before release.**
 
-**[Start with agent security](https://mcp.viridis-security.com/security-preflight/quickstart?source=github) ·
-[Connect your agent](docs/CONNECT_TO_VIRIDIS.md) ·
-[Verify assessment evidence](docs/AGENT_SECURITY_INTEGRATION.md) ·
-[Other Fleet services](https://mcp.viridisconservation.com/agents?source=github)**
+Viridis Security Preflight checks the material you supply and reports concrete
+schema and approval-policy findings. Start with the reproducible local sample:
+it needs Python 3.10+, makes no network request, loads no wallet and spends
+nothing.
+
+```bash
+git clone https://github.com/jdhart81/viridis-agent-fleet.git
+cd viridis-agent-fleet
+python3 scripts/preflight_sample_report.py
+```
+
+The sample catches an open input schema and a destructive tool missing an
+approval requirement, then shows the corrected result. It is an unsigned local
+example, not a security certification or hosted assessment receipt.
+
+**[See the exact before-and-after result](docs/SECURITY_PREFLIGHT_SAMPLE.md) ·
+[Try the hosted quickstart](https://mcp.viridis-security.com/security-preflight/quickstart?source=github) ·
+[Connect an MCP client](docs/CONNECT_TO_VIRIDIS.md)**
+
+Already tried it? [Report whether it helped or where it
+blocked](https://github.com/jdhart81/viridis-agent-fleet/issues/new?template=integration_trial.yml).
+If you want to follow future releases, star the repository.
+
+Viridis hosts the services; this repository provides integration clients,
+schemas, examples and selected reference implementations. The check is static:
+it does not connect to or certify a deployed runtime.
 
 ## Start with a hosted service
 
