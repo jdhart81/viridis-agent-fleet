@@ -1,0 +1,394 @@
+================================================================================
+VIRIDIS AGENT TEMPLATE - CANONICAL STRUCTURE
+================================================================================
+
+LOCATION:
+/sessions/sweet-zen-knuth/mnt/Agents to deploy copy/_AGENT_TEMPLATE/
+
+PURPOSE:
+Universal template for all Viridis agents. Single codebase, deploy to:
+  • FastAPI + Docker
+  • Google Cloud Run / AWS ECS / Kubernetes
+  • Cloudflare Workers
+  • MCP Server (Claude Code, other LLMs)
+  • Claude Code Skill
+
+================================================================================
+FILE STRUCTURE
+================================================================================
+
+_AGENT_TEMPLATE/
+├── agent.yaml                    # Agent manifest (metadata, config, dependencies)
+├── .env.example                  # Environment variables (no secrets)
+├── .gitignore                    # Git ignore patterns
+├── requirements.txt              # Python dependencies (pip)
+├── Dockerfile                    # Multi-stage Docker build
+├── Makefile                      # Development commands
+├── wrangler.toml                 # Cloudflare Worker config
+
+├── README.md                     # Full documentation with usage patterns
+├── DEPLOYMENT_GUIDE.md           # Detailed deployment instructions
+├── EXAMPLE.md                    # Concrete example (text processor agent)
+├── TEMPLATE_SUMMARY.txt          # This file
+
+├── src/
+│   └── core.py                   # CORE LOGIC - Domain business logic only
+│                                   (import by all deployment adapters)
+
+├── adapters/
+│   ├── fastapi_server.py         # HTTP/FastAPI adapter (Cloud Run, Docker, local)
+│   ├── mcp_server.py             # MCP protocol adapter (Claude Code)
+│   ├── cloudflare_worker.js      # Cloudflare Workers adapter
+│   └── claude_skill.md           # Claude Code Skill adapter template
+
+└── tests/
+    └── test_core.py             # Unit tests for core logic (comprehensive)
+
+================================================================================
+DESIGN PRINCIPLES
+================================================================================
+
+1. SEPARATION OF CONCERNS
+   • Core logic in src/core.py — ONLY business logic, zero deployment knowledge
+   • Each adapter is thin glue layer between core and HTTP/MCP/etc.
+   • Zero duplication across adapters
+
+2. MODULAR & ADAPTABLE
+   • Copy template → Edit agent.yaml + src/core.py → Deploy to any target
+   • Same code runs on FastAPI, Workers, MCP, Skill with zero changes to core
+   • Adapters are pluggable: add new one without touching existing code
+
+3. CONFIGURATION-DRIVEN
+   • All config via YAML manifest + environment variables
+   • No hardcoded secrets, no deployment-specific logic in code
+   • Clear separation between config and code
+
+4. STANDARD INTERFACE CONTRACT
+   • Every agent implements:
+     - async process(input_data: dict) -> dict
+     - async health() -> dict
+     - describe() -> dict
+   • Same interface across all deployment targets
+   • Enables agent composition and discovery
+
+================================================================================
+QUICK START (Creating Your First Agent)
+================================================================================
+
+1. Copy template:
+   cp -r _AGENT_TEMPLATE my-agent
+
+2. Edit agent.yaml with agent metadata:
+   - name, description, pillar, status, revenue_model
+
+3. Implement src/core.py:
+   - Subclass AgentCore
+   - Override process() with your domain logic
+   - Override describe() with capabilities
+
+4. Test locally:
+   make install
+   make test
+   make dev
+   
+   (In another terminal)
+   curl -X POST http://localhost:8080/process \
+     -H "Content-Type: application/json" \
+     -d '{"your": "input"}'
+
+5. Deploy to target:
+   - Docker: make docker-build && make docker-run
+   - Cloud Run: gcloud run deploy ... (see DEPLOYMENT_GUIDE)
+   - MCP: python adapters/mcp_server.py
+   - Skill: zip -r my-agent.skill.zip my-agent.skill/
+
+================================================================================
+CORE.PY PATTERN (What You Write)
+================================================================================
+
+from src.core import AgentCore, AgentConfig
+
+class MyAgent(AgentCore):
+    async def process(self, input_data: dict) -> dict:
+        # Validate inputs
+        self.validate_input(input_data, ["required_field"])
+        
+        # Your business logic here
+        result = await self._do_work(input_data)
+        
+        # Return wrapped result
+        return self._wrap_result(data=result)
+
+    def describe(self) -> dict:
+        return {
+            "name": self.config.name,
+            "version": self.config.version,
+            "capabilities": ["your", "capabilities"],
+            "inputs": {"field": "type"},
+            "outputs": {"result": "type"}
+        }
+
+That's it. Adapters handle HTTP, MCP, Workers, etc. — you never touch them.
+
+================================================================================
+DEPLOYMENT TARGETS (How You Deploy)
+================================================================================
+
+FastAPI + Docker:
+  docker build -t agent .
+  docker run -e AGENT_NAME=agent -p 8080:8080 agent
+
+Cloud Run:
+  gcloud run deploy agent --image agent --region us-central1
+
+Cloudflare Workers:
+  wrangler deploy
+
+MCP Server (Claude Code):
+  python adapters/mcp_server.py
+  # Then in Claude Code settings, register the MCP server
+
+Claude Code Skill:
+  zip -r agent.skill.zip agent.skill/
+  /import ./agent.skill.zip
+
+================================================================================
+FILE DETAILS
+================================================================================
+
+agent.yaml
+-----------
+Standard manifest with:
+  • name, version, description
+  • pillar (revenue | climate-intelligence | high-ceiling | infrastructure)
+  • status (spec | prototype | mvp | production)
+  • owner, revenue_model
+  • dependencies (list of packages)
+  • ports (http: 8080, health: /health)
+  • env_vars (list of required env var names)
+
+src/core.py
+-----------
+Base AgentCore class that you subclass:
+  • AgentConfig: Dataclass for configuration
+  • AgentCore: Base class with standard methods
+    - process(input_data) -> dict: YOUR LOGIC HERE
+    - health() -> dict: Health status
+    - describe() -> dict: Capabilities
+  • Helper methods:
+    - validate_input(data, required_fields)
+    - _wrap_result(data, error): Standard response format
+
+adapters/fastapi_server.py
+--------------------------
+HTTP server using FastAPI:
+  • GET /health: Health check
+  • GET /describe: Agent capabilities
+  • POST /process: Main processing endpoint
+  • GET /info: Agent info
+  • Automatic Swagger docs at /docs
+  • CORS, request logging, exception handling
+
+adapters/mcp_server.py
+----------------------
+MCP protocol server using FastMCP:
+  • Tools: process(), health(), describe()
+  • Resources: agent://metadata
+  • Auto-registration with MCP clients
+  • Works with Claude Code out of the box
+
+adapters/cloudflare_worker.js
+-----------------------------
+Cloudflare Workers entry point:
+  • Handles HTTP requests
+  • Pattern: Delegate to core logic (Python service or reimplemented JS)
+  • Provides caching, DDoS protection edge
+
+adapters/claude_skill.md
+-----------------------
+SKILL.md manifest for Claude Code deployment:
+  • YAML frontmatter with command definitions
+  • Python import pattern (wraps core.py)
+  • Type hints for inputs/outputs
+
+tests/test_core.py
+------------------
+Comprehensive unit tests:
+  • 50+ tests covering all core functionality
+  • Async/await patterns with pytest-asyncio
+  • Fixtures, validation tests, integration tests
+  • Run with: pytest tests/test_core.py -v
+
+Dockerfile
+----------
+Multi-stage Docker build:
+  • Stage 1: Builder (installs dependencies)
+  • Stage 2: Runtime (minimal image with just dependencies)
+  • Non-root user for security
+  • Health check configured
+  • Default runs FastAPI adapter
+
+requirements.txt
+----------------
+Python dependencies:
+  • fastapi, uvicorn, pydantic
+  • fastmcp (for MCP)
+  • pytest, pytest-asyncio, pytest-cov
+  • python-dotenv for env var loading
+  • Optional: packages you add for your agent
+
+Makefile
+--------
+Development commands:
+  make install       - pip install requirements
+  make test          - pytest
+  make test-cov      - pytest with coverage report
+  make dev           - Run FastAPI in reload mode
+  make docker-build  - Build Docker image
+  make docker-run    - Run Docker container
+  make health        - Check /health endpoint
+  make process       - Example curl to /process
+  make lint, fmt, clean - Code quality
+
+README.md
+---------
+Complete guide covering:
+  • Architecture and design philosophy
+  • Directory structure
+  • How to create new agents from template
+  • Deployment to each target
+  • Development workflow
+  • Integration patterns
+  • Monitoring and observability
+  • Deployment checklist
+  • FAQ
+
+DEPLOYMENT_GUIDE.md
+-------------------
+Detailed instructions for deploying to:
+  • FastAPI + Docker
+  • Google Cloud Run
+  • AWS ECS
+  • Kubernetes
+  • Cloudflare Workers
+  • MCP Server
+  • CI/CD (GitHub Actions example)
+  • Monitoring, logging, metrics
+  • Secrets management
+  • Security checklist
+  • Troubleshooting
+
+EXAMPLE.md
+----------
+Walk-through: Building a text processing agent from scratch
+  • Shows concrete implementation of src/core.py
+  • Tests for the agent
+  • Testing HTTP endpoints
+  • Docker deployment
+  • MCP deployment
+  • Skill deployment
+  • Composition with other agents
+  • Troubleshooting
+
+================================================================================
+DEPLOYMENT REFERENCE
+================================================================================
+
+Choose one or more targets:
+
+TARGET                ADAPTER              ENVIRONMENT
+------                -------              -----------
+Local Development     fastapi_server.py    make dev
+Docker                Dockerfile           make docker-build/run
+Cloud Run             Dockerfile + deploy  gcloud run deploy
+ECS                   Dockerfile + config  AWS ECS task
+Kubernetes            Dockerfile + yaml    kubectl apply
+Cloudflare Workers    cloudflare_worker.js wrangler publish
+MCP Server            mcp_server.py        python adapters/mcp_server.py
+Claude Code Skill     claude_skill.md      /import ./agent.skill.zip
+
+All deploy the SAME core logic from src/core.py — zero code duplication.
+
+================================================================================
+STANDARD ENDPOINTS
+================================================================================
+
+GET /health
+  Health check. Returns: {"status": "ok|degraded|error", "agent": "...", ...}
+
+GET /describe
+  Agent capabilities. Returns: {"name": "...", "capabilities": [...], ...}
+
+POST /process
+  Main processing. Input: {"your": "data"}. Output: {"status": "ok|error", ...}
+
+GET /info
+  Agent info. Returns: {"name": "...", "version": "...", ...}
+
+GET /docs
+  Swagger UI (FastAPI only)
+
+================================================================================
+ENVIRONMENT VARIABLES
+================================================================================
+
+All agents support:
+  AGENT_NAME      # Agent identifier (required)
+  LOG_LEVEL       # INFO (default), DEBUG, WARNING, ERROR
+  HOST            # 0.0.0.0 (default)
+  PORT            # 8080 (default)
+
+Add more in .env.example, load with python-dotenv in your adapter.
+
+================================================================================
+TESTING
+================================================================================
+
+Unit tests in tests/test_core.py:
+  pytest tests/test_core.py -v              # Run all
+  pytest tests/test_core.py::TestClass -v   # Run one class
+  pytest tests/test_core.py -k "test_name"  # Run one test
+  pytest tests/test_core.py --cov=src       # With coverage
+
+With coverage report:
+  pytest tests/ --cov=src --cov-report=html
+  open htmlcov/index.html
+
+================================================================================
+EXAMPLE: TEXT PROCESSOR AGENT
+================================================================================
+
+See EXAMPLE.md for step-by-step walkthrough creating an agent that:
+  • Takes text input
+  • Transforms with uppercase/lowercase/reverse/titlecase
+  • Returns transformed text
+  • Deployed to all targets
+
+Shows:
+  • agent.yaml configuration
+  • src/core.py implementation
+  • Unit tests
+  • HTTP testing
+  • Docker deployment
+  • MCP deployment
+  • Skill deployment
+  • Composition with other agents
+
+================================================================================
+SUPPORT
+================================================================================
+
+Template Location:
+  /sessions/sweet-zen-knuth/mnt/Agents to deploy copy/_AGENT_TEMPLATE/
+
+Use this for all new Viridis agents. Structure is canonical and enforces
+best practices:
+  • Core logic separated from deployment
+  • Configuration-driven, zero hardcoded secrets
+  • Standard interface contract across targets
+  • Production-quality code with tests
+  • Comprehensive documentation
+
+Questions? See README.md, DEPLOYMENT_GUIDE.md, or EXAMPLE.md.
+
+================================================================================

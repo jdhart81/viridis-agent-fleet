@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ from adapters.llm_solver import (  # noqa: E402
     MAX_REVIEW_OUTPUT_TOKENS,
     MAX_SOLVE_OUTPUT_TOKENS,
     LLMSolverAdapter,
+    OPENAI_SERVICE_TIER,
     conservative_request_cost_usd,
     openai_transport,
 )
@@ -95,6 +97,41 @@ def test_openai_key_is_checked_only_at_call_time(monkeypatch):
             "instructions": "i", "prompt": "p",
             "max_output_tokens": 1,
         }))
+
+
+def test_openai_transport_pins_standard_service_tier(monkeypatch):
+    captured = {}
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"choices": [{"message": {"content": "ok"}}]}
+
+    class Client:
+        def __init__(self, *, timeout):
+            captured["timeout"] = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url, *, headers, json):
+            captured.update({"url": url, "headers": headers, "json": json})
+            return Response()
+
+    monkeypatch.setitem(
+        sys.modules, "httpx", SimpleNamespace(AsyncClient=Client))
+    result = run(openai_transport(api_key="test-key")({
+        "instructions": "i", "prompt": "p", "max_output_tokens": 10,
+    }))
+
+    assert result == "ok"
+    assert captured["json"]["service_tier"] == OPENAI_SERVICE_TIER
+    assert OPENAI_SERVICE_TIER == "default"
 
 
 def test_cost_bound_is_conservative_and_small():

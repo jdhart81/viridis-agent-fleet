@@ -1,0 +1,19 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python3 scripts/public_boundary_guard.py
+  tests:
+    runs-on: ubuntu-latest
+    needs: boundary
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -r requirements-dev.txt
+      - run: python3 run_fleet_tests.py

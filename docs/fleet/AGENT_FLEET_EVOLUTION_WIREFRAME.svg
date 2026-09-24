@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1000 760" xmlns="http://www.w3.org/2000/svg" role="img" font-family="system-ui, -apple-system, sans-serif">
+  <title>Viridis Agent Fleet Evolution</title>
+  <desc>Five-layer wireframe of the Viridis agent fleet evolution from book-DNA foundations through pillar agents, shared primitives, canonical patterns, and Nightkeeper self-improvement to today's snapshot (v4.2 / N48, 761/761 pass, 16 consecutive clean nights).</desc>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#888"/></marker>
+    <marker id="ahw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d99a4a"/></marker>
+  </defs>
+  <style>
+    .title{font-size:20px;font-weight:600;fill:#1a1a1a}
+    .subtitle{font-size:12px;fill:#666}
+    .layer-label{font-size:11px;font-weight:700;fill:#1a1a1a;letter-spacing:0.08em}
+    .layer-sub{font-size:10px;fill:#888}
+    .box{fill:#f5f5f5;stroke:#d4d4d4;stroke-width:1}
+    .box-accent{fill:#e8f3ee;stroke:#6ba98a;stroke-width:1}
+    .box-warm{fill:#fbf2e6;stroke:#d99a4a;stroke-width:1}
+    .box-text{font-size:11px;fill:#1a1a1a;font-weight:500}
+    .box-text-sm{font-size:10px;fill:#666}
+    .arrow{stroke:#888;stroke-width:1.5;fill:none}
+    .arrow-loop{stroke:#d99a4a;stroke-width:1.5;fill:none;stroke-dasharray:5 4}
+    .num{font-size:22px;font-weight:700;fill:#1a1a1a}
+    .num-warn{font-size:22px;font-weight:700;fill:#d99a4a}
+    .stat-label{font-size:9px;fill:#666;letter-spacing:0.04em}
+    .stat-warn{font-size:9px;fill:#d99a4a;letter-spacing:0.04em;font-weight:600}
+  </style>
+  <text x="500" y="28" text-anchor="middle" class="title">Viridis Agent Fleet — Evolution Wireframe</text>
+  <text x="500" y="46" text-anchor="middle" class="subtitle">Book-DNA foundations to today's Nightkeeper-managed canonical fleet (v4.2 / N48)</text>
+  <text x="30" y="92" class="layer-label">L0 - BOOKS</text>
+  <text x="30" y="106" class="layer-sub">Intellectual DNA</text>
+  <rect class="box" x="180" y="75" width="155" height="40" rx="6"/><text x="257" y="93" text-anchor="middle" class="box-text">Intelligence Bound</text><text x="257" y="106" text-anchor="middle" class="box-text-sm">AI safety thesis</text>
+  <rect class="box" x="350" y="75" width="155" height="40" rx="6"/><text x="427" y="93" text-anchor="middle" class="box-text">Physical Review E</text><text x="427" y="106" text-anchor="middle" class="box-text-sm">Thermo-econ paper</text>
+  <rect class="box" x="520" y="75" width="155" height="40" rx="6"/><text x="597" y="93" text-anchor="middle" class="box-text">Nature Sustainability</text><text x="597" y="106" text-anchor="middle" class="box-text-sm">Conservation econ</text>
+  <rect class="box" x="690" y="75" width="155" height="40" rx="6"/><text x="767" y="93" text-anchor="middle" class="box-text">Protocol Paper</text><text x="767" y="106" text-anchor="middle" class="box-text-sm">Agent economy</text>
+  <line x1="500" y1="120" x2="500" y2="152" class="arrow" marker-end="url(#ah)"/>
+  <text x="30" y="178" class="layer-label">L1 - AGENTS</text>
+  <text x="30" y="192" class="layer-sub">30+ today (v4.2)</text>
+  <rect class="box-accent" x="180" y="162" width="92" height="28" rx="5"/><text x="226" y="180" text-anchor="middle" class="box-text">HDFM</text>
+  <rect class="box-accent" x="282" y="162" width="92" height="28" rx="5"/><text x="328" y="180" text-anchor="middle" class="box-text">Sentinel</text>
+  <rect class="box-accent" x="384" y="162" width="92" height="28" rx="5"/><text x="430" y="180" text-anchor="middle" class="box-text">EnergyAI</text>
+  <rect class="box-accent" x="486" y="162" width="92" height="28" rx="5"/><text x="532" y="180" text-anchor="middle" class="box-text">Carbon-Bridge</text>
+  <rect class="box-accent" x="588" y="162" width="92" height="28" rx="5"/><text x="634" y="180" text-anchor="middle" class="box-text">D-Score</text>
+  <rect class="box-accent" x="690" y="162" width="92" height="28" rx="5"/><text x="736" y="180" text-anchor="middle" class="box-text">Thermo-Econ</text>
+  <rect class="box-accent" x="792" y="162" width="92" height="28" rx="5"/><text x="838" y="180" text-anchor="middle" class="box-text">Wavefunction</text>
+  <rect class="box-accent" x="180" y="196" width="92" height="28" rx="5"/><text x="226" y="214" text-anchor="middle" class="box-text">Evoterra</text>
+  <rect class="box-accent" x="282" y="196" width="92" height="28" rx="5"/><text x="328" y="214" text-anchor="middle" class="box-text">Bioacoustic</text>
+  <rect class="box-accent" x="384" y="196" width="92" height="28" rx="5"/><text x="430" y="214" text-anchor="middle" class="box-text">Mycelium-IQ</text>
+  <rect class="box-accent" x="486" y="196" width="92" height="28" rx="5"/><text x="532" y="214" text-anchor="middle" class="box-text">GaiaSim</text>
+  <rect class="box-accent" x="588" y="196" width="92" height="28" rx="5"/><text x="634" y="214" text-anchor="middle" class="box-text">Proof-of-Cons</text>
+  <rect class="box-accent" x="690" y="196" width="92" height="28" rx="5"/><text x="736" y="214" text-anchor="middle" class="box-text">Shendao</text>
+  <rect class="box-accent" x="792" y="196" width="92" height="28" rx="5"/><text x="838" y="214" text-anchor="middle" class="box-text" font-style="italic">+22 more</text>
+  <line x1="500" y1="230" x2="500" y2="262" class="arrow" marker-end="url(#ah)"/>
+  <text x="30" y="288" class="layer-label">L2 - PRIMITIVES</text>
+  <text x="30" y="302" class="layer-sub">fleet_utils</text>
+  <rect class="box" x="220" y="272" width="180" height="40" rx="6"/><text x="310" y="290" text-anchor="middle" class="box-text">require_number</text><text x="310" y="303" text-anchor="middle" class="box-text-sm">type / range validator</text>
+  <rect class="box" x="415" y="272" width="180" height="40" rx="6"/><text x="505" y="290" text-anchor="middle" class="box-text">Symmetric drift detector</text><text x="505" y="303" text-anchor="middle" class="box-text-sm">dispatch &lt;-&gt; describe()</text>
+  <rect class="box" x="610" y="272" width="180" height="40" rx="6"/><text x="700" y="290" text-anchor="middle" class="box-text">SUPPORTED_ACTIONS</text><text x="700" y="303" text-anchor="middle" class="box-text-sm">canonical dispatch tuple</text>
+  <line x1="500" y1="318" x2="500" y2="350" class="arrow" marker-end="url(#ah)"/>
+  <text x="30" y="376" class="layer-label">L3 - PATTERNS</text>
+  <text x="30" y="390" class="layer-sub">canonical disciplines</text>
+  <rect class="box" x="220" y="360" width="180" height="52" rx="6"/><text x="310" y="378" text-anchor="middle" class="box-text">Section 9</text><text x="310" y="392" text-anchor="middle" class="box-text-sm">dispatch validation</text><text x="310" y="405" text-anchor="middle" class="box-text-sm">canonical (N46-A)</text>
+  <rect class="box-accent" x="415" y="360" width="180" height="52" rx="6"/><text x="505" y="378" text-anchor="middle" class="box-text" font-weight="600">Section 9.1 * ACTIVE ARC</text><text x="505" y="392" text-anchor="middle" class="box-text-sm">3 of 4 sub-patterns canonical</text><text x="505" y="405" text-anchor="middle" class="box-text-sm">N46-A -&gt; N47-A/B -&gt; N48-A</text>
+  <rect class="box" x="610" y="360" width="180" height="52" rx="6"/><text x="700" y="378" text-anchor="middle" class="box-text">Section 10</text><text x="700" y="392" text-anchor="middle" class="box-text-sm">monotonicity / linearity</text><text x="700" y="405" text-anchor="middle" class="box-text-sm">canonical</text>
+  <line x1="500" y1="418" x2="500" y2="450" class="arrow" marker-end="url(#ah)"/>
+  <text x="30" y="476" class="layer-label">L4 - NIGHTKEEPER</text>
+  <text x="30" y="490" class="layer-sub">3 AM self-improvement</text>
+  <rect class="box-warm" x="180" y="460" width="705" height="44" rx="6"/>
+  <text x="195" y="479" class="box-text" font-weight="600">N1</text>
+  <line x1="215" y1="475" x2="855" y2="475" stroke="#d99a4a" stroke-width="1.5"/>
+  <g stroke="#d99a4a" stroke-width="1"><line x1="280" y1="471" x2="280" y2="479"/><line x1="345" y1="471" x2="345" y2="479"/><line x1="410" y1="471" x2="410" y2="479"/><line x1="475" y1="471" x2="475" y2="479"/><line x1="540" y1="471" x2="540" y2="479"/><line x1="605" y1="471" x2="605" y2="479"/><line x1="670" y1="471" x2="670" y2="479"/><line x1="735" y1="471" x2="735" y2="479"/><line x1="800" y1="471" x2="800" y2="479"/></g>
+  <text x="870" y="479" text-anchor="end" class="box-text" font-weight="700">N48 (today)</text>
+  <text x="532" y="496" text-anchor="middle" class="box-text-sm" font-style="italic">16 consecutive clean nights | 0 regressions | 0 reverts</text>
+  <line x1="500" y1="510" x2="500" y2="545" class="arrow" marker-end="url(#ah)"/>
+  <rect x="180" y="552" width="705" height="160" rx="8" fill="#fff" stroke="#1a1a1a" stroke-width="1.5"/>
+  <text x="200" y="576" class="layer-label">TODAY | 2026-05-17 | v4.2 / N48</text>
+  <line x1="200" y1="584" x2="865" y2="584" stroke="#d4d4d4" stroke-width="1"/>
+  <g transform="translate(210, 610)"><text x="0" y="0" class="num">761</text><text x="0" y="15" class="stat-label">audited / 761 pass</text></g>
+  <g transform="translate(330, 610)"><text x="0" y="0" class="num">1,058</text><text x="0" y="15" class="stat-label">full fleet | 0 fails</text></g>
+  <g transform="translate(465, 610)"><text x="0" y="0" class="num">30+</text><text x="0" y="15" class="stat-label">agents live</text></g>
+  <g transform="translate(560, 610)"><text x="0" y="0" class="num">3 / 4</text><text x="0" y="15" class="stat-label">section 9.1 sub-patterns canonical</text></g>
+  <g transform="translate(740, 610)"><text x="0" y="0" class="num-warn">2</text><text x="0" y="15" class="stat-warn">HUMAN_DECISION pending</text><text x="0" y="27" class="stat-warn">16 nights aged !</text></g>
+  <line x1="200" y1="660" x2="865" y2="660" stroke="#d4d4d4" stroke-width="1"/>
+  <text x="200" y="680" class="box-text-sm" font-weight="600">Next arc (N49 #1 HIGH):</text>
+  <text x="200" y="695" class="box-text-sm">Section 9.1 4th sub-pattern (back-propagation) -&gt; graduates to fleet-wide intro discipline | ~10-LOC test-only edit</text>
+  <path d="M 880 632 C 965 632, 965 178, 880 178" class="arrow-loop" marker-end="url(#ahw)"/>
+  <text x="912" y="395" class="box-text-sm" fill="#d99a4a" font-style="italic" font-weight="600"><tspan x="912" y="385">self-</tspan><tspan x="912" y="398">improvement</tspan><tspan x="912" y="411">loop</tspan></text>
+  <g transform="translate(180, 738)">
+    <rect class="box-accent" x="0" y="-9" width="14" height="10" rx="2"/><text x="20" y="0" class="box-text-sm">active arc / agents</text>
+    <rect class="box" x="160" y="-9" width="14" height="10" rx="2"/><text x="180" y="0" class="box-text-sm">canonical / stable</text>
+    <rect class="box-warm" x="305" y="-9" width="14" height="10" rx="2"/><text x="325" y="0" class="box-text-sm">Nightkeeper / warning</text>
+    <line x1="475" y1="-5" x2="500" y2="-5" class="arrow-loop"/><text x="506" y="0" class="box-text-sm">self-improvement loop</text>
+  </g>
+</svg>

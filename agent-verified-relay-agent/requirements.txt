@@ -1,0 +1,6 @@
+# Core is stdlib-only (no runtime deps) — deploy-anywhere.
+# Dev/test:
+pytest>=7.0
+pytest-asyncio>=0.21
+# Optional adapter deps (install for MCP serving):
+# mcp>=1.0

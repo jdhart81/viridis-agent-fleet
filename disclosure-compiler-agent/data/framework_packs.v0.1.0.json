@@ -1,0 +1,136 @@
+{
+  "schema_version": "viridis.disclosure.framework-packs.v1",
+  "pack_version": "2026.07.13-v0.1.0",
+  "effective_as_of": "2026-07-13",
+  "disclaimer": "Disclosure draft for professional review only. This deterministic assembly is not a filed, assured, audited, or legally sufficient report and is not legal, accounting, assurance, or regulatory advice. Missing fields remain explicit gaps; applicability and materiality must be confirmed by qualified professionals.",
+  "ghg_verifier": {
+    "producer_agent_id": "ghg-ledger-agent",
+    "producer_version": "0.1.0",
+    "factor_pack_version": "2026.07.13-v0.1.0",
+    "factor_pack_sha256": "a5d65d87b44e945f24d887a8722991cea131f594b59c867d816862ef27042469",
+    "audit_profile": "viridis.ghg-ledger.audit.v0.1.0",
+    "required_checks": ["audit_hash", "conservation", "notary_payload", "offset_weave", "factor_pack_current"]
+  },
+  "sources": [
+    {
+      "id": "eu-esrs-e1-2023",
+      "authority": "Commission Delegated Regulation (EU) 2023/2772, ESRS E1",
+      "title": "European Sustainability Reporting Standards — ESRS E1 Climate change",
+      "publisher": "European Union",
+      "date": "2023-12-22",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023R2772"
+    },
+    {
+      "id": "sec-33-11275-2024",
+      "authority": "SEC Release Nos. 33-11275 and 34-99678",
+      "title": "The Enhancement and Standardization of Climate-Related Disclosures for Investors",
+      "publisher": "U.S. Securities and Exchange Commission",
+      "date": "2024-03-06",
+      "url": "https://www.sec.gov/files/rules/final/2024/33-11275.pdf"
+    },
+    {
+      "id": "sec-33-11421-proposed-rescission-2026",
+      "authority": "SEC Release No. 33-11421, File No. S7-2026-19",
+      "title": "Proposed Rescission of Climate-Related Disclosure Rules",
+      "publisher": "U.S. Securities and Exchange Commission",
+      "date": "2026-05-29",
+      "url": "https://www.sec.gov/rules-regulations/2026/05/s7-2026-19",
+      "note": "The 2024 climate rules remain stayed and the SEC proposed full rescission in May 2026. This pack never presumes current applicability."
+    },
+    {
+      "id": "ifrs-s2-2023-with-2025-ghg-amendments",
+      "authority": "IFRS S2 Climate-related Disclosures",
+      "title": "IFRS S2 Climate-related Disclosures and standard history",
+      "publisher": "IFRS Foundation / International Sustainability Standards Board",
+      "date": "2025-12",
+      "url": "https://www.ifrs.org/issued-standards/ifrs-sustainability-standards-navigator/ifrs-s2-climate-related-disclosures/",
+      "note": "Pack notes the December 2025 targeted GHG amendments, effective for periods beginning on or after 2027 unless early applied. Professional review must confirm the applicable edition."
+    },
+    {
+      "id": "tnfd-final-recommendations-2023",
+      "authority": "Recommendations of the Taskforce on Nature-related Financial Disclosures",
+      "title": "TNFD Final Recommendations",
+      "publisher": "Taskforce on Nature-related Financial Disclosures",
+      "date": "2023-09",
+      "url": "https://tnfd.global/publication/recommendations-of-the-taskforce-on-nature-related-financial-disclosures/"
+    },
+    {
+      "id": "viridis-disclosure-builder-spec-v0.1.0",
+      "authority": "Non-authoritative Viridis builder-spec pin",
+      "title": "Disclosure Compiler MVP deterministic mapping specification",
+      "publisher": "Viridis Conservation",
+      "date": "2026-07-13",
+      "url": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/deployment/REVENUE_TOOLS_BUILD_LIST.md",
+      "note": "Implementation pin only; it does not replace the underlying framework text or professional judgment."
+    }
+  ],
+  "frameworks": {
+    "esrs-e1": {
+      "name": "ESRS E1 — Climate change",
+      "status": "mvp_structured_datapoints",
+      "source_ids": ["eu-esrs-e1-2023", "viridis-disclosure-builder-spec-v0.1.0"],
+      "datapoints": [
+        {"id": "entity_name", "section": "basis", "label": "Reporting undertaking", "requirement": "Identify the reporting undertaking.", "required": true, "expected_input": {"source": "company_facts", "path": "company_name"}, "source_id": "eu-esrs-e1-2023"},
+        {"id": "reporting_period", "section": "basis", "label": "Reporting period", "requirement": "State the reporting period for the climate disclosures.", "required": true, "expected_input": {"source": "company_facts", "path": "reporting_period"}, "source_id": "eu-esrs-e1-2023"},
+        {"id": "transition_plan", "section": "E1-1", "label": "Transition plan", "requirement": "Describe the transition plan for climate-change mitigation.", "required": true, "expected_input": {"source": "company_facts", "path": "transition_plan"}, "source_id": "eu-esrs-e1-2023"},
+        {"id": "climate_targets", "section": "E1-4", "label": "Climate targets", "requirement": "Disclose climate-change mitigation and adaptation targets.", "required": true, "expected_input": {"source": "company_facts", "path": "climate_targets"}, "source_id": "eu-esrs-e1-2023"},
+        {"id": "gross_scope_1", "section": "E1-6", "label": "Gross Scope 1 emissions", "requirement": "Disclose gross Scope 1 GHG emissions.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_1"}, "source_id": "eu-esrs-e1-2023"},
+        {"id": "gross_scope_2_location_based", "section": "E1-6", "label": "Gross Scope 2 emissions — location based", "requirement": "Disclose gross location-based Scope 2 GHG emissions.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_2_location_based"}, "source_id": "eu-esrs-e1-2023"},
+        {"id": "gross_scope_2_market_based", "section": "E1-6", "label": "Gross Scope 2 emissions — market based", "requirement": "Disclose gross market-based Scope 2 GHG emissions.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_2_market_based"}, "source_id": "eu-esrs-e1-2023"},
+        {"id": "gross_scope_3", "section": "E1-6", "label": "Gross Scope 3 emissions", "requirement": "Disclose gross Scope 3 GHG emissions.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_3"}, "source_id": "eu-esrs-e1-2023"},
+        {"id": "total_location_based", "section": "E1-6", "label": "Total GHG emissions — location based", "requirement": "Disclose total GHG emissions using location-based Scope 2.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.total_location_based"}, "source_id": "eu-esrs-e1-2023"},
+        {"id": "ghg_intensity", "section": "E1-6", "label": "GHG emissions intensity", "requirement": "Disclose GHG intensity using an explicit denominator and methodology.", "required": true, "expected_input": {"source": "company_facts", "path": "ghg_intensity"}, "source_id": "eu-esrs-e1-2023"}
+      ]
+    },
+    "sec-climate": {
+      "name": "SEC climate disclosure — 2024 final-rule structured draft",
+      "status": "mvp_structured_datapoints_professional_applicability_review_required",
+      "note": "The 2024 rules remain stayed and full rescission was proposed in May 2026. This is a structured scenario draft only; no current SEC applicability is presumed.",
+      "source_ids": ["sec-33-11275-2024", "sec-33-11421-proposed-rescission-2026", "viridis-disclosure-builder-spec-v0.1.0"],
+      "datapoints": [
+        {"id": "entity_name", "section": "basis", "label": "Registrant name", "requirement": "Identify the registrant.", "required": true, "expected_input": {"source": "company_facts", "path": "company_name"}, "source_id": "sec-33-11275-2024"},
+        {"id": "reporting_period", "section": "basis", "label": "Reporting period", "requirement": "State the reporting period.", "required": true, "expected_input": {"source": "company_facts", "path": "reporting_period"}, "source_id": "sec-33-11275-2024"},
+        {"id": "board_oversight", "section": "governance", "label": "Board oversight", "requirement": "Describe board oversight of climate-related risks when applicable.", "required": true, "expected_input": {"source": "company_facts", "path": "board_oversight"}, "source_id": "sec-33-11275-2024"},
+        {"id": "management_role", "section": "governance", "label": "Management role", "requirement": "Describe management's role in assessing and managing material climate-related risks.", "required": true, "expected_input": {"source": "company_facts", "path": "management_role"}, "source_id": "sec-33-11275-2024"},
+        {"id": "material_climate_risks", "section": "strategy", "label": "Material climate risks", "requirement": "Describe material climate-related risks and their actual or likely material impacts.", "required": true, "expected_input": {"source": "company_facts", "path": "material_climate_risks"}, "source_id": "sec-33-11275-2024"},
+        {"id": "risk_management_process", "section": "risk_management", "label": "Risk-management process", "requirement": "Describe processes used to identify, assess, and manage material climate-related risks.", "required": true, "expected_input": {"source": "company_facts", "path": "risk_management_process"}, "source_id": "sec-33-11275-2024"},
+        {"id": "climate_targets", "section": "targets_and_goals", "label": "Climate targets and goals", "requirement": "Disclose material climate-related targets or goals and progress when applicable.", "required": true, "expected_input": {"source": "company_facts", "path": "climate_targets"}, "source_id": "sec-33-11275-2024"},
+        {"id": "gross_scope_1", "section": "ghg_metrics_if_applicable", "label": "Scope 1 emissions input", "requirement": "Structured Scope 1 emissions input for professional applicability review.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_1"}, "source_id": "sec-33-11275-2024"},
+        {"id": "gross_scope_2_location_based", "section": "ghg_metrics_if_applicable", "label": "Scope 2 emissions input", "requirement": "Structured location-based Scope 2 emissions input for professional applicability review.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_2_location_based"}, "source_id": "sec-33-11275-2024"}
+      ]
+    },
+    "ifrs-s2": {
+      "name": "IFRS S2 — Climate-related Disclosures",
+      "status": "mvp_structured_datapoints",
+      "source_ids": ["ifrs-s2-2023-with-2025-ghg-amendments", "viridis-disclosure-builder-spec-v0.1.0"],
+      "datapoints": [
+        {"id": "entity_name", "section": "basis", "label": "Reporting entity", "requirement": "Identify the reporting entity.", "required": true, "expected_input": {"source": "company_facts", "path": "company_name"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"},
+        {"id": "reporting_period", "section": "basis", "label": "Reporting period", "requirement": "State the reporting period.", "required": true, "expected_input": {"source": "company_facts", "path": "reporting_period"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"},
+        {"id": "governance", "section": "governance", "label": "Governance", "requirement": "Describe governance processes, controls, and procedures for climate-related risks and opportunities.", "required": true, "expected_input": {"source": "company_facts", "path": "climate_governance"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"},
+        {"id": "strategy", "section": "strategy", "label": "Climate strategy", "requirement": "Describe climate-related risks and opportunities and their effects on strategy and decision-making.", "required": true, "expected_input": {"source": "company_facts", "path": "climate_strategy"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"},
+        {"id": "climate_resilience", "section": "strategy", "label": "Climate resilience", "requirement": "Describe resilience of strategy and business model, informed by scenario analysis.", "required": true, "expected_input": {"source": "company_facts", "path": "climate_resilience"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"},
+        {"id": "risk_management", "section": "risk_management", "label": "Risk management", "requirement": "Describe processes to identify, assess, prioritise, and monitor climate-related risks and opportunities.", "required": true, "expected_input": {"source": "company_facts", "path": "risk_management_process"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"},
+        {"id": "gross_scope_1", "section": "metrics_and_targets", "label": "Gross Scope 1 emissions", "requirement": "Disclose gross Scope 1 GHG emissions.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_1"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"},
+        {"id": "gross_scope_2_location_based", "section": "metrics_and_targets", "label": "Gross Scope 2 emissions", "requirement": "Disclose gross Scope 2 GHG emissions using the selected method and methodology disclosures.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_2_location_based"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"},
+        {"id": "gross_scope_3", "section": "metrics_and_targets", "label": "Gross Scope 3 emissions", "requirement": "Disclose gross Scope 3 GHG emissions under the applicable edition and reliefs.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_3"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"},
+        {"id": "climate_targets", "section": "metrics_and_targets", "label": "Climate targets", "requirement": "Disclose climate-related targets and performance against them.", "required": true, "expected_input": {"source": "company_facts", "path": "climate_targets"}, "source_id": "ifrs-s2-2023-with-2025-ghg-amendments"}
+      ]
+    },
+    "tnfd": {
+      "name": "TNFD Recommendations — starter nature disclosure",
+      "status": "mvp_starter_leap_aligned",
+      "source_ids": ["tnfd-final-recommendations-2023", "viridis-disclosure-builder-spec-v0.1.0"],
+      "datapoints": [
+        {"id": "entity_name", "section": "basis", "label": "Reporting organisation", "requirement": "Identify the reporting organisation.", "required": true, "expected_input": {"source": "company_facts", "path": "company_name"}, "source_id": "tnfd-final-recommendations-2023"},
+        {"id": "reporting_period", "section": "basis", "label": "Reporting period", "requirement": "State the reporting period.", "required": true, "expected_input": {"source": "company_facts", "path": "reporting_period"}, "source_id": "tnfd-final-recommendations-2023"},
+        {"id": "nature_governance", "section": "governance", "label": "Nature governance", "requirement": "Describe governance of nature-related dependencies, impacts, risks, and opportunities.", "required": true, "expected_input": {"source": "company_facts", "path": "nature_governance"}, "source_id": "tnfd-final-recommendations-2023"},
+        {"id": "dependencies_and_impacts", "section": "strategy", "label": "Nature dependencies and impacts", "requirement": "Describe material nature-related dependencies and impacts.", "required": true, "expected_input": {"source": "company_facts", "path": "nature_dependencies_and_impacts"}, "source_id": "tnfd-final-recommendations-2023"},
+        {"id": "risks_and_opportunities", "section": "strategy", "label": "Nature risks and opportunities", "requirement": "Describe nature-related risks and opportunities and their effects.", "required": true, "expected_input": {"source": "company_facts", "path": "nature_risks_and_opportunities"}, "source_id": "tnfd-final-recommendations-2023"},
+        {"id": "priority_locations", "section": "strategy", "label": "Priority locations", "requirement": "Identify priority locations, including sensitive locations, used in the assessment.", "required": true, "expected_input": {"source": "company_facts", "path": "priority_locations"}, "source_id": "tnfd-final-recommendations-2023"},
+        {"id": "leap_process", "section": "risk_and_impact_management", "label": "LEAP-aligned assessment process", "requirement": "Describe the process used to locate, evaluate, assess, and prepare for nature-related issues.", "required": true, "expected_input": {"source": "company_facts", "path": "leap_process"}, "source_id": "tnfd-final-recommendations-2023"},
+        {"id": "nature_metrics", "section": "metrics_and_targets", "label": "Nature metrics", "requirement": "Disclose metrics used to assess and manage material nature-related dependencies, impacts, risks, and opportunities.", "required": true, "expected_input": {"source": "company_facts", "path": "nature_metrics"}, "source_id": "tnfd-final-recommendations-2023"},
+        {"id": "nature_targets", "section": "metrics_and_targets", "label": "Nature targets", "requirement": "Disclose targets and performance used to manage nature-related issues.", "required": true, "expected_input": {"source": "company_facts", "path": "nature_targets"}, "source_id": "tnfd-final-recommendations-2023"}
+      ]
+    }
+  }
+}

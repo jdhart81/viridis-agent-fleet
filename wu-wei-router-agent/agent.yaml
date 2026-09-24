@@ -1,0 +1,9 @@
+name: wu-wei-router
+version: 0.1.0
+status: candidate
+pillar: efficiency
+description: Evidence-constrained workload routing plans with explicit modeled net savings
+revenue_model: Fixed $1 USDC per workload plan; no share-of-savings billing
+env_vars:
+  - WU_WEI_FLEET_ENABLED
+claim_boundary: Caller-supplied estimates, not measured savings or autonomous routing

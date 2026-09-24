@@ -1,0 +1,193 @@
+{
+  "case_id": "municipal-heat-001",
+  "title": "Municipal extreme-heat protection strategy",
+  "version": "0.1",
+  "evaluation_time": "2026-08-06T00:00:00Z",
+  "frame": {
+    "system_boundary": "Municipal heat-response services, participating buildings, mobility, and affected residents",
+    "stakeholders": [
+      { "id": "residents", "name": "All residents", "standing": "Directly affected population" },
+      { "id": "high_risk_residents", "name": "Residents at elevated heat risk", "vulnerability": "Age, health, housing, mobility, or outdoor exposure", "standing": "Priority protected population" }
+    ],
+    "scales": ["neighborhood", "municipal"],
+    "time_horizons": [
+      { "name": "heat_event", "duration": "14 days" },
+      { "name": "recovery", "duration": "90 days" }
+    ],
+    "decision_owner": {
+      "name": "Municipal emergency management authority",
+      "basis": "Public health and emergency-management mandate",
+      "scope": "Heat preparedness and response budget"
+    },
+    "excluded_elements": ["Regional electricity-generation investment decisions"]
+  },
+  "invariants": [
+    {
+      "id": "high_risk_health_index",
+      "name": "Maximum modeled heat-health burden",
+      "measure": "Normalized acute heat-health burden index",
+      "operator": "<=",
+      "threshold": 1.0,
+      "normalization": 1.0,
+      "non_compensable": true,
+      "applies_to": ["high_risk_residents"],
+      "authority": "Public health protection floor",
+      "rationale": "Severe health burden cannot be compensated by cost or convenience"
+    },
+    {
+      "id": "cooling_access_fraction",
+      "name": "Minimum safe-cooling access",
+      "measure": "Fraction of residents able to reach or retain safe cooling",
+      "operator": ">=",
+      "threshold": 0.8,
+      "normalization": 1.0,
+      "non_compensable": true,
+      "applies_to": ["residents"],
+      "authority": "Equitable service-access floor",
+      "rationale": "A strategy is not viable if a material share of residents cannot use it"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "central_cooling_centers",
+      "name": "Central cooling centers with shuttle backup",
+      "initial_action": "Expand large municipal cooling centers and provide event-triggered shuttle service",
+      "monitoring": ["Facility capacity", "Grid status", "Transit availability"],
+      "triggers": ["Open centers when heat alert is issued"],
+      "fallbacks": ["Deploy municipal shuttle buses"],
+      "irreversible_commitments": ["Long-term leases for three central facilities"]
+    },
+    {
+      "id": "distributed_passive_network",
+      "name": "Distributed passive protection and neighborhood hubs",
+      "initial_action": "Combine home retrofits, shaded neighborhood hubs, microgrids, and mobile outreach",
+      "monitoring": ["Indoor temperature sentinels", "Hub capacity", "Neighborhood health calls"],
+      "triggers": ["Activate outreach at forecast threshold", "Island hub microgrids on grid instability"],
+      "fallbacks": ["Mobile outreach", "Mutual-aid relocation", "Passive safe rooms"],
+      "irreversible_commitments": []
+    },
+    {
+      "id": "alert_only",
+      "name": "Public alerts with existing services",
+      "initial_action": "Rely on heat alerts and existing emergency facilities",
+      "monitoring": ["Weather alerts"],
+      "triggers": ["Issue public warning"],
+      "fallbacks": [],
+      "irreversible_commitments": []
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "ordinary_heatwave",
+      "name": "Ordinary severe heatwave",
+      "family": "normal_variation",
+      "mandatory": true,
+      "description": "Seven days above the local severe-heat threshold",
+      "probability": 0.2,
+      "severity": "severe",
+      "duration": "7 days",
+      "shared_causes": [],
+      "evidence_refs": ["heat_model"]
+    },
+    {
+      "id": "grid_outage_heatwave",
+      "name": "Heatwave with multi-day grid outage",
+      "family": "correlated_cascade",
+      "mandatory": true,
+      "description": "Extreme heat raises load and coincides with a 72-hour outage",
+      "probability": null,
+      "severity": "extreme",
+      "duration": "72 hours",
+      "shared_causes": ["regional_grid", "extreme_heat"],
+      "evidence_refs": ["heat_model", "service_model"]
+    },
+    {
+      "id": "smoke_heat_compound",
+      "name": "Wildfire smoke and extreme heat",
+      "family": "prolonged_aftershock",
+      "mandatory": true,
+      "description": "Outdoor air is unsafe while cooling demand is elevated",
+      "probability": null,
+      "severity": "extreme",
+      "duration": "10 days",
+      "shared_causes": ["regional_fire_weather"],
+      "evidence_refs": ["heat_model"]
+    },
+    {
+      "id": "transit_disruption",
+      "name": "Transit disruption during heat emergency",
+      "family": "dependency_loss",
+      "mandatory": true,
+      "description": "Road and public-transit capacity fall below half of normal",
+      "probability": null,
+      "severity": "high",
+      "duration": "48 hours",
+      "shared_causes": ["transport_network"],
+      "evidence_refs": ["service_model"]
+    }
+  ],
+  "governance": {
+    "decision_rule": "Reject non-compensable failures and prohibited burden transfers, then present the Pareto frontier for accountable municipal selection",
+    "selection_rule": "pareto_only",
+    "comparison_dimensions": [
+      { "name": "worst_viability_margin", "direction": "maximize", "rationale": "Protect the thinnest remaining safety margin" },
+      { "name": "common_mode_exposure", "direction": "minimize", "rationale": "Avoid one dependency disabling all response paths" },
+      { "name": "mean_recovery_time_hours", "direction": "minimize", "rationale": "Restore full protection quickly" },
+      { "name": "maximum_externality_magnitude", "direction": "minimize", "rationale": "Minimize the largest normalized shifted harm without summing unlike harms" },
+      { "name": "annual_cost_musd", "direction": "minimize", "rationale": "Preserve public resources after viability is secured" }
+    ],
+    "minimum_assessment_confidence": 0.7,
+    "trajectory_policy": {
+      "minimum_mandatory_coverage": 0.25
+    },
+    "action_policy": {
+      "mode": "advisory_only",
+      "authorized_actions": [],
+      "authority_lease": null
+    },
+    "authorities": [
+      { "name": "City council", "basis": "Budget and policy authority", "scope": "Final selection and appropriation" },
+      { "name": "Public health officer", "basis": "Health-protection mandate", "scope": "Health invariant and emergency veto" }
+    ],
+    "veto_rules": ["Public health officer may veto a candidate that violates the health invariant"],
+    "appeal_process": "Publish assumptions and accept a documented council reconsideration request",
+    "dissent_process": "Attach minority council and affected-community statements to the decision record",
+    "review_schedule": "Before each heat season and after every activation"
+  },
+  "evidence": [
+    { "id": "heat_model", "claim": "Scenario-specific health burden estimates", "source": "Synthetic fixture based on a municipal heat-health model", "evidence_class": "NUMERICAL_RESULT", "confidence": 0.82, "limitations": "Illustrative values; not a real municipal forecast", "contested": false },
+    { "id": "service_model", "claim": "Scenario-specific service access and recovery estimates", "source": "Synthetic transport and facilities model", "evidence_class": "NUMERICAL_RESULT", "confidence": 0.78, "limitations": "Simplified dependency representation", "contested": false },
+    { "id": "community_review", "claim": "Central access controls may exclude high-risk residents", "source": "Synthetic affected-community review", "evidence_class": "STAKEHOLDER_TESTIMONY", "confidence": 0.8, "limitations": "Illustrative governance fixture", "contested": true }
+  ],
+  "claims": [
+    {
+      "id": "municipal_fixture_model_results",
+      "statement": "The supplied fixture calculates candidate-specific heat-health, access, recovery, and cost outcomes for the declared scenarios.",
+      "scope": "Synthetic fixture calculations only",
+      "assertions": [
+        {
+          "state": "NUMERICALLY_SUPPORTED",
+          "evidence_refs": ["heat_model", "service_model"],
+          "basis": "The fixture contains explicit scenario outputs from the two declared synthetic models."
+        }
+      ],
+      "limitations": "This does not establish empirical accuracy, policy authorization, adoption, deployment, or observed public-health benefit."
+    },
+    {
+      "id": "central_access_exclusion_risk",
+      "statement": "Central access controls may exclude some high-risk residents during an extreme-heat response.",
+      "scope": "Risk hypothesis raised by the affected-community review",
+      "assertions": [
+        {
+          "state": "HYPOTHESIZED",
+          "evidence_refs": ["community_review"],
+          "basis": "The synthetic community review identifies a plausible exclusion pathway."
+        }
+      ],
+      "limitations": "The fixture does not provide an empirical observation or measured exclusion rate."
+    }
+  ],
+  "dissent": [
+    { "author": "Budget office", "position": "The distributed strategy has a higher first-year budget requirement", "evidence_refs": ["service_model"] }
+  ]
+}

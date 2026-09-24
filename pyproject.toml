@@ -1,0 +1,66 @@
+# Viridis Agent Fleet — CI/CD Configuration
+# Enables single-command test execution: `python -m pytest` from fleet root
+
+[tool.pytest.ini_options]
+# importlib mode resolves the duplicate test_core.py namespace collision
+# across 35 agent directories that all share tests/test_core.py
+addopts = "--import-mode=importlib"
+# DEPLOYMENT STABLE ONLY (reorg 2026-07-09).
+# Root now holds exactly the agents Viridis is driving to deployment: the revenue
+# focus four (SmartScale, ProtoGen, Regulatory-Radar, Narrative-Engine) + the three
+# novel agent-to-agent-economy primitives (identity -> trust -> escrow).
+# Parked agents live under _rnd-exploration/ ; agents already deployed in their own
+# repos live under _deployed-elsewhere/ . Both are `_`-prefixed so run_fleet_tests.py
+# auto-discovery skips them. To test a parked agent, run pytest inside its folder.
+testpaths = [
+    # --- revenue focus (fleet-only, near-deploy) ---
+    "smartscale-agent/tests",
+    "protogen-agent/tests",
+    "regulatory-radar-agent/tests",
+    "narrative-engine-agent/tests",
+    # --- novel A2A-economy primitives (added 2026-07-09) ---
+    "agent-identity-registry-agent/tests",
+    "agent-trust-oracle-agent/tests",
+    "agent-escrow-agent/tests",
+    # --- agent SEO + communication + paid-work market (2026-07-20) ---
+    "agent-market-network-agent/tests",
+    # --- A2A settlement-stack extensions (added 2026-07-09) ---
+    "agent-metering-agent/tests",
+    "agent-arbitration-agent/tests",
+    "agent-compute-ledger-agent/tests",
+    # --- founding-era constitution agents (added 2026-07-09, third pass) ---
+    "agent-covenant-agent/tests",
+    # --- nested hive orchestration over the settlement rails (2026-07-25) ---
+    "agent-hive-orchestrator-agent/tests",
+    "agent-provenance-agent/tests",
+    "agent-offset-clearinghouse-agent/tests",
+    # --- ERC-8004 interop (added 2026-07-11) ---
+    "agent-erc8004-bridge-agent/tests",
+    # --- demand-side discovery (promoted from _rnd-exploration 2026-07-11) ---
+    "wavefunction-search-agent/tests",
+    # --- risk transfer + verifiable delivery (added 2026-07-11) ---
+    "agent-surety-agent/tests",
+    "agent-notary-agent/tests",
+    # --- deterministic revenue tools (added 2026-07-12) ---
+    "taxcredit-engine-agent/tests",
+    # --- deterministic climate accounting (added 2026-07-13) ---
+    "ghg-ledger-agent/tests",
+    # --- deterministic construction takeoff (added 2026-07-13) ---
+    "quantity-takeoff-agent/tests",
+    # --- B2B subscription capital engine (added 2026-07-13) ---
+    "subscriptions-agent/tests",
+    # --- Viridis Verified: consequence wrapper / demand-side rails (2026-07-15) ---
+    "agent-verified-relay-agent/tests",
+    # --- revenue/distribution infrastructure ---
+    "deploy/payments",
+    "deploy/glama",
+    "deploy/gateway",
+]
+asyncio_mode = "auto"
+markers = [
+    "asyncio: async test marker",
+]
+
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

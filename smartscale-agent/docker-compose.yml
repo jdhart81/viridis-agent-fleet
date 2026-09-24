@@ -1,0 +1,8 @@
+services:
+  smartscale-agent:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

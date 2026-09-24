@@ -1,0 +1,158 @@
+{
+  "server": "security-preflight-agent",
+  "tool_count": 3,
+  "tools": [
+    {
+      "name": "security_preflight",
+      "description": "Run a $1 static Security Preflight and return a signed receipt.\n\nNew x402 payer wallets may receive the fleet-wide $0.01 introductory call.\nNo deployed endpoint is fetched or tested. Importing the receipt into an\nAgent Market profile is a separate, explicit action.",
+      "inputSchema": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "manifest": {
+            "additionalProperties": true,
+            "title": "Manifest",
+            "type": "object"
+          },
+          "subject_profile_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Subject Profile Sha256"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Policy"
+          },
+          "sample_inputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sample Inputs"
+          },
+          "payment_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Payment Ref"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "agent_id",
+          "manifest"
+        ],
+        "title": "security_preflightArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "security_preflightOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_security_receipt",
+      "description": "Read a previously issued public, input-redacted receipt.",
+      "inputSchema": {
+        "properties": {
+          "receipt_id": {
+            "title": "Receipt Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "receipt_id"
+        ],
+        "title": "get_security_receiptArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "get_security_receiptOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Describe scope, evidence boundary, inputs, and outputs.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "describe_agentOutput",
+        "type": "object"
+      }
+    }
+  ]
+}

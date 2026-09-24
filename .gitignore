@@ -1,9 +1,142 @@
+# === SECRETS & CREDENTIALS ===
+# The env/ folder holds live keys — NEVER commit any of it.
+env/
+**/env/
+*stripe*key*
+*sk_live_*
+*sk_test_*
 
-# Buyer-owned inputs, wallet environment and paid results stay private.
-/inputs.json
-/paid-result*.json
-/.venv-buyer/
-/feedback-*.json
-/.viridis-private/
-__pycache__/
-.pytest_cache/
+# API Keys, tokens, and passwords (NEVER commit these)
+*-key.txt
+*-secret.txt
+*-token.txt
+*-credential.txt
+*-password.txt
+*.pem
+*.key
+*.pub
+*.pgp
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
+.env.test.local
+
+# Stripe keys
+stripe-key.txt
+stripe-secret.txt
+
+# AWS credentials
+.aws/credentials
+.aws/config
+aws-credentials.json
+
+# GCP/Firebase
+*-serviceAccountKey.json
+firebase-adminsdk-*.json
+gcp-*.json
+
+# Azure credentials
+azure-credentials.json
+.azure/
+
+# API keys and tokens
+api-key.txt
+api-keys.json
+api_key.json
+api_keys.txt
+*_api_key*
+*-apikey-*
+
+# OAuth tokens
+*.token
+oauth-tokens.json
+refresh_token.txt
+
+# Passwords and passphrases
+password*.txt
+passwd*.txt
+pass*.txt
+credentials.json
+secrets.json
+secrets.yaml
+secrets.yml
+
+# Database credentials
+db-credentials.txt
+database.url
+DATABASE_URL
+database-credentials.json
+
+# SSH keys
+*.pem
+*.pub
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Private keys
+private-key.pem
+private.key
+*.key
+
+# Other secret files
+secret*.txt
+secret*.json
+config.secret.json
+*.secret
+
+# Encryption keys
+encryption-key.txt
+cipher-key.txt
+master-key.txt
+
+# Access tokens
+access-token.txt
+access_token.json
+bearer-token.txt
+
+# API configuration with secrets
+config.prod.json
+config.production.json
+
+# Logs that might contain secrets
+*.log
+logs/
+
+# Cache files that might store credentials
+node_modules/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pip-cache/
+*.cache
+.cache/
+
+# IDE files that might contain secrets
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.iml
+
+# Mac OS files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+~*
+*~
+.tmp/
+
+# Package manager files with potential secrets
+package-lock.json (review before committing)
+yarn.lock (review before committing)
+Pipfile.lock (review before committing)

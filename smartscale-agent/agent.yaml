@@ -1,0 +1,69 @@
+name: "smartscale-agent"
+version: "0.9.4"
+description: "Deterministic conversion of caller-supplied CR80 reference and coplanar object pixel geometry to millimetres"
+pillar: "revenue"
+status: "conditional-beta"
+owner: "justin@viridis.earth"
+
+revenue_model: |
+  The first published allowance of state-changing calls is free.
+  Additional deterministic scaling calls cost $0.50 each through the shared
+  Viridis payment gate. Commercial validation remains absent until an external
+  paid call is independently verified.
+
+thesis_connection: |
+  SmartScale standardizes caller-supplied physical geometry for downstream
+  conservation and fabrication workflows. It provides measurement plumbing,
+  not independent proof of a conservation outcome, and its service revenue
+  supports the shared Viridis verification infrastructure.
+
+deploy_targets:
+  primary: "remote-mcp-shared-gateway"
+  secondary: []
+
+dependencies:
+  services:
+    - "viridis-payment-gate"
+    - "viridis-state-store"
+  agents: []
+
+env_vars: []
+
+capabilities:
+  inputs:
+    - "source_identifier"
+    - "cr80_card_pixel_width"
+    - "optional_cr80_card_pixel_height"
+    - "coplanar_object_pixel_geometry"
+    - "optional_request_id"
+  outputs:
+    - "deterministic_dimensions_mm"
+    - "explicit_assumptions"
+    - "distortion_warning_or_refusal"
+
+claim_boundary: |
+  The production MCP does not receive images or detect cards, objects, edges,
+  or bounding boxes. It is limited to non-safety-critical coplanar 2D scaling
+  from caller-supplied pixel geometry. It is not legal metrology or a
+  fabrication-tolerance guarantee.
+
+documentation:
+  readme: "README.md"
+  deploy: "deploy/gateway/Dockerfile"
+  business_plan: null
+
+notes: |
+  - Canonical runtime: Caddy -> shared gateway -> PaymentGate -> StateStore -> SmartScaleCore.
+  - Standalone FastAPI, Docker Compose, simulated vision, and ChArUco code are not production surfaces.
+  - Keep the shared topology for the no-SLA pilot.
+  - Automatic image extraction is deferred until three external paid scaler callers exist and one requests it.
+
+invariants:
+  - "S1 process() never raises; malformed input returns a structured error envelope"
+  - "S2 unknown action rejected with ValidationError naming supported actions"
+  - "S3 CR80 linear scaling: pixels_per_mm = card_px_width / 85.60; deterministic"
+  - "S4 describe().name == health().agent; capabilities non-empty and truthful"
+  - "S5 non-finite, out-of-range, oversized, and overlong inputs fail closed"
+  - "S6 valid measure_from_credit_card returns deterministic dimensions_mm"
+  - "S7 aspect disagreement above 15% refuses without dimensions"
+  - "S8 same caller + request_id + input returns the persisted result exactly once"

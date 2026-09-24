@@ -1,0 +1,48 @@
+name: "agent-arbitration-agent"
+version: "0.2.0"
+description: "Dispute-resolution oracle for A2A escrows: deterministic, evidence-weighted, machine-verifiable rulings that close the DISPUTED -> resolved loop."
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "arbitration"
+
+thesis_connection: |
+  agent-escrow-agent's state machine reserves DISPUTED -> (RELEASED|REFUNDED)
+  for 'an arbiter'. This is that arbiter - and it embodies the Viridis
+  Security thesis: authority must be proof-backed. Rulings are deterministic
+  functions of cited evidence + trust-oracle scores, and verify_ruling
+  recomputes them - an auditable oracle, not a black-box judge. Consumes
+  agent-trust-oracle-agent signals; completes the trust flywheel (a lost
+  dispute becomes a reputation event).
+
+revenue_model: |
+  Per-case arbitration fee (bps of disputed amount, e.g. 50-200bps with a
+  floor) - disputes are high-stakes and price-insensitive. Marketplace/
+  orchestrator subscription for guaranteed arbitration capacity. Natural
+  bundle: escrow + arbitration sold together as 'settlement with recourse'.
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [file_case, submit_evidence, set_trust_scores, rule, verify_ruling, get_case, list_cases]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-escrow-agent (ruling emits release/refund instruction for DISPUTED escrows)"
+  - "agent-trust-oracle-agent (scores are ruling inputs; outcomes are reputation events)"
+  - "agent-metering-agent (SLA breach reports are admissible evidence)"
+
+invariants:
+  - "A1 lifecycle forward-only: FILED -> EVIDENCE_OPEN -> RULED; RULED terminal"
+  - "A2 distinct parties + non-empty disputed escrow reference required"
+  - "A3 evidence only from named parties, only while EVIDENCE_OPEN"
+  - "A4 deterministic rulings: same evidence + trust -> same allocation"
+  - "A5 allocation completeness: claimant_pct + respondent_pct == 100"
+  - "A6 machine-checkable: verify_ruling recomputes from cited inputs"
+  - "A7 exactly-once: ruling a RULED case returns the existing ruling"
+  - "A8 unknown case_id -> error envelope, never a crash"

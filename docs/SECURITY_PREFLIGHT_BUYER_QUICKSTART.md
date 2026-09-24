@@ -3,8 +3,6 @@
 Security Preflight checks the MCP manifest, tool schemas, policy and samples
 you supply. It does not fetch, execute or certify the deployed service.
 
-First, [inspect a reproducible sample assessment](SECURITY_PREFLIGHT_SAMPLE.md) to decide whether these bounded checks answer your question.
-
 ## 1. Prepare your inputs and inspect a free quote
 
 Use Python 3.10 or newer. From a fresh checkout:
@@ -87,12 +85,6 @@ The free runner compares your current inputs with the authentic stored
 assessment. Attach this command to your own manifest or policy release event;
 keep signing keys out of that free-check job.
 
-For a pass/fail release step, add `--ci --trust trust.json`, using the
-[operator-approved verification policy](AGENT_SECURITY_INTEGRATION.md). The
-diagnostic command above exits 0 when the comparison completes; CI mode exits
-0 only for an unchanged, authenticated preflight pass. Stop on every nonzero
-exit and review changes before authorizing another purchase.
-
 | Decision | Next action |
 |---|---|
 | `UNCHANGED` | Retain the existing findings; no new payment is needed. A previous failed assessment still fails. |
@@ -105,38 +97,17 @@ schedule managed monitoring, create a subscription or charge automatically.
 
 ## 5. Close the feedback loop
 
-Choose whether the findings were `USEFUL`, `PARTIALLY_USEFUL` or `NOT_USEFUL`,
-and independently choose whether you would buy again. Preview your feedback
-locally; this example records a **partial** result and **no** repeat intent:
-
-```sh
-python3 scripts/viridis_preflight_feedback.py --paid-result paid-result-001.json \
-  --outcome PARTIALLY_USEFUL --would-buy-again no --reason missing_evidence
-```
-
-Choose values that reflect your own experience. No feedback is sent by default.
-To submit the choices you reviewed, repeat the same command with
-`--submit --output feedback-001.json`. The helper sends once to the existing
-feedback endpoint, keeps its bearer token out of logs, and saves a private
-confirmation. It makes no purchase or subscription. An existing output file
-is never overwritten.
-
-If confirmation is lost, retain the output and reconcile before retrying.
-An explicitly chosen retry using the **same paid result and choices** and a
-new output filename uses the same idempotency key. Changed choices cannot
-overwrite the original one-time outcome; a conflict requires review.
-
-The feedback proves possession of the result token, not independent identity,
-payment or a new sale. Keep the specific decision the assessment informed in
-your own pilot notes. The helper does not upload free-text notes or tokens to
-public issues. [Pilot and recurring-service qualification](SECURITY_PREFLIGHT_PILOT.md).
+Tell the operator assisting your pilot whether the findings were useful,
+partially useful or not useful, and whether you would buy again. Share the
+specific integration decision without sharing the private result token.
+Machine clients can submit the one-time outcome using the supported
+`viridis_delivery.feedback` contract and the documented gateway feedback
+schema. Only the buyer chooses that outcome; successful transport alone does
+not establish usefulness.
 
 [Service contract](https://mcp.viridis-security.com/security-preflight/service.json)
 and [change-check details](SECURITY_PREFLIGHT_CHANGE_CHECK.md).
 
 ## Agent integration verification
 
-Before relying on a saved manifest assessment, follow the
-[offline verification guide](AGENT_SECURITY_INTEGRATION.md). The buyer helper's
-delivery hashes do not establish issuer authenticity. The verifier separately
-checks an operator-pinned signing key, scanner policy, expiry and exact inputs.
+Before relying on a saved manifest assessment, follow the [offline verification guide](AGENT_SECURITY_INTEGRATION.md). The buyer helper checks delivery hashes; the verifier separately checks issuer authenticity, an operator-approved scanner, expiry and exact input binding.

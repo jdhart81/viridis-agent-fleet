@@ -1,0 +1,41 @@
+name: "agent-identity-registry-agent"
+version: "0.1.1"
+description: "The passport + directory of the agent-to-agent economy: verifiable agent identity (content-addressed DIDs), capability advertising, and capability-based discovery. Supply-side complement to intent routing."
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "identity"
+
+thesis_connection: |
+  A market needs a registry. Agents register a verifiable identity and advertise
+  capabilities/prices; other agents discover them. This is the hub the other two
+  novel A2A agents plug into: identity -> trust -> escrow. Complements
+  wavefunction-search (demand-side intent routing) with the supply-side directory.
+
+revenue_model: |
+  Verified-identity issuance/listing fees. Premium/featured discovery placement.
+  Registry API subscription for marketplaces and orchestrators that need a
+  canonical agent directory ($500-$5K/mo). Verification tiers (self-asserted vs.
+  proof-backed) as an upsell into agent-trust-oracle-agent.
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [register, resolve, discover, revoke, list]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-trust-oracle-agent (reputation attached to identity)"
+  - "wavefunction-search-agent (demand-side matching over this supply)"
+
+invariants:
+  - "R1 deterministic content-addressed DID"
+  - "R2 register idempotent on agent_id (versioned)"
+  - "R3 discover returns only ACTIVE, AND-matched on capabilities"
+  - "R4 deterministic result ordering"
+  - "R6 revoke terminal for discovery, record retained"

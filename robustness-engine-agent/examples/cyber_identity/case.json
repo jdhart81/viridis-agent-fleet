@@ -1,0 +1,193 @@
+{
+  "case_id": "cyber-identity-001",
+  "title": "Identity-service architecture under correlated and adversarial failure",
+  "version": "0.1",
+  "evaluation_time": "2026-08-06T00:00:00Z",
+  "frame": {
+    "system_boundary": "Customer identity, authentication control planes, recovery credentials, DNS, cloud regions, and operators",
+    "stakeholders": [
+      { "id": "service_users", "name": "Service users", "standing": "Depend on secure and available authentication" },
+      { "id": "operators", "name": "Security and reliability operators", "standing": "Accountable for operation and recovery" }
+    ],
+    "scales": ["service", "organization"],
+    "time_horizons": [
+      { "name": "incident", "duration": "72 hours" },
+      { "name": "recovery", "duration": "30 days" }
+    ],
+    "decision_owner": {
+      "name": "Security architecture authority",
+      "basis": "Delegated control over identity architecture and incident recovery",
+      "scope": "Identity and authentication system"
+    },
+    "excluded_elements": ["End-user device compromise outside the authentication boundary"]
+  },
+  "invariants": [
+    {
+      "id": "authentication_availability",
+      "name": "Minimum authentication availability",
+      "measure": "Fraction of valid authentication requests completed within the service objective",
+      "operator": ">=",
+      "threshold": 0.95,
+      "normalization": 1.0,
+      "non_compensable": true,
+      "applies_to": ["service_users"],
+      "authority": "Availability service objective",
+      "rationale": "Users must retain access during mandatory stress scenarios"
+    },
+    {
+      "id": "unauthorized_auth_fraction",
+      "name": "Maximum unauthorized-authentication fraction",
+      "measure": "Fraction of authentication decisions incorrectly granting access",
+      "operator": "<=",
+      "threshold": 0.01,
+      "normalization": 0.01,
+      "non_compensable": true,
+      "applies_to": ["service_users"],
+      "authority": "Security risk acceptance boundary",
+      "rationale": "Integrity cannot be traded for latency or cost"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "shared_control_hot_standby",
+      "name": "Multi-region hot standby with shared control plane",
+      "initial_action": "Run active and standby identity services in two regions under one global identity and DNS control plane",
+      "monitoring": ["Authentication success", "Region health", "Administrative changes"],
+      "triggers": ["Fail traffic to standby region"],
+      "fallbacks": ["Standby region"],
+      "irreversible_commitments": ["Provider-specific global identity integration"]
+    },
+    {
+      "id": "split_control_recovery",
+      "name": "Split control planes with offline recovery",
+      "initial_action": "Separate production and recovery identities, DNS control, credentials, and cloud failure domains",
+      "monitoring": ["Authentication success", "Independent control-plane integrity", "Recovery drill status"],
+      "triggers": ["Isolate production administration", "Activate independently authenticated recovery service"],
+      "fallbacks": ["Independent recovery region", "Offline break-glass process"],
+      "irreversible_commitments": []
+    },
+    {
+      "id": "single_optimized_path",
+      "name": "Single optimized identity path",
+      "initial_action": "Concentrate identity processing in the lowest-latency region and control plane",
+      "monitoring": ["Authentication latency", "Region health"],
+      "triggers": ["Restart failed service"],
+      "fallbacks": [],
+      "irreversible_commitments": ["Single-provider proprietary identity workflow"]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "normal_peak_load",
+      "name": "Normal peak load",
+      "family": "normal_variation",
+      "mandatory": true,
+      "description": "Authentication demand reaches twice the normal peak",
+      "probability": 0.1,
+      "severity": "moderate",
+      "duration": "4 hours",
+      "shared_causes": [],
+      "evidence_refs": ["load_model"]
+    },
+    {
+      "id": "primary_region_loss",
+      "name": "Primary cloud-region loss",
+      "family": "component_failure",
+      "mandatory": true,
+      "description": "The primary execution region becomes unreachable for twelve hours",
+      "probability": null,
+      "severity": "high",
+      "duration": "12 hours",
+      "shared_causes": ["primary_region"],
+      "evidence_refs": ["failure_model"]
+    },
+    {
+      "id": "admin_identity_compromise",
+      "name": "Administrative identity compromise",
+      "family": "adversarial",
+      "mandatory": true,
+      "description": "An attacker obtains production administrative credentials and adapts to response actions",
+      "probability": null,
+      "severity": "critical",
+      "duration": "36 hours",
+      "shared_causes": ["global_administrative_identity"],
+      "evidence_refs": ["threat_model"]
+    },
+    {
+      "id": "identity_dependency_exploit",
+      "name": "Shared identity-library exploit",
+      "family": "correlated_cascade",
+      "mandatory": true,
+      "description": "A common authentication dependency is exploited across production paths",
+      "probability": null,
+      "severity": "critical",
+      "duration": "24 hours",
+      "shared_causes": ["authentication_library", "deployment_pipeline"],
+      "evidence_refs": ["threat_model", "failure_model"]
+    }
+  ],
+  "governance": {
+    "decision_rule": "Reject security or availability invariant failures, then choose lexicographically by safety margin, common-mode exposure, fallback independence, recovery time, and latency",
+    "selection_rule": "lexicographic",
+    "comparison_dimensions": [
+      { "name": "worst_viability_margin", "direction": "maximize", "rationale": "Maximize the thinnest mandatory safety margin" },
+      { "name": "common_mode_exposure", "direction": "minimize", "rationale": "Reduce compromise paths shared by all recovery modes" },
+      { "name": "fallback_independence", "direction": "maximize", "rationale": "Reward distinct failure domains" },
+      { "name": "mean_recovery_time_hours", "direction": "minimize", "rationale": "Restore service quickly" },
+      { "name": "latency_ms", "direction": "minimize", "rationale": "Use performance only after robustness dimensions" }
+    ],
+    "minimum_assessment_confidence": 0.75,
+    "trajectory_policy": {
+      "minimum_mandatory_coverage": 0.25
+    },
+    "action_policy": {
+      "mode": "advisory_only",
+      "authorized_actions": [],
+      "authority_lease": null
+    },
+    "authorities": [
+      { "name": "Chief information security officer", "basis": "Security risk authority", "scope": "Integrity invariant and final architecture approval" },
+      { "name": "Service reliability owner", "basis": "Availability operating mandate", "scope": "Availability invariant and recovery operation" }
+    ],
+    "veto_rules": ["Either invariant owner may reject an invariant breach"],
+    "appeal_process": "Architecture review board may request a new evidence-bound evaluation",
+    "dissent_process": "Attach signed minority architecture opinion to the record",
+    "review_schedule": "Quarterly and after every material incident or dependency change"
+  },
+  "evidence": [
+    { "id": "load_model", "claim": "Peak-load availability and latency estimates", "source": "Synthetic load-test fixture", "evidence_class": "NUMERICAL_RESULT", "confidence": 0.94, "limitations": "Does not model all client retry behavior", "contested": false },
+    { "id": "failure_model", "claim": "Region and dependency failure trajectories", "source": "Synthetic fault-injection fixture", "evidence_class": "NUMERICAL_RESULT", "confidence": 0.87, "limitations": "Finite scenario coverage", "contested": false },
+    { "id": "threat_model", "claim": "Administrative compromise and exploit outcomes", "source": "Synthetic red-team model", "evidence_class": "NUMERICAL_RESULT", "confidence": 0.83, "limitations": "Adversaries may discover unmodeled paths", "contested": true }
+  ],
+  "claims": [
+    {
+      "id": "cyber_fixture_model_results",
+      "statement": "The supplied fixture calculates candidate-specific availability, security, dependency, recovery, latency, and cost outcomes for the declared scenarios.",
+      "scope": "Synthetic load, fault-injection, and red-team fixture calculations only",
+      "assertions": [
+        {
+          "state": "NUMERICALLY_SUPPORTED",
+          "evidence_refs": ["load_model", "failure_model", "threat_model"],
+          "basis": "The fixture contains explicit outputs from the three declared synthetic models."
+        }
+      ],
+      "limitations": "This does not establish reproduction, formal proof, empirical security, architecture authorization, deployment, or observed incident performance."
+    },
+    {
+      "id": "split_control_hidden_dependency_result",
+      "statement": "Within the declared dependency graph, split-control recovery has less transitive common-mode exposure than the shared-control hot standby.",
+      "scope": "Declared synthetic dependency graph and v0.3 finite-set metric",
+      "assertions": [
+        {
+          "state": "NUMERICALLY_SUPPORTED",
+          "evidence_refs": ["failure_model", "threat_model"],
+          "basis": "The engine expands the declared dependency DAG and computes the finite-set overlap diagnostics."
+        }
+      ],
+      "limitations": "An omitted or aliased dependency can invalidate the comparison; the result conveys no deployment authority."
+    }
+  ],
+  "dissent": [
+    { "author": "Application performance team", "position": "The split-control design adds nominal latency and operational complexity", "evidence_refs": ["load_model"] }
+  ]
+}

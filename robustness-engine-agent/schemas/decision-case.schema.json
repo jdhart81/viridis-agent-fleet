@@ -1,0 +1,302 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robustness.local/schemas/decision-case.schema.json",
+  "title": "Robustness Decision Case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "title",
+    "version",
+    "evaluation_time",
+    "frame",
+    "invariants",
+    "candidates",
+    "scenarios",
+    "governance",
+    "evidence",
+    "claims"
+  ],
+  "properties": {
+    "case_id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "evaluation_time": { "type": "string", "format": "date-time" },
+    "frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system_boundary", "stakeholders", "scales", "time_horizons", "decision_owner"],
+      "properties": {
+        "system_boundary": { "type": "string", "minLength": 1 },
+        "stakeholders": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/namedItem" } },
+        "scales": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "time_horizons": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/timeHorizon" } },
+        "decision_owner": { "$ref": "#/$defs/authority" },
+        "excluded_elements": { "type": "array", "items": { "type": "string" }, "default": [] }
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "measure", "operator", "threshold", "non_compensable", "applies_to"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "measure": { "type": "string" },
+          "operator": { "enum": [">", ">=", "<", "<=", "=="] },
+          "threshold": {},
+          "normalization": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+          "non_compensable": { "type": "boolean" },
+          "applies_to": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "authority": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "initial_action"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "initial_action": { "type": "string" },
+          "monitoring": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "triggers": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "fallbacks": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "irreversible_commitments": { "type": "array", "items": { "type": "string" }, "default": [] }
+        }
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "family", "mandatory", "description"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "family": {
+            "enum": [
+              "normal_variation",
+              "component_failure",
+              "correlated_cascade",
+              "resource_scarcity",
+              "prolonged_aftershock",
+              "adversarial",
+              "dependency_loss",
+              "regime_shift",
+              "model_invalidation",
+              "degraded_recovery",
+              "boundary_externality"
+            ]
+          },
+          "mandatory": { "type": "boolean" },
+          "description": { "type": "string" },
+          "probability": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+          "severity": { "type": ["number", "string", "null"] },
+          "duration": { "type": ["number", "string", "null"] },
+          "shared_causes": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "evidence_refs": { "type": "array", "items": { "type": "string" }, "default": [] }
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_rule", "selection_rule", "comparison_dimensions", "trajectory_policy", "action_policy", "authorities", "appeal_process", "dissent_process"],
+      "properties": {
+        "decision_rule": { "type": "string" },
+        "selection_rule": {
+          "enum": ["pareto_only", "unique_pareto", "lexicographic"]
+        },
+        "comparison_dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "direction"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "direction": { "enum": ["maximize", "minimize"] },
+              "rationale": { "type": "string" }
+            }
+          }
+        },
+        "minimum_assessment_confidence": { "type": "number", "minimum": 0, "maximum": 1, "default": 0 },
+        "trajectory_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minimum_mandatory_coverage"],
+          "properties": {
+            "minimum_mandatory_coverage": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "action_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "authorized_actions", "authority_lease"],
+          "properties": {
+            "mode": { "enum": ["advisory_only", "bounded_execution"] },
+            "authorized_actions": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+            "authority_lease": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["lease_id", "principal", "state", "scopes", "expires_at", "revocable"],
+                  "properties": {
+                    "lease_id": { "type": "string", "minLength": 1 },
+                    "principal": { "type": "string", "minLength": 1 },
+                    "state": { "enum": ["ACTIVE", "REVOKED", "EXPIRED"] },
+                    "scopes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+                    "expires_at": { "type": "string", "format": "date-time" },
+                    "revocable": { "type": "boolean" }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "authorities": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/authority" } },
+        "veto_rules": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "appeal_process": { "type": "string" },
+        "dissent_process": { "type": "string" },
+        "review_schedule": { "type": "string" }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "claim", "source", "evidence_class", "confidence", "limitations"],
+        "properties": {
+          "id": { "type": "string" },
+          "claim": { "type": "string" },
+          "source": { "type": "string" },
+          "evidence_class": {
+            "enum": [
+              "ASSUMPTION_RECORD",
+              "HYPOTHESIS_RATIONALE",
+              "NUMERICAL_RESULT",
+              "REPRODUCTION_RECEIPT",
+              "FORMAL_PROOF_RECEIPT",
+              "EMPIRICAL_OBSERVATION",
+              "AUTHORIZATION_RECEIPT",
+              "DEPLOYMENT_RECEIPT",
+              "OUTCOME_OBSERVATION",
+              "STAKEHOLDER_TESTIMONY"
+            ]
+          },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "limitations": { "type": "string" },
+          "contested": { "type": "boolean", "default": false }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "statement", "scope", "assertions", "limitations"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "scope": { "type": "string", "minLength": 1 },
+          "assertions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["state", "evidence_refs", "basis"],
+              "properties": {
+                "state": {
+                  "enum": [
+                    "ASSUMED",
+                    "HYPOTHESIZED",
+                    "NUMERICALLY_SUPPORTED",
+                    "REPRODUCED",
+                    "FORMALLY_PROVED",
+                    "EMPIRICALLY_SUPPORTED",
+                    "AUTHORIZED",
+                    "DEPLOYED",
+                    "OBSERVED"
+                  ]
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "basis": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "limitations": { "type": "string" }
+        }
+      }
+    },
+    "dissent": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["author", "position"],
+        "properties": {
+          "author": { "type": "string" },
+          "position": { "type": "string" },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "default": []
+    }
+  },
+  "$defs": {
+    "namedItem": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "vulnerability": { "type": "string" },
+        "standing": { "type": "string" }
+      }
+    },
+    "timeHorizon": {
+      "type": "object",
+      "required": ["name", "duration"],
+      "properties": {
+        "name": { "type": "string" },
+        "duration": { "type": "string" }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "required": ["name", "basis"],
+      "properties": {
+        "name": { "type": "string" },
+        "basis": { "type": "string" },
+        "scope": { "type": "string" }
+      }
+    }
+  }
+}

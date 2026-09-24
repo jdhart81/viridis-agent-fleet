@@ -1,0 +1,37 @@
+name: "wavefunction-search-agent"
+version: "0.2.0"
+description: "Routing intelligence for decentralized coordination—crystallizing ambiguous human intentions into actionable commitments and matching them to constitutionally-aligned agents and missions"
+pillar: "revenue"
+status: "prototype"
+owner: "justin@viridis.earth"
+revenue_model: "Coordination-as-a-service platform ($5K–$50K/month for organizations), licensing to internal Viridis fleet routing, future external API monetization. Draws revenue from all agents by improving match quality."
+deploy_targets:
+  primary: "fastapi"
+  secondary: ["mcp"]
+dependencies:
+  services: []
+  agents: []
+env_vars: []
+capabilities:
+  inputs:
+    - "user_superposition (initial ambiguous intentions, implicit patterns, value signals)"
+    - "dialogue_context (conversation history, shadow detection)"
+    - "agent_registry (mission profiles, constitutional principles, capabilities)"
+    - "external_network_index (non-Viridis agents, DAOs, collectives)"
+  outputs:
+    - "crystallized_intention (structured, testable, transformation-grounded commitment)"
+    - "intention_vector (value hierarchy, domain distribution, shadow-work context)"
+    - "candidate_matches (ranked agents/collectives with alignment scores)"
+    - "constitutional_threshold_check (S_C ≥ 0.5 enforcement—all four principles satisfied)"
+    - "routing_explanation (transparent reasoning for each route)"
+    - "transformation_pathway (evidence chain: user → intention → action → completion → reward)"
+    - "coordination_friction_metric (T reduction; elimination of misdirection, double-matching, re-discovery)"
+    - "wavefunction_collapse_record (dialogue metadata, intention evolution, decision boundary)"
+ports:
+  http: 8080
+  health: /health
+thesis_connection: |
+  Demand-side discovery for the whole fleet: routes caller intention to the
+  agent/collective that reduces coordination friction most — the wavefunction
+  collapse IS the network effect made searchable. Free rail: a priced front
+  door would tax every other agent's funnel.

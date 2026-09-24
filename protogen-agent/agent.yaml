@@ -1,0 +1,77 @@
+name: "protogen-agent"
+version: "0.3.1"
+description: "Viridis LLC revenue MCP CAD agent: provides a callable CAD design environment and manufacturing planning services to other agents"
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+
+revenue_model: |
+  Viridis LLC revenue agent. ProtoGen provides CAD design services to other
+  agents and external customers through MCP-callable workspaces.
+  Launch offers:
+  - $99-$499 per CAD design brief / parametric part contract
+  - $500-$2,500/month maker, contractor, and product-development workflows
+  - $3K-$15K/month custom CAD-to-manufacturing operations packages
+  Long-term: manufacturer SaaS ($5K-$50K/month), supplier referrals, and
+  design-to-quote transaction fees.
+
+deploy_targets:
+  primary: "mcp"
+  secondary: ["fastapi"]
+
+dependencies:
+  services:
+    - "supabase"        # Design and order database
+    - "stripe"          # SaaS billing
+    - "openai"          # Design inference
+  agents: []
+
+env_vars:
+  - "OPENAI_API_KEY"
+  - "SUPABASE_URL"
+  - "SUPABASE_ANON_KEY"
+  - "STRIPE_API_KEY"
+
+capabilities:
+  inputs:
+    - "cad_design_request"  # {project_name, owner_agent, design_goal, dimensions_mm, features}
+    - "agent_cad_workspace"  # MCP workspace for other Viridis agents to call
+    - "product_spec"    # {materials, dimensions, tolerances, volume}
+    - "current_bom"     # Bill of Materials
+    - "supply_chain_constraints"
+  outputs:
+    - "cad_workspace"  # MCP-callable design environment contract
+    - "parametric_cad_design"  # OpenSCAD-style script + STEP handoff contract
+    - "manufacturing_brief"  # DFM notes and next actions
+    - "optimized_design"
+    - "supply_chain_recommendation"
+    - "cost_estimate"
+    - "lead_time_estimate"
+    - "quality_checks"
+
+documentation:
+  readme: null
+  deploy: null
+  business_plan: "BUSINESS_PLAN.md"
+
+notes: |
+  - MCP is the primary integration target so other Viridis agents can request CAD design services.
+  - First product surface: create a CAD workspace, generate parametric CAD contracts, export OpenSCAD or manufacturing briefs.
+  - Follow-on surface: design optimization, BOM cost reduction, supply chain coordination.
+  - First customers: makers, contractors, product developers, internal Viridis agents, then contract manufacturers and electronics OEMs.
+  - Vertical expansion: aerospace, automotive, medical devices.
+
+thesis_connection: |
+  Second half of the measure->CAD bundle with SmartScale: one SMB/maker
+  go-to-market, one buyer, one workflow (measure -> model -> CAD). Revenue
+  funds the conservation stack, and parametric CAD-as-a-service is a service
+  agents hire over the Viridis A2A rails - ProtoGen doubles as the
+  provider-side proof for identity -> trust -> escrow.
+
+invariants:
+  - "P1 process() never raises; invalid spec returns error envelope with error_type + field"
+  - "P2 CAD lifecycle composes: create_cad_workspace -> generate_cad_design -> export_cad_design"
+  - "P3 export of unknown design_id -> error envelope, never a crash"
+  - "P4 generate_cad_design validates dimensions_mm (missing length -> error, no exception)"
+  - "P5 describe().name == health().agent; capabilities non-empty"
+  - "P6 process() is total: every dict input returns a dict with a status key"

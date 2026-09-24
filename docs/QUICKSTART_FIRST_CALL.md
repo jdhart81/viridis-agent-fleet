@@ -1,9 +1,11 @@
 # Your first Viridis fleet call in 30 seconds
 
-Every fleet agent is a plain MCP streamable-http endpoint. No signup, no key:
-most priced agents give **10 free calls per UTC day**; the Hive gives **3 free
-solves per caller per UTC day**, then costs **$5.00/solve**. The settlement
-rails are free forever. One curl pattern works everywhere:
+Every fleet agent is a plain MCP streamable-http endpoint. No signup or API key
+is needed for discovery. Most priced agents give **10 free calls per UTC day**.
+The provider-backed Hive has **no execution free tier** and costs
+**$5.00/solve** so its solver and model costs remain covered; its read-only
+tools and unpaid x402 preflight remain free. The settlement rails are free
+forever. One curl pattern works everywhere:
 
 ```bash
 curl -s https://mcp.viridisconservation.com/<MOUNT>/mcp \
@@ -77,6 +79,70 @@ x402 SDK payment selector that creates the signed retry. If the wallet already
 used its intro or the price is otherwise above $0.01, it stops without paying.
 Keep the private key outside prompts, repositories, tool arguments, and logs.
 
+## One reviewed Hive solve
+
+Hive is a separate fixed-price $5 product with no execution free tier. Its
+three model workers, cross-review, solver settlement, compute accounting, and
+content-addressed audit carry real per-call costs.
+
+```bash
+export X402_BUYER_PRIVATE_KEY='0x...'
+python3 scripts/x402_demo_client.py \
+  --route hive --max-payment-usdc 5.00
+```
+
+The client first obtains the unpaid live contract. It makes at most one paid
+attempt and registers the 5,000,000-atomic-USDC ceiling inside the SDK before
+signing. If the route quotes more than $5.00, it stops without paying. Add
+`--dry-run` to inspect the same request without invoking the model workers.
+
+## One Security Preflight
+
+`security-preflight` is a $1 static review of caller-supplied MCP manifests,
+tool schemas, policies, and sample inputs. It returns a signed, input-redacted
+receipt and does not fetch or certify the deployed runtime. Inspect the route
+without paying at:
+
+```text
+POST https://mcp.viridisconservation.com/x402/security-preflight/security_preflight
+```
+
+Every paid attempt requires a fresh x402 quote and caller-owned signature. A
+receipt becomes eligible for explicit Agent Market import only when the caller
+supplies the current target profile digest; the scan never mutates the target
+profile automatically.
+
+## Verify before paying
+
+Treat the unpaid 402 as the authoritative pre-payment contract. Verify the
+method, resource URL, x402 version, `exact` scheme, `eip155:8453` network,
+official Base USDC asset, receiver, amount, input schema, and required fields
+before signing.
+
+Do not treat seller counters as proof.
+`intro_pricing.seen_payers` is seller-reported pricing eligibility state, not
+independently verifiable buyer or revenue evidence. The signed authorization
+determines intro eligibility; `PAYMENT-RESPONSE` and its referenced Base
+transaction provide settlement evidence after payment.
+
+Independent public fixtures:
+
+- [settled Regulatory Radar](https://github.com/smartflowproai-lang/x402-endpoint-validator/pull/12);
+- [unpaid GHG Ledger](https://github.com/smartflowproai-lang/x402-endpoint-validator/pull/14).
+
+Machine clients can discover immutable external-file pointers, merge commits,
+and SHA-256 digests in `independent_evidence` at
+`https://mcp.viridisconservation.com/.well-known/x402`. That index is
+seller-published pointer metadata, not proof by itself. Verify the external
+fixture bytes against the pinned commit and digest. Also inspect each
+fixture's dated comparison and capture-method fields.
+
+The current Regulatory Radar bytes were captured by an unpaid preflight on
+2026-07-26 and matched a fresh live preflight before the pin moved. They are
+not a settlement receipt. The older paid-settlement capture remains pinned
+separately in `settled_flow_provenance.confirmed_at_merge`; payment terms were
+byte-identical between the captures.
+
 ## Canonical Regulatory Radar strict-v2 fixture
 
 Use this exact request when recording or validating the paid Regulatory Radar
@@ -97,7 +163,10 @@ The live x402 v2 sequence is:
 
 `X-PAYMENT` and `X-PAYMENT-RESPONSE` are legacy v1 header names. The optional
 `X402-Payer-Address` request header is only an unsigned pricing hint for the
-new-wallet quote; it never authorizes payment.
+new-wallet quote; it never authorizes payment. Returning buyers should include
+their public signing address in that header on the unpaid preflight so the
+first quote is the exact returning-wallet price. Never put a private key in
+this header.
 
 California-specific scans accept `california` or `US-CA`; `CA` means Canada.
 California results include global, US-federal, and California-specific
@@ -105,7 +174,7 @@ entries and expose the jurisdiction on every returned regulation.
 
 ## Worked examples (copy-paste)
 
-**Hire a reviewed agent hive** — 3 free solves/day, then $5/solve:
+**Hire a reviewed agent hive** — $5/solve; read-only tools and unpaid preflight are free:
 ```bash
 curl -s https://mcp.viridisconservation.com/hive/mcp \
   -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \

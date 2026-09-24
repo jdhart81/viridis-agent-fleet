@@ -1,0 +1,54 @@
+name: "regulatory-radar"
+version: "0.2.0"
+description: "Live authoritative-source regulatory change evidence, compliance screening, and deadline monitoring"
+pillar: "infrastructure"
+status: "mvp"
+owner: "justin@viridis.earth"
+
+revenue_model: "Compliance-as-a-service $5K-$50K/yr, regulatory intelligence subscription $499-$2499/mo, TNFD/CSRD reports $10K-$100K"
+
+deploy_targets:
+  primary: "fastapi"
+  secondary: ["mcp"]
+
+dependencies:
+  services: []
+  agents:
+    - "agent-ceo"
+    - "ecoinvest-agent"
+    - "carbon-bridge-agent"
+    - "thermo-arbitrage-agent"
+
+env_vars:
+  - "REGULATORY_RADAR_LIVE_FETCH_ENABLED"
+  - "REGULATORY_RADAR_SNAPSHOT_STORE"
+
+capabilities:
+  inputs:
+    - "jurisdiction"
+    - "industry_sector"
+    - "company_profile"
+    - "regulation_query"
+  outputs:
+    - "compliance_assessment"
+    - "regulatory_alert"
+    - "opportunity_signal"
+    - "tnfd_report"
+    - "csrd_report"
+    - "regulatory_forecast"
+    - "regulatory_change_evidence_pack"
+
+thesis_connection: |
+  Direct climate-mission surface: CSRD/TNFD/EU-Taxonomy compliance is how
+  enterprises are forced to account for nature. Regulatory-Radar is both a
+  revenue product (compliance-as-a-service, $5-50K/yr, buyers with budgets
+  AND dates) and the door-opener that leads enterprise deals for the Viridis
+  Core climate stack (MEASURE / VERIFY / FINANCE).
+
+invariants:
+  - "G1 process() never raises; validation failure returns full envelope (error_type, field, value, constraint, message, timestamp)"
+  - "G2 unknown action -> error envelope naming supported actions"
+  - "G3 scan requires jurisdiction; valid scan returns regulations with total >= urgent_count"
+  - "G4 valid assess returns success with a compliance assessment"
+  - "G5 describe().name == health().agent; capabilities non-empty"
+  - "G6 health() exposes regulations_in_db >= 0"

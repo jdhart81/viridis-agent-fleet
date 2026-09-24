@@ -1,0 +1,202 @@
+{
+  "case_id": "cyber-identity-001",
+  "case_version": "0.1",
+  "model_id": "synthetic-cyber-model-v1",
+  "lineage": {
+    "artifacts": [
+      {
+        "artifact_id": "sha256:916010be1d2f91814e0d71a79857200c13fe0025db18dab2dc462d883a95bf9c",
+        "kind": "MODEL",
+        "manifest": {
+          "model_id": "synthetic-cyber-model-v1",
+          "version": "1.0.0",
+          "provenance": "Synthetic reference fixture; no empirical validation"
+        },
+        "parent_ids": [],
+        "recall": null
+      },
+      {
+        "artifact_id": "sha256:304c8032c42f8b3b73dedee4061ef58d10a144742f6d57a4306239e4972e8fed",
+        "kind": "ADAPTER",
+        "manifest": {
+          "adapter_id": "cyber-identity-fixture-adapter",
+          "version": "1.0.0",
+          "contract": "Translate the synthetic cyber identity fixture into the domain-independent outcome schema"
+        },
+        "parent_ids": [
+          "sha256:916010be1d2f91814e0d71a79857200c13fe0025db18dab2dc462d883a95bf9c"
+        ],
+        "recall": null
+      }
+    ],
+    "model_artifact_id": "sha256:916010be1d2f91814e0d71a79857200c13fe0025db18dab2dc462d883a95bf9c",
+    "adapter_artifact_ids": [
+      "sha256:304c8032c42f8b3b73dedee4061ef58d10a144742f6d57a4306239e4972e8fed"
+    ],
+    "required_artifact_ids": [
+      "sha256:916010be1d2f91814e0d71a79857200c13fe0025db18dab2dc462d883a95bf9c",
+      "sha256:304c8032c42f8b3b73dedee4061ef58d10a144742f6d57a4306239e4972e8fed"
+    ]
+  },
+  "assessments": [
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "normal_peak_load", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "service", "time_point": "peak", "observed_value": 0.999, "confidence": 0.94, "evidence_refs": ["load_model"] },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "normal_peak_load", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "service", "time_point": "peak", "observed_value": 0.0, "confidence": 0.9, "evidence_refs": ["load_model"] },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "primary_region_loss", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "service", "time_point": "hour_2", "observed_value": 0.97, "confidence": 0.87, "evidence_refs": ["failure_model"] },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "primary_region_loss", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "service", "time_point": "hour_2", "observed_value": 0.002, "confidence": 0.86, "evidence_refs": ["failure_model"] },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "admin_identity_compromise", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_12", "observed_value": 0.96, "confidence": 0.82, "evidence_refs": ["threat_model"] },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "admin_identity_compromise", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_12", "observed_value": 0.008, "confidence": 0.8, "evidence_refs": ["threat_model"] },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "identity_dependency_exploit", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_8", "observed_value": 0.955, "observed_interval": { "lower": 0.953, "upper": 0.957, "basis": "Synthetic fault-envelope range" }, "confidence": 0.81, "evidence_refs": ["threat_model", "failure_model"] },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "identity_dependency_exploit", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_8", "observed_value": 0.009, "confidence": 0.79, "evidence_refs": ["threat_model"] },
+
+    { "candidate_id": "split_control_recovery", "scenario_id": "normal_peak_load", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "service", "time_point": "peak", "observed_value": 0.998, "confidence": 0.94, "evidence_refs": ["load_model"] },
+    { "candidate_id": "split_control_recovery", "scenario_id": "normal_peak_load", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "service", "time_point": "peak", "observed_value": 0.001, "confidence": 0.9, "evidence_refs": ["load_model"] },
+    { "candidate_id": "split_control_recovery", "scenario_id": "primary_region_loss", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "service", "time_point": "hour_2", "observed_value": 0.98, "confidence": 0.87, "evidence_refs": ["failure_model"] },
+    { "candidate_id": "split_control_recovery", "scenario_id": "primary_region_loss", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "service", "time_point": "hour_2", "observed_value": 0.001, "confidence": 0.86, "evidence_refs": ["failure_model"] },
+    { "candidate_id": "split_control_recovery", "scenario_id": "admin_identity_compromise", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_12", "observed_value": 0.975, "confidence": 0.83, "evidence_refs": ["threat_model"] },
+    { "candidate_id": "split_control_recovery", "scenario_id": "admin_identity_compromise", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_12", "observed_value": 0.003, "confidence": 0.82, "evidence_refs": ["threat_model"] },
+    { "candidate_id": "split_control_recovery", "scenario_id": "identity_dependency_exploit", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_8", "observed_value": 0.97, "observed_interval": { "lower": 0.968, "upper": 0.972, "basis": "Synthetic fault-envelope range" }, "confidence": 0.82, "evidence_refs": ["threat_model", "failure_model"] },
+    { "candidate_id": "split_control_recovery", "scenario_id": "identity_dependency_exploit", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_8", "observed_value": 0.004, "confidence": 0.81, "evidence_refs": ["threat_model"] },
+
+    { "candidate_id": "single_optimized_path", "scenario_id": "normal_peak_load", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "service", "time_point": "peak", "observed_value": 0.9995, "confidence": 0.94, "evidence_refs": ["load_model"] },
+    { "candidate_id": "single_optimized_path", "scenario_id": "normal_peak_load", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "service", "time_point": "peak", "observed_value": 0.0, "confidence": 0.9, "evidence_refs": ["load_model"] },
+    { "candidate_id": "single_optimized_path", "scenario_id": "primary_region_loss", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "service", "time_point": "hour_2", "observed_value": 0.6, "confidence": 0.87, "evidence_refs": ["failure_model"] },
+    { "candidate_id": "single_optimized_path", "scenario_id": "primary_region_loss", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "service", "time_point": "hour_2", "observed_value": 0.002, "confidence": 0.86, "evidence_refs": ["failure_model"] },
+    { "candidate_id": "single_optimized_path", "scenario_id": "admin_identity_compromise", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_12", "observed_value": 0.7, "confidence": 0.82, "evidence_refs": ["threat_model"] },
+    { "candidate_id": "single_optimized_path", "scenario_id": "admin_identity_compromise", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_12", "observed_value": 0.08, "confidence": 0.8, "evidence_refs": ["threat_model"] },
+    { "candidate_id": "single_optimized_path", "scenario_id": "identity_dependency_exploit", "invariant_id": "authentication_availability", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_8", "observed_value": 0.5, "observed_interval": { "lower": 0.45, "upper": 0.55, "basis": "Synthetic fault-envelope range" }, "confidence": 0.81, "evidence_refs": ["threat_model", "failure_model"] },
+    { "candidate_id": "single_optimized_path", "scenario_id": "identity_dependency_exploit", "invariant_id": "unauthorized_auth_fraction", "stakeholder_id": "service_users", "scale": "organization", "time_point": "hour_8", "observed_value": 0.12, "confidence": 0.79, "evidence_refs": ["threat_model"] }
+  ],
+  "trajectories": [
+    {
+      "candidate_id": "shared_control_hot_standby",
+      "scenario_id": "admin_identity_compromise",
+      "invariant_id": "authentication_availability",
+      "stakeholder_id": "service_users",
+      "scale": "organization",
+      "basis": "Synthetic ordered red-team trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0.999, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 12, "observed_value": 0.96, "observed_interval": { "lower": 0.955, "upper": 0.965, "basis": "Synthetic fault envelope" }, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 36, "observed_value": 0.98, "evidence_refs": ["threat_model"] }
+      ]
+    },
+    {
+      "candidate_id": "shared_control_hot_standby",
+      "scenario_id": "admin_identity_compromise",
+      "invariant_id": "unauthorized_auth_fraction",
+      "stakeholder_id": "service_users",
+      "scale": "organization",
+      "basis": "Synthetic ordered red-team trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 12, "observed_value": 0.008, "observed_interval": { "lower": 0.007, "upper": 0.009, "basis": "Synthetic attack envelope" }, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 36, "observed_value": 0.002, "evidence_refs": ["threat_model"] }
+      ]
+    },
+    {
+      "candidate_id": "split_control_recovery",
+      "scenario_id": "admin_identity_compromise",
+      "invariant_id": "authentication_availability",
+      "stakeholder_id": "service_users",
+      "scale": "organization",
+      "basis": "Synthetic ordered red-team trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0.999, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 8, "observed_value": 0.975, "observed_interval": { "lower": 0.972, "upper": 0.978, "basis": "Synthetic fault envelope" }, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 24, "observed_value": 0.995, "evidence_refs": ["threat_model"] }
+      ]
+    },
+    {
+      "candidate_id": "split_control_recovery",
+      "scenario_id": "admin_identity_compromise",
+      "invariant_id": "unauthorized_auth_fraction",
+      "stakeholder_id": "service_users",
+      "scale": "organization",
+      "basis": "Synthetic ordered red-team trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 8, "observed_value": 0.003, "observed_interval": { "lower": 0.002, "upper": 0.004, "basis": "Synthetic attack envelope" }, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 24, "observed_value": 0.001, "evidence_refs": ["threat_model"] }
+      ]
+    },
+    {
+      "candidate_id": "single_optimized_path",
+      "scenario_id": "admin_identity_compromise",
+      "invariant_id": "authentication_availability",
+      "stakeholder_id": "service_users",
+      "scale": "organization",
+      "basis": "Synthetic ordered red-team trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0.999, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 12, "observed_value": 0.7, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 36, "observed_value": 0.8, "evidence_refs": ["threat_model"] }
+      ]
+    },
+    {
+      "candidate_id": "single_optimized_path",
+      "scenario_id": "admin_identity_compromise",
+      "invariant_id": "unauthorized_auth_fraction",
+      "stakeholder_id": "service_users",
+      "scale": "organization",
+      "basis": "Synthetic ordered red-team trajectory",
+      "samples": [
+        { "elapsed_hours": 0, "observed_value": 0, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 12, "observed_value": 0.08, "evidence_refs": ["threat_model"] },
+        { "elapsed_hours": 36, "observed_value": 0.02, "evidence_refs": ["threat_model"] }
+      ]
+    }
+  ],
+  "dependencies": [
+    { "id": "provider_global_control_plane", "name": "Shared provider global control plane", "kind": "control_plane", "parent_ids": [], "failure_modes": ["administrative compromise", "provider-wide configuration failure"], "evidence_refs": ["failure_model", "threat_model"] },
+    { "id": "region_a_runtime", "name": "Provider region A runtime", "kind": "service", "parent_ids": ["provider_global_control_plane"], "failure_modes": ["regional outage"], "evidence_refs": ["failure_model"] },
+    { "id": "region_a_identity", "name": "Region A identity endpoint", "kind": "service", "parent_ids": ["provider_global_control_plane"], "failure_modes": ["credential service failure"], "evidence_refs": ["failure_model", "threat_model"] },
+    { "id": "region_a_dns", "name": "Region A DNS endpoint", "kind": "service", "parent_ids": ["provider_global_control_plane"], "failure_modes": ["routing failure"], "evidence_refs": ["failure_model"] },
+    { "id": "region_b_runtime", "name": "Provider region B runtime", "kind": "service", "parent_ids": ["provider_global_control_plane"], "failure_modes": ["regional outage"], "evidence_refs": ["failure_model"] },
+    { "id": "region_b_identity", "name": "Region B identity endpoint", "kind": "service", "parent_ids": ["provider_global_control_plane"], "failure_modes": ["credential service failure"], "evidence_refs": ["failure_model", "threat_model"] },
+    { "id": "region_b_dns", "name": "Region B DNS endpoint", "kind": "service", "parent_ids": ["provider_global_control_plane"], "failure_modes": ["routing failure"], "evidence_refs": ["failure_model"] },
+
+    { "id": "provider_a_control_plane", "name": "Provider A control plane", "kind": "control_plane", "parent_ids": [], "failure_modes": ["provider A administrative compromise"], "evidence_refs": ["failure_model", "threat_model"] },
+    { "id": "provider_b_control_plane", "name": "Provider B control plane", "kind": "control_plane", "parent_ids": [], "failure_modes": ["provider B administrative compromise"], "evidence_refs": ["failure_model", "threat_model"] },
+    { "id": "offline_hardware_root", "name": "Offline recovery hardware root", "kind": "technology", "parent_ids": [], "failure_modes": ["hardware loss", "key ceremony failure"], "evidence_refs": ["threat_model"] },
+    { "id": "prod_cloud_runtime", "name": "Production cloud runtime", "kind": "service", "parent_ids": ["provider_a_control_plane"], "failure_modes": ["runtime outage"], "evidence_refs": ["failure_model"] },
+    { "id": "production_identity", "name": "Production administrative identity", "kind": "service", "parent_ids": ["provider_a_control_plane"], "failure_modes": ["credential compromise"], "evidence_refs": ["threat_model"] },
+    { "id": "dns_a", "name": "Provider A DNS", "kind": "service", "parent_ids": ["provider_a_control_plane"], "failure_modes": ["routing failure"], "evidence_refs": ["failure_model"] },
+    { "id": "recovery_cloud_runtime", "name": "Recovery cloud runtime", "kind": "service", "parent_ids": ["provider_b_control_plane"], "failure_modes": ["runtime outage"], "evidence_refs": ["failure_model"] },
+    { "id": "offline_recovery_identity", "name": "Offline recovery identity", "kind": "service", "parent_ids": ["offline_hardware_root"], "failure_modes": ["credential loss", "key ceremony failure"], "evidence_refs": ["threat_model"] },
+    { "id": "dns_b", "name": "Provider B DNS", "kind": "service", "parent_ids": ["provider_b_control_plane"], "failure_modes": ["routing failure"], "evidence_refs": ["failure_model"] }
+  ],
+  "fallback_paths": [
+    { "candidate_id": "shared_control_hot_standby", "path_id": "primary_region", "dependency_ids": ["region_a_runtime", "region_a_identity", "region_a_dns"] },
+    { "candidate_id": "shared_control_hot_standby", "path_id": "standby_region", "dependency_ids": ["region_b_runtime", "region_b_identity", "region_b_dns"] },
+    { "candidate_id": "split_control_recovery", "path_id": "production_path", "dependency_ids": ["prod_cloud_runtime", "production_identity", "dns_a"] },
+    { "candidate_id": "split_control_recovery", "path_id": "recovery_path", "dependency_ids": ["recovery_cloud_runtime", "offline_recovery_identity", "dns_b"] },
+    { "candidate_id": "single_optimized_path", "path_id": "production_path", "dependency_ids": ["region_a_runtime", "region_a_identity", "region_a_dns"] }
+  ],
+  "recovery": [
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "normal_peak_load", "detection_time_hours": 0.1, "containment_time_hours": 0.2, "recovery_time_hours": 0.5, "switching_cost": 0.2, "irreversibility": 0.6 },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "primary_region_loss", "detection_time_hours": 0.1, "containment_time_hours": 0.5, "recovery_time_hours": 2, "switching_cost": 1, "irreversibility": 0.6 },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "admin_identity_compromise", "detection_time_hours": 2, "containment_time_hours": 10, "recovery_time_hours": 36, "switching_cost": 8, "irreversibility": 0.6 },
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "identity_dependency_exploit", "detection_time_hours": 1, "containment_time_hours": 8, "recovery_time_hours": 24, "switching_cost": 6, "irreversibility": 0.6 },
+    { "candidate_id": "split_control_recovery", "scenario_id": "normal_peak_load", "detection_time_hours": 0.1, "containment_time_hours": 0.3, "recovery_time_hours": 0.8, "switching_cost": 0.3, "irreversibility": 0.2 },
+    { "candidate_id": "split_control_recovery", "scenario_id": "primary_region_loss", "detection_time_hours": 0.1, "containment_time_hours": 0.4, "recovery_time_hours": 1.5, "switching_cost": 1.5, "irreversibility": 0.2 },
+    { "candidate_id": "split_control_recovery", "scenario_id": "admin_identity_compromise", "detection_time_hours": 1, "containment_time_hours": 3, "recovery_time_hours": 8, "switching_cost": 3, "irreversibility": 0.2 },
+    { "candidate_id": "split_control_recovery", "scenario_id": "identity_dependency_exploit", "detection_time_hours": 0.8, "containment_time_hours": 2, "recovery_time_hours": 6, "switching_cost": 2.5, "irreversibility": 0.2 },
+    { "candidate_id": "single_optimized_path", "scenario_id": "normal_peak_load", "detection_time_hours": 0.1, "containment_time_hours": 0.2, "recovery_time_hours": 0.4, "switching_cost": 0.1, "irreversibility": 0.8 },
+    { "candidate_id": "single_optimized_path", "scenario_id": "primary_region_loss", "detection_time_hours": 0.1, "containment_time_hours": 8, "recovery_time_hours": 18, "switching_cost": 10, "irreversibility": 0.8 },
+    { "candidate_id": "single_optimized_path", "scenario_id": "admin_identity_compromise", "detection_time_hours": 4, "containment_time_hours": 24, "recovery_time_hours": 72, "switching_cost": 20, "irreversibility": 0.8 },
+    { "candidate_id": "single_optimized_path", "scenario_id": "identity_dependency_exploit", "detection_time_hours": 2, "containment_time_hours": 18, "recovery_time_hours": 48, "switching_cost": 15, "irreversibility": 0.8 }
+  ],
+  "externalities": [
+    { "candidate_id": "shared_control_hot_standby", "scenario_id": "admin_identity_compromise", "stakeholder_id": "operators", "description": "Shared administrative recovery concentrates incident burden on one operator group", "measure": "normalized operator burden", "magnitude": 0.5, "basis": "Red-team operational assessment on a declared zero-to-one scale", "prohibited": false, "evidence_refs": ["threat_model"] },
+    { "candidate_id": "split_control_recovery", "scenario_id": "normal_peak_load", "stakeholder_id": "operators", "description": "Independent recovery controls require additional drills and maintenance", "measure": "normalized operator burden", "magnitude": 0.25, "basis": "Reliability assessment on a declared zero-to-one scale", "prohibited": false, "evidence_refs": ["failure_model"] },
+    { "candidate_id": "single_optimized_path", "scenario_id": "primary_region_loss", "stakeholder_id": "service_users", "description": "Recovery burden is shifted to locked-out users", "measure": "normalized access-loss burden", "magnitude": 0.9, "basis": "Fault-injection assessment on a declared zero-to-one scale", "prohibited": false, "evidence_refs": ["failure_model"] }
+  ],
+  "candidate_metrics": [
+    { "candidate_id": "shared_control_hot_standby", "name": "latency_ms", "value": 35, "value_interval": { "lower": 33, "upper": 38, "basis": "Synthetic peak-load range" }, "direction": "minimize", "unit": "milliseconds", "evidence_refs": ["load_model"] },
+    { "candidate_id": "split_control_recovery", "name": "latency_ms", "value": 44, "value_interval": { "lower": 41, "upper": 48, "basis": "Synthetic peak-load range" }, "direction": "minimize", "unit": "milliseconds", "evidence_refs": ["load_model"] },
+    { "candidate_id": "single_optimized_path", "name": "latency_ms", "value": 25, "value_interval": { "lower": 23, "upper": 27, "basis": "Synthetic peak-load range" }, "direction": "minimize", "unit": "milliseconds", "evidence_refs": ["load_model"] },
+    { "candidate_id": "shared_control_hot_standby", "name": "annual_cost_musd", "value": 2.1, "direction": "minimize", "unit": "million USD", "evidence_refs": ["load_model"] },
+    { "candidate_id": "split_control_recovery", "name": "annual_cost_musd", "value": 2.8, "direction": "minimize", "unit": "million USD", "evidence_refs": ["load_model"] },
+    { "candidate_id": "single_optimized_path", "name": "annual_cost_musd", "value": 1.2, "direction": "minimize", "unit": "million USD", "evidence_refs": ["load_model"] }
+  ]
+}

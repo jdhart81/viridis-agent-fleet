@@ -69,18 +69,6 @@ Do not trust unsigned wrapper fields such as the top-level `verdict`.
    input and scanner-policy verification. Changed inputs, expired evidence or
    changed rules require review and, when appropriate, a fresh quote and budget.
 
-For release automation, combine the free comparison and local verification:
-
-```sh
-python scripts/viridis_preflight_watch.py --inputs inputs.json \
-  --paid-result paid-result.json --ci --trust trust.json
-```
-
-Exit 0 requires both an unchanged baseline and an authenticated preflight pass.
-Exit 2 requires review; exit 1 means evidence or comparison could not be trusted.
-Any nonzero exit stops this gate. The default watch mode remains diagnostic and
-must not be used alone as a pass/fail release gate.
-
 ## Verification coverage and limits
 
 The verifier checks the Ed25519 signature using the operator-pinned public key,

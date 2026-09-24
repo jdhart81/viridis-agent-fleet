@@ -1,0 +1,21 @@
+name: "agent-surety-agent"
+version: "0.2.0"
+description: "Counterparty risk transfer for the agent economy: bonds behind promises, ruling-gated slashing, conservation-checked balances, tamper-evident audit. The trust oracle scores counterparties; surety BACKS them."
+pillar: "rails"
+status: "mvp"
+owner: "justin@viridisconservation.com"
+a2a_role: "surety"
+thesis_connection: |
+  Completes the settlement stack into actual risk transfer: trust (score) ->
+  escrow (hold) -> arbitration (rule) -> surety (pay for harm). Slashing is
+  gated on machine-verifiable rulings only — proof-backed authority, the
+  Viridis Security thesis in financial form. No custody: state machine over
+  a payment rail, same idiom as escrow/x402.
+revenue_model: |
+  Bond fees (2% default, frozen at post) — bps on bonded value scale with
+  economy volume. Near-term: bonds behind smartscale/protogen paid jobs and
+  federated members; marketplace tier for platforms requiring bonded agents.
+actions: [post_bond, activate, file_claim, slash, release, status, list, verify_audit]
+invariants: "SB1-SB8 (see src/core.py); one test per invariant"
+deploy_targets:
+  - mcp (adapters/mcp_server.py; mounted at /surety/mcp on the gateway)

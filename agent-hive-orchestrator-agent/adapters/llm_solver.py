@@ -21,6 +21,7 @@ Transport = Callable[[Dict[str, Any]], Awaitable[str]]
 
 DEFAULT_MODEL = os.getenv("HIVE_LLM_MODEL", "gpt-5-mini-2025-08-07")
 DEFAULT_PROVIDER = os.getenv("HIVE_LLM_PROVIDER", "openai")
+OPENAI_SERVICE_TIER = "default"
 MAX_PROMPT_CHARS = 20_000
 MAX_SOLVE_OUTPUT_TOKENS = 2_048
 MAX_REVIEW_OUTPUT_TOKENS = 256
@@ -79,7 +80,10 @@ def openai_transport(api_key: Optional[str] = None,
                 json={"model": model, "messages": [
                     {"role": "system", "content": payload["instructions"]},
                     {"role": "user", "content": prompt}],
-                    "max_completion_tokens": max_output_tokens},
+                    "max_completion_tokens": max_output_tokens,
+                    # Never inherit a project-level Priority setting: this
+                    # fixed-price product is costed against Standard rates.
+                    "service_tier": OPENAI_SERVICE_TIER},
             )
             resp.raise_for_status()
             return resp.json()["choices"][0]["message"]["content"]
