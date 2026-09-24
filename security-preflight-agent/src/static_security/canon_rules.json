@@ -1,0 +1,363 @@
+[
+  {
+    "id": "VC-AI-ACTION-0001",
+    "title": "Irreversible Action Executed Without Confirmation",
+    "category": "AI Agent Irreversible Action",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "irreversible\\s*[:=]\\s*[Tt]rue|\\b(?:delete|destroy|drop|remove|send|transfer|deploy|publish)_[a-z_]+\\.(?:run|execute|call|invoke)\\s*\\(",
+      "exclude_regex": "(?:confirmation_token|verifyConfirmation|verify_confirmation|requireConfirmation|require_confirmation|pending_confirmation|two_step|2fa_token|hash\\s*===\\s*plan)",
+      "confidence": "medium",
+      "corroboration": null
+    },
+    "mitigation": "Tag tools with `irreversible: true`. The dispatcher must require a confirmation_token whose hash equals SHA256(plan_id + tool_name + canonical(args)) and whose generation was logged in the prior turn. Without a matching token, the tool returns a 'pending confirmation' response instead of executing.",
+    "references": [
+      "OWASP LLM08: Excessive Agency",
+      "Anthropic \u2014 Computer Use Safety Considerations"
+    ]
+  },
+  {
+    "id": "VC-AI-API-0001",
+    "title": "Private Session Data Sent to Non-Allowlisted External API",
+    "category": "AI Agent Trust Boundary Crossing",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "(?:fetch|axios\\.(?:post|put|patch)|requests\\.(?:post|put|patch)|httpx\\.(?:post|put|patch))\\s*\\([^)]*\\b(?:url|target|endpoint|webhook|callback)\\b[^)]*(?:body|data|json|method:\\s*['\"](?:POST|PUT|PATCH))",
+      "exclude_regex": "(?:isAllowlistedHost|outboundAllowlist|egress_allowlist|assertAllowedDestination|assertNotPrivate|classifyData|safePost|safe_post)",
+      "confidence": "medium",
+      "corroboration": {
+        "window_lines": 14,
+        "signals": {
+          "untrusted_dest": {
+            "scope": "window",
+            "regex": "(?i)(\\breq\\b|\\brequest\\b|\\bparams\\b|\\bwebhook\\b|\\bcallback\\b|user[_-]?input|\\bllm\\b|\\btool\\b|\\bagent\\b|arguments|messages|\\(\\s*\\{[^}]*\\b(?:url|target|endpoint|webhook|callback)\\b|event\\.|\\bprompt\\b)"
+          },
+          "sensitive_body": {
+            "scope": "window",
+            "regex": "(?i)(session|secret|token|credential|api[_-]?key|password|passwd|\\bpii\\b|private|profile|\\bssn\\b|cookie|\\bauth\\b)"
+          }
+        },
+        "idiom_excludes": {
+          "scope": "window",
+          "regex": "(?i)(https?:\\/\\/[a-z0-9]|this\\.url|this\\.options|baseurl|base_url|parseenv|process\\.env|os\\.environ|getenv|new\\s+url\\s*\\(\\s*this\\.)"
+        },
+        "policy": {
+          "tiers": [
+            {
+              "when": [
+                "untrusted_dest",
+                "sensitive_body"
+              ],
+              "confidence": "high"
+            },
+            {
+              "when": [
+                "sensitive_body"
+              ],
+              "confidence": "medium"
+            },
+            {
+              "when": [],
+              "confidence": "low"
+            }
+          ]
+        }
+      }
+    },
+    "mitigation": "Outbound HTTP from the agent goes through a single safePost wrapper that (1) checks the destination host against a fixed allowlist, (2) classifies the request body and rejects bodies containing private-tagged fields when the destination is not on an internal allowlist, (3) logs every outbound call with destination and content-class. Prefer per-tool destination allowlists (e.g., the Stripe tool can only POST to api.stripe.com) over a global one.",
+    "references": [
+      "OWASP LLM06: Sensitive Information Disclosure",
+      "OWASP LLM02: Insecure Output Handling",
+      "MITRE ATLAS: AML.T0024 \u2014 Exfiltration via API"
+    ]
+  },
+  {
+    "id": "VC-AI-CHAIN-0001",
+    "title": "Multi-Agent Delegation Expands Permission Scope",
+    "category": "AI Agent Authorization Failure",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "\\b(?:delegate|delegateTo|hand_off|handoff|sub_agent|subAgent|spawn_agent)\\s*\\(",
+      "exclude_regex": "(?:mintDelegationToken|verifyDelegationToken|delegationToken\\s*[:=]|capability_token\\s*[:=]|capabilityToken\\s*[:=]|effective_permissions\\s*[:=]|effectivePermissions\\s*[:=])",
+      "confidence": "medium",
+      "corroboration": null
+    },
+    "mitigation": "Every delegation passes a capability token bound to the caller's permissions. The callee's dispatcher computes effective_permissions = caller_permissions \u2229 callee_permissions for the delegated call. Tokens are short-lived, signed, and bound to a specific tool name. Without a valid token, the callee refuses the delegation.",
+    "references": [
+      "OWASP LLM07: Insecure Plugin Design (delegation variant)",
+      "Capability-based security \u2014 confused deputy problem (Hardy 1988)"
+    ]
+  },
+  {
+    "id": "VC-AI-CHAIN-0002",
+    "title": "Cross-Agent State Channel Pollution",
+    "category": "AI Agent Trust Boundary Crossing",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "\\b(?:vectorStore|vectorDb|vector_db|memoryStore|memory_store|sharedMemory|shared_memory|sharedState|shared_state|messageQueue|message_queue|sharedKv|shared_kv|redis|kv\\.get|memory\\.get|memory\\.recall|context\\.recall)\\s*[\\.\\(]",
+      "exclude_regex": "(?:provenance|signed_by|writtenBy|writer_identity|writerIdentity|signature_verified|signatureVerified|verify_provenance|verifyProvenance|namespace_isolated|namespaceIsolated|tenant_scoped|tenantScoped)",
+      "confidence": "medium",
+      "corroboration": {
+        "window_lines": 12,
+        "signals": {
+          "sink": {
+            "scope": "window",
+            "regex": "(?i)(system\\s*prompt|systemprompt|you are\\b|messages\\s*\\.\\s*(append|push)|\\.invoke\\s*\\(|\\.run\\s*\\(|_?llm\\s*\\(|chat\\.complet|chatprompttemplate|prompt\\s*=|role\\s*[:=]\\s*[\"']system[\"']|completion\\s*\\(|\\bgenerate\\s*\\()"
+          },
+          "multi_writer": {
+            "scope": "file",
+            "regex": "(?i)\\.(set|put|write|store|save|add|insert|upsert|push|publish)\\s*\\("
+          }
+        },
+        "idiom_excludes": {
+          "scope": "window",
+          "regex": "(?i)(redlock|red-lock|\\block\\b|mutex|semaphore|\\bnx\\b|setnx|compare[-_ ]?and[-_ ]?(delete|swap)|\\.p?expire\\s*\\(|\\bttl\\b|\\bacquire|\\brelease|\\bunlock|heartbeat|watchdog|\\bsubscribe\\s*\\(|\\bpublish\\s*\\()"
+        },
+        "policy": {
+          "tiers": [
+            {
+              "when": [
+                "sink",
+                "multi_writer"
+              ],
+              "confidence": "high"
+            },
+            {
+              "when": [
+                "sink"
+              ],
+              "confidence": "medium"
+            },
+            {
+              "when": [],
+              "confidence": "low"
+            }
+          ]
+        }
+      }
+    },
+    "mitigation": "Every shared-channel write records {writer_agent_id, session_id, signed_at, signature_over(value)}. Every read returns the value PLUS the provenance record. Consumers MUST verify the signature, MUST check that writer_agent_id is on the consumer's allowlist of trusted writers for that namespace, AND MUST scope the read to the session/tenant the consumer is currently serving. A shared channel without provenance is a stored-injection sink.",
+    "references": [
+      "OWASP LLM02: Insecure Output Handling (cross-context variant)",
+      "Stored XSS pattern \u2014 multi-agent generalization (Hardy/Madnick analogue, 2024)",
+      "Related canon entry: VC-AI-CHAIN-0001 (delegation-time confused deputy)",
+      "Related canon entry: VC-AI-RAG-0001 (single-agent context poisoning)"
+    ]
+  },
+  {
+    "id": "VC-AI-CODEEXEC-0001",
+    "title": "Untrusted Tool Output Evaluated as Code Downstream",
+    "category": "AI Agent Trust Boundary Crossing",
+    "severity": "critical",
+    "detection": {
+      "signature_regex": "(?:^|[^.\\w/*])(?:eval|new\\s+Function|child_process\\.exec|child_process\\.execSync|os\\.system)\\s*\\(\\s*[^)]*\\b(?:result|output|response|content|body|next_action|plan|tool_)\\b",
+      "exclude_regex": "(?:DISPATCH_TABLE|action_handlers|ALLOWED_ACTIONS|allowed_actions|safe_dispatch|pattern\\.exec|matcher\\.exec|RegExp\\.prototype)",
+      "confidence": "high",
+      "corroboration": null
+    },
+    "mitigation": "Tool outputs are typed data, not code. Downstream dispatch uses a fixed allowlist table indexed by an enum-typed action name. eval / Function / exec are forbidden in the agent runtime, enforced by a lint rule and CI gate. Tool outputs that cross trust boundaries are JSON-parsed in a structured shape and validated against a schema.",
+    "references": [
+      "OWASP LLM02: Insecure Output Handling",
+      "CWE-94: Improper Control of Generation of Code",
+      "Semgrep \u2014 javascript.lang.security.audit.unsafe-eval"
+    ]
+  },
+  {
+    "id": "VC-AI-MEM-0001",
+    "title": "Cross-Tenant Memory Disclosure in Agent Long-Term Store",
+    "category": "AI Agent Memory Disclosure",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "\\b(?:memory|memoryStore|memory_store|memstore|long_term_memory|vectorStore|vector_store|store)\\.(?:search|recall|query|retrieve|fetch)\\s*\\(\\s*[^,)]+\\s*\\)",
+      "exclude_regex": "(?:ownerEquals|owner_equals|owner_principal_id|filter_by_owner|tenant_id\\s*=|principal_id\\s*=|where\\s*owner|RLS|row_level_security)",
+      "confidence": "high",
+      "corroboration": {
+        "window_lines": 16,
+        "signals": {
+          "multi_tenant": {
+            "scope": "file",
+            "regex": "(?i)(owner[_]?principal|principal[_]?id|\\bprincipal\\b|\\btenant\\b|tenant[_]?id|\\bowner[_]?id\\b|ownerid|per[_-]?user|cross[_-]?tenant|multi[_-]?tenant|\\buser[_]?id\\b)"
+          }
+        },
+        "policy": {
+          "tiers": [
+            {
+              "when": [
+                "multi_tenant"
+              ],
+              "confidence": "high"
+            },
+            {
+              "when": [],
+              "confidence": "low"
+            }
+          ]
+        }
+      }
+    },
+    "mitigation": "Every memory read must include an owner-equality predicate against the authenticated principal. Owner is bound at write time from the verified session, not from caller-supplied input. Tenant isolation is a database-level invariant, not an LLM policy.",
+    "references": [
+      "OWASP LLM06: Sensitive Information Disclosure",
+      "CWE-639: Authorization Bypass Through User-Controlled Key"
+    ]
+  },
+  {
+    "id": "VC-AI-PROMPT-0001",
+    "title": "System Instruction Disclosure via Output Reflection",
+    "category": "AI Agent System Prompt Disclosure",
+    "severity": "medium",
+    "detection": {
+      "signature_regex": "return\\s+(?:await\\s+)?(?:llm|model|client|openai|anthropic|chat)\\.(?:complete|generate|chat|invoke|completion|create_message)\\s*\\(",
+      "exclude_regex": "(?:stripSystem|outputFilter|redactSystem|sanitize_output|content_filter|output_strip|prompt_filter|stripSystemContent)",
+      "confidence": "medium",
+      "corroboration": null
+    },
+    "mitigation": "The output path passes through a strip layer that scans for known system-channel substrings (system prompt fingerprints, credential patterns, internal sentinel tokens) and refuses or redacts the response. Treat the system prompt as a secret; do not embed credentials in it; rotate fingerprint sentinels per deployment.",
+    "references": [
+      "OWASP LLM06: Sensitive Information Disclosure",
+      "OWASP LLM01: Prompt Injection (extraction variant)"
+    ]
+  },
+  {
+    "id": "VC-AI-PROMPT-0002",
+    "title": "Indirect Prompt Injection via Long-Context Attention Drift",
+    "category": "AI Agent Trust Boundary Crossing",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "\\b(?:retrievedDocs|retrieved_docs|ragResults|rag_results|searchResults|search_results|retrievedChunks|retrieved_chunks|documents|chunks|memories|toolOutputs|tool_outputs|uploads|webResults|web_results)\\s*\\.\\s*join\\s*\\(",
+      "exclude_regex": "(?:wrapUntrusted|wrap_untrusted|stripUntrustedRegions|strip_untrusted_regions|UNTRUSTED:|END_UNTRUSTED:|trust_boundary|trustBoundary|sanitize_context|sanitizeContext|imperativeSourceCheck|imperative_source_check)",
+      "confidence": "medium",
+      "corroboration": null
+    },
+    "mitigation": "Every retrieved document, tool output, or user-supplied content segment is wrapped with structural trust-boundary markers (e.g., <<<UNTRUSTED:doc_id>>>...<<<END_UNTRUSTED:doc_id>>>). The system prompt is re-emitted as an attention anchor after the untrusted block. A deterministic post-generation filter extracts imperatives from the model output and refuses any imperative whose semantic source traces to an untrusted region. Defense in depth: a final secret-scan output filter blocks known credential patterns regardless of source. Treat retrieved content as data, never as instructions.",
+    "references": [
+      "OWASP LLM01: Prompt Injection (indirect/stored variant)",
+      "OWASP LLM02: Insecure Output Handling",
+      "Greshake et al., 'Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection' (2023)",
+      "Related canon entry: VC-AI-PROMPT-0001 (direct system-prompt disclosure)",
+      "Related canon entry: VC-AI-RAG-0001 (retrieval-time context poisoning)",
+      "Related canon entry: VC-AI-CHAIN-0002 (multi-agent shared-channel pollution)"
+    ]
+  },
+  {
+    "id": "VC-AI-RAG-0001",
+    "title": "Untrusted Retrieved Content Crosses Trust Boundary",
+    "category": "AI Agent Trust Boundary Crossing",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "(?:systemPrompt|system_prompt|instructions?)[^\\n]{0,200}(?:\\$\\{[^}]*(?:retrievedDocs|retrieved_docs|docs|chunks|context_docs)[^}]*\\}|f['\"][^'\"]*\\{(?:retrieved_docs|docs|chunks|context_docs)[^'\"]*['\"]|\\+\\s*(?:retrieved_docs|docs|chunks|context_docs))",
+      "exclude_regex": "(?:trustedInstruction|trusted_instruction|untrustedData|untrusted_data|sandboxed_retrieval|data_channel|<retrieved_documents>|role:\\s*['\"]tool['\"])",
+      "confidence": "high",
+      "corroboration": null
+    },
+    "mitigation": "Tag retrieved content with an explicit data-channel role and surround it with a sandbox boundary the model recognizes. Strip or escape control sequences in retrieved text. Never concatenate retrieved strings directly into the system prompt; use a structured message with role=tool or role=user with clear delimiters.",
+    "references": [
+      "OWASP LLM01: Prompt Injection",
+      "OWASP LLM03: Training Data Poisoning (indirect via RAG corpus)",
+      "Greshake et al., Indirect Prompt Injection (2023)"
+    ]
+  },
+  {
+    "id": "VC-AI-RAG-0002",
+    "title": "RAG Context-Window Timing Side-Channel Exfiltration via Shared Prompt Cache",
+    "category": "AI Agent Memory Disclosure",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "sharedPromptCache\\s*\\.\\s*has\\s*\\(",
+      "exclude_regex": "tenantScopedKey|tenant_scoped_key|constantTimeResponse|constant_time_response|equalizeTiming|equalize_timing|fixed_latency_budget|fixedLatencyBudget",
+      "confidence": "medium",
+      "corroboration": null
+    },
+    "mitigation": "Namespace every prompt/prefix/KV cache key by trust boundary (tenant or session id) so one tenant's warm entries can never be hit by another tenant's probe, AND equalize the observable response time to a fixed budget so cache hit/miss is indistinguishable from latency. Cache the answer for performance under a tenant-scoped key, but decouple observable timing from cache state. Add rate limiting + anomaly detection on prefix-extension probing patterns. Treat any cross-trust-boundary cache as a covert channel until proven timing-safe.",
+    "references": [
+      "CWE-208: Observable Timing Discrepancy",
+      "CWE-385: Covert Timing Channel",
+      "CWE-203: Observable Discrepancy",
+      "OWASP LLM02:2025 \u2014 Sensitive Information Disclosure",
+      "Gu et al., 'Auditing Prompt Caching in Language Model APIs' (2025) \u2014 timing side channels from shared prompt caching",
+      "'InputSnatch: Stealing Input in LLM Services via Timing Side-Channel Attacks' (2024)",
+      "Related canon entry: VC-AI-RAG-0001 (retrieval-time context poisoning)",
+      "Related canon entry: VC-AI-MEM-0001 (memory disclosure across isolation boundary)",
+      "Related canon entry: VC-AI-PROMPT-0002 (indirect prompt injection via long-context attention drift)"
+    ]
+  },
+  {
+    "id": "VC-AI-SECRETS-0001",
+    "title": "Session Secrets Leaked via Tool Call Arguments",
+    "category": "AI Agent Memory Disclosure",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "(?:apiKey|api_key|access_token|accessToken|refresh_token|refreshToken|bearer|secret_key|client_secret)\\s*[:=]\\s*['\"`](?:sk-|sk_live_|sk_test_|AKIA|ghp_|xox[abprs]-|Bearer\\s+)[A-Za-z0-9._\\-]{16,}",
+      "exclude_regex": "(?:apiKeyRef|api_key_ref|secretRef|secret_ref|capability_handle|vault_handle|process\\.env|os\\.getenv|getSecret\\(|\\$\\{[A-Z_]+\\}|formData\\.get|req\\.body|validatedData)",
+      "confidence": "high",
+      "corroboration": null
+    },
+    "mitigation": "Secrets live in a server-side capability vault. Tools receive an opaque handle (capability:abc123) in their args. The dispatcher dereferences handles immediately before invoking the tool implementation; the dereferenced secret never crosses the trace/log boundary. Loggers redact handle dereferences. The LLM context never contains a raw secret; it sees only handles.",
+    "references": [
+      "OWASP LLM06: Sensitive Information Disclosure",
+      "CWE-532: Insertion of Sensitive Information into Log File",
+      "Capability-based security (Dennis & Van Horn 1966)"
+    ]
+  },
+  {
+    "id": "VC-AI-SSRF-0001",
+    "title": "Agent-Coerced SSRF to Internal and Metadata Endpoints",
+    "category": "AI Agent Trust Boundary Crossing",
+    "severity": "critical",
+    "detection": {
+      "signature_regex": "\\b(?:fetch|axios|httpx|got)(?:\\.(?:get|post|put|delete|request))?\\s*\\(\\s*[^)]*(?:url|target|endpoint|href|link)\\b",
+      "exclude_regex": "(?:assertSafeUrl|isPrivateIP|is_private_ip|reject_internal|ssrf_guard|validate_outbound_host|safeFetch|safe_fetch)",
+      "confidence": "low",
+      "corroboration": {
+        "window_lines": 8,
+        "signals": {
+          "host_from_input": {
+            "scope": "window",
+            "regex": "(?i)(new\\s+url\\s*\\(\\s*(?:req|request|args|event|params|user|payload)\\b|fetch\\s*\\(\\s*(?:req|request|args|event|params|user|payload)\\b|\\burl\\b\\s*[:=]\\s*(?:req|request|args|event|params|user|payload)\\b|\\(\\s*\\{[^}]*\\b(?:url|target|endpoint|href|link)\\b[^}]*\\}\\s*\\)\\s*=>)"
+          }
+        },
+        "idiom_excludes": {
+          "scope": "window",
+          "regex": "(?i)(https?:\\/\\/[a-z0-9]|this\\.url|this\\.options|baseurl|base_url|parseenv|process\\.env|os\\.environ|getenv|\\bconfig\\b|new\\s+url\\s*\\(\\s*this\\.)"
+        },
+        "policy": {
+          "tiers": [
+            {
+              "when": [
+                "host_from_input"
+              ],
+              "confidence": "high"
+            },
+            {
+              "when": [],
+              "confidence": "low"
+            }
+          ]
+        }
+      }
+    },
+    "mitigation": "Wrap every outbound fetch in a guard that resolves the host, rejects RFC1918, link-local (169.254.0.0/16), loopback (127.0.0.0/8), IPv6 ULA/loopback, and known cloud-metadata hostnames. Re-validate after each redirect. Prefer an allowlist of known external destinations over a blocklist. The agent's URL-fetch tool is the only path; no second tool may issue HTTP.",
+    "references": [
+      "OWASP LLM02: Insecure Output Handling (SSRF variant)",
+      "Capital One 2019 breach \u2014 IMDSv1 SSRF via WAF",
+      "OWASP API Top 10 \u2014 API7 SSRF"
+    ]
+  },
+  {
+    "id": "VC-AI-TOOL-0001",
+    "title": "Privileged Tool Call Without Permission Gate",
+    "category": "AI Agent Authorization Failure",
+    "severity": "high",
+    "detection": {
+      "signature_regex": "(?:tool|TOOLS\\[[^\\]]+\\])\\.(?:run|execute|call|invoke)\\s*\\(",
+      "exclude_regex": "(?:assertPermission|hasPermission|require_permission|permission_check|capabilities\\.has|session\\.permissions\\.has|@requires_permission|@has_permission)",
+      "confidence": "low",
+      "corroboration": null
+    },
+    "mitigation": "Wrap every tool dispatch in a permission gate keyed by (session_id, tool_name). Privileged tools must declare required capabilities, and the dispatcher must throw PermissionDeniedError if the active session does not hold them. Audit-log every privileged call.",
+    "references": [
+      "OWASP LLM07: Insecure Plugin Design",
+      "MITRE ATLAS: AML.T0053 \u2014 LLM Plugin Compromise"
+    ]
+  }
+]

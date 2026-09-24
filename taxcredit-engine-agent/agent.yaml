@@ -1,0 +1,25 @@
+name: "taxcredit-engine-agent"
+version: "0.1.0"
+description: "Deterministic auditable US clean-energy tax-credit scenario engine"
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+revenue_model: "10 free calculations/day, then $2.00 per calculation or prepaid credits; optional B2B monthly seats via /subscriptions/mcp"
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["docker"]
+dependencies:
+  services: []
+  agents: ["agent-metering-agent", "agent-notary-agent", "agent-escrow-agent"]
+env_vars: []
+capabilities:
+  inputs: ["45Q project facts", "verified 45V GREET result", "45Y/48E facility facts", "45X component facts"]
+  outputs: ["credit scenario", "eligibility flags", "formula audit trail", "content digest"]
+reference_data:
+  path: "data/rule_packs.v0.1.0.json"
+  effective_as_of: "2026-07-12"
+thesis_connection: |
+  Monetizes deterministic, auditable intelligence about the energy
+  transition's fiscal machinery (45Q/45V/45Y/48E/45X): every scenario is
+  recomputable from the pinned rule pack — proof-backed numbers where the
+  market sells opinions. Highest-priced fleet service; notary-composed.

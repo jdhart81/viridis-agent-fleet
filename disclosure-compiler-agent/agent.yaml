@@ -1,0 +1,17 @@
+name: disclosure-compiler-agent
+version: 0.1.0
+description: Deterministic cited compliance disclosure drafts with verified GHG lineage.
+entrypoint: adapters/mcp_server.py
+transport: streamable-http
+mount: /disclosure-compiler/mcp
+deterministic: true
+inference_in_serving_path: false
+revenue_model: |
+  $2/draft via the fleet gate (10 free/day); B2B seats for compliance
+  teams via subscriptions. Zero inference in the serving path keeps
+  margin structural.
+thesis_connection: |
+  Regulatory disclosure (ESRS E1/SEC/IFRS S2/TNFD) is where climate truth
+  meets enforcement: deterministic, framework-pinned, citation-carrying
+  drafts — the fleet's auditable-intelligence doctrine applied to the
+  documents regulators actually read.

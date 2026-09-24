@@ -1,0 +1,56 @@
+name: "agent-provenance-agent"
+version: "0.2.0"
+description: "Genesis certificates, lineage, and cascading recalls: birth certificates + bloodlines for the agent economy. The founding cohort is provably first."
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "provenance"
+
+thesis_connection: |
+  The agent economy's founding happens exactly once - provenance makes that
+  fact a ledger. Monotone genesis indices make the founding cohort provable;
+  parent->child lineage turns the fleet's 'living ecology' (agents spawning
+  agents, per the evolutionary-flexibility principle) into an audited
+  genealogy; cascading recalls are the safety mechanism nobody else has:
+  compromise an ancestor and the whole line is quarantined. Identity says WHO
+  you are; provenance says WHERE YOU CAME FROM.
+
+revenue_model: |
+  Founding-cohort genesis certificates (scarce by construction - only the
+  first 100 indices exist in epoch 0): premium issuance. Ongoing: per-birth
+  registration fees for agent factories/orchestrators, lineage-verification
+  API for marketplaces, and recall-notification subscriptions for anyone
+  running descendants of third-party agents.
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [register_genesis, get_certificate, verify_certificate, lineage, recall, list, register_artifact, get_artifact, verify_artifact, list_artifacts]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-identity-registry-agent (identity = who; provenance = origin)"
+  - "agent-covenant-agent (recall a line -> revoke its covenants)"
+  - "agent-trust-oracle-agent (quarantined lineage caps trust)"
+
+invariants:
+  - "V1 certificates content-addressed and immutable"
+  - "V2 genesis_index strictly monotone; epoch 0 = founding cohort, by index alone"
+  - "V3 lineage acyclic by construction (parent pre-exists; no self-parent)"
+  - "V4 recall cascades to all transitive descendants"
+  - "V5 recalled lineage sticky: children of recalled/quarantined parents born quarantined"
+  - "V6 verify_certificate recomputes the content hash"
+  - "V7 registration idempotent on agent_id (born once)"
+  - "V8 unknown agent -> error envelope, never a crash"
+  - "A1 artifact registration is separate from genesis and recall lineage"
+  - "A2 artifact records are content-addressed"
+  - "A3 artifact parent hashes form an acyclic DAG"
+  - "A4 artifact_id is idempotent only for identical integrity payloads; conflicts fail closed; artifact_hash is unique"
+  - "A5 verify_artifact detects tampering"
+  - "A6 artifact persistence uses canonical built-in state"
+  - "A7 malformed or unknown artifacts fail loud"

@@ -1,0 +1,54 @@
+name: "agent-verified-relay-agent"
+version: "0.1.0"
+description: "Viridis Verified: the consequence wrapper for the agent economy. Wraps any third-party MCP server with tamper-evident delivery receipts, metered per-call fees, and dispute-ready evidence — rails revenue that scales with other people's services."
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "verified-relay"
+
+thesis_connection: |
+  Economies are cornered by whoever underwrites everyone else's transactions.
+  The rails (identity -> trust -> escrow -> surety -> notary -> arbitration)
+  only compound if they carry OTHER agents' traffic, not just Viridis leaf
+  services. Verified turns every MCP server in every registry into potential
+  rails traffic: each relayed call produces recomputable evidence (V2/V4)
+  that feeds trust, can be bonded by surety underwriting (uw-v1), and is
+  arbitration-ready. This is demand-side infrastructure — the review's
+  explicit exception to the 21-agent growth gate.
+
+revenue_model: |
+  Basis points per verified call (default $0.02/call via the gateway's
+  freemium gate: 10 free/day then per-call), plus a natural upsell chain:
+  verified calls -> surety bond behind the provider (2%/yr premium, priced by
+  price_bond) -> SLA reporting -> arbitration fees on disputes. Fees accrue
+  per-service in an integer ledger recomputable from receipts (V6).
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [register_service, call_verified, get_receipt, verify_receipts, list_services, service_stats]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-metering-agent (per-call fees metered at the gateway)"
+  - "agent-surety-agent (price_bond underwrites registered providers)"
+  - "agent-notary-agent (receipts extend commit-reveal delivery proofs)"
+  - "agent-trust-oracle-agent (receipt history is reputation evidence)"
+  - "agent-arbitration-agent (receipts are the evidence base for rulings)"
+
+invariants:
+  - "V1 SSRF-guarded registration: https + public FQDN only, ports 443/8443"
+  - "V2 tamper-evident receipt hash chain per service; verify_receipts recomputes"
+  - "V3 idempotent on call_id; replay never re-calls the downstream"
+  - "V4 payload fidelity: canonical request hashing, response hashed as received"
+  - "V5 failures are evidence: error envelope AND a chained receipt"
+  - "V6 deterministic integer fee ledger, recomputable from receipts"
+  - "V7 read surface is pure"
+  - "V8 unknown ids -> error envelope; process never raises"
+  - "V9 content-addressed service identity; registration immutable + idempotent"
+  - "V10 resource safety: timeout <= 30s, response cap 512KiB"

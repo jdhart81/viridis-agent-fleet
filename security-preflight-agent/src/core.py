@@ -9,11 +9,14 @@ can verify and, with a separate explicit import action, attach to a profile.
 from __future__ import annotations
 
 import base64
+import asyncio
 import hashlib
 import json
 import os
 import re
 import sqlite3
+import subprocess
+import sys
 import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -37,6 +40,12 @@ MAX_TOOLS = 100
 MAX_SAMPLES = 20
 MAX_SAMPLE_CHARS = 8_192
 RECEIPT_TTL_DAYS = 30
+STATIC_WORKERS = threading.BoundedSemaphore(2)
+STATIC_BOUNDARY = (
+    "Deterministic indicators in caller-supplied text or source only. "
+    "Matches are hypotheses, not demonstrated vulnerabilities or calibrated "
+    "attack probabilities. No matches does not establish safety. No URL fetch, "
+    "code execution, model call or runtime certification is performed.")
 AGENT_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -224,7 +233,7 @@ def _signer_fingerprint() -> Optional[str]:
 class SecurityPreflightCore:
     """Fleet-standard deterministic Security Preflight core."""
 
-    KNOWN_ACTIONS = frozenset({"scan", "get_receipt"})
+    KNOWN_ACTIONS = frozenset({"scan", "get_receipt", "scan_source", "screen_injection"})
     READ_ACTIONS = frozenset({"get_receipt"})
 
     def __init__(self, receipt_db_path: Optional[str] = None):
@@ -420,6 +429,11 @@ class SecurityPreflightCore:
     def _paid_preflight(self, payload: dict) -> Optional[dict]:
         """Fail before settlement when inputs or receipt signing are unusable."""
         try:
+            if payload.get("action") in {"scan_source", "screen_injection"}:
+                self._validate_static(payload)
+                _load_signing_key()
+                self._ensure_receipt_store_ready()
+                return None
             if payload.get("action", "scan") != "scan":
                 raise PreflightError(
                     "paid Security Preflight supports only scan", "action")
@@ -726,6 +740,89 @@ class SecurityPreflightCore:
             },
         }
 
+    @staticmethod
+    def _validate_static(payload: dict) -> dict:
+        action = payload.get("action")
+        field = "source" if action == "scan_source" else "texts"
+        permitted = {"action", "agent_id", field, "payment_ref", "request_id"}
+        if set(payload) - permitted:
+            raise PreflightError("Unsupported input fields", "input")
+        agent_id = payload.get("agent_id")
+        if not isinstance(agent_id, str) or not AGENT_ID_RE.fullmatch(agent_id):
+            raise PreflightError("Valid agent_id required", "agent_id")
+        if action == "scan_source":
+            source = payload.get("source")
+            if not isinstance(source, str) or not source.strip():
+                raise PreflightError("Nonempty inline source required", "source")
+            if source.strip().startswith(("http://", "https://")):
+                raise PreflightError("Supply inline code, not a repository URL", "source")
+            if len(source.splitlines()) > 2000 or any(len(line) > 4096 for line in source.splitlines()):
+                raise PreflightError("Maximum 2000 lines and 4096 characters per line", "source")
+            texts = [source]
+        else:
+            texts = payload.get("texts")
+            if not isinstance(texts, list) or not 1 <= len(texts) <= 20 or any(
+                    not isinstance(t, str) or not t.strip() or len(t) > 8192 for t in texts):
+                raise PreflightError("Supply 1–20 nonempty text samples, each at most 8192 characters", "texts")
+        try:
+            if sum(len(t.encode('utf-8')) for t in texts) > 65536:
+                raise PreflightError("Maximum total input size is 65536 UTF-8 bytes", field)
+        except UnicodeEncodeError:
+            raise PreflightError("Input must be valid UTF-8", field)
+        directory = Path(__file__).parent / "static_security"
+        for name in ("worker.py", "canon_rules.json", "injection_rules.json"):
+            if not (directory / name).is_file():
+                raise PreflightError("Static scanner bundle unavailable", "service", "ServiceUnavailable")
+        return {"action": action, "agent_id": agent_id, field: payload[field]}
+
+    def _static_scan(self, payload: dict) -> dict:
+        data = self._validate_static(payload)
+        key = _load_signing_key()
+        directory = Path(__file__).parent / "static_security"
+        if not STATIC_WORKERS.acquire(blocking=False):
+            raise PreflightError("Static scanner at bounded capacity", "service", "ServiceUnavailable")
+        try:
+            completed = subprocess.run(
+                [sys.executable, "-I", "-S", str(directory / "worker.py")],
+                input=json.dumps(data), text=True, capture_output=True,
+                timeout=2, env={"LANG": "C.UTF-8"})
+            if completed.returncode:
+                raise PreflightError("Static scanner resource limit or execution failure", "service", "ServiceUnavailable")
+            result = json.loads(completed.stdout)
+        except subprocess.TimeoutExpired:
+            raise PreflightError("Static scanner exceeded two-second execution budget", "service", "ServiceUnavailable")
+        finally:
+            STATIC_WORKERS.release()
+        rule_file = "canon_rules.json" if data['action'] == 'scan_source' else "injection_rules.json"
+        rules_sha = hashlib.sha256((directory / rule_file).read_bytes()).hexdigest()
+        binding = _sha256(data)
+        scanner = {"name": "Viridis bounded " + data['action'], "version": "1.0.0", "canon_digest": rules_sha}
+        counts = {"indicators": len(result['findings']), "confirmed_vulnerabilities": 0}
+        evidence = {"protocol": "viridis-static-security-evidence-v1", "action": data['action'],
+                    "subject_agent_id": data['agent_id'], "input_sha256": binding,
+                    "scanner": scanner, "result": result, "result_counts": counts,
+                    "claim_boundary": STATIC_BOUNDARY, "input_redacted": True,
+                    "provider_calls": 0, "runtime_tested": False}
+        issued = _now()
+        unsigned = {"protocol": PROTOCOL, "issuer_id": ISSUER_ID, "subject_agent_id": data['agent_id'],
+                    "posture": "SCANNED", "coverage": [data['action'], "artifact-sha256:" + binding],
+                    "scanner": scanner, "result_counts": counts, "claim_boundary": STATIC_BOUNDARY,
+                    "evidence_sha256": _sha256(evidence), "issued_at": _iso(issued),
+                    "expires_at": _iso(issued + timedelta(days=RECEIPT_TTL_DAYS))}
+        receipt_id = "vsr_" + _sha256(unsigned)[:24]
+        base = os.environ.get("PUBLIC_BASE", "https://mcp.viridisconservation.com").rstrip('/')
+        receipt = {**unsigned, "receipt_id": receipt_id,
+                   "evidence_url": base + "/security-preflight/receipts/" + receipt_id}
+        record = {"status": "ok", "service": "viridis-static-security", "receipt": receipt,
+                  "signature_b64": _b64url(key.sign(_stable(receipt).encode())), "evidence": evidence,
+                  "verdict": "REVIEW_INDICATORS" if result['findings'] else "NO_INDICATORS",
+                  "privacy": {"raw_inputs_stored": False, "raw_inputs_returned": False},
+                  "market_import": {"automatic": False, "eligible": False},
+                  "repeat": {"automatic": False, "input_sha256": binding,
+                             "instruction": "Retain this result; buy a new scan only for changed inputs or rules, with a fresh quote and budget."}}
+        self._store_receipt(record)
+        return record
+
     def _get_receipt(self, receipt_id: Any) -> dict:
         if not isinstance(receipt_id, str) or not receipt_id.startswith("vsr_"):
             raise PreflightError(
@@ -747,6 +844,8 @@ class SecurityPreflightCore:
                 raise PreflightError(
                     "input_data must be an object", "input_data")
             action = input_data.get("action", "scan")
+            if action in {"scan_source", "screen_injection"}:
+                return await asyncio.to_thread(self._static_scan, input_data)
             if action == "scan":
                 return self._scan(input_data)
             if action == "get_receipt":
@@ -823,6 +922,8 @@ class SecurityPreflightCore:
                 "signed-security-receipts",
                 "persistent-public-receipts",
                 "artifact-and-profile-digest-binding",
+                "bounded-source-pattern-scan",
+                "bounded-text-injection-screening",
             ],
             "inputs": [
                 "agent_id", "subject_profile_sha256", "manifest", "policy",

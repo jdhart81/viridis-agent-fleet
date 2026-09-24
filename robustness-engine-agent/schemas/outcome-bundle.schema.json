@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://robustness.local/schemas/outcome-bundle.schema.json",
+  "title": "Robustness Outcome Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "case_version",
+    "model_id",
+    "lineage",
+    "assessments",
+    "trajectories",
+    "dependencies",
+    "fallback_paths",
+    "recovery",
+    "externalities",
+    "candidate_metrics"
+  ],
+  "properties": {
+    "case_id": { "type": "string", "minLength": 1 },
+    "case_version": { "type": "string", "minLength": 1 },
+    "model_id": { "type": "string", "minLength": 1 },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifacts", "model_artifact_id", "adapter_artifact_ids", "required_artifact_ids"],
+      "properties": {
+        "artifacts": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["artifact_id", "kind", "manifest", "parent_ids", "recall"],
+            "properties": {
+              "artifact_id": { "$ref": "#/$defs/contentAddress" },
+              "kind": {
+                "enum": [
+                  "MODEL",
+                  "ADAPTER",
+                  "DATASET",
+                  "EVIDENCE_SET",
+                  "CONFIGURATION",
+                  "SIMULATION_RECEIPT"
+                ]
+              },
+              "manifest": { "type": "object", "minProperties": 1 },
+              "parent_ids": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/contentAddress" }
+              },
+              "recall": {
+                "oneOf": [
+                  { "type": "null" },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["reason", "authority", "effective_at"],
+                    "properties": {
+                      "reason": { "type": "string", "minLength": 1 },
+                      "authority": { "type": "string", "minLength": 1 },
+                      "effective_at": { "type": "string", "format": "date-time" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "model_artifact_id": { "$ref": "#/$defs/contentAddress" },
+        "adapter_artifact_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/contentAddress" }
+        },
+        "required_artifact_ids": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/contentAddress" }
+        }
+      }
+    },
+    "assessments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "scenario_id",
+          "invariant_id",
+          "stakeholder_id",
+          "scale",
+          "time_point",
+          "observed_value",
+          "confidence",
+          "evidence_refs"
+        ],
+        "properties": {
+          "candidate_id": { "type": "string" },
+          "scenario_id": { "type": "string" },
+          "invariant_id": { "type": "string" },
+          "stakeholder_id": { "type": "string" },
+          "scale": { "type": "string" },
+          "time_point": { "type": ["number", "string"] },
+          "observed_value": { "type": "number" },
+          "observed_interval": { "$ref": "#/$defs/numericInterval" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+        }
+      }
+    },
+    "trajectories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "scenario_id",
+          "invariant_id",
+          "stakeholder_id",
+          "scale",
+          "basis",
+          "samples"
+        ],
+        "properties": {
+          "candidate_id": { "type": "string", "minLength": 1 },
+          "scenario_id": { "type": "string", "minLength": 1 },
+          "invariant_id": { "type": "string", "minLength": 1 },
+          "stakeholder_id": { "type": "string", "minLength": 1 },
+          "scale": { "type": "string", "minLength": 1 },
+          "basis": { "type": "string", "minLength": 1 },
+          "samples": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "elapsed_hours",
+                "observed_value",
+                "evidence_refs"
+              ],
+              "properties": {
+                "elapsed_hours": { "type": "number", "minimum": 0 },
+                "observed_value": { "type": "number" },
+                "observed_interval": { "$ref": "#/$defs/numericInterval" },
+                "evidence_refs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "kind", "parent_ids", "failure_modes", "evidence_refs"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": [
+              "component",
+              "service",
+              "control_plane",
+              "organization",
+              "resource",
+              "location",
+              "supplier",
+              "technology",
+              "policy",
+              "ecological"
+            ]
+          },
+          "parent_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+          "failure_modes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+          "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+        }
+      }
+    },
+    "fallback_paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "path_id", "dependency_ids"],
+        "properties": {
+          "candidate_id": { "type": "string" },
+          "path_id": { "type": "string" },
+          "dependency_ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } }
+        }
+      }
+    },
+    "recovery": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "scenario_id",
+          "detection_time_hours",
+          "containment_time_hours",
+          "recovery_time_hours",
+          "switching_cost",
+          "irreversibility"
+        ],
+        "properties": {
+          "candidate_id": { "type": "string" },
+          "scenario_id": { "type": "string" },
+          "detection_time_hours": { "type": "number", "minimum": 0 },
+          "containment_time_hours": { "type": "number", "minimum": 0 },
+          "recovery_time_hours": { "type": "number", "minimum": 0 },
+          "switching_cost": { "type": "number", "minimum": 0 },
+          "irreversibility": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "externalities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "scenario_id", "stakeholder_id", "description", "measure", "magnitude", "basis", "prohibited", "evidence_refs"],
+        "properties": {
+          "candidate_id": { "type": "string" },
+          "scenario_id": { "type": "string" },
+          "stakeholder_id": { "type": "string" },
+          "description": { "type": "string" },
+          "measure": { "type": "string", "minLength": 1 },
+          "magnitude": { "type": "number", "minimum": 0, "maximum": 1 },
+          "basis": { "type": "string", "minLength": 1 },
+          "prohibited": { "type": "boolean" },
+          "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+        }
+      }
+    },
+    "candidate_metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "name", "value", "direction", "unit", "evidence_refs"],
+        "properties": {
+          "candidate_id": { "type": "string" },
+          "name": { "type": "string", "minLength": 1 },
+          "value": { "type": "number" },
+          "value_interval": { "$ref": "#/$defs/numericInterval" },
+          "direction": { "enum": ["maximize", "minimize"] },
+          "unit": { "type": "string" },
+          "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "contentAddress": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "numericInterval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lower", "upper", "basis"],
+      "properties": {
+        "lower": { "type": "number" },
+        "upper": { "type": "number" },
+        "basis": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

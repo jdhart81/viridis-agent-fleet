@@ -1,0 +1,48 @@
+name: "agent-covenant-agent"
+version: "0.1.1"
+description: "Machine-checkable authority leases for agents: scoped, budgeted, expiring, revocable, audited. Deny-by-default power of attorney for the agent economy."
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "authority"
+
+thesis_connection: |
+  The Viridis Security thesis made operational: an agent is safe to trust
+  with authority only when that authority is explicit, bounded, expiring,
+  revocable, and audited. No agent in the economy should touch money or
+  accounts without a covenant. Pairs with escrow (a covenant authorizes the
+  spend an escrow settles) and provenance (recall an ancestor -> revoke its
+  line's covenants).
+
+revenue_model: |
+  Enterprise safety envelope: per-covenant issuance fees + a monthly platform
+  fee for orgs delegating authority to agents ($499-$5K/mo by covenant
+  volume). The compliance artifact IS the product: the audit chain of every
+  allowed/denied act is what security teams and insurers will pay for.
+  Natural upsell from agent-trust-oracle (score -> then bound).
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [grant, check_act, revoke, status, verify_audit, list]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-escrow-agent (covenant authorizes what escrow settles)"
+  - "agent-provenance-agent (lineage recall -> covenant revocation)"
+  - "agent-trust-oracle-agent (low score -> tighter covenant terms)"
+
+invariants:
+  - "C1 deny-by-default: allow only if ACTIVE + scope granted + budget fits + not expired"
+  - "C2 budget monotone non-increasing, never negative"
+  - "C3 every check (allow AND deny) on a tamper-evident audit chain"
+  - "C4 revocation immediate and terminal"
+  - "C5 deterministic scope matching (exact or wildcard prefix)"
+  - "C6 expiry enforced; expired is terminal"
+  - "C7 idempotent budget consumption on act_id"
+  - "C8 unknown covenant -> error envelope, never a crash"

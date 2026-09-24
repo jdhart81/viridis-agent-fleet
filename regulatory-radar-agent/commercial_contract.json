@@ -1,0 +1,35 @@
+{
+  "schema": "viridis-regulatory-radar-commercial-contract-v1",
+  "currency": "USDC",
+  "network": "eip155:8453",
+  "atomic_per_usdc": 1000000,
+  "prices": {
+    "list_atomic": 250000,
+    "intro_atomic": 10000
+  },
+  "variable_cost_ceiling": {
+    "facilitator_atomic": 1000,
+    "model_atomic": 0,
+    "external_data_atomic": 0,
+    "seller_gas_atomic": 0,
+    "marginal_compute_and_egress_reserve_atomic": 1000,
+    "total_atomic": 2000
+  },
+  "minimum_contribution_margin_bps": 4000,
+  "evidence": {
+    "facilitator_pricing_url": "https://docs.cdp.coinbase.com/x402/core-concepts/facilitator",
+    "facilitator_pricing_observed_at": "2026-07-27T03:40:00Z",
+    "facilitator_pricing_review_by": "2026-08-26T03:40:00Z",
+    "facilitator_paid_tier": "Above 1,000 monthly transactions: $0.001 per transaction",
+    "gas_posture": "CDP facilitator sponsors settlement gas; seller gas ceiling is zero",
+    "execution_posture": "Curated local regulation data and deterministic Python execution; no model or external data call",
+    "compute_reserve_posture": "Policy reserve equal to the paid-tier facilitator fee despite fixed droplet infrastructure"
+  },
+  "computed": {
+    "intro_contribution_atomic": 8000,
+    "intro_contribution_margin_bps": 8000,
+    "list_contribution_atomic": 248000,
+    "list_contribution_margin_bps": 9920,
+    "minimum_safe_price_atomic": 3334
+  }
+}

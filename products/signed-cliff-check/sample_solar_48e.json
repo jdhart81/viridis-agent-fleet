@@ -1,0 +1,27 @@
+{
+  "credit": "48E",
+  "client": "Sample C&I Developer",
+  "project": "Sample 1.5 MW Rooftop Solar",
+  "facts": {
+    "tax_year": 2026,
+    "tax_year_begin_date": "2026-01-01",
+    "qualified_investment_usd": "2400000",
+    "lifecycle_emissions_g_co2e_per_kwh": "0",
+    "construction_begin_date": "2026-08-15",
+    "placed_in_service_date": "2027-10-01",
+    "produced_in_us": true,
+    "nameplate_capacity_mw": "1.5",
+    "pwa_met": true,
+    "specified_foreign_entity": false,
+    "foreign_influenced_entity": false,
+    "material_assistance_from_pfe": false,
+    "technology": "solar",
+    "tax_exempt_bond_financing_percent": "0",
+    "claimed_45y": false,
+    "domestic_content_met": false,
+    "energy_community": false,
+    "low_income_bonus_percentage_points": "0",
+    "low_income_allocation_received": false,
+    "low_income_allocation_ratio_percent": "0"
+  }
+}

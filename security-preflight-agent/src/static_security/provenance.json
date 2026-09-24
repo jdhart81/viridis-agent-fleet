@@ -1,0 +1,11 @@
+{
+  "source_project": "Viridis-Bounty-Hunter- 2.0",
+  "sources": {
+    "canon-scanner/src/canon-data.ts": "98e99304e30d8a19428e1ecbbff618f5f719f838b4cbe6e93ca834bbf403e0c3",
+    "canon-scanner/src/corroboration.ts": "4b17ad0e9f2a4e79efae12a4d77d4d92316c5aa861bd9a1966197e942ad514c1",
+    "injection-detector/src/detector.ts": "f66ba429a97ef456125476272391e15dc629e6646a56dda6c6c726ec60f10db5",
+    "maxwell/src/pow.ts": "594e58f248fa9cfc236b033b0cd54fb989e4032ead21ad809e867e387a489872"
+  },
+  "migration": "bounded Python rule evaluator; no scoring probabilities, theorem guarantees, raw snippets, envelope lookup, provider SDKs or network fetching",
+  "maxwell": "HELD: hosted Argon2id verifier is a SHA-256 scaffold"
+}

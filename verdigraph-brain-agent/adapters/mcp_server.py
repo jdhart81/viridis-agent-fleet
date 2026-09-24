@@ -56,7 +56,8 @@ async def _run(payload: Dict[str, Any]) -> str:
 
 @mcp.tool()
 async def build_brain(content: str, format: str = "auto",
-                      include_document: bool = False) -> str:
+                      include_document: bool = False,
+                      request_id: Optional[str] = None) -> str:
     """Compile an agent file into a deterministic, content-addressed brain.
     content = the file as a string; format = verdigraph_genome |
     claude_project_export | openai_assistant | prompt_list | auto.
@@ -66,7 +67,9 @@ async def build_brain(content: str, format: str = "auto",
     graph."""
     return await _run({"action": "build", "content": content,
                        "format": format,
-                       "include_document": include_document})
+                       "include_document": include_document,
+                       **({"request_id": request_id}
+                          if request_id is not None else {})})
 
 
 @mcp.tool()

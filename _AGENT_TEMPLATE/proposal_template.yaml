@@ -1,0 +1,24 @@
+# Viridis Agent Proposal — fill this in and run: python scaffold.py --from-spec proposal.yaml
+
+name: ""                          # Agent name (lowercase, hyphens OK)
+description: ""                   # One-line description of purpose
+pillar: ""                         # revenue | climate-intelligence | high-ceiling | infrastructure
+status: "prototype"                # spec | prototype | mvp | production
+owner: "justin@viridis.earth"      # Agent owner email
+revenue_model: ""                  # How this agent drives/unlocks revenue
+deploy_targets:
+  primary: ""                      # fastapi | mcp | cloudflare-worker | claude-skill
+  secondary: []                    # Additional deployment targets
+dependencies:
+  services: []                     # External service dependencies
+  agents: []                       # Other agents this depends on
+env_vars: []                       # Environment variable names (no values)
+capabilities:
+  methods: []                      # List of capability method names
+  inputs: []                       # Input field names this agent expects
+  outputs: []                      # Output field names this agent returns
+justification:
+  gap_filled: ""                   # What problem does this solve?
+  thesis_alignment: ""             # How does it align with thermodynamic economics thesis?
+  expected_revenue: ""             # Estimated revenue or value
+  connections: []                  # Which agents does this connect with?

@@ -1,0 +1,79 @@
+[
+  {
+    "id": "Wu",
+    "name": "Wu Wei Dominance",
+    "statement": "Wu Wei Dominance. — S4×S5 bridge (Stewardship/Governance × Corridors); rate-matched intervention strictly out-diversifies aggression",
+    "doi": "10.5281/zenodo.20838923",
+    "fingerprint": "5284824efb56cf71"
+  },
+  {
+    "id": "FNT",
+    "name": "Forest Nucleation Theorem",
+    "statement": "Forest Nucleation Theorem. — standalone NEW-CATEGORY (afforestation \"concentrate, don't broadcast\" design law; candidate seed for a future Afforestation series)",
+    "doi": "10.5281/zenodo.20982979",
+    "fingerprint": "2de9b37400412c80"
+  },
+  {
+    "id": "GHT",
+    "name": "Gaian Harmonization Theorem",
+    "statement": "Gaian Harmonization Theorem. ( the Harmonizer ) — standalone NEW-CATEGORY (Gaian Systems); a single thermodynamic shadow price decentralizes planetary stewardship to the social optimum (strong duality), coordination bandwidth IB-bounded, wu-wei price signals strictly cheaper than central command",
+    "doi": "10.5281/zenodo.21168212",
+    "fingerprint": "7f4bdd5c5d310429"
+  },
+  {
+    "id": "AST",
+    "name": "Afforestation Stewardship Theorem",
+    "statement": "Afforestation Stewardship Theorem. ( the Sower ) — standalone NEW-CATEGORY (Afforestation); cubic optimal-seeding law, factor-8 site-prep lever, FNT homogeneous limit, and an IB seeding-rate ceiling",
+    "doi": "10.5281/zenodo.21168224",
+    "fingerprint": "adee00ef31e37108"
+  },
+  {
+    "id": "MINT",
+    "name": "Mutualistic Inference Network Theorem",
+    "statement": "Mutualistic Inference Network Theorem. ( the Mutualist ) — standalone NEW-CATEGORY (Mutualistic Inference Networks; 27th IB self-application); lifts the Symbiotic Inference Theorem dyad to an N-agent predictive commons, headline ceiling",
+    "doi": "10.5281/zenodo.21223160",
+    "fingerprint": "d1d5b66e7915dec8"
+  },
+  {
+    "id": "IET",
+    "name": "Intelligence Exergy Theorem",
+    "statement": "Intelligence Exergy Theorem. ( the Refiner ) — standalone NEW-CATEGORY (Intelligence Exergy; second-law completion of the Intelligence Capacity Framework); cognitive Gouy–Stodola relation, exergy/anergy decomposition, cos²Θ second-law efficiency",
+    "doi": "10.5281/zenodo.21223218",
+    "fingerprint": "ecf3a8d2c7b9f860"
+  },
+  {
+    "id": "Bridge_BiosphereProductivity",
+    "name": "IB ⇄ Biosphere-Productivity duality",
+    "statement": "IB ⇄ Biosphere-Productivity duality. (row 1): CORE-EXTENSION — the planetary face / Landauer-dual of the IB core (6 thm, Aristotle a776fa56). PUBLISHED standalone 2026-06-20 — DOI (concept 20777117), viridis-canon,",
+    "doi": "10.5281/zenodo.20777118",
+    "fingerprint": "ae3a6b76f073d1c6"
+  },
+  {
+    "id": "SIB",
+    "name": "Symbiotic Intelligence Bound",
+    "statement": "Symbiotic Intelligence Bound. (row 20): CORE-EXTENSION — the two-body generalization of the IB core (14th IB self-application, rate/flow twin of SVT). PUBLISHED standalone 2026-06-19 — concept , latest (v1 superseded; v2 corrected the self-application count), viridis-canon,",
+    "doi": "10.5281/zenodo.20764638",
+    "fingerprint": "0a9e2e200448b27c"
+  },
+  {
+    "id": "MRAB",
+    "name": "Multi-Ring Alignment Bound (Theorem 1)",
+    "statement": "Multi-Ring Alignment Bound (Theorem 1). (row 24): CORE-EXTENSION — the multi-ring/polymath generalization of the IB core; is an explicit UAIB→Master-IB reduction (10 thm, Aristotle 65347d17). PUBLISHED standalone 2026-06-22 — concept DOI 10.5281/zenodo.20800756 (version 20800757); Zenodo↔Git lockstep (repo tag ). MERGED INTO SPINE v10.0.0 (2026-06-22, record 20801185) — promoted into SPINE MANIFEST/defaultTargets/AxiomAudit; standalone DOI retained. Was the 3rd accumulated candidate (with Bridge & SIB) that triggered the v10 wave",
+    "doi": "10.5281/zenodo.20800756",
+    "fingerprint": "f6b2445ff6b21ee2"
+  },
+  {
+    "id": "UWMT",
+    "name": "Universal Water-Filling Meta-Theorem",
+    "statement": "Universal Water-Filling Meta-Theorem. (row 40): CORE-EXTENSION — the meta-theorem unifying the 9-member shadow-price/water-filling family (TWT/TDT/VPT/MWT/AST/GHT/CHT/...) into one variational object with two control knobs (curvature, temperature); 7 thm + non-vacuity witness (Aristotle da92404c). Pre-authorized by Justin 2026-06-29 (\"ok update to 10.1\"). MERGED INTO SPINE v10.1.0 (2026-07-06, record 21223021) as part of \"The Keystone Wave.\"",
+    "doi": "",
+    "fingerprint": "4d93d06ec682f1a3"
+  },
+  {
+    "id": "GST",
+    "name": "Geodesic Saturation Theorem",
+    "statement": "Geodesic Saturation Theorem. (row 41): CORE-EXTENSION — the IB's own equality/saturation geometry (dI/dt=(P-F)c; saturates iff F=0); names UWMT as its multichannel shadow; 6 thm (Aristotle f864600a). MERGED INTO SPINE v10.1.0 (2026-07-06, record 21223021) as part of \"The Keystone Wave,\" paired with UWMT as the coherent milestone-coherent wave (gate 4)",
+    "doi": "",
+    "fingerprint": "045186a1313316a1"
+  }
+]

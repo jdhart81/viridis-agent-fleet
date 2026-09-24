@@ -1,0 +1,83 @@
+{
+  "server": "verdigraph-brain-agent",
+  "tool_count": 4,
+  "tools": [
+    {
+      "name": "build_brain",
+      "description": "Compile an agent file into a deterministic, content-addressed brain.\ncontent = the file as a string; format = verdigraph_genome |\nclaude_project_export | openai_assistant | prompt_list | auto.\nReturns brain_id, content_hash, node/edge counts, the 9-invariant\nfiring report, and provenance. Identical bytes always produce the\nidentical brain_id (VB1). include_document=true returns the full\ngraph.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "default": "auto"
+          },
+          "include_document": {
+            "type": "boolean",
+            "default": false
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      }
+    },
+    {
+      "name": "verify_brain",
+      "description": "Machine-check a cognition claim: recompute the brain from the\nsubmitted content and compare against the claimed brain_id and/or\ncontent_hash. valid=true iff every claimed identifier matches the\ndeterministic recomputation (VB3).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "brain_id": {
+            "type": "string",
+            "default": ""
+          },
+          "content_hash": {
+            "type": "string",
+            "default": ""
+          },
+          "format": {
+            "type": "string",
+            "default": "auto"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      }
+    },
+    {
+      "name": "detect_format",
+      "description": "Detect which supported agent-file format the content is\n(verdigraph_genome, claude_project_export, openai_assistant,\nprompt_list) before building.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "Return capabilities and input contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

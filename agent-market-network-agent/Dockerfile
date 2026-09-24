@@ -1,7 +1,8 @@
 FROM python:3.12-slim
 WORKDIR /app
 COPY agent-market-network-agent/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY agent-market-network-agent/requirements.lock ./requirements.lock
+RUN pip install --no-cache-dir -r requirements.lock
 COPY agent-market-network-agent/src/ ./src/
 COPY agent-market-network-agent/adapters/ ./adapters/
 COPY agent-market-network-agent/main.py ./main.py
@@ -17,7 +18,9 @@ ENV MARKET_HOST=0.0.0.0 \
     MARKET_STATE_DB=/state/agent_market_network.sqlite3 \
     MARKET_SEED_PROFILES=/app/seed_profiles.json \
     MARKET_HUB_REQUIRED=0 \
-    MARKET_HUB_URL=
+    MARKET_HUB_URL= \
+    MARKET_SECURITY_RECEIPT_KEYS_JSON={} \
+    MARKET_OPERATOR_VERIFICATION_KEYS_JSON={}
 EXPOSE 8410
 HEALTHCHECK --interval=30s --timeout=5s CMD python3 -c "import urllib.request,sys; sys.exit(0 if b'\"status\":\"ok\"' in urllib.request.urlopen('http://127.0.0.1:8410/healthz').read() else 1)"
 CMD ["python3", "main.py"]

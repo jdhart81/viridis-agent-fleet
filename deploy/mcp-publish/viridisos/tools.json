@@ -1,0 +1,133 @@
+{
+  "server": "viridisos",
+  "tool_count": 7,
+  "tools": [
+    {
+      "name": "viridis_list_modules",
+      "description": "List ViridisOS modules and their LIVE/BLOCKED state (A-1 against the live canon).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "viridis_certify",
+      "description": "Certify a subject (parcel/portfolio) with a module -> a certificate. Errors if the module's\nbacking theorem is not gate-passed (BLOCKED).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "module_id": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "module_id",
+          "subject",
+          "inputs"
+        ]
+      }
+    },
+    {
+      "name": "viridis_certify_envelope",
+      "description": "Certify then return a 'Certified by ViridisOS' mark envelope (profile conservation-claim).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "module_id": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "module_id",
+          "subject",
+          "inputs"
+        ]
+      }
+    },
+    {
+      "name": "viridis_verify_mark",
+      "description": "Verify a 'Certified by ViridisOS' envelope against the shared trust root.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "envelope": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "envelope"
+        ]
+      }
+    },
+    {
+      "name": "viridis_bind_did",
+      "description": "Derive the canonical did:viridis identity for an agent (fleet R1 formula) under the shared root.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "pubkey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "pubkey"
+        ]
+      }
+    },
+    {
+      "name": "viridis_agent_attestation",
+      "description": "Issue a mark-stamped agent-attestation envelope under the shared trust root.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      }
+    },
+    {
+      "name": "viridis_compute_toll",
+      "description": "Compute the unified Viridis protocol margin (the take) + pass-through card cost for a settlement.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "amount_minor": {
+            "type": "string"
+          },
+          "payee_tier": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_minor",
+          "payee_tier"
+        ]
+      }
+    }
+  ]
+}

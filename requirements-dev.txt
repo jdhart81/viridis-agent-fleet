@@ -1,0 +1,16 @@
+# Fleet test environment — everything run_fleet_tests.py needs on a fresh VM.
+# Restore with:  pip install -r requirements-dev.txt --break-system-packages
+# (then: pip cache purge — Cowork VM disk hygiene)
+#
+# Added 2026-07-17 per Nightkeeper N60 recommendation: session VMs are
+# ephemeral, so each run was paying a rediscovery + reinstall tax. The agent
+# CORES stay stdlib-only by design — these are dev/test deps ONLY, plus the
+# gateway suite's serving-layer deps.
+pytest
+pytest-asyncio
+starlette
+httpx
+mcp>=1.28,<2  # 2.x renamed FastMCP; production pins 1.28.1
+stripe
+pyyaml
+numpy  # smartscale measurement tests

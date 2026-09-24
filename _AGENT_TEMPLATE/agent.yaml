@@ -1,0 +1,12 @@
+name: ""
+version: "0.1.0"
+description: ""
+pillar: ""  # revenue | climate-intelligence | high-ceiling | infrastructure
+status: "spec"  # spec | prototype | mvp | production
+owner: "justin@viridis.earth"
+revenue_model: ""  # How does this agent drive/unlock revenue?
+dependencies: []  # Package list: ["package1>=1.0.0", "package2"]
+ports:
+  http: 8080
+  health: /health
+env_vars: []  # List of required env var names (NO VALUES here — use .env.example)

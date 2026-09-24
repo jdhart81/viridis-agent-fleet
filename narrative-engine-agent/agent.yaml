@@ -1,0 +1,50 @@
+name: "narrative-engine"
+version: "0.1.1"
+description: "Translates ecological intelligence into investor, policy, grant, and media-ready narratives"
+pillar: "infrastructure"
+status: "prototype"
+owner: "justin@viridis.earth"
+
+revenue_model: "Grant writing 5-10% of award, investor relations $5K-$25K, policy briefs $999-$4999/mo"
+
+deploy_targets:
+  primary: "fastapi"
+  secondary: ["mcp", "claude-skill"]
+
+dependencies:
+  services: []
+  agents:
+    - "viridis-science-agent"
+    - "gaiasim-agent"
+    - "ecoinvest-agent"
+    - "carbon-bridge-agent"
+    - "agent-ceo"
+
+env_vars: []
+
+capabilities:
+  inputs:
+    - "agent_output"
+    - "audience_type"
+    - "format"
+    - "key_message"
+  outputs:
+    - "investor_deck_content"
+    - "policy_brief"
+    - "grant_proposal"
+    - "press_release"
+    - "executive_summary"
+
+thesis_connection: |
+  Closes the narrate -> reinvest loop: converts the ecological intelligence
+  the rest of the portfolio produces (D-Score, HDFM, carbon data) into
+  grants, investor material, and policy briefs - monetizing conservation
+  output (5-10% of raised capital) and multiplying every conservation dollar.
+
+invariants:
+  - "N1 process() never raises; empty agent_output -> ValidationError envelope"
+  - "N2 unknown action -> error envelope naming supported actions"
+  - "N3 audience_type is a closed vocabulary; invalid value -> ValidationError naming valid values"
+  - "N4 valid translate -> success with non-empty narrative content"
+  - "N5 describe().name == health().agent; capabilities non-empty"
+  - "N6 process() is total: every dict input returns a dict with a status key"

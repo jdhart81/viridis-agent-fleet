@@ -1,0 +1,153 @@
+================================================================================
+TEST OPTIMIZATION — DOCUMENTATION INDEX
+================================================================================
+
+OVERVIEW:
+
+  This directory contains 4 optimized climate-intelligence agents with
+  comprehensive scientific test suites. 36 new tests with 48 physics-validated
+  assertions have been added across all agents.
+
+DOCUMENTATION FILES:
+
+  1. OPTIMIZATION_SUMMARY.txt (this session)
+     - Executive summary of all optimizations
+     - Test breakdown by agent
+     - Key validations and physics coverage
+     - Deployment checklist
+
+  2. TEST_OPTIMIZATION_REPORT.md (comprehensive technical report)
+     - Detailed test descriptions for each agent
+     - Known-answer test specifications
+     - Edge-case coverage documentation
+     - Quality metrics and validation methodology
+
+  3. RUN_TESTS.sh (executable test runner)
+     - Bash script to run all agent test suites
+     - Usage: bash RUN_TESTS.sh
+
+AGENTS DIRECTORY STRUCTURE:
+
+  bioacoustic-agent/
+    ├── agent.yaml                (agent configuration)
+    ├── src/
+    │   ├── core.py              (BioacousticIntelligenceCore)
+    │   ├── acoustic_indices.py  (ACI, ADI, BIO, NDSI, D-Score)
+    │   └── spectral.py          (FFT, Mel spectrogram, band extraction)
+    ├── adapters/
+    │   └── fastapi_server.py    (REST API)
+    └── tests/
+        └── test_core.py         (41 tests, includes 13 new tests)
+
+  gaiasim-agent/
+    ├── agent.yaml
+    ├── src/
+    │   ├── core.py              (GaiaSimCore)
+    │   ├── climate.py           (SSP scenarios, tipping points)
+    │   └── ecosystem.py         (thermal stress, range shifts)
+    ├── adapters/
+    │   └── fastapi_server.py
+    └── tests/
+        └── test_core.py         (includes 7 new climate tests)
+
+  evoterra-agent/
+    ├── agent.yaml
+    ├── src/
+    │   ├── core.py              (EvoterraCore)
+    │   ├── succession.py        (ecological state transitions)
+    │   └── carbon.py            (sequestration rates)
+    ├── adapters/
+    │   └── fastapi_server.py
+    └── tests/
+        └── test_core.py         (includes 7 new ecology tests)
+
+  sentinel-watch-agent/
+    ├── agent.yaml
+    ├── src/
+    │   ├── core.py              (SentinelWatchCore)
+    │   ├── indices.py           (NDVI, EVI, NDWI, NBR)
+    │   └── change_detection.py  (deforestation, restoration)
+    ├── adapters/
+    │   └── fastapi_server.py
+    └── tests/
+        └── test_core.py         (includes 9 new remote sensing tests)
+
+================================================================================
+
+QUICK START:
+
+  1. Run all tests:
+     $ bash RUN_TESTS.sh
+
+  2. Run agent-specific tests:
+     $ cd bioacoustic-agent && pytest tests/test_core.py -v
+
+  3. Run specific test class:
+     $ cd gaiasim-agent && pytest tests/test_core.py::TestClimateScenarioEngine -v
+
+  4. Run with coverage:
+     $ pytest bioacoustic-agent/tests/test_core.py --cov=bioacoustic-agent/src
+
+================================================================================
+
+KEY VALIDATIONS BY AGENT:
+
+  BIOACOUSTIC-AGENT:
+    ✓ Nyquist frequency (22,050 Hz for 44.1 kHz)
+    ✓ Shannon entropy (0 to log₂(bands))
+    ✓ D-Score known answers (single band: 0, equal distribution: max)
+    ✓ Edge cases: silent audio, clipped signals, frequency masking
+
+  GAIASIM-AGENT:
+    ✓ SSP hierarchy (1.5 < 2.4 < 4.5 warming)
+    ✓ Ensemble coherence (lower ≤ mean ≤ upper)
+    ✓ Latitudinal amplification (equator 1.0x, arctic 1.8x)
+    ✓ Climate tipping points (1.5C, 2.0C, 3.0C, 4.0C)
+
+  EVOTERRA-AGENT:
+    ✓ Biome classification (temperate, tropical, arid, boreal)
+    ✓ Succession logic (bare→pioneer→forest→climax)
+    ✓ Carbon rates (arid 0.1-1, tropical 5-15 tCO2e/ha/yr)
+    ✓ Area scaling (linear dependence)
+
+  SENTINEL-WATCH-AGENT:
+    ✓ NDVI formula: (NIR - Red) / (NIR + Red)
+    ✓ NDVI ranges: forest 0.6-0.8, water <0, soil 0.01-0.1
+    ✓ Coordinate bounds: [-90,90] lat, [-180,180] lon
+    ✓ Deforestation threshold (ΔNDVI > 0.4)
+
+================================================================================
+
+DEPLOYMENT VERIFICATION:
+
+  Before deploying to production:
+
+  1. Run full test suite:
+     for agent in bioacoustic-agent gaiasim-agent evoterra-agent sentinel-watch-agent; do
+       cd $agent && pytest tests/ -v && cd ..
+     done
+
+  2. Verify FastAPI adapters:
+     Each agent has adapters/fastapi_server.py ✓
+
+  3. Check for external dependencies:
+     Only scipy, numpy required. No service mocking needed ✓
+
+  4. Monitor in production:
+     - Track assertion pass rates
+     - Log prediction residuals vs ground truth
+     - Compare climate projections to IPCC AR6
+     - Validate biodiversity indices to field surveys
+
+================================================================================
+
+CONTACT & SUPPORT:
+
+  Report Issues: TEST_OPTIMIZATION_REPORT.md (detailed descriptions)
+  Test Status: Run RUN_TESTS.sh to verify all agents
+  Agent Docs: See agent.yaml and agent-specific README files
+
+================================================================================
+Last Updated: April 3, 2026
+Status: Complete and Verified
+================================================================================

@@ -1,0 +1,41 @@
+name: "agent-escrow-agent"
+version: "0.1.3"
+description: "Trustless escrow & settlement for agent-to-agent (A2A) transactions. Funds sit in escrow until delivery is verified, then release or refund — with an exactly-once state machine and a tamper-evident audit chain."
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "settlement"
+
+thesis_connection: |
+  The agent economy needs a safe way to move value between agents. Escrow is the
+  settlement primitive. Leverages the x402/HTTP-402 micropayment idiom already
+  proven in Energy AI (idempotent, refundable). Enforces thermodynamic-style
+  irreversibility: terminal states are final, no double payout.
+
+revenue_model: |
+  Settlement fee: basis points per settled transaction (default 100 bps / 1.0%,
+  configurable per escrow). Volume model — value scales with A2A transaction count.
+  Premium: dispute arbitration routing (pairs with agent-trust-oracle-agent),
+  managed-settlement SLAs ($500-$5K/mo for high-volume agent operators).
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [open, fund, release, refund, dispute, status, list, verify_audit]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-identity-registry-agent (who are the parties)"
+  - "agent-trust-oracle-agent (dispute resolution + counterparty risk)"
+
+invariants:
+  - "E1 forward-only state machine; terminal states final"
+  - "E2 amount is positive integer minor units"
+  - "E3 fee frozen at open (ceil bps)"
+  - "E6 exactly-once settlement (idempotent release/refund)"
+  - "E7 tamper-evident audit hash chain"

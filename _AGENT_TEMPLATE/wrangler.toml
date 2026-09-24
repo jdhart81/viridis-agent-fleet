@@ -1,0 +1,26 @@
+# Cloudflare Workers Configuration
+# Used with the cloudflare_worker.js adapter
+
+name = "viridis-agent"
+type = "javascript"
+account_id = ""  # Your Cloudflare account ID
+workers_dev = true
+route = ""       # Your Workers route (optional)
+zone_id = ""     # Your Cloudflare zone ID (optional, needed for custom domains)
+
+# Environment variables (no secrets here!)
+[env.production]
+vars = { AGENT_NAME = "viridis-agent", LOG_LEVEL = "INFO" }
+
+[env.staging]
+vars = { AGENT_NAME = "viridis-agent-staging", LOG_LEVEL = "DEBUG" }
+
+[env.development]
+vars = { AGENT_NAME = "viridis-agent-dev", LOG_LEVEL = "DEBUG" }
+
+# Secrets should be set via wrangler secret:
+# wrangler secret put CORE_API_KEY --env production
+
+# Example trigger configuration (if using Cron Triggers)
+# [[triggers.crons]]
+# crons = ["0 0 * * *"]  # Daily at midnight UTC

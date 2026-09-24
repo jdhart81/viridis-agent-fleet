@@ -1,0 +1,229 @@
+{
+  "schema_version": "viridis.taxcredit.rules.v1",
+  "pack_version": "2026.07.12-v0.1.0",
+  "effective_as_of": "2026-07-12",
+  "disclaimer": "Deterministic scenario estimate only. Not filing, legal, tax, accounting, engineering, lifecycle-analysis, or investment advice. Confirm facts, elections, recapture, transferability, prevailing-wage and apprenticeship compliance, and then-current law with qualified advisers before filing or transacting.",
+  "sources": [
+    {
+      "id": "irc-45q",
+      "authority": "Internal Revenue Code section 45Q",
+      "title": "Credit for carbon oxide sequestration",
+      "publisher": "United States Congress / Internal Revenue Service",
+      "url": "https://www.irs.gov/credits-deductions/credit-for-carbon-oxide-sequestration",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "irc-45v",
+      "authority": "Internal Revenue Code section 45V",
+      "title": "Clean hydrogen production credit",
+      "publisher": "United States Congress / Internal Revenue Service",
+      "url": "https://www.irs.gov/instructions/i7210",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "45vh2-greet",
+      "authority": "45VH2-GREET lifecycle analysis framework",
+      "title": "Lifecycle greenhouse-gas emissions evidence for section 45V",
+      "publisher": "United States Department of Energy",
+      "url": "https://www.energy.gov/cmei/greet",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "irs-45v-2026",
+      "authority": "IRS Notice 2026-41",
+      "title": "2026 Section 45V inflation adjustment factor and applicable amount",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/irb/2026-29_irb",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "irs-45y-2025",
+      "authority": "IRS Notice 2025-39",
+      "title": "2025 Section 45Y inflation adjustment factor and applicable amounts",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/irb/2025-38_IRB",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "irc-45y-48e",
+      "authority": "Internal Revenue Code sections 45Y and 48E",
+      "title": "Technology-neutral clean electricity credits",
+      "publisher": "United States Congress / Internal Revenue Service",
+      "url": "https://www.irs.gov/instructions/i7211",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "irc-48e",
+      "authority": "Internal Revenue Code section 48E",
+      "title": "Clean electricity investment credit",
+      "publisher": "United States Congress / Internal Revenue Service",
+      "url": "https://www.irs.gov/credits-deductions/clean-electricity-investment-credit",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "form-3468-2025",
+      "authority": "2025 Instructions for Form 3468",
+      "title": "Clean electricity investment credit calculation and bond reduction",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/instructions/i3468",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "form-8933-2025",
+      "authority": "2025 Instructions for Form 8933",
+      "title": "Carbon oxide sequestration credit calculation",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/instructions/i8933",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "irc-45x",
+      "authority": "Internal Revenue Code section 45X",
+      "title": "Advanced manufacturing production credit",
+      "publisher": "United States Congress / Internal Revenue Service",
+      "url": "https://www.irs.gov/instructions/i7207",
+      "accessed_on": "2026-07-12"
+    },
+    {
+      "id": "builder-spec-2026-07-12",
+      "authority": "Non-authoritative implementation specification",
+      "title": "Tax-credit calculation constants pinned for deterministic scenario estimates",
+      "publisher": "Viridis",
+      "accessed_on": "2026-07-12",
+      "note": "Non-authoritative version-pinning record only. Official sources control; the service does not represent that a scenario is filing-ready."
+    }
+  ],
+  "rule_packs": {
+    "45Q": {
+      "name": "Carbon Oxide Sequestration Credit",
+      "unit": "metric_ton",
+      "currency": "USD",
+      "construction_begin_before_year": 2033,
+      "parity_effective_date": "2025-07-05",
+      "base_rates_usd_per_metric_ton": {
+        "general": {
+          "before_parity": {
+            "secure_storage": "17",
+            "utilization": "12"
+          },
+          "on_or_after_parity": {
+            "secure_storage": "17",
+            "utilization": "17"
+          }
+        },
+        "direct_air_capture": {
+          "before_parity": {
+            "secure_storage": "36",
+            "utilization": "36"
+          },
+          "on_or_after_parity": {
+            "secure_storage": "36",
+            "utilization": "36"
+          }
+        }
+      },
+      "pwa_multiplier": "5",
+      "tax_exempt_bond_reduction_max_percent": "15",
+      "annual_capture_threshold_metric_tons": {
+        "direct_air_capture": "1000",
+        "electricity_generating_facility": "18750",
+        "other_industrial_facility": "12500"
+      },
+      "source_ids": ["irc-45q", "form-8933-2025", "builder-spec-2026-07-12"]
+    },
+    "45V": {
+      "name": "Clean Hydrogen Production Credit",
+      "unit": "kg_hydrogen",
+      "currency": "USD",
+      "maximum_lifecycle_emissions_kg_co2e_per_kg_h2": "4",
+      "pwa_multiplier": "5",
+      "tax_exempt_bond_reduction_max_percent": "15",
+      "rates_usd_per_kg": {
+        "2025": [
+          {"tier": "tier_1", "emissions_gte": "2.5", "emissions_lte": "4", "base_rate": "0.127"},
+          {"tier": "tier_2", "emissions_gte": "1.5", "emissions_lt": "2.5", "base_rate": "0.159"},
+          {"tier": "tier_3", "emissions_gte": "0.45", "emissions_lt": "1.5", "base_rate": "0.213"},
+          {"tier": "tier_4", "emissions_gte": null, "emissions_lt": "0.45", "base_rate": "0.637"}
+        ],
+        "2026": [
+          {"tier": "tier_1", "emissions_gte": "2.5", "emissions_lte": "4", "base_rate": "0.131"},
+          {"tier": "tier_2", "emissions_gte": "1.5", "emissions_lt": "2.5", "base_rate": "0.164"},
+          {"tier": "tier_3", "emissions_gte": "0.45", "emissions_lt": "1.5", "base_rate": "0.219"},
+          {"tier": "tier_4", "emissions_gte": null, "emissions_lt": "0.45", "base_rate": "0.656"}
+        ]
+      },
+      "source_ids": ["irc-45v", "irs-45v-2026", "45vh2-greet", "builder-spec-2026-07-12"]
+    },
+    "45Y": {
+      "name": "Clean Electricity Production Credit",
+      "unit": "kwh",
+      "currency": "USD",
+      "rates_usd_per_kwh": {
+        "2025": {"base": "0.006", "increased": "0.030", "derived": false},
+        "2026": {"base": "0.006", "increased": "0.031", "derived": true}
+      },
+      "tax_exempt_bond_reduction_max_percent": "15",
+      "increased_rate_alternatives": {
+        "pwa_met": true,
+        "nameplate_capacity_mw_lt": "1",
+        "construction_began_before_date": "2023-01-29"
+      },
+      "source_ids": ["irc-45y-48e", "irs-45y-2025", "irs-45v-2026", "builder-spec-2026-07-12"]
+    },
+    "48E": {
+      "name": "Clean Electricity Investment Credit",
+      "unit": "qualified_investment_usd",
+      "currency": "USD",
+      "base_percentage": "6",
+      "increased_percentage": "30",
+      "domestic_content_bonus_percentage_points": {"base": "2", "increased": "10"},
+      "energy_community_bonus_percentage_points": {"base": "2", "increased": "10"},
+      "low_income_bonus_allowed_percentage_points": ["0", "10", "20"],
+      "tax_exempt_bond_reduction_max_percent": "15",
+      "increased_rate_alternatives": {
+        "pwa_met": true,
+        "nameplate_capacity_mw_lt": "1",
+        "construction_began_before_date": "2023-01-29"
+      },
+      "source_ids": ["irc-45y-48e", "irc-48e", "form-3468-2025", "builder-spec-2026-07-12"]
+    },
+    "45X": {
+      "name": "Advanced Manufacturing Production Credit",
+      "currency": "USD",
+      "components": {
+        "pv_wafer": {"rate_kind": "per_unit", "rate": "12", "unit": "m2"},
+        "pv_cell": {"rate_kind": "per_unit", "rate": "0.04", "unit": "dc_watt"},
+        "pv_module": {"rate_kind": "per_unit", "rate": "0.07", "unit": "dc_watt"},
+        "polymeric_backsheet": {"rate_kind": "per_unit", "rate": "0.40", "unit": "m2"},
+        "solar_grade_polysilicon": {"rate_kind": "per_unit", "rate": "3", "unit": "kg"},
+        "offshore_wind_vessel": {"rate_kind": "percent_basis", "rate_percent": "10", "basis_field": "eligible_sales_price_usd"},
+        "wind_blade": {"rate_kind": "per_unit", "rate": "0.02", "unit": "watt"},
+        "wind_nacelle": {"rate_kind": "per_unit", "rate": "0.05", "unit": "watt"},
+        "wind_tower": {"rate_kind": "per_unit", "rate": "0.03", "unit": "watt"},
+        "offshore_wind_fixed_foundation": {"rate_kind": "per_unit", "rate": "0.02", "unit": "watt"},
+        "offshore_wind_floating_foundation": {"rate_kind": "per_unit", "rate": "0.04", "unit": "watt"},
+        "torque_tube": {"rate_kind": "per_unit", "rate": "0.87", "unit": "kg"},
+        "structural_fastener": {"rate_kind": "per_unit", "rate": "2.28", "unit": "kg"},
+        "battery_cell": {"rate_kind": "per_unit", "rate": "35", "unit": "kwh_capacity"},
+        "battery_module_with_cells": {"rate_kind": "per_unit", "rate": "10", "unit": "kwh_capacity"},
+        "battery_module_without_cells": {"rate_kind": "per_unit", "rate": "45", "unit": "kwh_capacity"},
+        "utility_inverter": {"rate_kind": "per_unit", "rate": "0.015", "unit": "ac_watt"},
+        "commercial_inverter": {"rate_kind": "per_unit", "rate": "0.02", "unit": "ac_watt"},
+        "residential_inverter": {"rate_kind": "per_unit", "rate": "0.065", "unit": "ac_watt"},
+        "microinverter": {"rate_kind": "per_unit", "rate": "0.11", "unit": "ac_watt"},
+        "distributed_wind_inverter": {"rate_kind": "per_unit", "rate": "0.11", "unit": "ac_watt"},
+        "central_inverter": {"rate_kind": "per_unit", "rate": "0.025", "unit": "ac_watt"},
+        "electrode_active_material": {"rate_kind": "percent_basis", "rate_percent": "10", "basis_field": "eligible_production_cost_usd"},
+        "critical_mineral": {"rate_kind": "percent_basis", "rate_percent": "10", "basis_field": "eligible_production_cost_usd"},
+        "metallurgical_coal": {"rate_kind": "percent_basis", "rate_percent": "2.5", "basis_field": "eligible_production_cost_usd"}
+      },
+      "phaseout_percent_by_tax_year": {
+        "general": {"through_2029": "100", "2030": "75", "2031": "50", "2032": "25", "after_2032": "0"},
+        "critical_mineral": {"through_2030": "100", "2031": "75", "2032": "50", "2033": "25", "after_2033": "0"},
+        "wind": {"through_2027": "100", "after_2027": "0"},
+        "metallurgical_coal": {"through_2029": "100", "after_2029": "0"}
+      },
+      "source_ids": ["irc-45x", "builder-spec-2026-07-12"]
+    }
+  }
+}

@@ -1,0 +1,25 @@
+name: "ghg-ledger-agent"
+version: "0.1.0"
+description: "Deterministic auditable Scope 1, 2, and 3 greenhouse-gas inventory engine"
+pillar: "revenue"
+status: "mvp"
+owner: "justin@viridis.earth"
+revenue_model: "10 free inventory calculations/day, then $1.00 per calculation or prepaid credits; optional B2B monthly seats via /subscriptions/mcp"
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["docker"]
+dependencies:
+  services: []
+  agents: ["agent-metering-agent", "agent-compute-ledger-agent", "agent-provenance-agent", "agent-notary-agent", "agent-offset-clearinghouse-agent"]
+env_vars: []
+capabilities:
+  inputs: ["activity data", "explicit scope/category", "optional supplier market factor"]
+  outputs: ["gas-resolved CO2e", "scope/category rollups", "dual Scope 2", "ESRS-shaped totals", "audit digest", "offset dry-run weave"]
+reference_data:
+  path: "data/factor_packs.v0.1.0.json"
+  effective_as_of: "2026-07-13"
+thesis_connection: |
+  Compute-is-carbon made customer-facing: deterministic Scope 1/2/3
+  inventories from pinned factor packs, composed into the free rails
+  (compute-ledger + provenance) so every inventory is lineage-certified.
+  Climate truth as a service, never vibes.

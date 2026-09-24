@@ -1,0 +1,51 @@
+name: "agent-offset-clearinghouse-agent"
+version: "0.6.0"
+description: "Verified conservation credits matched to agent compute emissions: cheapest-first matching, exactly-once retirement, content-addressed offset certificates. The first economy born carbon-accountable."
+pillar: "impact"
+status: "mvp"
+owner: "justin@viridis.earth"
+a2a_role: "offsets"
+
+thesis_connection: |
+  The Viridis flywheel made structural: agent-compute-ledger prices agent
+  cognition in gCO2e; this clearinghouse converts those grams into demand for
+  VERIFIED conservation (verification_ref required - the D-Score /
+  land-verification moat is the gate to the book). Every ton the agent
+  economy emits becomes conservation funding. This is the one agent no
+  competitor can copy without also owning verification infrastructure.
+
+revenue_model: |
+  Clearinghouse bps on every offset purchase (50-150bps). Listing fees for
+  credit issuers. 'Carbon-accountable agent' certification (net_position
+  badge) sold to agent operators - pairs with regulatory-radar CSRD
+  disclosure and compute-ledger attestations as one ESG-for-agents bundle.
+  Long-run: the demand pipe for Viridis Core FINANCE credits (post
+  land-trust keystone).
+
+interfaces:
+  process: "async (dict) -> dict; dispatches on 'action'"
+  health: "async () -> dict"
+  describe: "sync () -> dict"
+
+actions: [list_credit, delist_credit, buy_offset, buy_offset_budget, net_position,
+  verify_certificate, book, get_purchase, settlement_batch]
+
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["fastapi"]
+
+composes_with:
+  - "agent-compute-ledger-agent (emissions in, offsets out)"
+  - "agent-escrow-agent (purchase settlement rides escrow; no money moves here)"
+  - "regulatory-radar-agent (net positions feed CSRD/TNFD disclosure)"
+
+invariants:
+  - "O1 conservation of mass: available + retired == listed, per credit and book-wide"
+  - "O2 no double-retirement; idempotent on purchase_id; oversubscription rejected atomically"
+  - "O3 deterministic cheapest-first matching, listing-order tiebreak"
+  - "O4 content-addressed offset certificates; verify recomputes"
+  - "O5 exact net position: net_g == emitted_g - retired_g"
+  - "O6 price integrity: ceil(kg * price) integer minor units, exact sums"
+  - "O7 verified supply only: D-Score reference and 100 minor/kg price floor"
+  - "O8 unknown ids -> error envelope, never a crash"
+  - "O14 delist_credit excludes supply from matching without erasing history"

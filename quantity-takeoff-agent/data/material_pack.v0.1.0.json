@@ -1,0 +1,263 @@
+{
+  "schema_version": "viridis.quantity-takeoff.material-pack.v1",
+  "pack_version": "2026.07.13-v0.1.0",
+  "effective_as_of": "2026-07-13",
+  "unit_conversions_source_id": "nist-sp811-unit-conversions",
+  "disclaimer": "Planning-grade deterministic quantity estimate only. Not a guaranteed material order, bid, professional-estimator certification, engineering design, or verification of field conditions, drawing completeness, constructability, code compliance, or supplier packaging. Bundled waste factors are industry-typical planning defaults; confirm project-specific waste, laps, cuts, openings, accessories, minimum orders, and conditions before procurement.",
+  "unit_conversions": {
+    "length_ft": {
+      "ft": "1",
+      "lf": "1",
+      "in": "0.08333333333333333333333333333",
+      "yd": "3",
+      "m": "3.280839895013123359580052493",
+      "cm": "0.03280839895013123359580052493",
+      "mm": "0.003280839895013123359580052493"
+    },
+    "area_ft2": {
+      "ft2": "1",
+      "sf": "1",
+      "yd2": "9",
+      "m2": "10.76391041670972230833350556",
+      "cm2": "0.001076391041670972230833350556"
+    },
+    "volume_ft3": {
+      "ft3": "1",
+      "yd3": "27",
+      "m3": "35.31466672148859025043801024",
+      "litre": "0.03531466672148859025043801024",
+      "liter": "0.03531466672148859025043801024"
+    },
+    "mass_lb": {
+      "lb": "1",
+      "short_ton": "2000",
+      "kg": "2.204622621848775807229738013",
+      "metric_tonne": "2204.622621848775807229738013"
+    }
+  },
+  "unit_systems": {
+    "imperial": ["in", "ft", "lf", "yd", "ft2", "sf", "yd2", "ft3", "yd3", "lb", "short_ton"],
+    "SI": ["mm", "cm", "m", "cm2", "m2", "m3", "litre", "liter", "kg", "metric_tonne"]
+  },
+  "sources": [
+    {
+      "id": "nist-sp811-unit-conversions",
+      "authority": "NIST Special Publication 811",
+      "title": "Guide for the Use of the International System of Units",
+      "publisher": "National Institute of Standards and Technology",
+      "date": "2008",
+      "url": "https://www.nist.gov/pml/special-publication-811"
+    },
+    {
+      "id": "aci-ct25-normalweight-concrete",
+      "authority": "ACI Concrete Terminology CT-25",
+      "title": "Concrete Terminology: normalweight concrete density definition",
+      "publisher": "American Concrete Institute",
+      "date": "2025",
+      "url": "https://www.concrete.org/portals/0/files/pdf/aci_concrete_terminology.pdf"
+    },
+    {
+      "id": "crsi-rebar-properties",
+      "authority": "CRSI reinforcing bar properties",
+      "title": "Reinforcing Bar Sizes and Unit Weights",
+      "publisher": "Concrete Reinforcing Steel Institute",
+      "date": "2024",
+      "url": "https://members.crsi.org/Common/Uploaded%20files/Promotional_and_Marketing/CRSI_Product_Catalog_2024-Fall.pdf"
+    },
+    {
+      "id": "awc-nds-wood-design",
+      "authority": "ANSI/AWC NDS",
+      "title": "National Design Specification for Wood Construction",
+      "publisher": "American Wood Council",
+      "date": "2024",
+      "url": "https://awc.org/resources/2024-nds/"
+    },
+    {
+      "id": "apa-panel-design",
+      "authority": "APA Panel Design Specification",
+      "title": "Panel Design Specification and 4 by 8 panel planning basis",
+      "publisher": "APA - The Engineered Wood Association",
+      "date": "2023",
+      "url": "https://www.apawood.org/osb"
+    },
+    {
+      "id": "ga-235-10-gypsum-board",
+      "authority": "GA-235-10",
+      "title": "Gypsum Board Typical Mechanical and Physical Properties",
+      "publisher": "Gypsum Association",
+      "date": "2010",
+      "url": "https://www.gypsum.org/wp-content/uploads/2011/11/GA-235-10.pdf"
+    },
+    {
+      "id": "gaf-roofing-square",
+      "authority": "GAF roofing measurement guidance",
+      "title": "How to Measure a Roofing Square",
+      "publisher": "GAF",
+      "date": "2021-03-23",
+      "url": "https://www.gaf.com/en-us/blog/your-home/how-to-measure-a-roofing-square-3faec381-6f6f-49ff-841f-114c59108f2a"
+    },
+    {
+      "id": "tms-402-602-masonry",
+      "authority": "TMS 402/602",
+      "title": "Building Code Requirements and Specification for Masonry Structures",
+      "publisher": "The Masonry Society",
+      "date": "2022",
+      "url": "https://masonrysociety.org/tms402/"
+    },
+    {
+      "id": "cmha-tek-04-02a",
+      "authority": "CMHA TEK 04-02A",
+      "title": "Estimating Concrete Masonry Materials",
+      "publisher": "Concrete Masonry and Hardscapes Association",
+      "date": "2024",
+      "url": "https://www.cmha.org/resource/tek-04-02a/"
+    },
+    {
+      "id": "bia-tn-10-modular-brick",
+      "authority": "Brick Industry Association Technical Note 10",
+      "title": "Dimensioning and Estimating Brick Masonry",
+      "publisher": "Brick Industry Association",
+      "date": "2009",
+      "url": "https://www.gobrick.com/media/file/10-dimensioning-and-estimating-brick-masonry.pdf"
+    },
+    {
+      "id": "aisc-shapes-v16",
+      "authority": "AISC Shapes Database v16.0",
+      "title": "Dimensions and Properties for Structural Steel Shapes",
+      "publisher": "American Institute of Steel Construction",
+      "date": "2023",
+      "url": "https://www.aisc.org/aisc/publications/steel-construction-manual/aisc-shapes-database-v160/"
+    },
+    {
+      "id": "astm-c29-c29m-23",
+      "authority": "ASTM C29/C29M-23",
+      "title": "Bulk Density and Voids in Aggregate",
+      "publisher": "ASTM International",
+      "date": "2023",
+      "url": "https://www.astm.org/c0029_c0029m-23.html",
+      "note": "Density measurement method only. The 1.5 short-ton/yd3 MVP value remains a non-authoritative Viridis builder-spec pin."
+    },
+    {
+      "id": "sherwin-williams-paint-coverage-faq",
+      "authority": "Sherwin-Williams project center FAQ",
+      "title": "Paint coverage estimating guidance",
+      "publisher": "Sherwin-Williams",
+      "date": "2026",
+      "url": "https://www.sherwin-williams.com/en-us/project-center/faqs/paint-faq"
+    },
+    {
+      "id": "viridis-builder-spec-material-pack-v0.1.0",
+      "authority": "Non-authoritative Viridis builder-spec pin",
+      "title": "MVP material constants, waste defaults, purchase increments, pitch multipliers, coverage and density pins",
+      "publisher": "Viridis",
+      "date": "2026-07-13",
+      "url": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/deployment/SOL_TASK_quantity-takeoff_build.md",
+      "note": "Planning defaults compiled for deterministic MVP behavior. Confirm project, manufacturer, supplier, specification, lap, cut, accessory, compaction, and minimum-order requirements before procurement."
+    }
+  ],
+  "waste_factors": {
+    "ready_mix_concrete": {"percent": "5", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance; project placement and form conditions govern."},
+    "reinforcing_bar": {"percent": "5", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Does not model project-specific laps, hooks, chairs, or couplers."},
+    "wood_studs": {"percent": "10", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance for cuts and defects."},
+    "dimensional_lumber": {"percent": "10", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance for cuts and defects."},
+    "wood_sheathing_4x8": {"percent": "10", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance; layout and openings govern."},
+    "drywall_4x8": {"percent": "10", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance; layout, openings, and finish level govern."},
+    "asphalt_shingles": {"percent": "10", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance; valleys, hips, starter, ridge, and complexity can require more."},
+    "cmu_8x8x16": {"percent": "5", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance; bond, cuts, and special units govern."},
+    "modular_brick": {"percent": "5", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance; bond, cuts, and special units govern."},
+    "structural_steel": {"percent": "2", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance; connections, plates, bolts, drops, and mill minimums excluded."},
+    "excavated_earth": {"percent": "0", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Geometric bank volume only; no shrink, swell, or over-excavation."},
+    "aggregate_base": {"percent": "5", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance; compaction, moisture, and supplier density govern."},
+    "paint": {"percent": "10", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Planning allowance; substrate, application, color, and product govern."}
+  },
+  "purchase_increments": {
+    "ready_mix_concrete": {"quantity": "0.01", "unit": "yd3", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "reinforcing_bar": {"quantity": "20", "unit": "lf", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "wood_studs": {"quantity": "1", "unit": "stud", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "dimensional_lumber": {"quantity": "1", "unit": "board_ft", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "wood_sheathing_4x8": {"quantity": "1", "unit": "sheet", "source_id": "apa-panel-design"},
+    "drywall_4x8": {"quantity": "1", "unit": "sheet", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Whole-sheet planning increment; confirm product size and packaging."},
+    "asphalt_shingles": {"quantity": "1", "unit": "square", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Conservative whole-square planning increment. Bundle coverage varies by product and must be verified before procurement."},
+    "cmu_8x8x16": {"quantity": "1", "unit": "unit", "source_id": "tms-402-602-masonry"},
+    "modular_brick": {"quantity": "1", "unit": "brick", "source_id": "bia-tn-10-modular-brick"},
+    "structural_steel": {"quantity": "0.01", "unit": "short_ton", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "excavated_earth": {"quantity": "0.01", "unit": "yd3", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "aggregate_base": {"quantity": "0.01", "unit": "short_ton", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "paint": {"quantity": "1", "unit": "gallon", "source_id": "viridis-builder-spec-material-pack-v0.1.0"}
+  },
+  "constants": {
+    "concrete_density_lb_per_yd3": {"value": "4050", "source_id": "aci-ct25-normalweight-concrete"},
+    "pi_pin": {"value": "3.141592653589793238462643383", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Bundled mathematical constant pin for reproducible circular-column geometry."},
+    "drywall_sheet_area_ft2": {"value": "32", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Explicit MVP 4 by 8 sheet planning pin; confirm specified panel size."},
+    "sheathing_sheet_area_ft2": {"value": "32", "source_id": "apa-panel-design"},
+    "roofing_square_area_ft2": {"value": "100", "source_id": "gaf-roofing-square"},
+    "cmu_units_per_ft2": {"value": "1.125", "source_id": "cmha-tek-04-02a", "note": "Planning coverage for nominal 8 by 8 by 16 CMU including mortar joint module."},
+    "modular_brick_per_ft2": {"value": "6.75", "source_id": "bia-tn-10-modular-brick"},
+    "aggregate_density_short_ton_per_yd3": {"value": "1.5", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "MVP compacted planning density; obtain supplier/project density."},
+    "paint_coverage_ft2_per_gallon": {"value": "350", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "MVP conservative pin within the manufacturer example range; product and substrate govern. Sherwin-Williams FAQ is included as an informational source."},
+    "wall_plate_runs": {"value": "3", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "nominal_2x4_thickness_in": {"value": "2", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Nominal-size planning pin, not an actual dressed dimension."},
+    "nominal_2x4_width_in": {"value": "4", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Nominal-size planning pin, not an actual dressed dimension."},
+    "board_foot_divisor": {"value": "12", "source_id": "viridis-builder-spec-material-pack-v0.1.0", "note": "Bundled board-foot formula divisor."},
+    "circular_area_divisor": {"value": "4", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "percent_denominator": {"value": "100", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "bar_grid_endpoint_addition": {"value": "1", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "wall_end_stud": {"value": "1", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "corner_extra_studs": {"value": "2", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "opening_extra_studs": {"value": "2", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "default_layers": {"value": "1", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "default_pieces": {"value": "1", "source_id": "viridis-builder-spec-material-pack-v0.1.0"}
+  },
+  "rebar_unit_weights_lb_per_ft": {
+    "#3": {"value": "0.376", "source_id": "crsi-rebar-properties"},
+    "#4": {"value": "0.668", "source_id": "crsi-rebar-properties"},
+    "#5": {"value": "1.043", "source_id": "crsi-rebar-properties"},
+    "#6": {"value": "1.502", "source_id": "crsi-rebar-properties"},
+    "#7": {"value": "2.044", "source_id": "crsi-rebar-properties"},
+    "#8": {"value": "2.670", "source_id": "crsi-rebar-properties"},
+    "#9": {"value": "3.400", "source_id": "crsi-rebar-properties"},
+    "#10": {"value": "4.303", "source_id": "crsi-rebar-properties"},
+    "#11": {"value": "5.313", "source_id": "crsi-rebar-properties"}
+  },
+  "roof_pitch_multipliers": {
+    "0:12": {"value": "1", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "2:12": {"value": "1.014", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "3:12": {"value": "1.031", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "4:12": {"value": "1.054", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "5:12": {"value": "1.083", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "6:12": {"value": "1.118", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "7:12": {"value": "1.158", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "8:12": {"value": "1.202", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "9:12": {"value": "1.250", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "10:12": {"value": "1.302", "source_id": "viridis-builder-spec-material-pack-v0.1.0"},
+    "12:12": {"value": "1.414", "source_id": "viridis-builder-spec-material-pack-v0.1.0"}
+  },
+  "steel_shapes_lb_per_ft": {
+    "W8x10": {"value": "10", "source_id": "aisc-shapes-v16"},
+    "W10x12": {"value": "12", "source_id": "aisc-shapes-v16"},
+    "W12x26": {"value": "26", "source_id": "aisc-shapes-v16"},
+    "W14x30": {"value": "30", "source_id": "aisc-shapes-v16"},
+    "W16x40": {"value": "40", "source_id": "aisc-shapes-v16"},
+    "HSS4x4x1/4": {"value": "12.21", "source_id": "aisc-shapes-v16"},
+    "HSS6x6x1/4": {"value": "19.02", "source_id": "aisc-shapes-v16"},
+    "HSS8x4x1/4": {"value": "19.02", "source_id": "aisc-shapes-v16"}
+  },
+  "assemblies": {
+    "concrete_slab": {"trade": "concrete", "required_dimensions": ["length", "width", "thickness"], "material": "ready_mix_concrete", "formula": "length_ft * width_ft * thickness_ft / ft3_per_yd3", "default_waste_percent": "5", "source_ids": ["aci-ct25-normalweight-concrete", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "concrete_footing": {"trade": "concrete", "required_dimensions": ["length", "width", "depth"], "material": "ready_mix_concrete", "formula": "length_ft * width_ft * depth_ft / ft3_per_yd3", "default_waste_percent": "5", "source_ids": ["aci-ct25-normalweight-concrete", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "concrete_wall": {"trade": "concrete", "required_dimensions": ["length", "height", "thickness"], "material": "ready_mix_concrete", "formula": "length_ft * height_ft * thickness_ft / ft3_per_yd3", "default_waste_percent": "5", "source_ids": ["aci-ct25-normalweight-concrete", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "concrete_column": {"trade": "concrete", "required_dimensions": ["height", "width and depth OR diameter"], "material": "ready_mix_concrete", "formula": "rectangular: width_ft * depth_ft * height_ft / ft3_per_yd3; circular: pi_pin * diameter_ft^2 / circular_area_divisor * height_ft / ft3_per_yd3", "default_waste_percent": "5", "source_ids": ["aci-ct25-normalweight-concrete", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "rebar_grid": {"trade": "reinforcing_steel", "required_dimensions": ["length", "width", "spacing", "bar_size"], "optional_dimensions": ["layers"], "material": "reinforcing_bar", "formula": "((ceil(width_ft / spacing_ft) + bar_grid_endpoint_addition) * length_ft + (ceil(length_ft / spacing_ft) + bar_grid_endpoint_addition) * width_ft) * layers", "default_waste_percent": "5", "source_ids": ["crsi-rebar-properties", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "wood_wall_framing": {"trade": "framing", "required_dimensions": ["length", "height", "stud_spacing"], "optional_dimensions": ["corners", "openings"], "materials": ["wood_studs", "dimensional_lumber"], "formula": "studs = ceil(length_ft / stud_spacing_ft) + wall_end_stud + corners * corner_extra_studs + openings * opening_extra_studs; board_ft = nominal_thickness_in * nominal_width_in * (net_studs * height_ft + wall_plate_runs * length_ft) / board_foot_divisor", "default_waste_percent": "10", "source_ids": ["awc-nds-wood-design", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "sheathing": {"trade": "framing", "required_dimensions": ["area OR length and height"], "material": "wood_sheathing_4x8", "formula": "area_ft2 / factor", "default_waste_percent": "10", "source_ids": ["apa-panel-design", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "drywall": {"trade": "drywall", "required_dimensions": ["area OR length and height"], "material": "drywall_4x8", "formula": "area_ft2 / factor", "default_waste_percent": "10", "source_ids": ["ga-235-10-gypsum-board", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "dimensional_lumber": {"trade": "framing", "required_dimensions": ["nominal_width", "nominal_thickness", "length"], "optional_dimensions": ["pieces"], "material": "dimensional_lumber", "formula": "nominal_width_in * nominal_thickness_in * length_ft * pieces / board_foot_divisor", "default_waste_percent": "10", "source_ids": ["awc-nds-wood-design", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "asphalt_shingle": {"trade": "roofing", "required_dimensions": ["area", "pitch"], "material": "asphalt_shingles", "formula": "area_ft2 / square_area_ft2 * pitch_multiplier", "default_waste_percent": "10", "source_ids": ["gaf-roofing-square", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "cmu_wall": {"trade": "masonry", "required_dimensions": ["area OR length and height"], "material": "cmu_8x8x16", "formula": "area_ft2 * factor", "default_waste_percent": "5", "source_ids": ["tms-402-602-masonry", "cmha-tek-04-02a", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "brick_veneer": {"trade": "masonry", "required_dimensions": ["area OR length and height"], "material": "modular_brick", "formula": "area_ft2 * factor", "default_waste_percent": "5", "source_ids": ["bia-tn-10-modular-brick", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "structural_steel": {"trade": "structural_steel", "required_dimensions": ["shape", "length"], "optional_dimensions": ["pieces"], "material": "structural_steel", "formula": "shape_lb_per_ft * length_ft * pieces / lb_per_short_ton", "default_waste_percent": "2", "source_ids": ["aisc-shapes-v16", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "excavation": {"trade": "sitework", "required_dimensions": ["length", "width", "depth"], "material": "excavated_earth", "formula": "length_ft * width_ft * depth_ft / ft3_per_yd3", "default_waste_percent": "0", "source_ids": ["nist-sp811-unit-conversions", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "aggregate_base": {"trade": "sitework", "required_dimensions": ["length", "width", "depth"], "material": "aggregate_base", "formula": "length_ft * width_ft * depth_ft / ft3_per_yd3 * density_short_ton_per_yd3", "default_waste_percent": "5", "source_ids": ["astm-c29-c29m-23", "viridis-builder-spec-material-pack-v0.1.0"]},
+    "paint": {"trade": "finishes", "required_dimensions": ["area", "coats"], "material": "paint", "formula": "area_ft2 / coverage_ft2_per_gallon * coats", "default_waste_percent": "10", "source_ids": ["sherwin-williams-paint-coverage-faq", "viridis-builder-spec-material-pack-v0.1.0"]}
+  }
+}

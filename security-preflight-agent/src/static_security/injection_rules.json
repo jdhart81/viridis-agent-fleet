@@ -1,0 +1,98 @@
+[
+  {
+    "id": "VC-AI-PROMPT-0001",
+    "pattern": "ignore (all |any )?(previous|prior|earlier) (instructions|prompts|context|messages)",
+    "ignore_case": true,
+    "category": "instruction-override"
+  },
+  {
+    "id": "VC-AI-PROMPT-0002",
+    "pattern": "disregard (the )?above",
+    "ignore_case": true,
+    "category": "instruction-override"
+  },
+  {
+    "id": "VC-AI-PROMPT-0003",
+    "pattern": "you are (now |henceforth )?(a |an )?(?:dan|jailbroken|unrestricted|developer mode)",
+    "ignore_case": true,
+    "category": "instruction-override"
+  },
+  {
+    "id": "VC-AI-PROMPT-0004",
+    "pattern": "(?:^|\\n)\\s*system\\s*[:.\\-]\\s+",
+    "ignore_case": true,
+    "category": "instruction-override"
+  },
+  {
+    "id": "VC-AI-PROMPT-0005",
+    "pattern": "<\\|im_start\\|>|<\\|im_end\\|>|\\[\\[INST\\]\\]|\\[INST\\]",
+    "ignore_case": true,
+    "category": "instruction-override"
+  },
+  {
+    "id": "VC-AI-DRAIN-0001",
+    "pattern": "transfer (all |the )?(?:funds|usdc|usdt|tokens|balance|eth|sol).{0,40}to\\s+(?:0x[a-fA-F0-9]{40}|[a-zA-Z0-9]{32,44})",
+    "ignore_case": true,
+    "category": "exfiltration"
+  },
+  {
+    "id": "VC-AI-DRAIN-0002",
+    "pattern": "send (?:everything|all of it|the wallet)",
+    "ignore_case": true,
+    "category": "exfiltration"
+  },
+  {
+    "id": "VC-AI-EXFIL-0001",
+    "pattern": "(?:print|reveal|output|show|leak|expose).{0,40}(?:system prompt|instructions|api[_ ]?key|secret|token)",
+    "ignore_case": true,
+    "category": "exfiltration"
+  },
+  {
+    "id": "VC-AI-EXFIL-0002",
+    "pattern": "what (?:is|are) your (?:system prompt|original instructions|hidden context)",
+    "ignore_case": true,
+    "category": "exfiltration"
+  },
+  {
+    "id": "VC-AI-TOOL-0001",
+    "pattern": "(?:use|call|invoke|run).{0,30}(?:as admin|with elevated|sudo|as system)",
+    "ignore_case": true,
+    "category": "tool-confusion"
+  },
+  {
+    "id": "VC-AI-TOOL-0002",
+    "pattern": "override (?:safety|guardrails|restrictions|filters|policies)",
+    "ignore_case": true,
+    "category": "tool-confusion"
+  },
+  {
+    "id": "VC-AI-ENC-0001",
+    "pattern": "\\\\x[0-9a-fA-F]{2}",
+    "ignore_case": false,
+    "category": "encoding"
+  },
+  {
+    "id": "VC-AI-ENC-0002",
+    "pattern": "(?:[A-Za-z0-9+/]{40,}={0,2})",
+    "ignore_case": false,
+    "category": "encoding"
+  },
+  {
+    "id": "VC-AI-ENC-0003",
+    "pattern": "[\u200b-\u200f\u202a-\u202e\u2060-\u206f]",
+    "ignore_case": false,
+    "category": "encoding"
+  },
+  {
+    "id": "VC-AI-CTX-0001",
+    "pattern": "(?:^|\\n)## ?(?:new instructions|priority directive|admin override)",
+    "ignore_case": true,
+    "category": "context-poison"
+  },
+  {
+    "id": "VC-AI-CTX-0002",
+    "pattern": "(?:role|persona|character) ?[:=] ?[\"'](?:admin|root|system|developer)",
+    "ignore_case": true,
+    "category": "context-poison"
+  }
+]

@@ -1,0 +1,41 @@
+name: "robustness-engine-agent"
+version: "0.6.0"
+description: "Fail-closed Viridis service for evaluating governed robustness decision cases under disturbance."
+pillar: "infrastructure"
+status: "audited-deployment-candidate"
+owner: "justin@viridis.earth"
+revenue_model: "Shared decision assurance infrastructure; no revenue is asserted by deployment."
+deploy_targets:
+  primary: "fastapi"
+  secondary: ["docker"]
+dependencies:
+  services: []
+  agents: []
+  packages:
+    - "jsonschema>=4.20,<5"
+    - "fastapi>=0.110,<1"
+    - "uvicorn>=0.29,<1"
+ports:
+  http: 8080
+  health: "/health"
+env_vars:
+  - "ROBUSTNESS_SERVICE_HOST"
+  - "ROBUSTNESS_SERVICE_PORT"
+  - "ROBUSTNESS_SERVICE_RELEASE_MODE"
+  - "ROBUSTNESS_RELEASE_MANIFEST_PATH"
+  - "ROBUSTNESS_DEPLOYED_ARTIFACT_DIGEST"
+capabilities:
+  inputs:
+    - "versioned robustness decision case"
+    - "content-addressed outcome bundle with interval and trajectory evidence"
+  outputs:
+    - "canonical governed decision record"
+    - "explicit HOLD or NO_ADMISSIBLE_OPTION receipt"
+    - "non-executing action boundary"
+invariants:
+  - "The service evaluates and reports; it never executes a selected decision"
+  - "HOLD and NO_ADMISSIBLE_OPTION are valid fail-closed results, not transport errors"
+  - "Final mode refuses healthy status without an Aristotle-audited hash-bound release manifest"
+  - "Final mode verifies the running OCI digest against a separately mounted release manifest"
+  - "The service is advisory and non-actuating even when production health is green"
+  - "No secrets, network calls, model calls, or mutable database are required"

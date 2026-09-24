@@ -80,13 +80,16 @@ async def green_route(workload: Dict[str, Any],
 
 
 @mcp.tool()
-async def certify(workload: Dict[str, Any]) -> str:
+async def certify(workload: Dict[str, Any],
+                  request_id: Optional[str] = None) -> str:
     """PAID ($0.50 after free tier): compute the workload footprint, then
     RETIRE the required verified offset mass through the fleet's own
     clearinghouse — Verra provenance rides into the certificate; no
     retirement, no certificate (GR3, fail-closed). Returns a
     machine-verifiable certificate anyone can check for free (GR4)."""
-    return await _run({"action": "certify", "workload": workload})
+    return await _run({"action": "certify", "workload": workload,
+                       **({"request_id": request_id}
+                          if request_id is not None else {})})
 
 
 @mcp.tool()

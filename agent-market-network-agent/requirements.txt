@@ -1,5 +1,6 @@
-mcp>=1.0
-uvicorn>=0.29
-starlette>=0.37
-cryptography>=42.0
-
+# Exact runtime contract. MCP 2.x removed the FastMCP import path used by this
+# service, so unconstrained resolution is not safe for release images.
+mcp==1.28.1
+uvicorn==0.51.0
+starlette==1.3.1
+cryptography==49.0.0

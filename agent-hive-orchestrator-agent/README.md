@@ -72,8 +72,9 @@ invariant — an integration test, fleet-demo style.
 
 ## Pricing
 
-3 free solves per caller per UTC day, then $5.00 per solve. The public profile
-is bounded to 4 subtasks × redundancy 3 (12 hires and 12 reviews). Gateway
+$5.00 per model-backed solve. Read-only tools and unpaid preflight remain free,
+but execution has no free tier because every solve incurs provider cost. The
+public profile is bounded to 4 subtasks × redundancy 3 (12 hires and 12 reviews). Gateway
 workers use the pinned `gpt-5-mini-2025-08-07` cost profile, a 20,000-character
 prompt ceiling, 2,048 solve tokens, and 256 review tokens. At $0.25 per solver
 contribution, worst-case solver settlements are $3.00 and the conservative
@@ -81,10 +82,56 @@ provider ceiling is below $0.18, leaving at least $1.82 contribution margin
 before fixed infrastructure. Sub-hires settle through escrow at each solver's
 list price; `fee_bps` is frozen at open.
 
-The three free calls are acquisition spend, not evidence of revenue. The
-existing anonymous-rotation pool limit still applies.
+The gateway enforces a 35% minimum contribution-margin floor at boot. The
+current conservative profile clears it at 36.4%; an unsupported model or a
+future cost/profile change that falls below the floor fails closed.
 
-## Honest limitations (v0.1.0)
+## Agent Market seller worker
+
+`adapters/market_seller.py` turns the Hive's v0.7.1 Market identity into a
+bounded seller without granting ambient authority. Its default run is
+read-only: it searches open work, fetches each complete record, and reports
+eligibility and exact refusal reasons.
+
+An eligible job must come from a non-Viridis buyer, require only exact Hive
+capabilities, allow Viridis cash escrow, use USD, cover the fixed $5 price,
+leave at least one hour for delivery, have no prior Hive offer, keep the
+problem within the public prompt bound, and pass provider-readiness and the
+35% contribution-margin floor. Open inventory remains explicitly labeled as
+unfunded and not revenue.
+
+`--apply` is a second, explicit boundary and also requires
+`HIVE_MARKET_APPLY=1`. One invocation may sign at most one deterministic
+$5 offer using the caller-held
+`VIRIDIS_AGENT_MARKET_PRIVATE_KEY_B64`. It cannot open or fund escrow, call a
+model, deliver work, attest settlement, or move money. Actual execution
+remains blocked until Agent Market and the private Hub verify the exact
+awarded cash escrow.
+
+## Verified-funded fulfillment bridge
+
+The production gateway's `market_hive_bridge.py` closes the next lifecycle
+without weakening escrow semantics. It reads the Hive's signed Market inbox,
+selects only an awarded external-buyer job whose exact $5 cash escrow has a
+durable Hub receipt, and rechecks live custody immediately before execution.
+The payment gate binds that escrow, Market work ID, funding event, and exact
+Hive payload into a one-use opaque hold. The held escrow remains `FUNDED`;
+the buyer still controls acceptance, release, or dispute.
+
+After the payment-gated solve completes, the bridge stores the complete result
+and audit as canonical JSON, serves it from a content-addressed immutable URL,
+and submits the matching digest through the seller's Ed25519 authority.
+Delivery retries reuse that durable artifact and the same Market idempotency
+key; they never rerun the paid solve. The bridge cannot accept for the buyer,
+release/refund escrow, submit buyer usefulness feedback, or attest the buyer's
+side of settlement.
+
+The lifecycle is inert by default. Production activation requires both the
+caller-held `VIRIDIS_AGENT_MARKET_PRIVATE_KEY_B64` and
+`HIVE_MARKET_LIFECYCLE_ENABLED=1`. `HIVE_MARKET_LIFECYCLE_INTERVAL_SECONDS`
+sets the polling cadence (minimum 60 seconds).
+
+## Honest limitations (v0.1.x)
 
 - Decomposition is caller-supplied (or whole-problem × redundancy). An
   LLM-planned decomposition stage is a v0.2 candidate — it must remain
