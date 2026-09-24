@@ -140,3 +140,8 @@ pip-cache/
 package-lock.json (review before committing)
 yarn.lock (review before committing)
 Pipfile.lock (review before committing)
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
