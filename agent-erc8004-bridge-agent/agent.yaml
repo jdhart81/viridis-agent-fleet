@@ -1,5 +1,5 @@
 name: "agent-erc8004-bridge-agent"
-version: "0.1.0"
+version: "0.2.0"
 description: "The MCP-native bridge to ERC-8004 (on-chain agent identity/reputation/validation, EF+Google+Coinbase, 170k+ agents): resolve registrations, score feedback with decay-weighted math, bind on-chain identities to DIDs, export unsigned attestations. No keys, no chain writes."
 pillar: "rails"
 status: "mvp"
@@ -32,9 +32,9 @@ interfaces:
   describe: "sync () -> dict"
 
 actions: [import_registration, resolve, import_feedback, score, bind,
-          export_attestation, verify, list]
+          export_attestation, verify, list, export_validation_response]
 
-invariants: "B1-B8 (see src/core.py docstring); one test per invariant"
+invariants: "B1-B9 (see src/core.py docstring); one test per invariant"
 
 deploy_targets:
   - mcp (adapters/mcp_server.py; mounted at /erc8004/mcp on the gateway)

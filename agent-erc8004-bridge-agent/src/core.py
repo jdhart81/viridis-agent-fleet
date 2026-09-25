@@ -38,6 +38,11 @@ B7  Resolution is total over imports: every imported registration is
     canonical record.
 B8  Binding is symmetric: bind(fleet_did, erc8004_ref) produces the same
     content hash regardless of argument order — one binding, two directions.
+B9  export_validation_response (ORC v0.1 evidence for the ERC-8004
+    Validation Registry): responseHash = 0x + the receipt's commitment,
+    tag = "orc/0.1", response is 100 ONLY if the bridge itself re-verifies
+    the receipt at L1 AND the caller reports a successful replay; otherwise 0.
+    Unsigned, no chain writes (B5 holds).
 """
 
 import hashlib
@@ -61,7 +66,7 @@ TIERS = ((0.85, "TRUSTED"), (0.65, "RELIABLE"), (0.40, "NEUTRAL"),
 @dataclass
 class AgentConfig:
     name: str
-    version: str = "0.1.0"
+    version: str = "0.2.0"
     debug: bool = False
     half_life_days: float = 30.0
     prior_strength: float = 2.0   # Beta(1,1)-equivalent pseudo-counts
@@ -171,7 +176,7 @@ class Erc8004BridgeCore(AgentCore):
             "version": self.config.version,
             "capabilities": ["import_registration", "resolve", "import_feedback",
                              "score", "bind", "export_attestation", "verify",
-                             "list"],
+                             "list", "export_validation_response"],
             "inputs": {"action": "one of capabilities", "...": "per action"},
             "outputs": {"status": "ok|error", "data": "per action"},
             "a2a_role": "identity-bridge",
@@ -240,6 +245,7 @@ class Erc8004BridgeCore(AgentCore):
                 "export_attestation": self._export_attestation,
                 "verify": self._verify,
                 "list": self._list,
+                "export_validation_response": self._export_validation_response,
             }.get(action)
             if handler is None:
                 return self._err(f"unknown action '{action}'",
@@ -247,7 +253,8 @@ class Erc8004BridgeCore(AgentCore):
                                  value=action,
                                  constraint="one of: import_registration, resolve, "
                                             "import_feedback, score, bind, "
-                                            "export_attestation, verify, list")
+                                            "export_attestation, verify, list, "
+                                            "export_validation_response")
             return handler(input_data)
         except ValidationError as e:
             return self._err(str(e), error_type="ValidationError",
@@ -441,6 +448,75 @@ class Erc8004BridgeCore(AgentCore):
         recomputed = _canonical_hash(payload)
         return self._ok({"valid": claimed == recomputed,
                          "claimed": claimed, "recomputed": recomputed})
+
+    @staticmethod
+    def _orc_l1(receipt: Any) -> Dict[str, bool]:
+        """Stdlib re-verification of an ORC v0.1 receipt at level 1."""
+        out = {"digest_recomputes": False, "commitment_binds": False}
+        try:
+            dg, cm = receipt["digest"], receipt["commitment"]
+            if (receipt.get("orc") != "0.1" or dg.get("alg") != "sha256"
+                    or dg.get("canonicalization") != "orc-canon/1"
+                    or cm.get("scheme") != "sha256(salt||digest)"):
+                return out
+            excl = set(dg.get("excludes") or [])
+            content = {k: v for k, v in receipt["output"].items() if k not in excl}
+            canon = json.dumps(content, sort_keys=True, separators=(",", ":"),
+                               ensure_ascii=True)
+            out["digest_recomputes"] = (
+                hashlib.sha256(canon.encode()).hexdigest() == dg.get("value"))
+            out["commitment_binds"] = (
+                hashlib.sha256((str(cm["salt"]) + str(dg.get("value"))).encode())
+                .hexdigest() == cm.get("value"))
+        except (KeyError, TypeError, AttributeError):
+            pass
+        return out
+
+    def _export_validation_response(self, d: dict) -> dict:      # B9
+        receipt = d.get("receipt")
+        if not isinstance(receipt, dict):
+            raise ValidationError("'receipt' must be an ORC v0.1 object",
+                                  field="receipt", value=type(receipt).__name__,
+                                  constraint="object")
+        rh = str(d.get("request_hash", "")).lower()
+        rh = rh[2:] if rh.startswith("0x") else rh
+        if len(rh) != 64 or any(c not in "0123456789abcdef" for c in rh):
+            raise ValidationError("'request_hash' must be 32 bytes hex",
+                                  field="request_hash", value=d.get("request_hash"),
+                                  constraint="0x + 64 hex")
+        uri = str(d.get("response_uri", ""))
+        if not uri.startswith("https://"):
+            raise ValidationError("'response_uri' must be an https URL where "
+                                  "the receipt is published",
+                                  field="response_uri", value=uri,
+                                  constraint="https://...")
+        replay_ok = d.get("replay_ok")
+        if not isinstance(replay_ok, bool):
+            raise ValidationError("'replay_ok' must be a boolean",
+                                  field="replay_ok", value=replay_ok,
+                                  constraint="bool")
+        check = self._orc_l1(receipt)
+        passed = replay_ok and all(check.values())
+        commitment = str(receipt.get("commitment", {}).get("value", ""))
+        payload = {
+            "standard": "ERC-8004",
+            "registry": "validation",
+            "function": "validationResponse",
+            "args": {"requestHash": "0x" + rh,
+                     "response": 100 if passed else 0,
+                     "responseURI": uri,
+                     "responseHash": "0x" + commitment,
+                     "tag": "orc/0.1"},
+            "orc_check": check,
+            "replay_ok": replay_ok,
+            "issuer": self.config.name,
+            "issued_at": _iso(),
+            "signed": False,                                     # B5
+            "anchoring": "sign and submit with YOUR OWN signer — this bridge "
+                         "holds no keys and writes to no chain",
+        }
+        payload["content_hash"] = _canonical_hash(payload)              # B4
+        return self._ok(payload)
 
     def _list(self, d: dict) -> dict:
         return self._ok({"count": len(self._registry),

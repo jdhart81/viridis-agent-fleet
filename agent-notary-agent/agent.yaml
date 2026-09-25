@@ -1,5 +1,5 @@
 name: "agent-notary-agent"
-version: "0.1.0"
+version: "0.2.0"
 description: "Commit-reveal content notarization: sellers commit to a deliverable's hash before handover; reveals verify exactly; late reveals expire. Turns escrow delivery proofs into cryptographic receipts. Digests only — never raw content."
 pillar: "rails"
 status: "mvp"
@@ -13,7 +13,7 @@ thesis_connection: |
 revenue_model: |
   Per-notarization micro-fee via the fleet metering/x402 rail; volume tier
   for marketplaces that require notarized delivery on every escrowed job.
-actions: [commit, reveal, verify, status, list]
-invariants: "N1-N8 (see src/core.py); one test per invariant"
+actions: [commit, reveal, verify, status, list, seal_orc, get_commitment]
+invariants: "N1-N8, O1-O6 (see src/core.py); one test per invariant"
 deploy_targets:
   - mcp (adapters/mcp_server.py; mounted at /notary/mcp on the gateway)

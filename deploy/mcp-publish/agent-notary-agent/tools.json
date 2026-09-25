@@ -1,28 +1,32 @@
 {
   "server": "agent-notary-agent",
-  "tool_count": 6,
+  "tool_count": 8,
   "tools": [
     {
       "name": "commit",
-      "description": "Commit to a deliverable BEFORE handover. commit_hash =\nsha256(salt || sha256(content)) as 64 hex chars; deadline is ISO-8601;\ncontext links the escrow/job. Idempotent per (committer, nonce).",
+      "description": "Commit to a deliverable BEFORE handover. commit_hash =\n    sha256(salt || sha256(content)) as 64 hex chars; deadline is ISO-8601;\n    context links the escrow/job. Idempotent per (committer, nonce).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "committer": {
+            "title": "Committer",
             "type": "string"
           },
           "nonce": {
+            "title": "Nonce",
             "type": "string"
           },
           "commit_hash": {
+            "title": "Commit Hash",
             "type": "string"
           },
           "deadline": {
+            "title": "Deadline",
             "type": "string"
           },
           "context": {
-            "type": "string",
-            "default": ""
+            "default": "",
+            "title": "Context",
+            "type": "string"
           }
         },
         "required": [
@@ -30,22 +34,39 @@
           "nonce",
           "commit_hash",
           "deadline"
-        ]
+        ],
+        "title": "commitArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "commitOutput",
+        "type": "object"
       }
     },
     {
       "name": "reveal",
-      "description": "Reveal the committed content's digest + salt after handover. Verifies\nagainst the commitment (one bit of drift fails); returns a delivery_proof\nstring for escrow release. Late reveals expire the commitment.",
+      "description": "Reveal the committed content's digest + salt after handover. Verifies\n    against the commitment (one bit of drift fails); returns a delivery_proof\n    string for escrow release. Late reveals expire the commitment.",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "commitment_id": {
+            "title": "Commitment Id",
             "type": "string"
           },
           "salt": {
+            "title": "Salt",
             "type": "string"
           },
           "content_digest": {
+            "title": "Content Digest",
             "type": "string"
           }
         },
@@ -53,62 +74,258 @@
           "commitment_id",
           "salt",
           "content_digest"
-        ]
-      }
-    },
-    {
-      "name": "verify",
-      "description": "Independently verify a revealed commitment; optionally check it against\nthe digest of content you received.",
-      "inputSchema": {
-        "type": "object",
+        ],
+        "title": "revealArguments",
+        "type": "object"
+      },
+      "outputSchema": {
         "properties": {
-          "commitment_id": {
-            "type": "string"
-          },
-          "content_digest": {
+          "result": {
+            "title": "Result",
             "type": "string"
           }
         },
         "required": [
+          "result"
+        ],
+        "title": "revealOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify",
+      "description": "Independently verify a revealed commitment; optionally check it against\n    the digest of content you received.",
+      "inputSchema": {
+        "properties": {
+          "commitment_id": {
+            "title": "Commitment Id",
+            "type": "string"
+          },
+          "content_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Content Digest"
+          }
+        },
+        "required": [
           "commitment_id"
-        ]
+        ],
+        "title": "verifyArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "verifyOutput",
+        "type": "object"
       }
     },
     {
       "name": "commitment_status",
       "description": "Current record for a commitment (pre-reveal, salt/digest stay hidden).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "commitment_id": {
+            "title": "Commitment Id",
             "type": "string"
           }
         },
         "required": [
           "commitment_id"
-        ]
+        ],
+        "title": "commitment_statusArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "commitment_statusOutput",
+        "type": "object"
       }
     },
     {
       "name": "list_commitments",
-      "description": "List commitments, optionally filtered by state\n(PENDING|REVEALED|EXPIRED).",
+      "description": "List commitments, optionally filtered by state\n    (PENDING|REVEALED|EXPIRED).",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "State"
+          }
+        },
+        "title": "list_commitmentsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
             "type": "string"
           }
         },
-        "required": []
+        "required": [
+          "result"
+        ],
+        "title": "list_commitmentsOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "seal_outcome_receipt",
+      "description": "Seal an agent output as an Outcome Receipt (ORC v0.1) and register its\n    commitment. Returns a portable receipt anyone can verify offline (L1) and\n    against this notary's registry (L2). The notary attests integrity and\n    time (\"notarized\"), not correctness. No floats in output; stores only\n    digests. Spec: docs/standards/OUTCOME_RECEIPT_v0.1.md",
+      "inputSchema": {
+        "properties": {
+          "output": {
+            "additionalProperties": true,
+            "title": "Output",
+            "type": "object"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Subject"
+          },
+          "profile": {
+            "default": "generic",
+            "title": "Profile",
+            "type": "string"
+          },
+          "excludes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Excludes"
+          },
+          "bindings": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bindings"
+          }
+        },
+        "required": [
+          "output"
+        ],
+        "title": "seal_outcome_receiptArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "seal_outcome_receiptOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_orc_commitment",
+      "description": "Registry lookup: is this ORC commitment sealed by this notary? Returns\n    digest, issuer, profile, attestation and registered_at, or NotFound.",
+      "inputSchema": {
+        "properties": {
+          "commitment": {
+            "title": "Commitment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commitment"
+        ],
+        "title": "get_orc_commitmentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "get_orc_commitmentOutput",
+        "type": "object"
       }
     },
     {
       "name": "describe_agent",
       "description": "Return capabilities and input contract.",
       "inputSchema": {
-        "type": "object",
         "properties": {},
-        "required": []
+        "title": "describe_agentArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "describe_agentOutput",
+        "type": "object"
       }
     }
   ]
