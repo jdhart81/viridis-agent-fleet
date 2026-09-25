@@ -145,6 +145,19 @@ async def list_registrations() -> str:
 
 
 @mcp.tool()
+async def export_validation_response(receipt: Dict[str, Any], request_hash: str,
+                                     response_uri: str, replay_ok: bool) -> str:
+    """Build UNSIGNED ERC-8004 Validation Registry validationResponse args
+    from an Outcome Receipt (ORC v0.1): responseHash = receipt commitment,
+    tag "orc/0.1", response 100 only if the bridge re-verifies the receipt
+    AND your replay succeeded. Sign and submit with your own signer; this
+    bridge holds no keys and writes to no chain."""
+    return await _run({"action": "export_validation_response",
+                       "receipt": receipt, "request_hash": request_hash,
+                       "response_uri": response_uri, "replay_ok": replay_ok})
+
+
+@mcp.tool()
 async def describe_agent() -> str:
     """Return the bridge's capabilities and input contract."""
     return json.dumps(agent.describe(), indent=2)

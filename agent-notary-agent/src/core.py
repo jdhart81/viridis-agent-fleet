@@ -27,10 +27,28 @@ N7  The notary never stores raw content — only digests. Payload privacy by
     construction (callers pass SHA-256 digests, not documents).
 N8  Commitment ids are unique and deterministic per (committer, nonce):
     the same (committer, nonce) can not create two different commitments.
+
+--- ORC v0.1 registry (docs/standards/OUTCOME_RECEIPT_v0.1.md) ---
+O1  seal_orc returns an Outcome Receipt that verifies at L1 with the fleet
+    reference implementation (fleet_utils.orc); canonical form and hashes are
+    byte-identical (pinned by a cross-implementation test).
+O2  The registry stores only digest, commitment, issuer, profile, subject
+    agent/tool and timestamps -- never the output (extends N7).
+O3  get_commitment returns the registry record for a known commitment and a
+    NotFound envelope otherwise; registered_at == the receipt's issued_at.
+O4  Registration is idempotent per commitment; a commitment can never be
+    re-bound to a different digest.
+O5  attestation is "notarized" for caller-supplied outputs (the notary
+    attests integrity + time, NOT correctness). "computed" is reachable only
+    through seal_computed(), which is not in the dispatch table, so no
+    external caller can claim Viridis computed their output.
+O6  Floats are rejected and canonical output is capped at MAX_ORC_BYTES.
 """
 
 import hashlib
+import json
 import logging
+import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -39,11 +57,32 @@ logger = logging.getLogger(__name__)
 
 _HEX64 = set("0123456789abcdef")
 
+ORC_VERSION = "0.1"
+ORC_CANON = "orc-canon/1"
+ORC_COMMIT_SCHEME = "sha256(salt||digest)"
+MAX_ORC_BYTES = 262_144
+DEFAULT_ISSUER = {"id": "did:web:viridisconservation.com", "name": "Viridis LLC"}
+
+
+def _orc_canonical(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=True)
+
+
+def _orc_has_float(v: Any) -> bool:
+    if isinstance(v, float):
+        return True
+    if isinstance(v, dict):
+        return any(_orc_has_float(x) for x in v.values())
+    if isinstance(v, (list, tuple)):
+        return any(_orc_has_float(x) for x in v)
+    return False
+
 
 @dataclass
 class AgentConfig:
     name: str
-    version: str = "0.1.0"
+    version: str = "0.2.0"
     debug: bool = False
 
 
@@ -117,6 +156,8 @@ class NotaryAgentCore(AgentCore):
         super().__init__(config or AgentConfig(name="agent-notary-agent"))
         self._commitments: Dict[str, Commitment] = {}
         self._by_key: Dict[str, str] = {}   # (committer,nonce) -> commitment_id
+        self._orc_registry: Dict[str, dict] = {}   # commitment -> record (O2)
+        self.orc_registry_base: str = ""   # set by the hosting gateway
 
     @staticmethod
     def _commit_hash(salt: str, content_digest: str) -> str:          # N1/N2
@@ -127,12 +168,14 @@ class NotaryAgentCore(AgentCore):
         states = [c.state for c in self._commitments.values()]
         h["checks"] = {"commitments": len(states),
                        "pending": states.count("PENDING"),
-                       "revealed": states.count("REVEALED")}
+                       "revealed": states.count("REVEALED"),
+                       "orc_registered": len(self._orc_registry)}
         return h
 
     def describe(self) -> dict:
         return {"name": self.config.name, "version": self.config.version,
-                "capabilities": ["commit", "reveal", "verify", "status", "list"],
+                "capabilities": ["commit", "reveal", "verify", "status", "list",
+                                 "seal_orc", "get_commitment"],
                 "inputs": {"action": "one of capabilities", "...": "per action"},
                 "outputs": {"status": "ok|error", "data": "per action"},
                 "a2a_role": "notary"}
@@ -146,13 +189,15 @@ class NotaryAgentCore(AgentCore):
             action = input_data.get("action")
             handler = {"commit": self._commit, "reveal": self._reveal,
                        "verify": self._verify, "status": self._status,
-                       "list": self._list}.get(action)
+                       "list": self._list, "seal_orc": self._seal_orc,
+                       "get_commitment": self._get_commitment}.get(action)
             if handler is None:
                 return self._err(f"unknown action '{action}'",
                                  error_type="ValidationError", field="action",
                                  value=action,
                                  constraint="one of: commit, reveal, verify, "
-                                            "status, list")
+                                            "status, list, seal_orc, "
+                                            "get_commitment")
             return handler(input_data)
         except ValidationError as e:
             return self._err(str(e), error_type="ValidationError",
@@ -269,6 +314,107 @@ class NotaryAgentCore(AgentCore):
         items = [c.public() for c in self._commitments.values()
                  if state is None or c.state == state]
         return self._ok({"count": len(items), "commitments": items})
+
+
+    # -- ORC v0.1 ------------------------------------------------------------
+    def _orc_seal(self, d: dict, attestation: str) -> dict:
+        output = d.get("output")
+        if not isinstance(output, dict):
+            raise ValidationError("'output' must be a JSON object",
+                                  field="output", value=type(output).__name__,
+                                  constraint="object")
+        if _orc_has_float(output):                                    # O6
+            raise ValidationError("floats are not allowed in 'output'; use "
+                                  "integers or decimal strings",
+                                  field="output", value=None,
+                                  constraint="no floats (ORC R6)")
+        subject = d.get("subject")
+        subject = {} if subject is None else subject
+        if not isinstance(subject, dict):
+            raise ValidationError("'subject' must be an object", field="subject",
+                                  value=type(subject).__name__, constraint="object")
+        excludes = d.get("excludes")
+        excludes = [] if excludes is None else excludes
+        if (not isinstance(excludes, list)
+                or not all(isinstance(x, str) for x in excludes)):
+            raise ValidationError("'excludes' must be a list of strings",
+                                  field="excludes", value=excludes,
+                                  constraint="list[str]")
+        bindings = d.get("bindings")
+        bindings = {} if bindings is None else bindings
+        if not isinstance(bindings, dict):
+            raise ValidationError("'bindings' must be an object", field="bindings",
+                                  value=type(bindings).__name__, constraint="object")
+        profile = str(d.get("profile") or "generic")
+        content = {k: v for k, v in output.items() if k not in set(excludes)}
+        canon = _orc_canonical(content)
+        if len(canon) > MAX_ORC_BYTES:                                # O6
+            raise ValidationError("output too large to seal", field="output",
+                                  value=len(canon),
+                                  constraint=f"<= {MAX_ORC_BYTES} canonical bytes")
+        digest = hashlib.sha256(canon.encode()).hexdigest()
+        salt = str(d.get("_salt") or secrets.token_hex(32))
+        if not _is_sha256_hex(salt):
+            raise ValidationError("salt must be 64 hex chars", field="salt",
+                                  value=None, constraint="sha256 hex")
+        salt = salt.lower()
+        commitment = self._commit_hash(salt, digest)
+        existing = self._orc_registry.get(commitment)
+        if existing is not None and existing["digest"] != digest:     # O4
+            raise ValidationError("commitment already bound to a different digest",
+                                  field="commitment", value=commitment,
+                                  constraint="one digest per commitment")
+        issuer = dict(DEFAULT_ISSUER)
+        now = existing["registered_at"] if existing else _iso()
+        record = existing or {
+            "commitment": commitment, "digest": digest, "issuer": issuer,
+            "profile": profile, "attestation": attestation,           # O5
+            "subject": {"agent": str(subject.get("agent", "")),
+                        "tool": str(subject.get("tool", ""))},
+            "registered_at": now}                                     # O2
+        self._orc_registry[commitment] = record
+        receipt = {
+            "orc": ORC_VERSION, "profile": profile, "issuer": issuer,
+            "subject": json.loads(json.dumps(subject)),
+            "output": json.loads(json.dumps(output)),
+            "digest": {"alg": "sha256", "canonicalization": ORC_CANON,
+                       "excludes": list(excludes), "value": digest},
+            "commitment": {"scheme": ORC_COMMIT_SCHEME, "salt": salt,
+                           "value": commitment},
+            "bindings": json.loads(json.dumps(bindings)),
+            "issued_at": now,                                         # O3
+        }
+        if self.orc_registry_base:
+            receipt["issuer_proof"] = {
+                "method": "registry",
+                "url": self.orc_registry_base.rstrip("/") + "/" + commitment}
+        return self._ok({"receipt": receipt, "registered": dict(record),
+                         "idempotent": existing is not None})
+
+    def _seal_orc(self, d: dict) -> dict:
+        return self._orc_seal(d, "notarized")
+
+    async def seal_computed(self, d: dict) -> dict:
+        """Gateway-internal only (O5): for outputs a Viridis engine computed.
+        Deliberately absent from the process() dispatch table."""
+        try:
+            return self._orc_seal(d, "computed")
+        except ValidationError as e:
+            return self._err(str(e), error_type="ValidationError",
+                             field=e.field, value=e.value, constraint=e.constraint)
+
+    def _get_commitment(self, d: dict) -> dict:
+        c = str(d.get("commitment", "")).lower()
+        if not _is_sha256_hex(c):
+            raise ValidationError("'commitment' must be 64 hex chars",
+                                  field="commitment", value=d.get("commitment"),
+                                  constraint="sha256 hex")
+        rec = self._orc_registry.get(c)
+        if rec is None:                                               # O3
+            return self._err("unknown commitment", error_type="NotFound",
+                             field="commitment", value=c,
+                             constraint="a commitment sealed by this notary")
+        return self._ok(dict(rec))
 
 
 def build(config: Optional[AgentConfig] = None) -> NotaryAgentCore:

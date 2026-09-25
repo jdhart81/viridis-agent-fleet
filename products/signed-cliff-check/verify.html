@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verify a Signed Cliff Check · Viridis</title>
+<meta name="description" content="Check that a Viridis Signed 48E Cliff Check is authentic and unaltered. Runs entirely in your browser; nothing is uploaded.">
+<style>
+:root{--bg:#fbfaf7;--fg:#1b2420;--dim:#5d6b64;--line:#dfe3dd;--card:#ffffff;--ok:#1f7a4d;--bad:#b3261e;--accent:#1f7a4d}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1512;--fg:#e3ebe6;--dim:#93a39a;--line:#26322c;--card:#151d19;--ok:#4ade80;--bad:#f87171;--accent:#4ade80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:720px;margin:0 auto;padding:40px 16px 64px}
+h1{font-size:26px;margin:0 0 6px}
+.sub{color:var(--dim);margin:0 0 24px}
+#drop{border:2px dashed var(--line);border-radius:12px;padding:28px 16px;text-align:center;background:var(--card);cursor:pointer}
+#drop.over{border-color:var(--accent)}
+textarea{width:100%;min-height:90px;margin-top:12px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px;font:12px ui-monospace,Menlo,monospace}
+button,.btn{display:inline-block;margin-top:10px;padding:9px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--bg);font-weight:600;text-decoration:none;cursor:pointer;font-size:14px}
+.btn.alt{background:transparent;color:var(--accent)}
+#out{margin-top:24px}
+.badge{font-size:20px;font-weight:700;padding:10px 14px;border-radius:10px;border:2px solid currentColor;display:inline-block}
+.ok{color:var(--ok)} .bad{color:var(--bad)}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top} td:first-child{color:var(--dim);width:38%}
+code{font:12px ui-monospace,Menlo,monospace;word-break:break-all}
+.cta{margin-top:36px;padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.cta h2{margin:0 0 6px;font-size:18px}
+.fine{font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<main>
+<h1>Verify a Signed Cliff Check</h1>
+<p class="sub">Drop the report's <code>.receipt.json</code> or <code>.orc.json</code> file below. Everything runs in your browser; nothing is uploaded.</p>
+<p id="linkref" class="fine" hidden></p>
+<div id="drop" tabindex="0">Drop the receipt file here, or click to choose a file
+<input id="file" type="file" accept=".json,application/json" hidden></div>
+<textarea id="paste" placeholder="…or paste the receipt JSON here"></textarea>
+<button id="go" type="button">Verify</button>
+<div id="out" aria-live="polite"></div>
+<div id="cta" class="cta"></div>
+<p class="fine">What is checked: (1) the result digest recomputes from the report's contents, which proves nothing was edited after sealing; (2) SHA-256(salt + digest) equals the sealed commitment. (3) the Viridis registry is asked whether it recorded this exact seal (ISSUED). Works for Signed Cliff Checks and any Outcome Receipt (ORC v0.1). A scenario estimate, not tax advice. Viridis LLC · viridisconservation.com</p>
+</main>
+
+<script id="vcore">
+// ---- pure verification core (tested in node: GL2, GL6) ----
+const PAYMENT_LINK_URL = "";   // set to the Stripe Payment Link to show the buy button
+const INTAKE_MAILTO = "mailto:hartjustin6@gmail.com?subject=Signed%2048E%20Cliff%20Check%20request";
+
+// JSON parser that keeps number literals verbatim, so canonical output
+// matches Python json.dumps byte-for-byte (no float re-formatting).
+function parseRaw(text) {
+  let i = 0;
+  const ws = () => { while (i < text.length && " \t\n\r".includes(text[i])) i++; };
+  function val() {
+    ws();
+    const c = text[i];
+    if (c === "{") { i++; const o = {}; ws(); if (text[i] === "}") { i++; return o; }
+      for (;;) { ws(); const k = str(); ws(); if (text[i++] !== ":") throw Error("bad json");
+        o[k] = val(); ws(); const d = text[i++]; if (d === "}") return o; if (d !== ",") throw Error("bad json"); } }
+    if (c === "[") { i++; const a = []; ws(); if (text[i] === "]") { i++; return a; }
+      for (;;) { a.push(val()); ws(); const d = text[i++]; if (d === "]") return a; if (d !== ",") throw Error("bad json"); } }
+    if (c === '"') return str();
+    if (text.startsWith("true", i)) { i += 4; return true; }
+    if (text.startsWith("false", i)) { i += 5; return false; }
+    if (text.startsWith("null", i)) { i += 4; return null; }
+    const m = /^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?/.exec(text.slice(i));
+    if (!m) throw Error("bad json at " + i);
+    i += m[0].length; return { __num: m[0] };
+  }
+  function str() {
+    if (text[i] !== '"') throw Error("bad json");
+    let j = i + 1;
+    while (text[j] !== '"') { if (text[j] === "\\") j++; j++; if (j >= text.length) throw Error("bad json"); }
+    const s = JSON.parse(text.slice(i, j + 1)); i = j + 1; return s;
+  }
+  const v = val(); ws(); if (i !== text.length) throw Error("trailing data"); return v;
+}
+
+// Python: json.dumps(v, sort_keys=True, separators=(",",":"), ensure_ascii=True)
+function canonical(v) {
+  if (v === null) return "null";
+  if (v === true) return "true";
+  if (v === false) return "false";
+  if (typeof v === "string")
+    return JSON.stringify(v).replace(/[\u007f-￿]/g,
+      c => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+  if (Array.isArray(v)) return "[" + v.map(canonical).join(",") + "]";
+  if (typeof v === "object" && "__num" in v && Object.keys(v).length === 1) return v.__num;
+  const keys = Object.keys(v).sort();
+  return "{" + keys.map(k => canonical(k) + ":" + canonical(v[k])).join(",") + "}";
+}
+
+async function sha256hex(s) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Same-origin issuer registry only: the verifier never trusts a registry URL
+// supplied inside the receipt (a forger could point it at their own server).
+const REGISTRY_BASE = "/orc/v0/commitments/";
+const CLIFF_EXCLUDES = ["audit_sha256", "notary_payload"];
+
+function normalize(r) {
+  const s = x => (x == null ? "" : String(x));
+  if (r.orc === "0.1") {
+    const d = r.digest || {}, c = r.commitment || {}, sub = r.subject || {};
+    const ok = d.alg === "sha256" && d.canonicalization === "orc-canon/1" &&
+               c.scheme === "sha256(salt||digest)";
+    return { kind: "orc", supported: ok, output: r.output || {},
+      excludes: Array.isArray(d.excludes) ? d.excludes.map(String) : [],
+      digest: s(d.value), salt: s(c.salt), commit: s(c.value), sigDigest: s(d.value),
+      project: sub.project, client: sub.client, credit: r.profile,
+      generated_at: sub.report_generated_at || r.issued_at, profile: r.profile };
+  }
+  const res = r.result || {}, sig = r.signature || {};
+  return { kind: "cliff-check", supported: true, output: res, excludes: CLIFF_EXCLUDES,
+    digest: s(res.audit_sha256), salt: s(sig.salt), commit: s(sig.commit_hash),
+    sigDigest: s(sig.content_digest), project: r.project, client: r.client,
+    credit: r.credit, status: r.calculation_status, generated_at: r.generated_at };
+}
+
+async function verifyReceipt(text) {
+  const r = parseRaw(text);
+  const n = normalize(r);
+  const ex = new Set(n.excludes), content = {};
+  for (const k of Object.keys(n.output)) if (!ex.has(k)) content[k] = n.output[k];
+  const computed = await sha256hex(canonical(content));
+  const commit = await sha256hex(n.salt + n.sigDigest);
+  const checks = {
+    digest_recomputes: n.supported && n.digest !== "" && computed === n.digest,
+    signature_binds_digest: n.sigDigest === n.digest,
+    commitment_matches: n.commit !== "" && commit === n.commit,
+  };
+  const num = x => (x && x.__num) ? x.__num : x;
+  const res = n.output;
+  return {
+    kind: n.kind, verified: Object.values(checks).every(Boolean), checks,
+    commit_hash: n.commit, digest: n.digest, computed_digest: computed,
+    project: n.project, client: n.client, credit: n.credit,
+    status: n.status || res.calculation_status, amount: num(res.credit_amount_usd),
+    rule_pack: (res.rule_pack || {}).version, generated_at: n.generated_at,
+  };
+}
+
+// L2: ask this site's own registry whether the issuer sealed this commitment.
+async function checkIssuer(v, fetchImpl) {
+  if (!v.verified || !/^[0-9a-f]{64}$/.test(v.commit_hash)) return { issued: false, reason: "not_intact" };
+  try {
+    const res = await fetchImpl(REGISTRY_BASE + v.commit_hash, { headers: { accept: "application/json" } });
+    if (res.status === 404) return { issued: false, reason: "not_registered" };
+    if (!res.ok) return { issued: false, reason: "unavailable" };
+    const j = await res.json();
+    const issued = j.commitment === v.commit_hash && j.digest === v.digest;
+    return { issued, reason: issued ? "registered" : "registry_mismatch",
+      attestation: j.attestation, registered_at: j.registered_at,
+      issuer: (j.issuer || {}).name };
+  } catch (e) { return { issued: false, reason: "unavailable" }; }
+}
+
+function renderCta(paymentUrl) {
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  return '<h2>Have a project facing the 12/31/2027 deadline?</h2>' +
+    '<p>Get your own signed 48E check: credit amount, every eligibility test, deadline math and adder upside, delivered within 24 hours.</p>' +
+    '<a class="btn" data-cta="intake" href="' + esc(INTAKE_MAILTO) + '">Request a signed check</a> ' +
+    (paymentUrl ? '<a class="btn alt" data-cta="buy" href="' + esc(paymentUrl) + '">Buy now · $149</a>' : "");
+}
+if (typeof module !== "undefined") module.exports = { parseRaw, canonical, sha256hex, normalize, verifyReceipt, checkIssuer, renderCta, REGISTRY_BASE };
+</script>
+
+<script>
+(function () {
+  if (typeof document === "undefined") return;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? "—" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  $("cta").innerHTML = renderCta(PAYMENT_LINK_URL);
+  const linkC = new URLSearchParams(location.search).get("c") || "";
+  if (/^[0-9a-f]{8,64}$/i.test(linkC)) { $("linkref").hidden = false; $("linkref").textContent = "Your link refers to commitment " + linkC.slice(0, 16) + "…"; }
+  const ISSUE_TEXT = {
+    not_registered: "Not found in the Viridis registry. It may have been sealed offline; ask the sender or email hartjustin6@gmail.com.",
+    unavailable: "Registry lookup unavailable here (for example, the page was opened as a local file).",
+    registry_mismatch: "The registry record does not match this receipt. Do not rely on it.",
+    not_intact: "" };
+  async function run(text) {
+    try {
+      const v = await verifyReceipt(text);
+      const linkOk = !linkC || v.commit_hash.toLowerCase().startsWith(linkC.toLowerCase());
+      const intact = v.verified && linkOk;
+      const iss = intact ? await checkIssuer(v, (u, o) => fetch(u, o)) : { issued: false, reason: "not_intact" };
+      const bad = !intact || iss.reason === "registry_mismatch";
+      const who = iss.attestation === "computed" ? "computed by the Viridis engine" : "notarized by Viridis";
+      const badge = bad ? '<span class="badge bad">✘ MISMATCH: do not rely on this report</span>'
+        : iss.issued ? '<span class="badge ok">✔ ISSUED: sealed by ' + esc(iss.issuer || "Viridis") + " · " + esc(who) + "</span>"
+        : '<span class="badge ok">✔ INTACT: unaltered since it was sealed</span>';
+      const amt = v.amount && /^-?\d+(\.\d+)?$/.test(String(v.amount)) ? "$" + Number(v.amount).toLocaleString("en-US", {minimumFractionDigits: 2}) : v.amount;
+      $("out").innerHTML = badge +
+        (!linkOk ? '<p class="bad">This receipt does not match the link you followed.</p>' : "") +
+        "<table>" +
+        "<tr><td>Project</td><td>" + esc(v.project) + "</td></tr>" +
+        "<tr><td>Client</td><td>" + esc(v.client) + "</td></tr>" +
+        "<tr><td>Credit / status</td><td>" + esc(v.credit) + " · " + esc(v.status) + "</td></tr>" +
+        "<tr><td>Credit amount</td><td>" + esc(amt) + "</td></tr>" +
+        "<tr><td>Rule pack</td><td>" + esc(v.rule_pack) + "</td></tr>" +
+        "<tr><td>Digest recomputes</td><td>" + (v.checks.digest_recomputes ? "yes" : "NO") + "</td></tr>" +
+        "<tr><td>Seal binds digest</td><td>" + (v.checks.signature_binds_digest ? "yes" : "NO") + "</td></tr>" +
+        "<tr><td>Commitment matches</td><td>" + (v.checks.commitment_matches ? "yes" : "NO") + "</td></tr>" +
+        "<tr><td>Issuer registry</td><td>" + (iss.issued ? "registered " + esc(iss.registered_at) : "not confirmed") + "</td></tr>" +
+        "<tr><td>Commitment</td><td><code>" + esc(v.commit_hash) + "</code></td></tr>" +
+        "<tr><td>Generated</td><td>" + esc(v.generated_at) + "</td></tr></table>" +
+        (!iss.issued && ISSUE_TEXT[iss.reason] ? '<p class="fine">' + esc(ISSUE_TEXT[iss.reason]) + "</p>" : "") +
+        '<p class="fine">INTACT means the numbers and the seal match each other. ISSUED additionally means the Viridis registry recorded this exact seal.</p>';
+    } catch (e) {
+      $("out").innerHTML = '<span class="badge bad">✘ Not a valid receipt file</span><p class="fine">' + esc(e.message) + "</p>";
+    }
+  }
+  const readFile = f => f && f.text().then(run);
+  $("drop").onclick = () => $("file").click();
+  $("drop").onkeydown = e => { if (e.key === "Enter" || e.key === " ") $("file").click(); };
+  $("file").onchange = e => readFile(e.target.files[0]);
+  $("drop").ondragover = e => { e.preventDefault(); $("drop").classList.add("over"); };
+  $("drop").ondragleave = () => $("drop").classList.remove("over");
+  $("drop").ondrop = e => { e.preventDefault(); $("drop").classList.remove("over"); readFile(e.dataTransfer.files[0]); };
+  $("go").onclick = () => $("paste").value.trim() && run($("paste").value);
+})();
+</script>
+</body>
+</html>

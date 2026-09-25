@@ -8,7 +8,7 @@ import asyncio
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -95,6 +95,29 @@ async def list_commitments(state: Optional[str] = None) -> str:
     """List commitments, optionally filtered by state
     (PENDING|REVEALED|EXPIRED)."""
     return await _run({"action": "list", "state": state})
+
+
+@mcp.tool()
+async def seal_outcome_receipt(output: Dict[str, Any],
+                               subject: Optional[Dict[str, Any]] = None,
+                               profile: str = "generic",
+                               excludes: Optional[List[str]] = None,
+                               bindings: Optional[Dict[str, Any]] = None) -> str:
+    """Seal an agent output as an Outcome Receipt (ORC v0.1) and register its
+    commitment. Returns a portable receipt anyone can verify offline (L1) and
+    against this notary's registry (L2). The notary attests integrity and
+    time ("notarized"), not correctness. No floats in output; stores only
+    digests. Spec: docs/standards/OUTCOME_RECEIPT_v0.1.md"""
+    return await _run({"action": "seal_orc", "output": output,
+                       "subject": subject or {}, "profile": profile,
+                       "excludes": excludes or [], "bindings": bindings or {}})
+
+
+@mcp.tool()
+async def get_orc_commitment(commitment: str) -> str:
+    """Registry lookup: is this ORC commitment sealed by this notary? Returns
+    digest, issuer, profile, attestation and registered_at, or NotFound."""
+    return await _run({"action": "get_commitment", "commitment": commitment})
 
 
 @mcp.tool()

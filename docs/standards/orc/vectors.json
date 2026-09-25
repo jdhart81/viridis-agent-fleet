@@ -1,0 +1,342 @@
+{
+  "spec": "ORC v0.1",
+  "note": "Levels above 1 need issuer/payment/validation resolvers and are out of scope for static vectors.",
+  "vectors": [
+    {
+      "name": "generic-valid",
+      "expect_level": 1,
+      "receipt": {
+        "orc": "0.1",
+        "profile": "generic",
+        "issuer": {
+          "id": "did:web:viridisconservation.com",
+          "name": "Viridis LLC"
+        },
+        "subject": {
+          "agent": "demo",
+          "tool": "echo"
+        },
+        "output": {
+          "amount_usd": "720000.00",
+          "count": 3,
+          "ok": true,
+          "items": [
+            "a",
+            "b"
+          ]
+        },
+        "digest": {
+          "alg": "sha256",
+          "canonicalization": "orc-canon/1",
+          "excludes": [],
+          "value": "e3ffef2c08a5b822bce2223ab661f9fe3506df10d19c188911b3b7afac9642cb"
+        },
+        "commitment": {
+          "scheme": "sha256(salt||digest)",
+          "salt": "abababababababababababababababababababababababababababababababab",
+          "value": "c620c6fd66fe3c1121f42d7b2acb4840d24f40703b579951734e43cd212ebc57"
+        },
+        "bindings": {},
+        "issued_at": "2026-09-24T00:00:00+00:00"
+      }
+    },
+    {
+      "name": "non-ascii-valid",
+      "expect_level": 1,
+      "receipt": {
+        "orc": "0.1",
+        "profile": "generic",
+        "issuer": {
+          "id": "did:web:viridisconservation.com",
+          "name": "Viridis LLC"
+        },
+        "subject": {
+          "agent": "demo",
+          "tool": "echo"
+        },
+        "output": {
+          "client": "Café Énergie — Montréal",
+          "note": "☀ 太陽"
+        },
+        "digest": {
+          "alg": "sha256",
+          "canonicalization": "orc-canon/1",
+          "excludes": [],
+          "value": "f9bef770da74947fd879087e9de81b5c2d43a2d985e1c5b9ad4c3f9346a3e3a7"
+        },
+        "commitment": {
+          "scheme": "sha256(salt||digest)",
+          "salt": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+          "value": "17e62b0cd928fd8b0c2a186c8585b8a310485c38e2649887cae0eefe4333f97e"
+        },
+        "bindings": {},
+        "issued_at": "2026-09-24T00:00:00+00:00"
+      }
+    },
+    {
+      "name": "tampered-output",
+      "expect_level": 0,
+      "receipt": {
+        "orc": "0.1",
+        "profile": "generic",
+        "issuer": {
+          "id": "did:web:viridisconservation.com",
+          "name": "Viridis LLC"
+        },
+        "subject": {
+          "agent": "demo",
+          "tool": "echo"
+        },
+        "output": {
+          "amount_usd": "720001.00",
+          "count": 3,
+          "ok": true,
+          "items": [
+            "a",
+            "b"
+          ]
+        },
+        "digest": {
+          "alg": "sha256",
+          "canonicalization": "orc-canon/1",
+          "excludes": [],
+          "value": "e3ffef2c08a5b822bce2223ab661f9fe3506df10d19c188911b3b7afac9642cb"
+        },
+        "commitment": {
+          "scheme": "sha256(salt||digest)",
+          "salt": "abababababababababababababababababababababababababababababababab",
+          "value": "c620c6fd66fe3c1121f42d7b2acb4840d24f40703b579951734e43cd212ebc57"
+        },
+        "bindings": {},
+        "issued_at": "2026-09-24T00:00:00+00:00"
+      }
+    },
+    {
+      "name": "wrong-salt",
+      "expect_level": 0,
+      "receipt": {
+        "orc": "0.1",
+        "profile": "generic",
+        "issuer": {
+          "id": "did:web:viridisconservation.com",
+          "name": "Viridis LLC"
+        },
+        "subject": {
+          "agent": "demo",
+          "tool": "echo"
+        },
+        "output": {
+          "amount_usd": "720000.00",
+          "count": 3,
+          "ok": true,
+          "items": [
+            "a",
+            "b"
+          ]
+        },
+        "digest": {
+          "alg": "sha256",
+          "canonicalization": "orc-canon/1",
+          "excludes": [],
+          "value": "e3ffef2c08a5b822bce2223ab661f9fe3506df10d19c188911b3b7afac9642cb"
+        },
+        "commitment": {
+          "scheme": "sha256(salt||digest)",
+          "salt": "efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+          "value": "c620c6fd66fe3c1121f42d7b2acb4840d24f40703b579951734e43cd212ebc57"
+        },
+        "bindings": {},
+        "issued_at": "2026-09-24T00:00:00+00:00"
+      }
+    },
+    {
+      "name": "excluded-field-change-still-valid",
+      "expect_level": 1,
+      "receipt": {
+        "orc": "0.1",
+        "profile": "generic",
+        "issuer": {
+          "id": "did:web:viridisconservation.com",
+          "name": "Viridis LLC"
+        },
+        "subject": {
+          "agent": "demo",
+          "tool": "echo"
+        },
+        "output": {
+          "amount_usd": "1.00",
+          "audit_note": "changed but excluded"
+        },
+        "digest": {
+          "alg": "sha256",
+          "canonicalization": "orc-canon/1",
+          "excludes": [
+            "audit_note"
+          ],
+          "value": "688ca7e883bc9556361809c3de9a1fa2afe942dcd1163b4004a1040975445e06"
+        },
+        "commitment": {
+          "scheme": "sha256(salt||digest)",
+          "salt": "1212121212121212121212121212121212121212121212121212121212121212",
+          "value": "b026160bb2ac3a1415843b121338d94820c4356bb22dbb08834d60c5b607ba77"
+        },
+        "bindings": {},
+        "issued_at": "2026-09-24T00:00:00+00:00"
+      }
+    },
+    {
+      "name": "cliff-check-48E-profile",
+      "expect_level": 1,
+      "receipt": {
+        "orc": "0.1",
+        "profile": "viridis.cliff-check/48E",
+        "issuer": {
+          "id": "did:web:viridisconservation.com",
+          "name": "Viridis LLC"
+        },
+        "subject": {
+          "agent": "taxcredit-engine",
+          "tool": "calculate_tax_credit",
+          "product": "viridis-signed-cliff-check",
+          "product_version": "0.2.0",
+          "client": "Sample C&I Developer",
+          "project": "Sample 1.5 MW Rooftop Solar"
+        },
+        "output": {
+          "credit": "48E",
+          "tax_year": 2026,
+          "calculation_status": "eligible",
+          "credit_amount_usd": "720000.00",
+          "rate": {
+            "percentage": "30",
+            "rate_class": "increased",
+            "low_income_effective_percentage_points": "0",
+            "tax_exempt_bond_reduction_percent": "0"
+          },
+          "tier": "increased",
+          "eligibility_flags": [
+            {
+              "id": "48E-US",
+              "status": "pass",
+              "detail": "facility/production is in US"
+            },
+            {
+              "id": "48E-EMISSIONS",
+              "status": "pass",
+              "detail": "greenhouse-gas emissions rate must be no greater than zero"
+            },
+            {
+              "id": "48E-PLACED",
+              "status": "pass",
+              "detail": "qualified facility/property placed in service after 2024"
+            },
+            {
+              "id": "48E-ENTITY",
+              "status": "pass",
+              "detail": "PFE entity restriction applied according to tax-year begin date"
+            },
+            {
+              "id": "48E-PFE",
+              "status": "pass",
+              "detail": "post-2025 construction has no modeled material assistance from PFE"
+            },
+            {
+              "id": "48E-WIND-SOLAR-TERM",
+              "status": "pass",
+              "detail": "modeled wind/solar termination rule"
+            },
+            {
+              "id": "48E-LOW-INCOME-ALLOCATION",
+              "status": "pass",
+              "detail": "10/20-point bonus requires allocation, positive capacity ratio, and facility under 5 MW"
+            },
+            {
+              "id": "48E-NO-45Y",
+              "status": "pass",
+              "detail": "same facility does not claim 45Y"
+            }
+          ],
+          "assumptions": [],
+          "audit_trail": [
+            {
+              "rule_id": "48E-PERCENTAGE",
+              "formula": "investment × total percentage × bond reduction",
+              "operands": {
+                "qualified_investment_usd": "2400000",
+                "total_percentage": "30",
+                "reduction_factor": "1"
+              },
+              "result_usd": "720000.00"
+            }
+          ],
+          "rule_pack": {
+            "version": "2026.07.12-v0.1.0",
+            "effective_as_of": "2026-07-12",
+            "sha256": "d842c8d8675b6e1808d99427e28be25f3b9171c2ce9fc2d6eee26f275e809850",
+            "sources": [
+              {
+                "id": "irc-45y-48e",
+                "authority": "Internal Revenue Code sections 45Y and 48E",
+                "title": "Technology-neutral clean electricity credits",
+                "publisher": "United States Congress / Internal Revenue Service",
+                "url": "https://www.irs.gov/instructions/i7211",
+                "accessed_on": "2026-07-12"
+              },
+              {
+                "id": "irc-48e",
+                "authority": "Internal Revenue Code section 48E",
+                "title": "Clean electricity investment credit",
+                "publisher": "United States Congress / Internal Revenue Service",
+                "url": "https://www.irs.gov/credits-deductions/clean-electricity-investment-credit",
+                "accessed_on": "2026-07-12"
+              },
+              {
+                "id": "form-3468-2025",
+                "authority": "2025 Instructions for Form 3468",
+                "title": "Clean electricity investment credit calculation and bond reduction",
+                "publisher": "Internal Revenue Service",
+                "url": "https://www.irs.gov/instructions/i3468",
+                "accessed_on": "2026-07-12"
+              },
+              {
+                "id": "builder-spec-2026-07-12",
+                "authority": "Non-authoritative implementation specification",
+                "title": "Tax-credit calculation constants pinned for deterministic scenario estimates",
+                "publisher": "Viridis",
+                "accessed_on": "2026-07-12",
+                "note": "Non-authoritative version-pinning record only. Official sources control; the service does not represent that a scenario is filing-ready."
+              }
+            ]
+          },
+          "input_sha256": "fd328be496fbbbdfcdd5a19aa30fa2415ab9b6cf13ca811bbd76b1bd6482125f",
+          "disclaimer": "Deterministic scenario estimate only. Not filing, legal, tax, accounting, engineering, lifecycle-analysis, or investment advice. Confirm facts, elections, recapture, transferability, prevailing-wage and apprenticeship compliance, and then-current law with qualified advisers before filing or transacting.",
+          "audit_sha256": "df640c22ccd7c47030289dc6780378f1b37dd7d80c25ad9220706dccba8ac03b",
+          "notary_payload": {
+            "content_digest": "df640c22ccd7c47030289dc6780378f1b37dd7d80c25ad9220706dccba8ac03b",
+            "context": "taxcredit-engine:48E:2026",
+            "digest_algorithm": "sha256"
+          }
+        },
+        "digest": {
+          "alg": "sha256",
+          "canonicalization": "orc-canon/1",
+          "excludes": [
+            "audit_sha256",
+            "notary_payload"
+          ],
+          "value": "df640c22ccd7c47030289dc6780378f1b37dd7d80c25ad9220706dccba8ac03b"
+        },
+        "commitment": {
+          "scheme": "sha256(salt||digest)",
+          "salt": "3434343434343434343434343434343434343434343434343434343434343434",
+          "value": "f282dce7295a85369e3c6204fbac9bf3464839e40acfffd4782a626c932cdccb"
+        },
+        "bindings": {},
+        "issued_at": "2026-09-24T00:00:00+00:00",
+        "verify": {
+          "page": "https://mcp.viridisconservation.com/cliff-check/verify?c=f282dce7295a85369e3c6204fbac9bf3464839e40acfffd4782a626c932cdccb"
+        }
+      }
+    }
+  ]
+}

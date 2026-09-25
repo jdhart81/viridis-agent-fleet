@@ -23,6 +23,13 @@ SC6  Same facts + same rule pack => identical audit_sha256 (determinism);
      only salt, commit_hash and generated_at differ between runs.
 SC7  Output is a self-contained HTML file plus a JSON receipt; no external
      assets, scripts or network calls.
+SC8  (v0.3) An Outcome Receipt (<stem>.orc.json, ORC v0.1) is written next to
+     the receipt; its digest equals audit_sha256 and its commitment equals the
+     report's commit_hash, so both formats verify identically.
+SC9  (v0.3) Network use is opt-in only: without --register nothing leaves the
+     machine. With --register the hosted gateway re-computes the result and
+     registers the seal (ISSUED); any failure there is reported and never
+     fails the build or alters the local report.
 """
 from __future__ import annotations
 
@@ -42,6 +49,7 @@ from pathlib import Path
 FLEET_ROOT = Path(__file__).resolve().parents[2]
 ENGINE_SRC = FLEET_ROOT / "taxcredit-engine-agent" / "src"
 VERIFY_ENDPOINT = "https://mcp.viridisconservation.com/taxcredit-engine/mcp"
+VERIFY_PAGE_URL = "https://mcp.viridisconservation.com/cliff-check/verify"
 OBBBA_BOC_CUTOFF = date(2026, 7, 4)
 OBBBA_PIS_DEADLINE = date(2027, 12, 31)
 NOTICE_2025_42 = "https://www.irs.gov/pub/irs-drop/n-25-42.pdf"
@@ -133,8 +141,9 @@ def build(credit: str, facts: dict, client: str, project: str,
     check = engine.verify_result(deepcopy(result))                      # SC2
     if not check["valid"]:
         raise SystemExit("self-verification failed; refusing to sign")
+    signature = sign(result["audit_sha256"], salt) if "audit_sha256" in result else None
     receipt = {
-        "product": "viridis-signed-cliff-check", "product_version": "0.1.0",
+        "product": "viridis-signed-cliff-check", "product_version": "0.3.0",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "client": client, "project": project, "credit": credit,
         "calculation_status": status, "result": result,
@@ -142,10 +151,11 @@ def build(credit: str, facts: dict, client: str, project: str,
         "adder_upside": (adder_sweep(engine, credit, facts,
                                      result["credit_amount_usd"])
                          if status == "eligible" else []),
-        "signature": sign(result["audit_sha256"], salt)
-        if "audit_sha256" in result else None,
+        "signature": signature,
         "verify": {"endpoint": VERIFY_ENDPOINT, "tool": "verify_tax_credit_result",
-                   "cost": "free", "how": "POST the 'result' object; expect valid=true"},
+                   "cost": "free", "how": "POST the 'result' object; expect valid=true",
+                   "page": (VERIFY_PAGE_URL + "?c=" + signature["commit_hash"]
+                            if signature else VERIFY_PAGE_URL)},
     }
     return receipt, render_html(receipt)
 
@@ -231,23 +241,64 @@ code{{font:12px ui-monospace,Menlo,monospace;word-break:break-all}} .fine{{font-
 {f'<section><h2>Eligibility checks</h2><table>{flags}</table></section>' if flags else ''}
 {up_html}
 {f'<section><h2>Audit trail</h2><table><tr><th>Rule</th><th>Formula</th><th>Operands</th><th>Result</th></tr>{trail}</table></section>' if trail else ''}
-<section><h2>Signature &amp; verification</h2><table>
+<section><h2>Signature &amp; verification</h2>
+<p class=verify-line><b>Anyone can verify this report in 10 seconds:</b> open <a href='{_e(r['verify']['page'])}'>{_e(r['verify']['page'])}</a> and drop in the receipt file that came with it.</p><table>
 <tr><td>Result digest (audit_sha256)</td><td><code>{_e(res.get('audit_sha256','—'))}</code></td></tr>
 <tr><td>Input digest</td><td><code>{_e(res.get('input_sha256','—'))}</code></td></tr>
 <tr><td>Rule pack</td><td>{_e(pack.get('version','—'))} · <code>{_e(pack.get('sha256','—'))}</code></td></tr>
 <tr><td>Commitment</td><td><code>{_e(sig.get('commit_hash','—'))}</code></td></tr>
 <tr><td>Salt</td><td><code>{_e(sig.get('salt','—'))}</code></td></tr></table>
-<p class=fine>Check it yourself: SHA-256(salt + result digest) must equal the commitment. The full result also re-verifies free at
+<p class=fine>Check it by hand: SHA-256(salt + result digest) must equal the commitment. Agents can re-verify the full result free at
 <code>{_e(r['verify']['endpoint'])}</code> (tool <code>verify_tax_credit_result</code>). Same facts under the same rule pack always give the same digest.</p></section>
 {f'<section><h2>Sources</h2><ul>{srcs}</ul></section>' if srcs else ''}
+<section class=cta data-cta=footer><p><b>Have a project facing the 12/31/2027 deadline?</b> <a href='{_e(VERIFY_PAGE_URL)}'>Get a signed check for your own project</a>.</p></section>
 <section class=fine><p>{_e(res.get('disclaimer',''))}</p><p>Generated {_e(r['generated_at'])} · Viridis LLC · viridisconservation.com</p></section>
 </main></body></html>"""
+
+
+def to_orc(receipt: dict) -> dict:                                      # SC8
+    sys.path.insert(0, str(FLEET_ROOT))
+    from fleet_utils import orc
+    return orc.from_cliff_check(receipt)
+
+
+REGISTER_URL = "https://mcp.viridisconservation.com/internal/orc/seal-cliff-check"
+
+
+def register(spec: dict, receipt: dict, url: str = REGISTER_URL,
+             token: str | None = None, opener=None) -> dict | None:     # SC9
+    """Ask the hosted gateway to replay + register this report's seal.
+    Returns the ISSUED ORC on success, None on any failure (never raises)."""
+    import os
+    import urllib.request
+    token = token if token is not None else os.environ.get("VIRIDIS_ADMIN_TOKEN", "")
+    if not token:
+        print("register: skipped (VIRIDIS_ADMIN_TOKEN not set)", file=sys.stderr)
+        return None
+    body = json.dumps({"credit": spec["credit"], "facts": spec["facts"],
+                       "receipt": receipt}).encode()
+    req = urllib.request.Request(url, data=body, method="POST", headers={
+        "content-type": "application/json", "x-viridis-admin-token": token})
+    try:
+        with (opener or urllib.request.urlopen)(req, timeout=20) as resp:
+            out = json.loads(resp.read().decode())
+        rc = out["receipt"]
+        if rc["commitment"]["value"] != receipt["signature"]["commit_hash"]:
+            raise ValueError("registry returned a different commitment")
+        return rc
+    except Exception as exc:
+        print(f"register: failed ({type(exc).__name__}: {exc}); report is still "
+              "valid at INTACT level", file=sys.stderr)
+        return None
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("facts", help="JSON file: {credit, client, project, facts}")
     ap.add_argument("--out", default="out", help="output directory")
+    ap.add_argument("--register", action="store_true",
+                    help="opt-in: have the hosted gateway replay and register the "
+                         "seal (needs VIRIDIS_ADMIN_TOKEN); off by default")
     a = ap.parse_args(argv)
     spec = json.loads(Path(a.facts).read_text())
     receipt, page = build(spec["credit"], spec["facts"], spec.get("client", "Client"),
@@ -256,6 +307,13 @@ def main(argv=None) -> int:
     stem = "".join(c if c.isalnum() else "-" for c in spec.get("project", "report")).strip("-").lower()
     (out / f"{stem}.html").write_text(page)
     (out / f"{stem}.receipt.json").write_text(json.dumps(receipt, indent=2))
+    orc_receipt = to_orc(json.loads(json.dumps(receipt)))
+    if a.register and receipt.get("signature"):
+        issued = register(spec, receipt)
+        if issued is not None:
+            orc_receipt = issued
+            print("register: ISSUED (sealed in the Viridis registry)")
+    (out / f"{stem}.orc.json").write_text(json.dumps(orc_receipt, indent=2))
     print(f"{receipt['calculation_status']}: {out / (stem + '.html')}")
     return 0
 
