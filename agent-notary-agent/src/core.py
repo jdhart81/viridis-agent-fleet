@@ -43,6 +43,15 @@ O5  attestation is "notarized" for caller-supplied outputs (the notary
     through seal_computed(), which is not in the dispatch table, so no
     external caller can claim Viridis computed their output.
 O6  Floats are rejected and canonical output is capped at MAX_ORC_BYTES.
+O7  register_external() is digest-only: it accepts commitment, salt, digest,
+    profile, issuer, subject and issued_at, rejects any output or arguments,
+    and registers only if SHA-256(salt || digest) == commitment.
+O8  External records carry attestation "registered" (the notary attests the
+    seal and the time, never the content) and a registrant label supplied by
+    the host. The Viridis issuer id is refused, so no external caller can
+    appear as Viridis.
+O9  register_external() is not in the process() dispatch table: only the
+    hosting gateway calls it, after authenticating and metering the caller.
 """
 
 import hashlib
@@ -399,6 +408,59 @@ class NotaryAgentCore(AgentCore):
         Deliberately absent from the process() dispatch table."""
         try:
             return self._orc_seal(d, "computed")
+        except ValidationError as e:
+            return self._err(str(e), error_type="ValidationError",
+                             field=e.field, value=e.value, constraint=e.constraint)
+
+    def register_external(self, d: dict, registrant: str) -> dict:
+        """Gateway-only (O9): register a third-party issuer's seal (O7/O8)."""
+        try:
+            if not isinstance(d, dict):
+                raise ValidationError("body must be an object", field="body",
+                                      value=type(d).__name__, constraint="object")
+            leaked = sorted({"output", "arguments", "args", "result"} & set(d))
+            if leaked:                                                # O7
+                raise ValidationError("send digests only; never outputs or arguments",
+                                      field=",".join(leaked), value=None,
+                                      constraint="digest-only registration")
+            c = str(d.get("commitment", "")).lower()
+            salt = str(d.get("salt", "")).lower()
+            digest = str(d.get("digest", "")).lower()
+            for name, v in (("commitment", c), ("salt", salt), ("digest", digest)):
+                if not _is_sha256_hex(v):
+                    raise ValidationError(f"'{name}' must be 64 hex chars", field=name,
+                                          value=None, constraint="sha256 hex")
+            if self._commit_hash(salt, digest) != c:                  # O7
+                raise ValidationError("commitment does not bind salt and digest",
+                                      field="commitment", value=c,
+                                      constraint="sha256(salt||digest)")
+            issuer = d.get("issuer") if isinstance(d.get("issuer"), dict) else {}
+            iid, iname = str(issuer.get("id", "")), str(issuer.get("name", "") or issuer.get("id", ""))
+            if (not iid or len(iid) > 200 or len(iname) > 200
+                    or not all(32 <= ord(ch) < 127 for ch in iid)):
+                raise ValidationError("issuer.id must be 1-200 printable ASCII chars",
+                                      field="issuer.id", value=iid[:40], constraint="printable")
+            if iid == DEFAULT_ISSUER["id"]:                           # O8
+                raise ValidationError("the Viridis issuer id is reserved",
+                                      field="issuer.id", value=iid, constraint="not Viridis")
+            subject = d.get("subject") if isinstance(d.get("subject"), dict) else {}
+            record = {"commitment": c, "digest": digest,
+                      "issuer": {"id": iid, "name": iname[:200]},
+                      "profile": str(d.get("profile") or "generic")[:120],
+                      "attestation": "registered",                    # O8
+                      "registrant": str(registrant)[:80],
+                      "subject": {"agent": str(subject.get("agent", ""))[:120],
+                                  "tool": str(subject.get("tool", ""))[:120]},
+                      "registered_at": _iso()}
+            existing = self._orc_registry.get(c)
+            if existing is not None:                                  # O4
+                if existing["digest"] != digest or existing["issuer"]["id"] != iid:
+                    raise ValidationError("commitment already registered to a different "
+                                          "digest or issuer", field="commitment", value=c,
+                                          constraint="one binding per commitment")
+                return self._ok({"record": dict(existing), "idempotent": True})
+            self._orc_registry[c] = record
+            return self._ok({"record": dict(record), "idempotent": False})
         except ValidationError as e:
             return self._err(str(e), error_type="ValidationError",
                              field=e.field, value=e.value, constraint=e.constraint)

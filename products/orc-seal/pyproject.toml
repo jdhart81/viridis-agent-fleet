@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orc-seal"
+version = "0.1.0"
+description = "Outcome Receipts (ORC v0.1) for any MCP server: every tool result gets a receipt a stranger can verify."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "Viridis LLC" }]
+keywords = ["mcp", "agents", "receipts", "verification", "erc-8004", "x402"]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/jdhart81/viridis-agent-fleet"
+Spec = "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/standards/OUTCOME_RECEIPT_v0.1.md"
+
+[project.scripts]
+orc-seal = "orc_seal.__main__:main"
+
+[tool.setuptools]
+packages = ["orc_seal"]

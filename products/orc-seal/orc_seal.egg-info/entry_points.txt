@@ -1,0 +1,2 @@
+[console_scripts]
+orc-seal = orc_seal.__main__:main
