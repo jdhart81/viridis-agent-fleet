@@ -189,7 +189,9 @@ if (typeof module !== "undefined") module.exports = { parseRaw, canonical, sha25
       const intact = v.verified && linkOk;
       const iss = intact ? await checkIssuer(v, (u, o) => fetch(u, o)) : { issued: false, reason: "not_intact" };
       const bad = !intact || iss.reason === "registry_mismatch";
-      const who = iss.attestation === "computed" ? "computed by the Viridis engine" : "notarized by Viridis";
+      const who = iss.attestation === "computed" ? "computed by the Viridis engine"
+        : iss.attestation === "registered" ? "seal timestamped by the Viridis registry (content is the issuer's claim)"
+        : "notarized by Viridis";
       const badge = bad ? '<span class="badge bad">✘ MISMATCH: do not rely on this report</span>'
         : iss.issued ? '<span class="badge ok">✔ ISSUED: sealed by ' + esc(iss.issuer || "Viridis") + " · " + esc(who) + "</span>"
         : '<span class="badge ok">✔ INTACT: unaltered since it was sealed</span>';
