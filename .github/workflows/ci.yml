@@ -29,5 +29,5 @@ jobs:
         with: {python-version: "3.12"}
       - uses: actions/setup-node@v4
         with: {node-version: "22"}
-      - run: pip install pytest mcp
+      - run: pip install pytest "mcp>=1.20,<2"
       - run: python3 -m pytest -q fleet_utils/test_orc.py products/signed-cliff-check/test_build_report.py products/orc-validator/test_validator.py products/orc-seal/tests
