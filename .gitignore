@@ -145,3 +145,10 @@ Pipfile.lock (review before committing)
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Additional secret-file patterns
+.env.*
+!.env.example
+*.p12
+service-account*.json
+*.keystore
