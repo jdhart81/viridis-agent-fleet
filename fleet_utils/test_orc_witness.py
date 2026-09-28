@@ -23,3 +23,15 @@ def test_LG4_witness_new_idempotent_conflict(tmp_path):
     other=dict(root,prev_root=sha('other'));other['root']=root_hash(other['prev_root'],other['merkle_root'],other['hour'],0)
     with pytest.raises(ValueError,match='conflict'): save_witness(other,tmp_path)
     with pytest.raises(ValueError,match='invalid'): save_witness(dict(root,hour='../bad'),tmp_path)
+
+
+def test_F4_unpublished_root_404_is_success(monkeypatch,capsys):
+    import urllib.request
+    import urllib.error
+    import sys
+    from fleet_utils.orc_witness import main
+    def missing(*args,**kwargs):raise urllib.error.HTTPError(args[0],404,'not published',{},None)
+    monkeypatch.setattr(urllib.request,'urlopen',missing)
+    monkeypatch.setattr(sys,'argv',['orc_witness'])
+    assert main()==0
+    assert capsys.readouterr().out.strip()=='no root published'

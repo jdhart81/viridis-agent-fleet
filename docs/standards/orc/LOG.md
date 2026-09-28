@@ -15,3 +15,5 @@ Fetch /orc/v0/proof/COMMITMENT and obtain the hour's JSON from this repository's
 The hourly workflow uses a public GET and the repository's own GITHUB_TOKEN. It needs no production credentials. It refuses to overwrite a different witness at the same path. Scheduling delays can leave gaps; the latest-only collector does not claim complete historical coverage. Review GitHub run and commit history for actual witness availability.
 
 /verify displays Viridis and outside issuer totals separately; related issuers are disclosed separately in stats and never folded into adoption. Roots and proofs establish log inclusion, not payment or correctness.
+
+Witness files are committed only to the dedicated `orc-witness` branch, created from `main` when absent. Main does not receive hourly bot commits. Before the log publishes its first root, HTTP 404 is a successful no-op; other fetch errors fail.

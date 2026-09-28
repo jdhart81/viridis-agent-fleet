@@ -76,14 +76,25 @@ def save_witness(root, directory):
     with target.open('x') as f: f.write(payload)
     return True
 
-if __name__ == '__main__':
+def main():
     import argparse
     import urllib.request
+    import urllib.error
     parser = argparse.ArgumentParser()
     parser.add_argument('--url', default='https://mcp.viridisconservation.com/orc/v0/roots/latest')
     parser.add_argument('--directory', default='orc-roots')
     args = parser.parse_args()
-    with urllib.request.urlopen(args.url, timeout=30) as response:
-        body = response.read(65537)
+    try:
+        with urllib.request.urlopen(args.url, timeout=30) as response:
+            body = response.read(65537)
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            raise
+        print('no root published')
+        return 0
     if len(body) > 65536: raise ValueError('root response too large')
     print('new' if save_witness(json.loads(body), args.directory) else 'already witnessed')
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
