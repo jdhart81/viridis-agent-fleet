@@ -1,0 +1,4 @@
+
+# false positive: empty DATADOG_API_KEY; regex spans newline into
+# PROMETHEUS_ENABLED=true. Reviewed by CEO agent 2026-09-28.
+protogen-agent/protogen-config-doc.md:generic-api-key:168
