@@ -1,0 +1,47 @@
+name: Publish recovered Fleet versions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-recovered-fleet-20260927
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out reviewed public manifests
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: 74b67c4266639b3c781bb635a64baec7f8087d06
+      - name: Assert exact publication scope
+        run: |
+          python3 - <<'CHECK'
+          import json
+          for directory, name in [('regulatory-radar-agent', 'regulatory-radar'), ('wavefunction-search-agent', 'wavefunction-search')]:
+              with open(f'deploy/mcp-publish-github/{directory}/server.json') as f:
+                  manifest = json.load(f)
+              assert manifest['name'] == 'io.github.jdhart81/' + name
+              assert manifest['version'] == '0.2.0'
+          CHECK
+      - name: Install pinned MCP publisher
+        run: |
+          curl --fail --location 'https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz' -o /tmp/mcp-publisher.tar.gz
+          echo 'ab128162b0616090b47cf245afe0a23f3ef08936fdce19074f5ba0a4469281ac  /tmp/mcp-publisher.tar.gz' | sha256sum --check --strict
+          tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
+          chmod +x /tmp/mcp-publisher
+      - name: Validate both manifests before publishing either
+        run: |
+          /tmp/mcp-publisher validate deploy/mcp-publish-github/regulatory-radar-agent/server.json
+          /tmp/mcp-publisher validate deploy/mcp-publish-github/wavefunction-search-agent/server.json
+      - name: Authenticate with existing GitHub OIDC method
+        run: /tmp/mcp-publisher login github-oidc
+      - name: Publish regulatory-radar 0.2.0 and wavefunction-search 0.2.0
+        run: |
+          /tmp/mcp-publisher publish deploy/mcp-publish-github/regulatory-radar-agent/server.json
+          /tmp/mcp-publisher publish deploy/mcp-publish-github/wavefunction-search-agent/server.json
