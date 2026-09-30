@@ -3,7 +3,7 @@ version: "1.2.0"
 description: "Evidence-bounded MCP manifest and tool-policy security preflight with signed receipts"
 pillar: "security"
 status: "production"
-owner: "Viridis North LLC"
+owner: "Viridis LLC"
 
 revenue_model: "$1 per scan; fleet-wide first-wallet x402 introduction may reduce one call to $0.01"
 
