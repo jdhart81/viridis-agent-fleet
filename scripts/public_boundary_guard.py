@@ -21,12 +21,24 @@ SECRETS = [re.compile(p) for p in (
     r"AKIA[0-9A-Z]{16}", r"gh[pousr]_[A-Za-z0-9]{36,}", r"xox[abpr]-[A-Za-z0-9-]{20,}")]
 
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
 def tracked_files():
-    out = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True).stdout
+    out = subprocess.run(
+        ["git", "ls-files"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
     return [line for line in out.splitlines() if line]
 
 
-def check(paths, read=lambda p: Path(p).read_text(errors="ignore")):
+def check(paths, read=None):
+    if read is None:
+        read = lambda p: (REPO_ROOT / p).read_text(errors="ignore")
+
     bad = []
     for p in paths:
         registry_manifest = p.startswith(REGISTRY_MANIFEST_DIRS) and not p.endswith(".py")
