@@ -150,12 +150,32 @@ def _check(check_id: str, status: str, severity: str, summary: str,
     }
 
 
+def _json_type(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, (int, float)):
+        return "number"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, dict):
+        return "object"
+    return type(value).__name__
+
+
 def _string_list(value: Any, field: str, maximum: int = MAX_TOOLS) -> List[str]:
     if value is None:
         return []
-    if not isinstance(value, list) or len(value) > maximum:
+    if not isinstance(value, list):
         raise PreflightError(
-            f"{field} must be a list with at most {maximum} entries", field)
+            f"{field} must be an array; received {_json_type(value)}", field)
+    if len(value) > maximum:
+        raise PreflightError(
+            f"{field} contains {len(value)} entries; maximum is {maximum}",
+            field)
     result: List[str] = []
     for index, item in enumerate(value):
         if not isinstance(item, str) or not item.strip() or len(item) > 160:
@@ -366,9 +386,15 @@ class SecurityPreflightCore:
         samples = payload.get("sample_inputs", [])
         if samples is None:
             samples = []
-        if not isinstance(samples, list) or len(samples) > MAX_SAMPLES:
+        if not isinstance(samples, list):
             raise PreflightError(
-                f"sample_inputs must contain at most {MAX_SAMPLES} strings",
+                "sample_inputs must be an array; received "
+                f"{_json_type(samples)}",
+                "sample_inputs")
+        if len(samples) > MAX_SAMPLES:
+            raise PreflightError(
+                f"sample_inputs contains {len(samples)} entries; "
+                f"maximum is {MAX_SAMPLES}",
                 "sample_inputs")
         for index, sample in enumerate(samples):
             if not isinstance(sample, str) or len(sample) > MAX_SAMPLE_CHARS:
@@ -394,9 +420,15 @@ class SecurityPreflightCore:
         tools = manifest.get("tools", [])
         if tools is None:
             tools = []
-        if not isinstance(tools, list) or len(tools) > MAX_TOOLS:
+        if not isinstance(tools, list):
             raise PreflightError(
-                f"manifest.tools must contain at most {MAX_TOOLS} objects",
+                "manifest.tools must be an array; received "
+                f"{_json_type(tools)}",
+                "manifest.tools")
+        if len(tools) > MAX_TOOLS:
+            raise PreflightError(
+                f"manifest.tools contains {len(tools)} entries; "
+                f"maximum is {MAX_TOOLS}",
                 "manifest.tools")
         normalized_tools = []
         for index, tool in enumerate(tools):
@@ -851,7 +883,8 @@ class SecurityPreflightCore:
             if action == "get_receipt":
                 return self._get_receipt(input_data.get("receipt_id"))
             raise PreflightError(
-                "unknown action; supported actions: scan, get_receipt",
+                "unknown action; supported actions: "
+                + ", ".join(sorted(self.KNOWN_ACTIONS)),
                 "action")
         except PreflightError as exc:
             return {
