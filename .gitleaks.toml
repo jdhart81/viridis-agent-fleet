@@ -74,3 +74,9 @@ paths = ['''^robustness\-engine\-agent/SERVICE_SOURCE_MANIFEST\.json$''']
 regexes = [
   '''(?m)^\ \ \ \ "adapters/fastapi_server\.py":\ "2a95a9483a81544cce792b06f73eac1c78da1ec5f4138e9de5477cdc46444d85",$''',
 ]
+
+[[rules]]
+id = "openai-api-key-modern"
+description = "OpenAI API key in project, service-account or admin format"
+regex = '''\bsk-(?:proj|svcacct|admin)-[A-Za-z0-9_-]{40,}'''
+keywords = ["sk-proj-", "sk-svcacct-", "sk-admin-"]
