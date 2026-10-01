@@ -10,7 +10,7 @@ pytest
 pytest-asyncio
 starlette
 httpx
-mcp>=1.28,<2  # 2.x renamed FastMCP; production pins 1.28.1
+mcp>=2.2.0,<3  # 2.x renamed FastMCP; production pins 1.28.1
 stripe
 pyyaml
 numpy  # smartscale measurement tests

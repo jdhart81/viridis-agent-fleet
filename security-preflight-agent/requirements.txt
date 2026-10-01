@@ -1,2 +1,2 @@
 cryptography==46.0.3
-mcp==1.25.0
+mcp==2.2.0
