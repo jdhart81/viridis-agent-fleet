@@ -4,7 +4,7 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 
 # MCP Server support
-fastmcp==0.1.0
+fastmcp==4.0.10
 
 # Testing
 pytest==7.4.3
