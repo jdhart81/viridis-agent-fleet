@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Evidence-bounded reliability checks for MCP and A2A services",
   "author": {
-    "name": "Viridis North LLC",
+    "name": "Viridis LLC",
     "url": "https://viridisconservation.com"
   },
   "homepage": "https://viridisconservation.com/reliability-sprint",
@@ -20,7 +20,7 @@
     "displayName": "Viridis Agent Reliability",
     "shortDescription": "Check whether an MCP or A2A service is safe and reliable to buy.",
     "longDescription": "Runs a bounded, read-only reliability check across discovery, protocol compatibility, identity, authority, payment, delivery evidence, and retention readiness. It distinguishes observed evidence from unknowns and never treats listings or technical health as commercial proof.",
-    "developerName": "Viridis North LLC",
+    "developerName": "Viridis LLC",
     "category": "Developer Tools",
     "capabilities": [
       "Read-only diagnostics",

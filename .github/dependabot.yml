@@ -1,0 +1,47 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directories:
+      - "/"
+      - "/_AGENT_TEMPLATE"
+      - "/agent-arbitration-agent"
+      - "/agent-compute-ledger-agent"
+      - "/agent-covenant-agent"
+      - "/agent-erc8004-bridge-agent"
+      - "/agent-escrow-agent"
+      - "/agent-hive-orchestrator-agent"
+      - "/agent-identity-registry-agent"
+      - "/agent-market-network-agent"
+      - "/agent-metering-agent"
+      - "/agent-notary-agent"
+      - "/agent-offset-clearinghouse-agent"
+      - "/agent-provenance-agent"
+      - "/agent-surety-agent"
+      - "/agent-trust-oracle-agent"
+      - "/agent-verified-relay-agent"
+      - "/ghg-ledger-agent"
+      - "/narrative-engine-agent"
+      - "/products/orc-seal"
+      - "/protogen-agent"
+      - "/quantity-takeoff-agent"
+      - "/regulatory-radar-agent"
+      - "/robustness-engine-agent"
+      - "/security-preflight-agent"
+      - "/smartscale-agent"
+      - "/taxcredit-engine-agent"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
