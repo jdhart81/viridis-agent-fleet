@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/jdhart81/viridis-agent-fleet/security/advisories/new
+    about: Report vulnerabilities privately instead of opening a public issue.
+  - name: Contribution guide
+    url: https://github.com/jdhart81/viridis-agent-fleet/blob/main/CONTRIBUTING.md
+    about: Review scope, safety boundaries and verification steps.
