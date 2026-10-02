@@ -4,16 +4,16 @@ jobs:
   boundary:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: "3.12"}
       - run: python3 scripts/public_boundary_guard.py
   tests:
     runs-on: ubuntu-latest
     needs: boundary
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: "3.12"}
       - run: pip install -r requirements-dev.txt
       - run: python3 run_fleet_tests.py
@@ -24,18 +24,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: boundary
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: "3.12"}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: {node-version: "22"}
       - run: pip install pytest "mcp>=1.20,<2"
       - run: python3 -m pytest -q fleet_utils/test_orc.py products/signed-cliff-check/test_build_report.py products/orc-validator/test_validator.py products/orc-seal/tests
   receipt-log-proof:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: "3.12"}
       - run: pip install pytest
       - run: python -m pytest -q fleet_utils/test_orc_witness.py
