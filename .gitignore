@@ -145,3 +145,5 @@ Pipfile.lock (review before committing)
 __pycache__/
 *.pyc
 .pytest_cache/
+build/
+*.egg-info/
