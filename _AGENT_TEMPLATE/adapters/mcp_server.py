@@ -156,11 +156,7 @@ def agent_metadata() -> str:
 async def main():
     """Run the MCP server."""
     logger.info(f"Starting MCP server for {AGENT_NAME}")
-    async with mcp.run() as server:
-        logger.info(f"MCP server running. Waiting for connections...")
-        # Keep the server running
-        while True:
-            await asyncio.sleep(1)
+    await mcp.run_async()
 
 
 if __name__ == "__main__":
