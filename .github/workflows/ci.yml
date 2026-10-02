@@ -17,6 +17,9 @@ jobs:
         with: {python-version: "3.12"}
       - run: pip install -r requirements-dev.txt
       - run: python3 run_fleet_tests.py
+      - name: Verify patched template MCP transport
+        working-directory: _AGENT_TEMPLATE
+        run: PYTHONPATH=. python3 -m pytest -q tests/test_mcp_adapter.py tests/test_core.py
   standards:
     # ORC v0.1 conformance: Python reference + the browser verifier's JS
     # (run in node) must agree on every vector, and the Cliff Check builder's
