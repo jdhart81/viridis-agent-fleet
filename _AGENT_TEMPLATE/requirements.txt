@@ -1,19 +1,19 @@
 # Core agent framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+pydantic==2.13.5
 
 # MCP Server support
-fastmcp==0.1.0
+fastmcp==0.4.1
 
 # Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
+pytest==7.4.4
+pytest-asyncio==0.26.0
 pytest-cov==4.1.0
-httpx==0.25.0
+httpx==0.28.1
 
 # Development utilities
-python-dotenv==1.0.0
+python-dotenv==1.2.3
 
 # Logging and monitoring
 python-json-logger==2.0.7
