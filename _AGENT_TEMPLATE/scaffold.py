@@ -985,21 +985,21 @@ if __name__ == "__main__":
 def generate_requirements_txt(spec: AgentSpec) -> str:
     """Generate requirements.txt with base and conditional dependencies."""
     reqs = """# Core agent framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
 
 # MCP Server support
-fastmcp==0.1.0
+fastmcp==3.2.0
 
 # Testing
 pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-httpx==0.25.0
+httpx==0.28.1
 
 # Development utilities
-python-dotenv==1.0.0
+python-dotenv==1.2.4
 
 # Logging and monitoring
 python-json-logger==2.0.7
