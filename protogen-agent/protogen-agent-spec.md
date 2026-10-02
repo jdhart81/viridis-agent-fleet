@@ -229,7 +229,6 @@ GET    /api/v1/projects/{id}/status
 ### Business Risks
 - **Supplier Quality**: Rigorous vetting process and performance monitoring
 - **Market Adoption**: Freemium tier to lower barriers to entry
-- **Competition**: Patent pending on key algorithms and processes
 
 ### Operational Risks
 - **Customer Support**: 24/7 chat support with <5 minute response time

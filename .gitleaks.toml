@@ -1,0 +1,82 @@
+# Exact non-secret text reviewed for the t7 baseline; default rules remain enabled.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "curl-auth-header"
+
+[[rules.allowlists]]
+description = "Reviewed non-secret baseline text in protogen-agent/protogen-readme.md"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^protogen\-agent/protogen\-readme\.md$''']
+regexes = [
+  '''(?m)^curl\ \-X\ GET\ https://api\.protogen\.ai/v1/projects/PROJECT_ID/quote\ \\\n\ \ \-H\ "Authorization:\ Bearer\ YOUR_API_KEY"\ \\$''',
+  '''(?m)^curl\ \-X\ POST\ https://api\.protogen\.ai/v1/projects/create\ \\\n\ \ \-H\ "Authorization:\ Bearer\ YOUR_API_KEY"\ \\$''',
+]
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Reviewed non-secret baseline text in agent-market-network-agent/tests/test_core.py"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^agent\-market\-network\-agent/tests/test_core\.py$''']
+regexes = [
+  '''(?m)^\ \ \ \ \ \ \ \ \ \ \ \ "idempotency_key":\ "delivery\-accept\-0001"\}$''',
+]
+
+[[rules.allowlists]]
+description = "Reviewed non-secret baseline text in docs/deployment/AGENT_MARKET_HIVE_CASH_SELLER_RELEASE_2026-07-26.md"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^docs/deployment/AGENT_MARKET_HIVE_CASH_SELLER_RELEASE_2026\-07\-26\.md$''']
+regexes = [
+  '''(?m)^\ \ `auth_mode=operator_signed_ed25519`,$''',
+  '''(?m)^\-\ Public\ seller\-key\ fingerprint:\n\ \ `f1424a1f110ad1d5208deb40fd711dbabdcf9c668751a74c223f58d72b6ae6bd`$''',
+]
+
+[[rules.allowlists]]
+description = "Reviewed non-secret baseline text in gateway/commercial_outcome_outbox.py"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^gateway/commercial_outcome_outbox\.py$''']
+regexes = [
+  '''(?m)^DEFAULT_KEY_ID\ =\ "fleet\-commercial\-v1"$''',
+  '''(?m)^PRIVATE_KEY_ENV\ =\ "FLEET_COMMERCIAL_RECEIPT_PRIVATE_KEY_PKCS8_B64"$''',
+]
+
+[[rules.allowlists]]
+description = "Reviewed non-secret baseline text in gateway/test_commercial_delivery_helpers.py"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^gateway/test_commercial_delivery_helpers\.py$''']
+regexes = [
+  '''(?m)^\ \ \ \ \ \ \ \ \ \ \ \ key_id="fleet\-commercial\-v1",$''',
+  '''(?m)^\ \ \ \ \ \ \ \ key_id="fleet\-commercial\-v1",$''',
+]
+
+[[rules.allowlists]]
+description = "Reviewed non-secret baseline text in robustness-engine-agent/PROTOTYPE_INTEGRATION_RECEIPT.json"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^robustness\-engine\-agent/PROTOTYPE_INTEGRATION_RECEIPT\.json$''']
+regexes = [
+  '''(?m)^\ \ \ \ "adapters/fastapi_server\.py":\ "2a95a9483a81544cce792b06f73eac1c78da1ec5f4138e9de5477cdc46444d85",$''',
+]
+
+[[rules.allowlists]]
+description = "Reviewed non-secret baseline text in robustness-engine-agent/SERVICE_SOURCE_MANIFEST.json"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^robustness\-engine\-agent/SERVICE_SOURCE_MANIFEST\.json$''']
+regexes = [
+  '''(?m)^\ \ \ \ "adapters/fastapi_server\.py":\ "2a95a9483a81544cce792b06f73eac1c78da1ec5f4138e9de5477cdc46444d85",$''',
+]
+
+[[rules]]
+id = "openai-api-key-modern"
+description = "OpenAI API key in project, service-account or admin format"
+regex = '''\bsk-(?:proj|svcacct|admin)-[A-Za-z0-9_-]{40,}'''
+keywords = ["sk-proj-", "sk-svcacct-", "sk-admin-"]

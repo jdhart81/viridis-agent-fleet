@@ -184,7 +184,9 @@ def test_p_end_to_end_subprocess_proxy():
 
 
 def test_p_real_mcp_sdk_server_through_proxy(tmp_path):
-    pytest.importorskip("mcp")
+    # The fleet (and production gateway) pins mcp 1.x. mcp 2.x renamed FastMCP
+    # to MCPServer; skip rather than fail if a 2.x SDK is installed here.
+    pytest.importorskip("mcp.server.fastmcp", reason="needs the mcp 1.x SDK (FastMCP)")
     server = tmp_path / "srv.py"
     server.write_text(
         "from mcp.server.fastmcp import FastMCP\n"
@@ -239,3 +241,38 @@ def test_browser_verifier_agrees(tmp_path):
         ".then(v=>console.log(JSON.stringify(v.map(x=>x.verified))))")
     out = subprocess.run([node, "-e", js], capture_output=True, text=True, timeout=30)
     assert out.stdout.strip() == "[true,false]", out.stderr
+
+
+def test_p4_server_dies_early_proxy_exits_with_its_code_cleanly(tmp_path):
+    """P4 regression: server exits while the client's stdin is still open."""
+    dead = tmp_path / "dead.py"
+    dead.write_text("import sys; sys.stderr.write('boom\\n'); sys.exit(3)\n")
+    p = subprocess.Popen([sys.executable, "-m", "orc_seal", "--issuer", "did:web:example.com", "--",
+                          sys.executable, str(dead)],
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         cwd=PKG, env={"PATH": "/usr/bin:/bin", "PYTHONPATH": str(PKG)})
+    try:
+        out, err = p.communicate(timeout=15)   # stdin is left open until communicate closes it
+    except subprocess.TimeoutExpired:
+        p.kill(); raise
+    assert p.returncode == 3
+    assert b"Fatal Python error" not in err
+
+
+def test_p4_server_dies_early_with_client_still_writing(tmp_path):
+    """Same, but the client keeps its stdin pipe open (not closed by communicate)."""
+    import time
+    dead = tmp_path / "dead.py"
+    dead.write_text("import sys, time; time.sleep(0.2); sys.exit(5)\n")
+    p = subprocess.Popen([sys.executable, "-m", "orc_seal", "--issuer", "did:web:example.com", "--",
+                          sys.executable, str(dead)],
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         cwd=PKG, env={"PATH": "/usr/bin:/bin", "PYTHONPATH": str(PKG)})
+    p.stdin.write(b'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n'); p.stdin.flush()
+    deadline = time.time() + 15
+    while p.poll() is None and time.time() < deadline:
+        time.sleep(0.05)
+    assert p.returncode == 5, "proxy must exit when the server exits, even with stdin open"
+    err = p.stderr.read()
+    assert b"Fatal Python error" not in err
+    p.stdin.close()

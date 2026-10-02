@@ -59,5 +59,19 @@ def main(argv=None) -> int:
     return run(cmd, sealer)
 
 
+def _exit(code: int) -> None:
+    """P4: exit with the server's code without waiting on the stdin pump.
+
+    The client->server pump is a daemon thread blocked in stdin.readline();
+    normal interpreter shutdown can then die with "could not acquire lock for
+    <stdin>". Flush what we wrote, then leave immediately.
+    """
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    finally:
+        os._exit(code if isinstance(code, int) else 1)
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    _exit(main())
