@@ -19,3 +19,15 @@ def test_quote_discloses_fee_without_audit_mutation(monkeypatch):
     with pytest.raises(ValueError):agent.quote_route(data,fee_microusd=-1)
     monkeypatch.setenv('WU_WEI_V2_ENABLED','0')
     with pytest.raises(ValueError):agent.quote_route(data)
+
+
+@pytest.mark.parametrize('gross, expected', [(500000, True), (1000000, False), (1500000, False)])
+def test_fee_exceeds_modeled_savings_below_equal_above(monkeypatch, gross, expected):
+    agent=f.core(monkeypatch);data=f.payload()
+    data['profiles'][0]['cost_microusd']=2000
+    data['profiles'][1]['cost_microusd']=2000-gross//data['task']['count']
+    quote=agent.quote_route(data,fee_microusd=1000000)
+    assert quote['modeled_gross_savings']==gross
+    assert quote['fee_exceeds_modeled_savings'] is expected
+    assert quote['modeled_net_savings_after_fee']==gross-1000000
+    assert agent._router_state()['events']==[]

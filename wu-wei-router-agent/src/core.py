@@ -266,7 +266,7 @@ class WuWeiRouterCore:
                 "selection_objective": record["selection_objective"],
                 "service_fee": fee_microusd, "modeled_gross_savings": gross,
                 "modeled_net_savings_after_fee": gross - fee_microusd,
-                "modeled_net_savings_below_fee": gross - fee_microusd < fee_microusd,
+                "fee_exceeds_modeled_savings": gross < fee_microusd,
                 "execution_authorized": False, "energy_savings_measured": False,
                 "preview_only": True, "claim_boundary": BOUNDARY}
 
