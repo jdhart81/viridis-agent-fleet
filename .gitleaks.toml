@@ -80,3 +80,8 @@ id = "openai-api-key-modern"
 description = "OpenAI API key in project, service-account or admin format"
 regex = '''\bsk-(?:proj|svcacct|admin)-[A-Za-z0-9_-]{40,}'''
 keywords = ["sk-proj-", "sk-svcacct-", "sk-admin-"]
+
+[allowlist]
+description = "CEO-authorized 2026-10-03: exact lowercase SHA-256 digest values only"
+regexTarget = "secret"
+regexes = ['^(sha256:)?[0-9a-f]{64}$']
