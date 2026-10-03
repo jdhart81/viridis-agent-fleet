@@ -230,7 +230,7 @@ class WuWeiRouterCore:
                     raise ValueError("Invalid decision task state")
                 task = record["tasks"][0]
                 validate({"action": "plan_workload", "profiles": [{k: p[k] for k in PROFILE_FIELDS} for p in profiles], "tasks": [task]})
-                if _decision_record(profiles, task) != record or decision_digest(record) != event["decision_sha256"]:
+                if _decision_record(profiles, task, legacy_cost_selection="selection_objective" not in record) != record or decision_digest(record) != event["decision_sha256"]:
                     raise ValueError("Decision state does not recompute")
             outcome_ids = set()
             for outcome in state["outcomes"]:
@@ -288,7 +288,10 @@ class WuWeiRouterCore:
             result = {"status": "ok", **copy.deepcopy(event), "decision": record["decision"],
                       "chosen_profile": record["chosen_profile"], "baseline_profile": record["baseline_profile"],
                       "thermo": copy.deepcopy(record["thermo"]), "eligibility": "wilson-lower-bound",
-                      "reason": "baseline optimal / no change" if record["decision"] == "BASELINE_OPTIMAL_NO_CHANGE" else "Lowest declared cost among Wilson-eligible profiles; shadow trial recommended",
+                      "reason": "baseline optimal / no change" if record["decision"] == "BASELINE_OPTIMAL_NO_CHANGE" else (
+                          "Lowest modeled energy among Wilson-eligible routes within baseline cost; shadow trial recommended"
+                          if record["selection_objective"] == "least_energy_within_baseline_cost" else
+                          record["selection_objective"] + "; cheapest Wilson-eligible route; shadow trial recommended"),
                       "economics": {"currency": "USD", "unit": "microdollars", "service_fee": FEE,
                                     "modeled_gross_savings": gross, "modeled_net_savings_after_fee": gross - FEE},
                       "execution_authorized": False, "energy_savings_measured": False}
@@ -385,12 +388,23 @@ def _energy(profile, task):
     return profile["power_uw"] * profile["p95_latency_ms"] * task["count"] // 1000
 
 
-def _decision_record(profiles, task):
+def _decision_record(profiles, task, *, legacy_cost_selection=False):
     # Use the unchanged Wilson predicate; quantization is for the record only.
     by_id = {p["id"]: p for p in profiles}
     candidates = [p for p in profiles if eligible(p, task)]
-    chosen = min(candidates, key=lambda p: (p["cost_microusd"], p["p95_latency_ms"], p["id"]))
     baseline = by_id[task["baseline_profile"]]
+    capped = [p for p in candidates if p["cost_microusd"] <= baseline["cost_microusd"]]
+    assert any(p["id"] == baseline["id"] for p in capped), "Budget cap must contain eligible baseline"
+    if legacy_cost_selection:
+        pool, objective = candidates, None  # validate historical audit records without rewriting them
+    elif any("power_uw" not in p for p in capped):
+        pool, objective = capped, "cost_fallback_missing_power"
+    else:
+        pool, objective = capped, "least_energy_within_baseline_cost"
+    if objective == "least_energy_within_baseline_cost":
+        chosen = min(pool, key=lambda p: (_energy(p, task), p["cost_microusd"], p["p95_latency_ms"], p["id"]))
+    else:
+        chosen = min(pool, key=lambda p: (p["cost_microusd"], p["p95_latency_ms"], p["id"]))
     chosen_energy, baseline_energy = _energy(chosen, task), _energy(baseline, task)
     thermo = {"method": "modeled-wallclock-v1", "energy_savings_measured": False}
     if chosen_energy is None or baseline_energy is None:
@@ -399,7 +413,8 @@ def _decision_record(profiles, task):
         thermo.update(chosen_energy_uj=chosen_energy, baseline_energy_uj=baseline_energy,
                       modeled_savings_uj=max(0, baseline_energy - chosen_energy),
                       chosen_energy_exceeds_baseline=chosen_energy > baseline_energy)
-    return {"policy_version": POLICY, "profiles": sorted(copy.deepcopy(profiles), key=lambda p: p["id"]),
+    return {**({"selection_objective": objective} if objective is not None else {}),
+            "policy_version": POLICY, "profiles": sorted(copy.deepcopy(profiles), key=lambda p: p["id"]),
             "tasks": [copy.deepcopy(task)], "eligibility": "wilson-lower-bound",
             "eligibility_outcomes": [{"profile_id": p["id"], "eligible": eligible(p, task),
                 "success_lower_95_bps": math.floor(lower_bound(p["successes"], p["trials"]) * 10000)}

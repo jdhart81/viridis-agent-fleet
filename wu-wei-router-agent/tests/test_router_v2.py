@@ -121,7 +121,7 @@ def test_missing_power_and_energy_shortfall_are_explicit(monkeypatch):
     data['profiles'][1]['power_w'] = 1000
     result = admitted(agent, data)
     assert result['thermo']['modeled_savings_uj'] == 0
-    assert result['thermo']['chosen_energy_exceeds_baseline'] is True
+    assert result['thermo']['chosen_energy_exceeds_baseline'] is False
 
 
 def test_fee_neutrality_and_honest_shortfall(monkeypatch):
