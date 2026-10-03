@@ -276,3 +276,11 @@ def test_p4_server_dies_early_with_client_still_writing(tmp_path):
     err = p.stderr.read()
     assert b"Fatal Python error" not in err
     p.stdin.close()
+
+
+def test_cli_help_without_server_command(capsys):
+    from orc_seal.__main__ import main
+    with pytest.raises(SystemExit) as exc:
+        main(["--help"])
+    assert exc.value.code == 0
+    assert "usage: orc-seal" in capsys.readouterr().out

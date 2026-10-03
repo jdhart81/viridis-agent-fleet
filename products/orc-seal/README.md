@@ -1,6 +1,6 @@
 # orc-seal
 
-**Every MCP tool result gets a receipt a stranger can verify.** Put `orc-seal` in front of any MCP server, in any language, with no code changes. Each successful `tools/call` result carries an [Outcome Receipt (ORC v0.1)](../../docs/standards/OUTCOME_RECEIPT_v0.1.md) under `result._meta["com.viridisconservation/orc"]`.
+**Every MCP tool result gets a receipt a stranger can verify.** Put `orc-seal` in front of any MCP server, in any language, with no code changes. Each successful `tools/call` result carries an [Outcome Receipt (ORC v0.1)](https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/standards/OUTCOME_RECEIPT_v0.1.md) under `result._meta["com.viridisconservation/orc"]`.
 
 Identity standards say who an agent is. Payment rails say what was paid. A receipt says **what was actually delivered**, and anyone can check it.
 
