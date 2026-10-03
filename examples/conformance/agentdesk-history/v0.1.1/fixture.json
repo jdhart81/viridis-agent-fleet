@@ -1,0 +1,309 @@
+{
+  "canonical_event_ordering": {
+    "direction": "ascending",
+    "key": "sequence",
+    "noncanonical_input": "reject; never sort or repair",
+    "unique_fields": [
+      "sequence",
+      "event_id"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "complete_history",
+      "coverage_basis": {
+        "collection_completeness_proven": false,
+        "evidence": "caller_supplied_synthetic_readback",
+        "method": "exact_sequence_set",
+        "required_interval": [
+          1,
+          2
+        ],
+        "supplied_anchor": {
+          "event_id": "e1",
+          "expected_earliest_sequence": 1
+        },
+        "timestamps_establish_coverage": false
+      },
+      "expected_verdict": "BLOCKED",
+      "returned_events": [
+        {
+          "event_id": "e1",
+          "operator_account_action": false,
+          "outcome": "started",
+          "run_id": "synthetic-run-a",
+          "sequence": 1,
+          "server_timestamp": "2000-01-01T00:00:01Z",
+          "source": "participant",
+          "step": "trial_started"
+        },
+        {
+          "error_class": "SYNTHETIC_VALIDATION_FAILURE",
+          "event_id": "e2",
+          "operator_account_action": false,
+          "outcome": "blocked",
+          "run_id": "synthetic-run-a",
+          "sequence": 2,
+          "server_timestamp": "2000-01-01T00:00:02Z",
+          "source": "server",
+          "step": "pre_registration"
+        }
+      ],
+      "returned_range": [
+        1,
+        2
+      ],
+      "run_ids": [
+        "synthetic-run-a"
+      ]
+    },
+    {
+      "case_id": "truncated_history",
+      "coverage_basis": {
+        "collection_completeness_proven": false,
+        "evidence": "caller_supplied_synthetic_readback",
+        "method": "exact_sequence_set",
+        "required_interval": [
+          1,
+          6
+        ],
+        "supplied_anchor": {
+          "event_id": "e1",
+          "expected_earliest_sequence": 1
+        },
+        "timestamps_establish_coverage": false
+      },
+      "expected_verdict": "INSUFFICIENT_COVERAGE",
+      "returned_events": [
+        {
+          "event_id": "e3",
+          "operator_account_action": false,
+          "outcome": "recorded",
+          "run_id": "synthetic-run-a",
+          "sequence": 3,
+          "server_timestamp": "2000-01-01T00:00:03Z",
+          "source": "operator",
+          "step": "simulated_fix_noted"
+        },
+        {
+          "event_id": "e4",
+          "operator_account_action": false,
+          "outcome": "started",
+          "run_id": "synthetic-run-b",
+          "sequence": 4,
+          "server_timestamp": "2000-01-01T00:00:04Z",
+          "source": "participant",
+          "step": "retry_started"
+        },
+        {
+          "event_id": "e5",
+          "operator_account_action": false,
+          "outcome": "succeeded",
+          "run_id": "synthetic-run-b",
+          "sequence": 5,
+          "server_timestamp": "2000-01-01T00:00:05Z",
+          "source": "server",
+          "step": "registration_simulated"
+        },
+        {
+          "event_id": "e6",
+          "operator_account_action": false,
+          "outcome": "succeeded",
+          "run_id": "synthetic-run-b",
+          "sequence": 6,
+          "server_timestamp": "2000-01-01T00:00:06Z",
+          "source": "server",
+          "step": "synthetic_probe_completed"
+        }
+      ],
+      "returned_range": [
+        3,
+        6
+      ],
+      "run_ids": [
+        "synthetic-run-a",
+        "synthetic-run-b"
+      ]
+    },
+    {
+      "case_id": "retry_after_fix",
+      "coverage_basis": {
+        "collection_completeness_proven": false,
+        "evidence": "caller_supplied_synthetic_readback",
+        "method": "exact_sequence_set",
+        "required_interval": [
+          1,
+          6
+        ],
+        "supplied_anchor": {
+          "event_id": "e1",
+          "expected_earliest_sequence": 1
+        },
+        "timestamps_establish_coverage": false
+      },
+      "expected_verdict": "RECOVERED_WITH_PRIOR_BLOCKER",
+      "returned_events": [
+        {
+          "event_id": "e1",
+          "operator_account_action": false,
+          "outcome": "started",
+          "run_id": "synthetic-run-a",
+          "sequence": 1,
+          "server_timestamp": "2000-01-01T00:00:01Z",
+          "source": "participant",
+          "step": "trial_started"
+        },
+        {
+          "error_class": "SYNTHETIC_VALIDATION_FAILURE",
+          "event_id": "e2",
+          "operator_account_action": false,
+          "outcome": "blocked",
+          "run_id": "synthetic-run-a",
+          "sequence": 2,
+          "server_timestamp": "2000-01-01T00:00:02Z",
+          "source": "server",
+          "step": "pre_registration"
+        },
+        {
+          "event_id": "e3",
+          "operator_account_action": false,
+          "outcome": "recorded",
+          "run_id": "synthetic-run-a",
+          "sequence": 3,
+          "server_timestamp": "2000-01-01T00:00:03Z",
+          "source": "operator",
+          "step": "simulated_fix_noted"
+        },
+        {
+          "event_id": "e4",
+          "operator_account_action": false,
+          "outcome": "started",
+          "run_id": "synthetic-run-b",
+          "sequence": 4,
+          "server_timestamp": "2000-01-01T00:00:04Z",
+          "source": "participant",
+          "step": "retry_started"
+        },
+        {
+          "event_id": "e5",
+          "operator_account_action": false,
+          "outcome": "succeeded",
+          "run_id": "synthetic-run-b",
+          "sequence": 5,
+          "server_timestamp": "2000-01-01T00:00:05Z",
+          "source": "server",
+          "step": "registration_simulated"
+        },
+        {
+          "event_id": "e6",
+          "operator_account_action": false,
+          "outcome": "succeeded",
+          "run_id": "synthetic-run-b",
+          "sequence": 6,
+          "server_timestamp": "2000-01-01T00:00:06Z",
+          "source": "server",
+          "step": "synthetic_probe_completed"
+        }
+      ],
+      "returned_range": [
+        1,
+        6
+      ],
+      "run_ids": [
+        "synthetic-run-a",
+        "synthetic-run-b"
+      ]
+    }
+  ],
+  "coverage_anchor": {
+    "event_id": "e1",
+    "expected_earliest_sequence": 1
+  },
+  "first_blocker_event": "e2",
+  "fixture_id": "viridis-agentdesk-history",
+  "limits": [
+    "All data, field names, step codes and verdicts are proposed synthetic fixture vocabulary, not an implemented AgentDesk API.",
+    "stored_events is the offline test oracle; returned_events is the participant-visible readback. Stored rows absent from readback cannot establish coverage.",
+    "Completeness means the actual returned sequence set equals the supplied required interval, without gaps, duplicates or extra rows. Reported endpoints and timestamps alone do not establish it. This is modeled coverage, not collection-completeness proof.",
+    "The fix is an operator note, not an operator guest-account action. No independence verdict is inferred from this synthetic flag.",
+    "No restart, durable storage, live collector, conformance integration, Commons transaction, payment or independently controlled trial is tested."
+  ],
+  "run_ids": [
+    "synthetic-run-a",
+    "synthetic-run-b"
+  ],
+  "status": "PROPOSED_SYNTHETIC_CONTRACT",
+  "stored_events": [
+    {
+      "event_id": "e1",
+      "operator_account_action": false,
+      "outcome": "started",
+      "run_id": "synthetic-run-a",
+      "sequence": 1,
+      "server_timestamp": "2000-01-01T00:00:01Z",
+      "source": "participant",
+      "step": "trial_started"
+    },
+    {
+      "error_class": "SYNTHETIC_VALIDATION_FAILURE",
+      "event_id": "e2",
+      "operator_account_action": false,
+      "outcome": "blocked",
+      "run_id": "synthetic-run-a",
+      "sequence": 2,
+      "server_timestamp": "2000-01-01T00:00:02Z",
+      "source": "server",
+      "step": "pre_registration"
+    },
+    {
+      "event_id": "e3",
+      "operator_account_action": false,
+      "outcome": "recorded",
+      "run_id": "synthetic-run-a",
+      "sequence": 3,
+      "server_timestamp": "2000-01-01T00:00:03Z",
+      "source": "operator",
+      "step": "simulated_fix_noted"
+    },
+    {
+      "event_id": "e4",
+      "operator_account_action": false,
+      "outcome": "started",
+      "run_id": "synthetic-run-b",
+      "sequence": 4,
+      "server_timestamp": "2000-01-01T00:00:04Z",
+      "source": "participant",
+      "step": "retry_started"
+    },
+    {
+      "event_id": "e5",
+      "operator_account_action": false,
+      "outcome": "succeeded",
+      "run_id": "synthetic-run-b",
+      "sequence": 5,
+      "server_timestamp": "2000-01-01T00:00:05Z",
+      "source": "server",
+      "step": "registration_simulated"
+    },
+    {
+      "event_id": "e6",
+      "operator_account_action": false,
+      "outcome": "succeeded",
+      "run_id": "synthetic-run-b",
+      "sequence": 6,
+      "server_timestamp": "2000-01-01T00:00:06Z",
+      "source": "server",
+      "step": "synthetic_probe_completed"
+    }
+  ],
+  "trial_id": "synthetic-trial-001",
+  "verdict_vocabulary": {
+    "fixture_local": [
+      "BLOCKED",
+      "RECOVERED_WITH_PRIOR_BLOCKER",
+      "UNRESOLVED"
+    ],
+    "required_conformance_outcome": "INSUFFICIENT_COVERAGE"
+  },
+  "version": "0.1.1"
+}
