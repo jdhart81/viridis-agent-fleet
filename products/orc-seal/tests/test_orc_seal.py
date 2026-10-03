@@ -1,5 +1,6 @@
 """M1-M7 (sealer) and P1-P4 (stdio proxy) for orc-seal."""
 import asyncio
+from datetime import datetime
 import io
 import json
 import subprocess
@@ -67,14 +68,31 @@ def test_m2_receipt_verifies_intact_and_tamper_fails():
     assert r["verify"]["page"].endswith("/verify?c=" + r["commitment"]["value"])
 
 
-def test_m3_args_never_in_receipt_nor_registry_payload():
+@pytest.mark.parametrize("issued_at", [
+    "2026-10-03T14:41:10.421808+00:00",
+    "2026-10-03T14:41:10.123456+00:00",
+])
+def test_m3_args_never_in_receipt_nor_registry_payload(monkeypatch, issued_at):
+    class Clock:
+        @staticmethod
+        def now(tz):
+            return datetime.fromisoformat(issued_at).astimezone(tz)
+    monkeypatch.setattr(vendored, "datetime", Clock)
     cap = []
     s = Sealer(ISSUER, registry=RegistryClient("https://reg.test", "k", opener=opener_echo(cap)))
     r = s.seal_tools_call(REQ, RESP)["result"]["_meta"][META_KEY]
     assert "hunter2" not in json.dumps(r)
-    sent = json.dumps(cap[0]["body"])
-    assert "hunter2" not in sent and "42" not in sent.replace(r["commitment"]["value"], "").replace(r["digest"]["value"], "").replace(r["commitment"]["salt"], "")
-    assert set(cap[0]["body"]) == {"commitment", "salt", "digest", "profile", "issuer", "subject", "issued_at"}
+    # Exact metadata fields exclude arguments/results without treating digits
+    # in an issuance timestamp (or a digest) as leaked result content.
+    assert cap[0]["body"] == {
+        "commitment": r["commitment"]["value"],
+        "salt": r["commitment"]["salt"],
+        "digest": r["digest"]["value"],
+        "profile": r["profile"],
+        "issuer": ISSUER,
+        "subject": {"agent": "", "tool": "double"},
+        "issued_at": issued_at,
+    }
     assert cap[0]["headers"]["Authorization"] == "Bearer k"
 
 
