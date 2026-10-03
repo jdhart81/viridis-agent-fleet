@@ -252,6 +252,24 @@ class WuWeiRouterCore:
             canonical_decision(state)
             return {key: state[key] for key in ("profiles", "events", "outcomes", "seq")}
 
+    def quote_route(self, payload, *, fee_microusd=1000000):
+        """Host-only, read-only quote; absent from MCP actions and admission."""
+        if not self.v2_enabled or os.environ.get("WU_WEI_FLEET_ENABLED") != "1":
+            raise ValueError("Wu Wei v2 is disabled")
+        if payload.get("action") != "route_task":
+            raise ValueError("Quote requires route_task")
+        _integer(fee_microusd, 0, 1000000, "fee_microusd")
+        record = _decision_record(*self._validate_v2(payload))
+        gross = record["baseline_cost_microusd"] - record["planned_cost_microusd"]
+        return {"decision": record["decision"], "chosen_profile": record["chosen_profile"],
+                "decision_sha256": decision_digest(record), "thermo": copy.deepcopy(record["thermo"]),
+                "selection_objective": record["selection_objective"],
+                "service_fee": fee_microusd, "modeled_gross_savings": gross,
+                "modeled_net_savings_after_fee": gross - fee_microusd,
+                "modeled_net_savings_below_fee": gross - fee_microusd < fee_microusd,
+                "execution_authorized": False, "energy_savings_measured": False,
+                "preview_only": True, "claim_boundary": BOUNDARY}
+
     async def process(self, payload):
         if not self.v2_enabled:
             return await self._plan_workload(payload)
