@@ -45,7 +45,7 @@ code{font:12px ui-monospace,Menlo,monospace;word-break:break-all}
 
 <script id="vcore">
 // ---- pure verification core (tested in node: GL2, GL6) ----
-const PAYMENT_LINK_URL = "";   // set to the Stripe Payment Link to show the buy button
+const PAYMENT_LINK_URL = "";   // release gate: set to the deployed /service-orders intake URL
 const INTAKE_MAILTO = "mailto:hartjustin6@gmail.com?subject=Signed%2048E%20Cliff%20Check%20request";
 
 // JSON parser that keeps number literals verbatim, so canonical output
@@ -162,9 +162,9 @@ async function checkIssuer(v, fetchImpl) {
 function renderCta(paymentUrl) {
   const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   return '<h2>Have a project facing the 12/31/2027 deadline?</h2>' +
-    '<p>Get your own signed 48E check: credit amount, every eligibility test, deadline math and adder upside, delivered within 24 hours.</p>' +
+    '<p>Get your own signed 48E check: credit amount, every eligibility test, deadline math and adder upside. Scenario estimate, not tax advice; buyer-supplied facts may yield INDETERMINATE. Justin delivers manually; timing is confirmed separately. First three approved design partners are free in exchange for a usefulness receipt; request eligibility before paying.</p>' +
     '<a class="btn" data-cta="intake" href="' + esc(INTAKE_MAILTO) + '">Request a signed check</a> ' +
-    (paymentUrl ? '<a class="btn alt" data-cta="buy" href="' + esc(paymentUrl) + '">Buy now · $149</a>' : "");
+    (paymentUrl ? '<a class="btn alt" data-cta="buy" href="' + esc(paymentUrl) + '">Intake and checkout · $149</a>' : "");
 }
 if (typeof module !== "undefined") module.exports = { parseRaw, canonical, sha256hex, normalize, verifyReceipt, checkIssuer, renderCta, REGISTRY_BASE };
 </script>
