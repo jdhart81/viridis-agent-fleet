@@ -1,0 +1,16 @@
+{
+  "name": "viridis-agent-fleet",
+  "owner": {
+    "name": "Viridis North LLC"
+  },
+  "plugins": [
+    {
+      "name": "viridis-agent-reliability",
+      "source": "./plugins/viridis-agent-reliability",
+      "description": "Inspect agent service scope and filtered security receipts."
+    }
+  ],
+  "metadata": {
+    "description": "Viridis agent service diagnostics and evidence workflows."
+  }
+}

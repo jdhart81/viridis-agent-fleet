@@ -1,6 +1,6 @@
 {
   "name": "viridis-agent-reliability",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Evidence-bounded reliability checks for MCP and A2A services",
   "author": {
     "name": "Viridis North LLC",
@@ -36,5 +36,6 @@
     ],
     "brandColor": "#176B4D"
   },
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "license": "Apache-2.0"
 }
