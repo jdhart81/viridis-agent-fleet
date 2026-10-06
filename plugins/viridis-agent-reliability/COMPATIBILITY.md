@@ -16,8 +16,8 @@ listing are different milestones; none should stand in for another.
 Previous local-preparation text claiming that the unsafe source is still live,
 that no Codex binary exists, or that no native installation was performed is
 superseded. Native tests used no model turns, purchases, live scans, customer
-credits, new credentials or OAuth grants. Version 0.1.2 is a source update, not a
-claim that its new titles or an authenticated workflow are deployed.
+credits, new credentials or OAuth grants. Version 0.1.2 packaging and the live tool-title metadata update are released;
+an authenticated hosted workflow is still unrun.
 
 ## Live service boundary
 
@@ -25,9 +25,9 @@ Endpoint: `https://mcp.viridisconservation.com/security-preflight/mcp`.
 Public service version: 1.2.0. Expected tools are `describe_agent`,
 `get_security_receipt`, `security_preflight`, `scan_source`, `screen_injection`.
 The first two are reads; the other three persist signed assessment results.
-All five live tools have truthful annotations. Their display titles were absent
-in the live metadata check; 0.1.2 supplies titles in source for a future coordinated
-adapter/private OSS pin/image release.
+All five live tools have truthful annotations and display titles. The initial
+metadata check found missing titles; the coordinated adapter/private OSS pin/image
+release added them, and the public post-cutover metadata check passed.
 
 Direct assessments, `create_service_checkout` and `fulfill_paid_scan` require
 caller auth independently of general gateway auth mode. Fixed orders bind the
@@ -77,8 +77,9 @@ Existing checkout templates are not activated, and are excluded from the
 submission ZIP. No real funded transaction or assessment was tested.
 
 For **ChatGPT directory**, current guidelines prohibit digital-service sales,
-transactional links and indirect checkout referrals. Existing-entitlement access
-is a different permitted direction, subject to review; do not add the $1 checkout
+transactional links and indirect checkout referrals. Existing paid-account/subscription access
+is a different documented direction; one-off order eligibility remains subject
+to review; do not add the $1 checkout
 tools to the plugin or use the diagnostic as an upsell. A user-supplied token or
 actor in chat is not a substitute for OAuth. The current fixed-order service
 requires both Bearer and `X-Viridis-Agent-ID`; a future OAuth identity mapping must
