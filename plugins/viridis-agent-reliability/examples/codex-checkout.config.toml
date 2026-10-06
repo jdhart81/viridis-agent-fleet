@@ -1,0 +1,8 @@
+# REVIEW TEMPLATE ONLY. Do not copy into active configuration without approval.
+# Existing provisioned credential/actor required; no signup or token creation.
+[mcp_servers.viridis-checkout]
+url = "https://mcp.viridisconservation.com/payments/mcp"
+enabled = false
+bearer_token_env_var = "VIRIDIS_CALLER_TOKEN"
+env_http_headers = { "X-Viridis-Agent-ID" = "VIRIDIS_REGISTERED_AGENT_ID" }
+enabled_tools = ["create_service_checkout", "fulfill_paid_scan"]

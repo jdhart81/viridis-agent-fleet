@@ -838,6 +838,35 @@ class SecurityPreflightCore:
             }
         return dict(record)
 
+    @staticmethod
+    def public_receipt_view(record: dict) -> dict:
+        """Projection only: do not edit or re-sign historical receipt records."""
+        if not isinstance(record, dict) or record.get('status') != 'ok':
+            return {'status':'error', 'error_type':'NotFound' if isinstance(record,dict)
+                    and record.get('error_type')=='NotFound' else 'ServiceUnavailable'}
+        try:
+            receipt = record['receipt']
+            receipt_id = receipt['receipt_id']
+            if not isinstance(receipt_id,str) or not re.fullmatch(r'vsr_[a-f0-9]{24}',receipt_id):
+                raise ValueError('invalid stored ID')
+            evidence = record.get('evidence',{})
+            known_counts = {'checks','findings','warnings','passed','indicators','confirmed_vulnerabilities'}
+            counts = receipt.get('result_counts',{})
+            summary = {'result_counts':{key:value for key,value in counts.items()
+                if key in known_counts and type(value) is int and 0 <= value <= 100000}}
+            verdict = evidence.get('verdict',record.get('verdict'))
+            if verdict in {'pass','review','fail','NO_INDICATORS','REVIEW_INDICATORS'}:
+                summary['verdict'] = verdict
+            return {'status':'ok','public_view_protocol':'viridis-security-public-view-v1',
+                'receipt_id':receipt_id, 'summary':summary,
+                'original_receipt_sha256':_sha256(receipt),
+                'original_evidence_sha256':_sha256(evidence),
+                'original_record_sha256':_sha256(record),
+                'original_payload_disclosed':False, 'signature_verified':False,
+                'verification_instruction':'Verify the signature on your original delivered record; this filtered public view is unsigned.'}
+        except Exception:
+            return {'status':'error','error_type':'ServiceUnavailable'}
+
     async def process(self, input_data: dict) -> dict:
         try:
             if not isinstance(input_data, dict):
@@ -937,5 +966,14 @@ class SecurityPreflightCore:
             "receipt_protocol": PROTOCOL,
             "receipt_issuer_id": ISSUER_ID,
             "receipt_public_key_b64": public_key,
-            "privacy": "raw caller inputs are neither persisted nor returned",
+            "privacy": (
+                "Raw supplied manifests, source and text are not stored in "
+                "assessment records or returned as raw artifacts. Original "
+                "signed deliveries retain subject identifiers, digests, findings "
+                "and scanner metadata; diagnostic messages can repeat submitted "
+                "tool and policy names verbatim. Public receipt reads use an "
+                "unsigned filtered summary and original-record hashes, excluding "
+                "those private fields and original signatures. Retain original "
+                "delivery for signature verification. Never submit secrets. "
+                "This does not promise anonymity or a deletion period."),
         }
