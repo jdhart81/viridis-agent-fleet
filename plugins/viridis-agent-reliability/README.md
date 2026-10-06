@@ -59,7 +59,7 @@ before directory submission; this technical description is not that policy.
 
 The caller-bound fixed-order boundary and filtered receipt contract were
 published and deployed on 2026-10-06. The earlier shared-credit/raw-public-receipt
-behavior is closed. Native version 0.1.1 installation/discovery passed in bundled
+behavior is closed. Native versions 0.1.1 and 0.1.2 installation/discovery passed in bundled
 Codex 0.160.0 and Claude Code 2.1.241. Codex invoked live `describe_agent` and a
 local synthetic receipt read; Claude discovered the skill and all five tools
 through its zero-model native control interface. No real paid assessment or

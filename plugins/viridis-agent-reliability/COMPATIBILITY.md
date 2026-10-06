@@ -8,9 +8,9 @@ listing are different milestones; none should stand in for another.
 
 | Platform | Local install | Native invocation | Authenticated useful assessment | Directory |
 |---|---|---|---|---|
-| Codex 0.160.0 bundled in ChatGPT.app | 0.1.1 installed in native cache, globally disabled, enabled only in scratch project | Ephemeral read-only native thread: five tools discovered, live `describe_agent` and synthetic filtered receipt passed; unrelated servers disabled | Unrun; existing caller/credential/session and explicit scope required | Not submitted, reviewed or listed |
+| Codex 0.160.0 bundled in ChatGPT.app | 0.1.2 installed in native cache, globally disabled, enabled only in scratch project | Ephemeral read-only native thread: five tools discovered, live `describe_agent` and synthetic filtered receipt passed; unrelated servers disabled | Unrun; existing caller/credential/session and explicit scope required | Not submitted, reviewed or listed |
 | ChatGPT hosted | Portable package and HTTP endpoint prepared | Hosted custom connection unrun; Codex app-server evidence is not a ChatGPT chat test | Unrun; OAuth and account-resolved caller binding absent | ZIP preparation only; verified publisher/project and portal access unknown |
-| Claude Code 2.1.241 | 0.1.1 installed in isolated configuration/cache and scratch local settings | Native zero-model control interface discovered the skill, all five hosted tools and a local fixture server; no native business-tool invocation | Unrun; current native auth check says logged out | Public repository marketplace is separate from Anthropic's directory |
+| Claude Code 2.1.241 | 0.1.2 installed in isolated configuration/cache and scratch local settings | Native zero-model control interface discovered the skill, all five hosted tools and a local fixture server; no native business-tool invocation | Unrun; current native auth check says logged out | Public repository marketplace is separate from Anthropic's directory |
 | Claude chat/Desktop/Cowork | Remote HTTPS connector instructions prepared | Account connector installation/invocation unrun | Unrun; per-user OAuth absent; fixed-header beta is conditional | Connector and plugin submissions both required, neither submitted |
 
 Previous local-preparation text claiming that the unsafe source is still live,
