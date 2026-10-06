@@ -66,10 +66,11 @@ through its zero-model native control interface. No real paid assessment or
 hosted ChatGPT/Claude account workflow was tested.
 
 Version 0.1.2 adds distribution packaging, documentation and adapter display
-titles. Live runtime titles remain absent until the coordinated service pin and
+titles. The titles are now deployed through the coordinated service pin and immutable
 image release. Model-driven Claude Code use is blocked by its current logged-out
 state. Hosted authenticated use and directory review are not complete.
 
-See [COMPATIBILITY.md](COMPATIBILITY.md) for each platform's evidence and gates,
+See [ROLLOUT_STATUS.md](ROLLOUT_STATUS.md) for the completed metadata deployment,
+and [COMPATIBILITY.md](COMPATIBILITY.md) for each platform's evidence and gates,
 and [REVIEW.md](REVIEW.md) for proposed reviewer cases. Licensed under
 [Apache-2.0](LICENSE).
