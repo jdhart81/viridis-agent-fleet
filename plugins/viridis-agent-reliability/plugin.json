@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "viridis-agent-reliability",
+  "version": "0.1.1",
+  "description": "Evidence-bounded diagnostics with SecurityPreflight MCP discovery and public receipts"
+}

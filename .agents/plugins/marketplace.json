@@ -1,0 +1,10 @@
+{
+  "name": "viridis-local-preparation",
+  "plugins": [
+    {
+      "name": "viridis-agent-reliability",
+      "source": {"source": "local", "path": "./plugins/viridis-agent-reliability"},
+      "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"}
+    }
+  ]
+}
