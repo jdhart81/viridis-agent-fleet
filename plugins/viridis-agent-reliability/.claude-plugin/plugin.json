@@ -1,9 +1,17 @@
 {
   "name": "viridis-agent-reliability",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Evidence-bounded diagnostics with SecurityPreflight MCP discovery and public receipts",
-  "author": {"name": "Viridis North LLC", "url": "https://viridisconservation.com"},
+  "author": {
+    "name": "Viridis North LLC",
+    "url": "https://viridisconservation.com"
+  },
   "homepage": "https://github.com/jdhart81/viridis-agent-fleet/tree/main/plugins/viridis-agent-reliability",
   "repository": "https://github.com/jdhart81/viridis-agent-fleet",
-  "keywords": ["mcp", "agent-reliability", "evidence"]
+  "keywords": [
+    "mcp",
+    "agent-reliability",
+    "evidence"
+  ],
+  "license": "Apache-2.0"
 }

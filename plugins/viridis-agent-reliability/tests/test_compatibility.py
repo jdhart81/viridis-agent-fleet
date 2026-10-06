@@ -32,7 +32,7 @@ def test_manifests_connect_real_mcp_and_exclude_payment_endpoint():
         assert 'headers' not in server and 'oauth' not in server
     for path in ('plugin.json','.codex-plugin/plugin.json','.claude-plugin/plugin.json'):
         manifest=json.loads((ROOT/path).read_text())
-        assert manifest['name']=='viridis-agent-reliability' and manifest['version']=='0.1.1'
+        assert manifest['name']=='viridis-agent-reliability' and manifest['version']=='0.1.2'
         assert 'reliability-sprint' not in json.dumps(manifest)
     assert json.loads((ROOT/'.codex-plugin/plugin.json').read_text())['mcpServers']=='./.mcp.json'
 
@@ -57,6 +57,7 @@ def test_real_adapter_sdk_advertises_read_and_priced_tools_truthfully(monkeypatc
         try:
             tools=asyncio.run(module.mcp.list_tools())
             assert {t.name for t in tools}==NAMES
+            assert all(t.title for t in tools)
             for tool in tools:
                 assert tool.annotations.readOnlyHint is (tool.name in CONTRACT['diagnostic_tools'])
                 assert tool.annotations.idempotentHint is (tool.name in CONTRACT['diagnostic_tools'])
@@ -129,3 +130,40 @@ def test_sdk_wire_discovery_and_description_only(sse,paginated,wrong_tool):
         assert result['status']=='pass' and not result['paid_tools_called']
     invoked=[params['name'] for method,params in calls if method=='tools/call']
     assert invoked==([] if wrong_tool else ['describe_agent'])
+
+
+def test_claude_marketplace_resolves_same_plugin():
+    catalog=json.loads((REPO/'.claude-plugin/marketplace.json').read_text())
+    assert catalog['name']=='viridis-agent-fleet'
+    assert len(catalog['plugins'])==1
+    entry=catalog['plugins'][0]
+    assert entry['name']=='viridis-agent-reliability'
+    assert (REPO/entry['source']).resolve()==ROOT.resolve()
+
+
+def test_submission_archive_excludes_checkout_and_untracked_files(tmp_path):
+    import shutil
+    import zipfile
+    specification=importlib.util.spec_from_file_location('package_builder',ROOT/'scripts/build_package.py')
+    builder=importlib.util.module_from_spec(specification);specification.loader.exec_module(builder)
+    copied=tmp_path/'plugin';shutil.copytree(ROOT,copied)
+    (copied/'unknown-private-file.txt').write_text('invented test marker')
+    first=tmp_path/'first.zip';second=tmp_path/'second.zip'
+    a=builder.build(first,root=copied);b=builder.build(second,root=copied)
+    assert a['sha256']==b['sha256'] and not a['submitted']
+    with zipfile.ZipFile(first) as archive:
+        assert set(archive.namelist())==set(builder.FILES)
+        assert not any('examples/' in name or 'unknown-private' in name for name in archive.namelist())
+        assert json.loads(archive.read('plugin.json'))['version']=='0.1.2'
+        assert 'LICENSE' in archive.namelist()
+
+
+def test_submission_archive_rejects_symlink(tmp_path):
+    import shutil
+    specification=importlib.util.spec_from_file_location('package_builder_links',ROOT/'scripts/build_package.py')
+    builder=importlib.util.module_from_spec(specification);specification.loader.exec_module(builder)
+    copied=tmp_path/'plugin';shutil.copytree(ROOT,copied)
+    outside=tmp_path/'outside.txt';outside.write_text('invented marker')
+    (copied/'README.md').unlink();(copied/'README.md').symlink_to(outside)
+    with pytest.raises(ValueError,match='symlink'):
+        builder.build(tmp_path/'unsafe.zip',root=copied)

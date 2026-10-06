@@ -56,7 +56,7 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2)
 
 
-@mcp.tool(annotations=ASSESSMENT)
+@mcp.tool(title="Static agent manifest assessment", annotations=ASSESSMENT)
 async def security_preflight(
         agent_id: str,
         manifest: Dict[str, Any],
@@ -88,7 +88,7 @@ async def security_preflight(
     })
 
 
-@mcp.tool(annotations=ASSESSMENT)
+@mcp.tool(title="Inline source indicator scan", annotations=ASSESSMENT)
 async def scan_source(agent_id: str, source: str, session_id: Optional[str] = None) -> str:
     """$1 bounded inline VulnCanon source scan; indicators, not proven exploits.
 
@@ -100,7 +100,7 @@ async def scan_source(agent_id: str, source: str, session_id: Optional[str] = No
                        **({"_fixed_order_session": session_id} if session_id else {})})
 
 
-@mcp.tool(annotations=ASSESSMENT)
+@mcp.tool(title="Text injection indicator screening", annotations=ASSESSMENT)
 async def screen_injection(agent_id: str, texts: List[str], session_id: Optional[str] = None) -> str:
     """$1 batch of 1–20 text samples screened for deterministic injection markers.
 
@@ -112,7 +112,7 @@ async def screen_injection(agent_id: str, texts: List[str], session_id: Optional
                        **({"_fixed_order_session": session_id} if session_id else {})})
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(title="Filtered public security receipt", annotations=READ_ONLY)
 async def get_security_receipt(receipt_id: str) -> str:
     """Read an unsigned, filtered public view; retain original delivery for signature verification."""
     if not isinstance(receipt_id, str) or not re.fullmatch(r'vsr_[a-f0-9]{24}', receipt_id):
@@ -121,7 +121,7 @@ async def get_security_receipt(receipt_id: str) -> str:
     return json.dumps(agent.public_receipt_view(record), indent=2)
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(title="Security assessment scope and evidence", annotations=READ_ONLY)
 async def describe_agent() -> str:
     """Describe scope, evidence boundary, inputs, and outputs."""
     return json.dumps(agent.describe(), indent=2)
