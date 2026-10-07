@@ -9,9 +9,10 @@ from pathlib import Path
 
 import pytest
 
-ROOT=Path(__file__).resolve().parents[1]
-REPO=ROOT.parents[1]
-spec=importlib.util.spec_from_file_location('viridis_mcp_check', ROOT/'scripts/check_mcp.py')
+TOOLS=Path(__file__).resolve().parents[1]
+REPO=TOOLS.parents[1]
+ROOT=REPO/"plugins/viridis-agent-reliability"
+spec=importlib.util.spec_from_file_location('viridis_mcp_check', TOOLS/'scripts/check_mcp.py')
 probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
 CONTRACT=json.loads((ROOT/'TOOL_CONTRACT.json').read_text())
 NAMES=set(CONTRACT['diagnostic_tools']+CONTRACT['priced_tools_excluded_from_diagnostic'])
@@ -134,7 +135,7 @@ def test_claude_marketplace_resolves_same_plugin():
 def test_submission_archive_excludes_checkout_and_untracked_files(tmp_path):
     import shutil
     import zipfile
-    specification=importlib.util.spec_from_file_location('package_builder',ROOT/'scripts/build_package.py')
+    specification=importlib.util.spec_from_file_location('package_builder',TOOLS/'scripts/build_package.py')
     builder=importlib.util.module_from_spec(specification);specification.loader.exec_module(builder)
     copied=tmp_path/'plugin';shutil.copytree(ROOT,copied)
     (copied/'unknown-private-file.txt').write_text('invented test marker')
@@ -150,7 +151,7 @@ def test_submission_archive_excludes_checkout_and_untracked_files(tmp_path):
 
 def test_submission_archive_rejects_symlink(tmp_path):
     import shutil
-    specification=importlib.util.spec_from_file_location('package_builder_links',ROOT/'scripts/build_package.py')
+    specification=importlib.util.spec_from_file_location('package_builder_links',TOOLS/'scripts/build_package.py')
     builder=importlib.util.module_from_spec(specification);specification.loader.exec_module(builder)
     copied=tmp_path/'plugin';shutil.copytree(ROOT,copied)
     outside=tmp_path/'outside.txt';outside.write_text('invented marker')

@@ -6,7 +6,7 @@ from pathlib import Path
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3] / "plugins/viridis-agent-reliability"
 
 async def check(url=None, *, httpx_client_factory=None):
     contract=json.loads((ROOT/'TOOL_CONTRACT.json').read_text())

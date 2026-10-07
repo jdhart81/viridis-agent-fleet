@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3] / "plugins/viridis-agent-reliability"
 FILES = (
     'plugin.json', 'mcp.json', '.mcp.json',
     '.codex-plugin/plugin.json', '.claude-plugin/plugin.json',
