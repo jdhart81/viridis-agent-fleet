@@ -1,6 +1,6 @@
 # Exact runtime contract. MCP 2.x removed the FastMCP import path used by this
 # service, so unconstrained resolution is not safe for release images.
-mcp==2.2.0
+mcp==1.28.1
 uvicorn==0.51.0
 starlette==1.3.1
 cryptography==50.0.0

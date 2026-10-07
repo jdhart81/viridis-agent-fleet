@@ -1,0 +1,18 @@
+{
+  "endpoint": "https://mcp.viridisconservation.com/security-preflight/mcp",
+  "diagnostic_tools": [
+    "describe_agent",
+    "get_security_receipt"
+  ],
+  "priced_tools_excluded_from_diagnostic": [
+    "security_preflight",
+    "scan_source",
+    "screen_injection"
+  ],
+  "grants_access": false,
+  "implements_signup": false,
+  "implements_oauth": false,
+  "receipt_visibility": "prepared: unsigned filtered public summary and original-record digests; full signed record retained in authorized delivery",
+  "assessment_authorization": "prepared gateway: existing registered caller plus caller-bound fixed scan session and exact intake; shared credits rejected",
+  "deployed": false
+}

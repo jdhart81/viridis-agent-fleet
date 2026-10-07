@@ -1,13 +1,15 @@
 # Known-good Agent Market runtime resolution captured during the authorized
 # Viridis Agent Reliability Sprint rehearsal on 2026-08-15. Re-resolve only
 # intentionally, then rebuild and repeat the complete non-serving gate.
+# Security refresh 2026-10-07: cryptography 50.0.0 and PyJWT 2.15.0;
+# the compatible MCP 1.28.1 contract and all other pins are retained.
 annotated-types==0.7.0
 anyio==4.14.2
 attrs==26.1.0
 certifi==2026.6.17
 cffi==2.1.0
 click==8.4.2
-cryptography==49.0.0
+cryptography==50.0.0
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
@@ -20,7 +22,7 @@ pycparser==3.0
 pydantic==2.13.4
 pydantic-settings==2.14.2
 pydantic_core==2.46.4
-PyJWT==2.13.0
+PyJWT==2.15.0
 python-dotenv==1.2.2
 python-multipart==0.0.32
 referencing==0.37.0

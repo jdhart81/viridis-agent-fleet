@@ -1,12 +1,12 @@
 {
   "name": "viridis-agent-reliability",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Evidence-bounded reliability checks for MCP and A2A services",
   "author": {
-    "name": "Viridis LLC",
+    "name": "Viridis North LLC",
     "url": "https://viridisconservation.com"
   },
-  "homepage": "https://viridisconservation.com/reliability-sprint",
+  "homepage": "https://github.com/jdhart81/viridis-agent-fleet/tree/main/plugins/viridis-agent-reliability",
   "repository": "https://github.com/jdhart81/viridis-agent-fleet",
   "keywords": [
     "agent-reliability",
@@ -18,9 +18,9 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Viridis Agent Reliability",
-    "shortDescription": "Check whether an MCP or A2A service is safe and reliable to buy.",
-    "longDescription": "Runs a bounded, read-only reliability check across discovery, protocol compatibility, identity, authority, payment, delivery evidence, and retention readiness. It distinguishes observed evidence from unknowns and never treats listings or technical health as commercial proof.",
-    "developerName": "Viridis LLC",
+    "shortDescription": "Inspect MCP discovery and evidence boundaries.",
+    "longDescription": "Provides a bounded diagnostic workflow and an actual SecurityPreflight MCP connection for description and public receipt reads. Static artifacts and technical health do not prove runtime security, delivery, acceptance or usefulness. No signup or credential provisioning is included.",
+    "developerName": "Viridis North LLC",
     "category": "Developer Tools",
     "capabilities": [
       "Read-only diagnostics",
@@ -28,7 +28,7 @@
       "A2A identity",
       "Evidence reports"
     ],
-    "websiteURL": "https://viridisconservation.com/reliability-sprint",
+    "websiteURL": "https://github.com/jdhart81/viridis-agent-fleet/tree/main/plugins/viridis-agent-reliability",
     "defaultPrompt": [
       "Run a reliability check on this agent endpoint.",
       "Audit this MCP server before I connect it.",
@@ -36,5 +36,6 @@
     ],
     "brandColor": "#176B4D"
   },
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "license": "Apache-2.0"
 }

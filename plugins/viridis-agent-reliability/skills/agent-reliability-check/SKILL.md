@@ -101,15 +101,34 @@ format, and support path. Distinguish:
 - acceptance from usefulness; and
 - usefulness from repeat purchase or active subscription.
 
-### 6. Optional Viridis static preflight
+### 6. Bundled MCP scope
 
 The bundled Viridis Security Preflight evaluates buyer-supplied static
 manifests, policies, and sample text. It does not fetch or test a deployed
 runtime and does not certify that an agent is secure.
 
-First call its free description tool to confirm the live scope and price. Do
-not call the priced `security_preflight` tool until the user explicitly
-authorizes the quoted payment and supplied payload.
+The adapter exposes exactly `describe_agent`, `get_security_receipt`,
+`security_preflight`, `scan_source`, and `screen_injection`. For this diagnostic,
+use only `describe_agent` and, when the user supplies a public receipt ID,
+`get_security_receipt`. The other three tools create priced assessments; do not
+invoke them as part of this read-only workflow. Do not substitute invented
+quote, signup, checkout, or reliability-audit tools. Checkout is a separate
+service, not bundled by this plugin.
+
+The prepared receipt workflow returns an unsigned filtered public summary
+with an opaque ID, allowlisted verdict/counts and hashes of original records.
+It omits subject IDs, input digests, detailed findings, tool/policy names,
+scanner metadata and original signatures. Retain authorized original delivery
+for signature verification. Originals can repeat submitted identifiers; never
+submit secrets. No retention/deletion or anonymity promise is established.
+The plugin grants no access and implements no signup or OAuth flow.
+
+The coordinated local gateway patch routes assessments through caller-bound
+fixed orders and rejects shared-credit consumption. It is not deployed by
+loading this package. Until release verification, treat the reviewed live
+shared-credit behavior and full public receipts as unresolved. Restrict the
+three assessment tools in the host policy for this diagnostic; stop if the
+restriction cannot be established.
 
 ### 7. Report
 
@@ -134,9 +153,8 @@ Report each finding as:
 | Boundary | What it does not establish |
 | Priority | P0, P1, or P2 |
 
-End with one smallest safe next action. If a paid Viridis engagement is a fit,
-present `https://viridisconservation.com/reliability-sprint` as an optional next
-step, never as proof that the checked service passed.
+End with one smallest safe next action supported by the observed evidence.
+Do not refer the user to paid Viridis services or present a sales offer.
 
 ## Commercial truth
 

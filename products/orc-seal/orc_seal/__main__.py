@@ -39,16 +39,16 @@ def main(argv=None) -> int:
         print(json.dumps({"level": out["level"], "label": out["label"],
                           "reasons": out["reasons"]}, indent=2))
         return 0 if out["level"] >= 1 else 1
-    if "--" not in argv:
-        print(__doc__, file=sys.stderr)
-        return 2
-    i = argv.index("--")
-    opts, cmd = argv[:i], argv[i + 1:]
     p = argparse.ArgumentParser(prog="orc-seal")
     p.add_argument("--issuer", required=True, help="issuer id, e.g. did:web:example.com")
     p.add_argument("--name", default="")
     p.add_argument("--agent", default="")
     p.add_argument("--registry", default=os.environ.get("ORC_SEAL_REGISTRY", DEFAULT_REGISTRY))
+    if "--" not in argv:
+        p.parse_args(argv)  # --help exits successfully before requiring a server.
+        p.error("missing server command after --")
+    i = argv.index("--")
+    opts, cmd = argv[:i], argv[i + 1:]
     a = p.parse_args(opts)
     if not cmd:
         p.error("missing server command after --")
@@ -73,5 +73,10 @@ def _exit(code: int) -> None:
         os._exit(code if isinstance(code, int) else 1)
 
 
-if __name__ == "__main__":
+def cli() -> None:
+    """Console entry point with the same safe shutdown as python -m."""
     _exit(main())
+
+
+if __name__ == "__main__":
+    cli()
