@@ -1625,7 +1625,7 @@ def test_container_runtime_dependencies_are_exactly_pinned():
         "mcp==1.28.1",
         "uvicorn==0.51.0",
         "starlette==1.3.1",
-        "cryptography==49.0.0",
+        "cryptography==50.0.0",
     }
     lock = (
         Path(__file__).parents[1] / "requirements.lock"
