@@ -123,12 +123,12 @@ for signature verification. Originals can repeat submitted identifiers; never
 submit secrets. No retention/deletion or anonymity promise is established.
 The plugin grants no access and implements no signup or OAuth flow.
 
-The coordinated local gateway patch routes assessments through caller-bound
-fixed orders and rejects shared-credit consumption. It is not deployed by
-loading this package. Until release verification, treat the reviewed live
-shared-credit behavior and full public receipts as unresolved. Restrict the
-three assessment tools in the host policy for this diagnostic; stop if the
-restriction cannot be established.
+The caller-bound fixed-order and filtered public receipt boundary were released
+on 2026-10-06. Hosted authenticated assessments remain pending OAuth activation.
+Do not read credentials from files, environment variables or the user's machine;
+do not request keys or tokens through skill or user_config inputs. The intended
+hosted path uses the platform consent flow only. Restrict the three assessment
+tools in host policy for this diagnostic and stop if that cannot be established.
 
 ### 7. Report
 

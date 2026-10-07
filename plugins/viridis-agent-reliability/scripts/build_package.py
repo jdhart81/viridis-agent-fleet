@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = (
     'plugin.json', 'mcp.json', '.mcp.json',
     '.codex-plugin/plugin.json', '.claude-plugin/plugin.json',
-    'README.md', 'COMPATIBILITY.md', 'REVIEW.md', 'ROLLOUT_STATUS.md', 'LICENSE',
+    'README.md', 'COMPATIBILITY.md', 'PRIVACY.md', 'icon.png', 'LICENSE',
     'TOOL_CONTRACT.json', 'skills/agent-reliability-check/SKILL.md',
 )
 

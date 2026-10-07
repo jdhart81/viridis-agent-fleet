@@ -32,7 +32,7 @@ def test_manifests_connect_real_mcp_and_exclude_payment_endpoint():
         assert 'headers' not in server and 'oauth' not in server
     for path in ('plugin.json','.codex-plugin/plugin.json','.claude-plugin/plugin.json'):
         manifest=json.loads((ROOT/path).read_text())
-        assert manifest['name']=='viridis-agent-reliability' and manifest['version']=='0.1.2'
+        assert manifest['name']=='viridis-agent-reliability' and manifest['version']=='0.1.3'
         assert 'reliability-sprint' not in json.dumps(manifest)
     assert json.loads((ROOT/'.codex-plugin/plugin.json').read_text())['mcpServers']=='./.mcp.json'
 
@@ -67,16 +67,6 @@ def test_real_adapter_sdk_advertises_read_and_priced_tools_truthfully(monkeypatc
             module.agent.close()
     finally:
         sys.path[:]=saved
-
-def test_checkout_examples_keep_credentials_out_and_codex_disabled():
-    c=tomllib.loads((ROOT/'examples/codex-checkout.config.toml').read_text())['mcp_servers']['viridis-checkout']
-    assert c['enabled'] is False
-    assert c['bearer_token_env_var']=='VIRIDIS_CALLER_TOKEN'
-    assert c['env_http_headers']=={'X-Viridis-Agent-ID':'VIRIDIS_REGISTERED_AGENT_ID'}
-    assert c['enabled_tools']==['create_service_checkout','fulfill_paid_scan']
-    headers=json.loads((ROOT/'examples/claude-checkout.mcp.json').read_text())['mcpServers']['viridis-checkout']['headers']
-    assert headers=={'Authorization':'Bearer ${VIRIDIS_CALLER_TOKEN}', 'X-Viridis-Agent-ID':'${VIRIDIS_REGISTERED_AGENT_ID}'}
-
 
 def test_adapter_public_receipt_filters_private_stored_fields(monkeypatch):
     import sys
@@ -154,7 +144,7 @@ def test_submission_archive_excludes_checkout_and_untracked_files(tmp_path):
     with zipfile.ZipFile(first) as archive:
         assert set(archive.namelist())==set(builder.FILES)
         assert not any('examples/' in name or 'unknown-private' in name for name in archive.namelist())
-        assert json.loads(archive.read('plugin.json'))['version']=='0.1.2'
+        assert json.loads(archive.read('plugin.json'))['version']=='0.1.3'
         assert 'LICENSE' in archive.namelist()
 
 

@@ -1,76 +1,43 @@
 # Viridis Agent Reliability
 
-Inspect an agent service's scope, MCP compatibility and security evidence. This
-package connects to the hosted SecurityPreflight MCP server and includes the
-`agent-reliability-check` diagnostic skill. It does not certify runtime security.
+Inspect an agent service's declared scope, MCP compatibility and evidence limits.
+The diagnostic skill uses `describe_agent` and `get_security_receipt` only.
+A public receipt summary is unsigned; preserve the original authorized signed
+record for verification. This package does not certify runtime security.
 
-## Installation
+The existing MCP endpoint also advertises `security_preflight`, `scan_source`
+and `screen_injection`. Those assessments require an existing exact entitlement.
+Do not invoke them from this diagnostic skill. Hosted authenticated assessments
+await OAuth activation and platform review; installation creates no account,
+paid order or access grant. The OAuth-only hosted path will use the platform's
+consent flow rather than collecting credentials through this skill.
 
-For Claude Code, add the public repository marketplace and install locally in
-an intended project:
+The package does not read environment variables or credential files, accept
+secrets through skill inputs, or define sensitive user_config fields. Do not
+paste tokens, cookies, keys or private payment identifiers into a conversation.
+No checkout, referral, subscription or payment-administration tools are bundled.
 
-```sh
-claude plugin marketplace add jdhart81/viridis-agent-fleet
-claude plugin install viridis-agent-reliability@viridis-agent-fleet --scope local
-```
+## Data handling
 
-For a temporary Claude Code session, load the checked-out plugin directory:
+When used, the platform receives the user's conversation and supplied diagnostic
+material under its own policies. The existing Viridis MCP receives only tool
+arguments sent to it. Static assessment inputs may contain identifiers and are
+stored with their signed receipt and order state. Public receipt views omit
+subject IDs, detailed findings and original signatures, retaining an opaque ID,
+verdict/counts and record hashes. Do not submit secrets or sensitive records.
 
-```sh
-claude --plugin-dir ./plugins/viridis-agent-reliability
-```
+The existing [soft-launch privacy notice](https://viridisconservation.com/privacy)
+identifies Viridis North LLC as operator and justin@viridisconservation.com as
+privacy contact. Its service retention depends on purpose and engagement terms;
+this package establishes no new retention period, deletion deadline, refund
+policy or anonymity promise. Hosted OAuth token persistence and platform-specific
+assessment disclosures need review before authenticated release. The notice's
+existing payment activation language is not a claim about this plugin's readiness.
+See [PRIVACY.md](PRIVACY.md) for current technical boundaries.
 
-Codex supports the repository's `.agents/plugins/marketplace.json` and the
-plugin's `.codex-plugin/plugin.json` compatibility manifest. Choose an explicit
-project scope. ChatGPT and Claude hosted account installation are separate from
-local CLI installation; neither platform directory lists this package yet.
+The icon is a PNG rendering of the existing public Viridis site icon, without
+changing its design. Publisher verification in the OpenAI draft is Individual —
+JUSTIN DANIEL HART; this does not assert business verification of the operator.
+Version 0.1.3 is prepared for draft validation, not directory approval.
 
-## What is available
-
-The HTTP server advertises five tools. `describe_agent` explains its scope;
-`get_security_receipt` reads an unsigned filtered public summary. The diagnostic
-skill uses only these two tools. Three assessment tools also exist:
-`security_preflight`, `scan_source`, and `screen_injection`. They require an
-existing registered caller and a verified fixed-order session belonging to that
-caller. Installation does not create an account or an entitlement.
-
-A diagnostic is not an assessment. To run an assessment, retain the original
-intake and use its existing paid session under the same authorized caller.
-Another caller, subject, input or second execution cannot consume that order.
-Credential setup needs an explicitly approved scope; never paste secrets into a
-conversation or plugin package. No OAuth or self-service signup is implemented.
-
-Use exact host tool controls to restrict a diagnostic session to the two read
-operations. Skill instructions and MCP annotations are not authorization or
-server-side tool filtering. Do not automatically approve assessment tools.
-
-## Privacy and evidence
-
-Public receipt views contain an opaque ID, allowlisted verdict/counts and hashes
-of the original record. They omit subject IDs, input digests, detailed findings,
-tool/policy names, scanner metadata and original signatures. Keep the original
-authorized delivery for signature verification; the public summary is unsigned.
-Original signed records remain stored and may repeat submitted names. Never
-submit secrets. Anonymity and a deletion period are not promised. A published
-service privacy policy covering retention and user controls is still required
-before directory submission; this technical description is not that policy.
-
-## Verified release status
-
-The caller-bound fixed-order boundary and filtered receipt contract were
-published and deployed on 2026-10-06. The earlier shared-credit/raw-public-receipt
-behavior is closed. Native versions 0.1.1 and 0.1.2 installation/discovery passed in bundled
-Codex 0.160.0 and Claude Code 2.1.241. Codex invoked live `describe_agent` and a
-local synthetic receipt read; Claude discovered the skill and all five tools
-through its zero-model native control interface. No real paid assessment or
-hosted ChatGPT/Claude account workflow was tested.
-
-Version 0.1.2 adds distribution packaging, documentation and adapter display
-titles. The titles are now deployed through the coordinated service pin and immutable
-image release. Model-driven Claude Code use is blocked by its current logged-out
-state. Hosted authenticated use and directory review are not complete.
-
-See [ROLLOUT_STATUS.md](ROLLOUT_STATUS.md) for the completed metadata deployment,
-and [COMPATIBILITY.md](COMPATIBILITY.md) for each platform's evidence and gates,
-and [REVIEW.md](REVIEW.md) for proposed reviewer cases. Licensed under
-[Apache-2.0](LICENSE).
+Licensed under [Apache-2.0](LICENSE).

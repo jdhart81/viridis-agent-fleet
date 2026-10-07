@@ -1,9 +1,9 @@
 {
   "name": "viridis-agent-reliability",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Evidence-bounded reliability checks for MCP and A2A services",
   "author": {
-    "name": "Viridis North LLC",
+    "name": "JUSTIN DANIEL HART",
     "url": "https://viridisconservation.com"
   },
   "homepage": "https://github.com/jdhart81/viridis-agent-fleet/tree/main/plugins/viridis-agent-reliability",
@@ -19,8 +19,8 @@
   "interface": {
     "displayName": "Viridis Agent Reliability",
     "shortDescription": "Inspect MCP discovery and evidence boundaries.",
-    "longDescription": "Provides a bounded diagnostic workflow and an actual SecurityPreflight MCP connection for description and public receipt reads. Static artifacts and technical health do not prove runtime security, delivery, acceptance or usefulness. No signup or credential provisioning is included.",
-    "developerName": "Viridis North LLC",
+    "longDescription": "A bounded diagnostic workflow with SecurityPreflight description and filtered public receipt reads. Hosted authenticated assessments await OAuth activation and platform review. Installation grants no account or paid entitlement.",
+    "developerName": "JUSTIN DANIEL HART",
     "category": "Developer Tools",
     "capabilities": [
       "Read-only diagnostics",

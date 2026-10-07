@@ -1,8 +1,0 @@
-# Review-only existing-entitlement configuration. Activate only after approving
-# the named caller, process-local environment scope and exact assessment intake.
-[mcp_servers.viridis-assessments]
-url = "https://mcp.viridisconservation.com/security-preflight/mcp"
-enabled = false
-bearer_token_env_var = "VIRIDIS_CALLER_TOKEN"
-env_http_headers = { "X-Viridis-Agent-ID" = "VIRIDIS_REGISTERED_AGENT_ID" }
-enabled_tools = ["security_preflight", "scan_source", "screen_injection"]
