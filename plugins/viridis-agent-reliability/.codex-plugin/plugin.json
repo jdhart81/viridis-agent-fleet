@@ -18,7 +18,7 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Viridis Agent Reliability",
-    "shortDescription": "Inspect MCP discovery and evidence boundaries.",
+    "shortDescription": "Inspect MCP evidence.",
     "longDescription": "A bounded diagnostic workflow with SecurityPreflight description and filtered public receipt reads. Hosted authenticated assessments await OAuth activation and platform review. Installation grants no account or paid entitlement.",
     "developerName": "JUSTIN DANIEL HART",
     "category": "Developer Tools",
@@ -34,7 +34,12 @@
       "Audit this MCP server before I connect it.",
       "Check this A2A Agent Card and authority boundary."
     ],
-    "brandColor": "#176B4D"
+    "brandColor": "#176B4D",
+    "supportURL": "https://github.com/jdhart81/viridis-agent-fleet/issues",
+    "privacyPolicyURL": "https://viridisconservation.com/privacy",
+    "termsOfServiceURL": "https://viridisconservation.com/terms",
+    "composerIcon": "./icon.png",
+    "logo": "./icon.png"
   },
   "mcpServers": "./.mcp.json",
   "license": "Apache-2.0"
