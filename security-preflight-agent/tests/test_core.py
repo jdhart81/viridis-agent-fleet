@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 CORE_PATH = Path(__file__).resolve().parents[1] / "src" / "core.py"
 SPEC = importlib.util.spec_from_file_location(
     "security_preflight_test_core", CORE_PATH)
@@ -133,6 +135,34 @@ def test_safe_scan_signs_market_compatible_receipt(signing_key):
     assert result["market_import"]["automatic"] is False
     assert result["evidence"]["runtime_tested"] is False
     assert result["privacy"]["raw_manifest_stored"] is False
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("delete_records", True),
+        ("DELETE_RECORDS", True),
+        ("deleteRecords", True),
+        ("DeleteRecords", True),
+        ("SMSSend", True),
+        ("safeReader", False),
+        ("sendmailbox", False),
+    ],
+)
+def test_high_impact_tool_name_tokens(name, expected):
+    assert CORE_MODULE._high_impact(name) is expected
+
+
+def test_camel_case_high_impact_without_approval_has_vsp004_finding():
+    payload = safe_payload()
+    payload["manifest"]["tools"][0]["name"] = "deleteRecords"
+    result = run(SecurityPreflightCore(), payload)
+    vsp_004 = next(
+        check for check in result["evidence"]["checks"]
+        if check["check_id"] == "VSP-004"
+    )
+    assert vsp_004["status"] == "finding"
+    assert "deleteRecords" in vsp_004["summary"]
 
 
 def test_high_impact_tool_without_approval_fails():

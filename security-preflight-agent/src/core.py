@@ -183,9 +183,11 @@ def _tool_schema(tool: dict) -> Any:
 
 
 def _high_impact(name: str) -> bool:
+    separated = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name)
+    separated = re.sub(r"([A-Z])([A-Z][a-z])", r"\1 \2", separated)
     tokens = {
-        token for token in re.findall(r"[a-z0-9]+", name.casefold())
-        if token
+        token.casefold()
+        for token in re.findall(r"[A-Za-z0-9]+", separated)
     }
     return bool(tokens & HIGH_IMPACT_TERMS)
 
