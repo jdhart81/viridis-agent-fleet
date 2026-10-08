@@ -8,9 +8,76 @@ With coverage:
     pytest tests/test_core.py --cov=src --cov-report=html
 """
 
-import pytest
+import ast
 import asyncio
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+from packaging.requirements import Requirement
+from scaffold import AgentSpec, generate_agent
 from src.core import AgentCore, AgentConfig
+
+
+@pytest.mark.parametrize("description,has_http", [
+    ("Processes local payloads", False),
+    ("Fetches HTTP payloads", True),
+])
+def test_generated_agent_preserves_security_pins_and_package_contract(tmp_path, description, has_http):
+    """New agents keep maintained pins and expose a working core package."""
+    output = tmp_path / "security-pin-probe"
+    spec = AgentSpec(name=output.name, description=description, pillar="infrastructure")
+    assert generate_agent(spec, output)
+
+    def requirements(path):
+        return {
+            requirement.name: requirement.specifier
+            for line in path.read_text().splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+            for requirement in [Requirement(line)]
+        }
+
+    root = Path(__file__).resolve().parents[1]
+    generated = requirements(output / "requirements.txt")
+    template = requirements(root / "requirements.txt")
+    assert generated["pytest"] == template["pytest"]
+
+    if has_http:
+        fleet_root = root.parent
+        http_agent = requirements(fleet_root / "regulatory-radar-agent" / "requirements.txt")
+        assert generated["aiohttp"] == http_agent["aiohttp"]
+        module = ast.parse((output / "src" / "security_pin_probe.py").read_text())
+        imports = {alias.name for node in ast.walk(module) if isinstance(node, ast.Import)
+                   for alias in node.names}
+        assert "aiohttp" in imports
+    else:
+        assert "aiohttp" not in generated
+
+        result = subprocess.run(
+            [sys.executable, "-c", """
+import asyncio
+import pytest
+from src import SecurityPinProbeCore, AgentConfig
+
+agent = SecurityPinProbeCore(AgentConfig(name="security-pin-probe"))
+assert agent.describe()["name"] == "security-pin-probe"
+health = asyncio.run(agent.health())
+assert health["status"] == "ok"
+assert health["agent"] == "security-pin-probe"
+result = asyncio.run(agent.process({}))
+assert result["status"] == "error"
+assert "Missing required fields" in result["error"]
+assert pytest.main(["tests", "-q"]) == 0
+"""],
+            cwd=output,
+            env={**os.environ, "PYTHONPATH": str(output)},
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0, result.stderr
 
 
 # ============================================================================
