@@ -7,7 +7,12 @@ no new deletion or retention promise is made here.
 
 This skill reads no local credentials and requests no secret user_config input.
 The submitted package contains no environment-backed authentication examples.
-User-supplied diagnostic material remains in the host conversation. Tool calls
+User-supplied diagnostic material remains in the host conversation. A user-requested
+bounded public discovery request may go to the supplied third-party origin and
+reveal the requested URL and request metadata. The diagnostic excludes private
+inputs and credentials. Activated identity authorization uses Supabase; the
+existing gateway payment verification uses Stripe, not a card-entry tool in this
+plugin. Tool calls
 share their supplied arguments with the named Viridis MCP endpoint. The skill reviews supplied declarations and public discovery evidence only; it
 does not automatically invoke the attached priced tools.
 

@@ -22,6 +22,14 @@ No checkout, referral, subscription or payment-administration tools are bundled.
 
 ## Data handling
 
+At the user's request, the read-only diagnostic may make bounded public
+discovery requests to the supplied third-party MCP/A2A origin. Those requests
+reveal their URL and request metadata to that service, outside the attached
+Viridis connector. Private inputs and credentials are excluded from the diagnostic.
+When hosted authentication is activated, identity authorization uses Supabase,
+and the gateway verifies an existing payment session with Stripe. Raw card
+credentials are not collected through this plugin; checkout remains separate.
+
 When used, the platform receives the user's conversation and supplied diagnostic
 material under its own policies. The existing Viridis MCP receives only tool
 arguments sent to it. Static assessment inputs may contain identifiers and are
