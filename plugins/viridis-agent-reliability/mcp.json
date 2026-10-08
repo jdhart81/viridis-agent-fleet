@@ -3,7 +3,7 @@
   "mcpServers": {
     "viridis-security-preflight": {
       "type": "streamable-http",
-      "url": "https://mcp.viridisconservation.com/security-preflight/mcp"
+      "url": "https://mcp.viridisconservation.com/hosted-entitlements/mcp"
     }
   }
 }

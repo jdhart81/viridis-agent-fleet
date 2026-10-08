@@ -49,3 +49,17 @@ transactional referrals are prohibited by current directory rules. Its existing
 paid-account/subscription permission does not establish that one-off Viridis
 orders qualify. Keep that product-fit question explicit; do not change prices or
 invent subscriptions, buyers, grants or reviewer test credits.
+
+
+## Hosted package checkpoint — 2026-10-08
+
+Version 0.1.4 selects the hosted-entitlements MCP path. Its static public metadata
+is deployed; MCP returns 401 and grants/execution remain blocked. The separate
+runtime candidate passes 71 synthetic Linux tests (no skips), with no live scans,
+charges or model work. Dedicated broker-only caller registration and cleanup are
+implemented locally; owner mapping, timing/retention, isolated runtime activation
+and exact host grants remain pending approval. OpenAI and Claude have existing
+unpublished drafts. OpenAI replacement currently reports an identity lookup error
+despite the selected organization's Verified status. Claude source validation has
+passed; neither directory submission nor authenticated fulfillment is claimed.
+The earlier paragraphs record the historical October 6 checkpoint.

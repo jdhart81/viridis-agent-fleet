@@ -1,23 +1,26 @@
 # Platform compatibility evidence
 
-The public endpoint currently advertises five tools. The diagnostic skill uses
-only describe_agent and get_security_receipt. Host permission controls must
-restrict the three assessment tools; skill text alone is not authorization.
+Version 0.1.4 selects the hosted-entitlements MCP path. Its public resource and
+authorization metadata are deployed; MCP returns 401, and authorization and
+execution remain blocked. This is discovery-only compatibility evidence.
+The prepared hosted runtime has three caller/order-bound paid assessment tools,
+not the ordinary gateway's two public read tools. The diagnostic skill does not
+automatically invoke the priced tools. Installation grants no account or order.
 
-Native Codex/Claude Code discovery and read-only diagnostic probes were completed
-for earlier 0.1.2 packaging. Version 0.1.3 removes credential-reading examples and
-adds existing public icon/privacy metadata. It makes no authenticated host test
-or directory approval claim. The local OAuth candidate passes 31 synthetic tests
-and the unchanged gateway affected suites pass 213 tests in its separate SDK.
-No live provider consent, paid assessment or model-driven host turn was tested.
+The separate runtime candidate passes 71 synthetic Linux tests, including actual
+nonroot isolation, broker-only identity/public-auth separation, fixed paid-order
+binding and configurable cleanup lifecycle. No production provider consent,
+paid assessment or model-driven host turn was tested. Earlier native Codex and
+Claude Code probes used 0.1.2 packaging and the separate ordinary gateway.
 
-OpenAI has an unpublished draft in Viridis / Default project, with verified
-individual publisher JUSTIN DANIEL HART and incomplete MCP configuration.
-Claude source validation of public main 172b92a found four credential-reading
-policy holds and missing icon/privacy metadata. This revision prepares fixes;
-portal revalidation is required against its actual published source.
+OpenAI has the original unpublished 0.1.3 draft in Viridis / Default project.
+Its replacement reports identity unavailable while organization settings show
+Verified; this is unresolved, not a request to change developer identity.
+Claude's existing draft has passed source/name/publisher validation with two
+warnings. The updated 0.1.4 branch requires revalidation in that same draft.
+Neither directory approval nor authenticated hosted fulfillment is claimed.
 
-Hosted assessments use OAuth only once activated. Do not collect credentials
-through conversations, skill inputs or user_config. No static-header or local
-credential examples are distributed. Entitlement eligibility and exact host
-callbacks remain platform review/setup gates. No checkout is bundled.
+When activated, hosted assessments use platform OAuth consent. No credentials
+are collected through conversation, skill input or user_config. Exact host
+callbacks, owner-to-caller mapping, retention and runtime activation remain
+release gates. No checkout is bundled.

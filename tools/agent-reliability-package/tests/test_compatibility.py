@@ -15,7 +15,9 @@ ROOT=REPO/"plugins/viridis-agent-reliability"
 spec=importlib.util.spec_from_file_location('viridis_mcp_check', TOOLS/'scripts/check_mcp.py')
 probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
 CONTRACT=json.loads((ROOT/'TOOL_CONTRACT.json').read_text())
-NAMES=set(CONTRACT['diagnostic_tools']+CONTRACT['priced_tools_excluded_from_diagnostic'])
+HOSTED_NAMES=set(CONTRACT['priced_tools_excluded_from_diagnostic'])
+LEGACY_READ={'describe_agent','get_security_receipt'}
+NAMES=HOSTED_NAMES|LEGACY_READ
 
 def test_manifests_connect_real_mcp_and_exclude_payment_endpoint():
     catalog=json.loads((REPO/'.agents/plugins/marketplace.json').read_text())
@@ -33,7 +35,7 @@ def test_manifests_connect_real_mcp_and_exclude_payment_endpoint():
         assert 'headers' not in server and 'oauth' not in server
     for path in ('plugin.json','.codex-plugin/plugin.json','.claude-plugin/plugin.json'):
         manifest=json.loads((ROOT/path).read_text())
-        assert manifest['name']=='viridis-agent-reliability' and manifest['version']=='0.1.3'
+        assert manifest['name']=='viridis-agent-reliability' and manifest['version']=='0.1.4'
         assert 'reliability-sprint' not in json.dumps(manifest)
     assert json.loads((ROOT/'.codex-plugin/plugin.json').read_text())['mcpServers']=='./.mcp.json'
 
@@ -42,7 +44,9 @@ def test_tool_contract_matches_decorated_adapter_without_running_scanner():
     exposed={node.name for node in tree.body if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef))
              and any(isinstance(d,ast.Call) and isinstance(d.func,ast.Attribute) and d.func.attr=='tool' for d in node.decorator_list)}
     assert exposed==NAMES
-    assert set(CONTRACT['diagnostic_tools'])=={'describe_agent','get_security_receipt'}
+    assert set(CONTRACT['diagnostic_tools'])==set()
+    assert HOSTED_NAMES=={'security_preflight','scan_source','screen_injection'}
+    assert CONTRACT['discovery_stage'].endswith('authorization and execution blocked')
     skill=(ROOT/'skills/agent-reliability-check/SKILL.md').read_text()
     assert 'reliability-sprint' not in skill
     assert all('`'+name+'`' in skill for name in NAMES)
@@ -60,8 +64,8 @@ def test_real_adapter_sdk_advertises_read_and_priced_tools_truthfully(monkeypatc
             assert {t.name for t in tools}==NAMES
             assert all(t.title for t in tools)
             for tool in tools:
-                assert tool.annotations.readOnlyHint is (tool.name in CONTRACT['diagnostic_tools'])
-                assert tool.annotations.idempotentHint is (tool.name in CONTRACT['diagnostic_tools'])
+                assert tool.annotations.readOnlyHint is (tool.name in LEGACY_READ)
+                assert tool.annotations.idempotentHint is (tool.name in LEGACY_READ)
                 assert tool.annotations.destructiveHint is False
                 assert tool.annotations.openWorldHint is False
         finally:
@@ -145,7 +149,7 @@ def test_submission_archive_excludes_checkout_and_untracked_files(tmp_path):
     with zipfile.ZipFile(first) as archive:
         assert set(archive.namelist())==set(builder.FILES)
         assert not any('examples/' in name or 'unknown-private' in name for name in archive.namelist())
-        assert json.loads(archive.read('plugin.json'))['version']=='0.1.3'
+        assert json.loads(archive.read('plugin.json'))['version']=='0.1.4'
         assert 'LICENSE' in archive.namelist()
 
 
@@ -158,3 +162,24 @@ def test_submission_archive_rejects_symlink(tmp_path):
     (copied/'README.md').unlink();(copied/'README.md').symlink_to(outside)
     with pytest.raises(ValueError,match='symlink'):
         builder.build(tmp_path/'unsafe.zip',root=copied)
+
+@pytest.mark.parametrize('wrong_resource',[False,True])
+def test_hosted_discovery_requires_exact_resource_and_never_calls_tools(wrong_resource):
+    endpoint=CONTRACT['endpoint'];origin='https://mcp.viridisconservation.com';resource=origin+'/.well-known/oauth-protected-resource/hosted-entitlements/mcp'
+    requests=[]
+    def handler(request):
+        requests.append((request.method,str(request.url)))
+        if request.method=='POST':
+            assert json.loads(request.content)['method']=='initialize'
+            return httpx.Response(401,headers={'www-authenticate':'Bearer resource_metadata="'+resource+'"'})
+        if str(request.url)==resource:
+            return httpx.Response(200,json={'resource':endpoint if not wrong_resource else 'https://other.invalid/mcp','authorization_servers':[origin+'/hosted-entitlements']})
+        assert str(request.url)==origin+'/.well-known/oauth-authorization-server/hosted-entitlements'
+        return httpx.Response(200,json={'issuer':origin+'/hosted-entitlements','scopes_supported':['security-preflight:assess']})
+    call=probe.check_hosted_discovery(transport=httpx.MockTransport(handler))
+    if wrong_resource:
+        with pytest.raises(ValueError,match='resource binding'):asyncio.run(call)
+    else:
+        result=asyncio.run(call)
+        assert result['status']=='discovery_only' and not result['paid_tools_called']
+    assert all(not url.endswith(('/authorize','/token','/register')) for _,url in requests)

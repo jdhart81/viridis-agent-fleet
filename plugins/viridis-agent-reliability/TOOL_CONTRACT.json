@@ -1,9 +1,6 @@
 {
-  "endpoint": "https://mcp.viridisconservation.com/security-preflight/mcp",
-  "diagnostic_tools": [
-    "describe_agent",
-    "get_security_receipt"
-  ],
+  "endpoint": "https://mcp.viridisconservation.com/hosted-entitlements/mcp",
+  "diagnostic_tools": [],
   "priced_tools_excluded_from_diagnostic": [
     "security_preflight",
     "scan_source",
@@ -13,6 +10,7 @@
   "implements_signup": false,
   "implements_oauth": false,
   "receipt_visibility": "prepared: unsigned filtered public summary and original-record digests; full signed record retained in authorized delivery",
-  "assessment_authorization": "prepared gateway: existing registered caller plus caller-bound fixed scan session and exact intake; shared credits rejected",
-  "deployed": false
+  "assessment_authorization": "prepared hosted path: individual consent plus broker-only caller and caller-bound fixed $1 USD scan session, exact intake and verified payment; no shared credits",
+  "deployed": false,
+  "discovery_stage": "public metadata live; MCP 401; authorization and execution blocked"
 }

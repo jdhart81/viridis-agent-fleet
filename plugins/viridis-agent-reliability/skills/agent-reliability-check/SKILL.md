@@ -107,13 +107,13 @@ The bundled Viridis Security Preflight evaluates buyer-supplied static
 manifests, policies, and sample text. It does not fetch or test a deployed
 runtime and does not certify that an agent is secure.
 
-The adapter exposes exactly `describe_agent`, `get_security_receipt`,
-`security_preflight`, `scan_source`, and `screen_injection`. For this diagnostic,
-use only `describe_agent` and, when the user supplies a public receipt ID,
-`get_security_receipt`. The other three tools create priced assessments; do not
-invoke them as part of this read-only workflow. Do not substitute invented
-quote, signup, checkout, or reliability-audit tools. Checkout is a separate
-service, not bundled by this plugin.
+The attached hosted adapter is prepared to expose only `security_preflight`,
+`scan_source`, and `screen_injection`. These create priced assessments and are
+excluded from this read-only diagnostic workflow. Review supplied declarations
+and public discovery evidence instead. Do not assume the attached MCP offers
+`describe_agent` or `get_security_receipt`; those belong to a separate ordinary
+gateway and are not attached here. Do not invent quote, signup, checkout, or audit
+tools. Checkout is a separate service, not bundled by this plugin.
 
 The prepared receipt workflow returns an unsigned filtered public summary
 with an opaque ID, allowlisted verdict/counts and hashes of original records.

@@ -1,6 +1,7 @@
 # Proposed listing and reviewer workflow
 
-These are preparation materials, not completed review attestations. The five
+These are preparation materials, not completed review attestations. The three
+hosted assessment cases among the five
 positive cases below must pass in the actual hosted clients before submission.
 Anonymous description and local synthetic receipt checks passed; authenticated
 cases and model-driven selection are unrun. No reviewer account or order is
@@ -15,6 +16,8 @@ Short description: Inspect agent service scope and signed assessment evidence.
 Description: Review SecurityPreflight's static analysis scope, inspect filtered
 public receipt summaries and, when authorized with an existing entitlement,
 assess a supplied agent manifest, bounded inline source or text samples.
+The attached hosted MCP does not include the two ordinary public read tools
+in the historical table below; public evidence must be reviewed separately.
 Results describe deterministic indicators and retain evidence boundaries;
 they do not prove runtime safety, exploitability or deployed behavior. The
 public summary is unsigned; retain the original authorized signed delivery.
@@ -22,7 +25,8 @@ Account authentication and an existing caller-owned fixed order are required
 for assessments. No checkout, account signup or credential provisioning is
 included in the directory package.
 
-Publisher: Viridis North LLC (publishing identity must be confirmed in each portal).
+Publisher identity: JUSTIN DANIEL HART (the existing Individual publisher).
+Service operator: Viridis North LLC; business verification is not asserted.
 
 Documentation: this public repository's plugin README.
 

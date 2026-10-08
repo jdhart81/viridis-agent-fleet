@@ -1,16 +1,19 @@
 # Viridis Agent Reliability
 
 Inspect an agent service's declared scope, MCP compatibility and evidence limits.
-The diagnostic skill uses `describe_agent` and `get_security_receipt` only.
-A public receipt summary is unsigned; preserve the original authorized signed
-record for verification. This package does not certify runtime security.
+The diagnostic skill reviews supplied declarations and public discovery evidence.
+It does not certify runtime security or invoke priced assessments automatically.
 
-The existing MCP endpoint also advertises `security_preflight`, `scan_source`
-and `screen_injection`. Those assessments require an existing exact entitlement.
-Do not invoke them from this diagnostic skill. Hosted authenticated assessments
-await OAuth activation and platform review; installation creates no account,
-paid order or access grant. The OAuth-only hosted path will use the platform's
-consent flow rather than collecting credentials through this skill.
+The attached hosted MCP is prepared to expose only `security_preflight`,
+`scan_source` and `screen_injection`, under individual consent and exact existing
+$1 USD paid-order checks. It provides no checkout or free entitlement. Its public
+metadata is live, while MCP discovery returns 401 and authorization/execution
+remain blocked pending runtime approval and host integration. Installation creates
+no account, paid order or access grant. The platform consent flow will handle
+identity when activated; this skill never collects credentials. Public description
+and receipt read tools from the separate ordinary gateway are not attached by
+this package. An unsigned public summary cannot replace an authorized original
+signed receipt.
 
 The package does not read environment variables or credential files, accept
 secrets through skill inputs, or define sensitive user_config fields. Do not
@@ -38,6 +41,6 @@ See [PRIVACY.md](PRIVACY.md) for current technical boundaries.
 The icon is a PNG rendering of the existing public Viridis site icon, without
 changing its design. Publisher verification in the OpenAI draft is Individual —
 JUSTIN DANIEL HART; this does not assert business verification of the operator.
-Version 0.1.3 is prepared for draft validation, not directory approval.
+Version 0.1.4 is prepared for draft validation, not directory approval.
 
 Licensed under [Apache-2.0](LICENSE).
