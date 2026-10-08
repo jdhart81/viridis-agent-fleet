@@ -563,7 +563,7 @@ def _determine_imports(spec: AgentSpec) -> str:
         imports.append("redis")
 
     if imports:
-        return "\n" + ", ".join(imports)
+        return "\nimport " + ", ".join(imports)
     return ""
 
 
@@ -659,8 +659,9 @@ class TestAgentProcess:
     @pytest.mark.asyncio
     async def test_process_validation_error(self, agent):
         """Test that process validates inputs."""
-        with pytest.raises(ValueError):
-            await agent.process({{}})
+        result = await agent.process({{}})
+        assert result["status"] == "error"
+        assert "Missing required fields" in result["error"]
 
 {chr(10).join(test_methods)}
 
@@ -993,7 +994,7 @@ pydantic==2.13.5
 fastmcp==3.2.0
 
 # Testing
-pytest==7.4.3
+pytest==9.0.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
 httpx==0.28.1
@@ -1011,7 +1012,7 @@ pyyaml==6.0.1
     optional_deps = []
 
     if "http" in spec.description.lower():
-        optional_deps.append("aiohttp==3.9.1")
+        optional_deps.append("aiohttp==3.14.3")
 
     if "postgres" in spec.description.lower() or "database" in spec.description.lower():
         optional_deps.append("psycopg[binary]==3.9")
@@ -1252,7 +1253,8 @@ def generate_agent(spec: AgentSpec, output_dir: Path, force: bool = False) -> bo
     # Generate files
     files_to_create = {
         "agent.yaml": generate_agent_yaml(spec),
-        "src/__init__.py": f"\"\"\"Generated {spec.name} agent module.\"\"\"\n\nfrom .core import {name_to_class(spec.name)}, AgentConfig\n\n__all__ = [{name_to_class(spec.name)!r}, 'AgentConfig']\n",
+        "src/__init__.py": f"\"\"\"Generated {spec.name} agent module.\"\"\"\n\nfrom .{name_to_module(spec.name)} import {name_to_class(spec.name)}, AgentConfig\n\n__all__ = [{name_to_class(spec.name)!r}, 'AgentConfig']\n",
+        "src/core.py": (TEMPLATE_DIR / "src" / "core.py").read_text(),
         f"src/{name_to_module(spec.name)}.py": generate_core_py(spec),
         "tests/__init__.py": "\"\"\"Generated tests module.\"\"\"\n",
         "tests/test_core.py": generate_test_core_py(spec),
