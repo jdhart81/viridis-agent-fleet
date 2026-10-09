@@ -63,3 +63,23 @@ unpublished drafts. OpenAI replacement currently reports an identity lookup erro
 despite the selected organization's Verified status. Claude source validation has
 passed; neither directory submission nor authenticated fulfillment is claimed.
 The earlier paragraphs record the historical October 6 checkpoint.
+
+## Current private-pilot checkpoint — 2026-10-09
+
+The earlier sections are historical checkpoints. Approved private ChatGPT and
+Claude connections and three-tool discovery are now complete. The hosted pilot
+uses owner-bound Supabase OAuth, encrypted token storage and a separate metadata
+ledger; gateway payment credentials and signer files remain outside the adapter.
+Approved grant families are capped at 24 hours with hourly cleanup and a one-hour
+post-expiry window; this is not a secure-erasure or backup-deletion promise.
+
+Live paid execution and customer delivery remain untested. Broader buyer/reviewer
+mappings, reviewer eligibility, commercial retention/public privacy accuracy and
+legal/publication approval remain separate gates. Public directories remain
+unpublished/unsubmitted. The approved documentation push preserves version 0.1.4,
+all manifests, the endpoint, capabilities and prices. Claude's browser-local draft
+must be rebuilt and validated from this branch. No legal attestations, listing
+submission, reviewer grants, charges or service execution are authorized by this
+checkpoint. Signed48E remains outside these tools: three free design partners
+with owner-confirmed eligibility, then $149 USD per signed report and manual
+Justin delivery. Do not infer consumed free slots or automatic completion.

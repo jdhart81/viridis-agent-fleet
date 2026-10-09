@@ -9,8 +9,11 @@
   "grants_access": false,
   "implements_signup": false,
   "implements_oauth": false,
-  "receipt_visibility": "prepared: unsigned filtered public summary and original-record digests; full signed record retained in authorized delivery",
-  "assessment_authorization": "prepared hosted path: individual consent plus broker-only caller and caller-bound fixed $1 USD scan session, exact intake and verified payment; no shared credits",
-  "deployed": false,
-  "discovery_stage": "public metadata live; MCP 401; authorization and execution blocked"
+  "receipt_visibility": "authorized assessment returns original signed result; separate public view is an unsigned filtered summary and original-record digests",
+  "assessment_authorization": "individual consent plus approved caller and caller-bound fixed $1 USD base-price scan session, exact intake/service and verified payment/tax; no shared credits",
+  "deployed": true,
+  "discovery_stage": "private ChatGPT and Claude connections accepted; anonymous MCP requires OAuth; live paid execution untested",
+  "hosted_oauth_active": true,
+  "execution_tested": false,
+  "caller_availability": "approved owner-bound private pilot; new callers require separate authorization"
 }

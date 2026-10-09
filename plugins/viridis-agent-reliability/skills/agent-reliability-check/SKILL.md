@@ -107,7 +107,7 @@ The bundled Viridis Security Preflight evaluates buyer-supplied static
 manifests, policies, and sample text. It does not fetch or test a deployed
 runtime and does not certify that an agent is secure.
 
-The attached hosted adapter is prepared to expose only `security_preflight`,
+The attached hosted adapter exposes only `security_preflight`,
 `scan_source`, and `screen_injection`. These create priced assessments and are
 excluded from this read-only diagnostic workflow. Review supplied declarations
 and public discovery evidence instead. Do not assume the attached MCP offers
@@ -115,19 +115,24 @@ and public discovery evidence instead. Do not assume the attached MCP offers
 gateway and are not attached here. Do not invent quote, signup, checkout, or audit
 tools. Checkout is a separate service, not bundled by this plugin.
 
-The prepared receipt workflow returns an unsigned filtered public summary
-with an opaque ID, allowlisted verdict/counts and hashes of original records.
-It omits subject IDs, input digests, detailed findings, tool/policy names,
-scanner metadata and original signatures. Retain authorized original delivery
-for signature verification. Originals can repeat submitted identifiers; never
-submit secrets. No retention/deletion or anonymity promise is established.
-The plugin grants no access and implements no signup or OAuth flow.
+An explicitly authorized paid assessment returns its original signed result with
+subject identifiers, detailed derived findings, digests and signature. The separate
+public receipt view is unsigned and filtered to an opaque ID, allowlisted verdict/
+counts and original-record hashes. It omits subject IDs, detailed findings and
+original signatures. Public receipt-read tools are not attached here. Retain the
+authorized original for signature verification. Derived findings may repeat
+submitted identifiers; never submit secrets. No retention/deletion or anonymity
+promise is established. Installing the package creates no paid entitlement and
+implements no signup or OAuth flow; the host may separately initiate OAuth consent.
 
-The caller-bound fixed-order and filtered public receipt boundary were released
-on 2026-10-06. Hosted authenticated assessments remain pending OAuth activation.
+Private ChatGPT and Claude connections and tool discovery are complete. Live paid
+execution and customer delivery remain untested. Each assessment requires individual
+consent, an approved caller mapping and an exact caller-owned fixed $1 USD base-price
+order, intake, service and verified payment/tax. Only the approved owner is mapped
+in the current pilot; this skill does not provision buyers or reviewers.
 Do not read credentials from files, environment variables or the user's machine;
-do not request keys or tokens through skill or user_config inputs. The intended
-hosted path uses the platform consent flow only. Restrict the three assessment
+do not request keys or tokens through skill or user_config inputs. The hosted
+identity path uses the platform consent flow only. Restrict the three assessment
 tools in host policy for this diagnostic and stop if that cannot be established.
 
 ### 7. Report
