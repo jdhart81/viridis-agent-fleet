@@ -63,15 +63,19 @@ async def _run(payload: Dict[str, Any]) -> str:
 
 @mcp.tool()
 async def scan_regulations(jurisdiction: str, sector: Optional[str] = None,
+                           query: Optional[str] = None,
                            payment_ref: Optional[str] = None,
                            request_id: Optional[str] = None) -> str:
-    """Scan a jurisdiction (e.g. EU, US, california, or CA for Canada), optionally filtered by sector.
+    """Scan a jurisdiction (e.g. EU, US, california, or CA for Canada), optionally
+    filtered by sector and/or a free-text query over regulation names, descriptions
+    and requirements.
 
     Returns regulations with urgency flags and effective dates. Price: $0.25
     per call after 10 free calls/day. Pay at
     /x402/regulatory-radar/scan_regulations with Base USDC, cash-fund payment_ref through
     escrow_checkout + confirm_escrow_funding, or use /seats."""
     return await _run({"action": "scan", "jurisdiction": jurisdiction, "sector": sector,
+                 **({"query": query} if query else {}),
                  **({"payment_ref": payment_ref} if payment_ref else {}),
                  **({"request_id": request_id}
                     if request_id is not None else {})})
