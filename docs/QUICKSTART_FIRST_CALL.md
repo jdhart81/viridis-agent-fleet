@@ -283,38 +283,76 @@ print(fleet("regulatory-radar", "scan_regulations", jurisdiction="EU"))
 ## When you hit the free tier
 
 The 11th call returns a structured `payment_required` envelope (HTTP-402
-idiom) with both paths inline: a Stripe checkout link for humans
-(`create_payment` → pay → `redeem_payment` for instant prepaid credits) and
-the x402 escrow path for agents. Nothing crashes; the envelope tells you
-exactly what to do next.
+idiom) with every completable path inline. Nothing crashes; the envelope
+tells you exactly what to do next. One payment prepays a batch: credits are
+spent one per call and never expire, so a single checkout (or one cash-funded
+escrow) keeps an agent running for many calls.
 
-## Paying as an agent (a2a escrow — live)
+## Paying past the free tier — three paths that actually complete
 
-Past the free tier, agents settle without any human in the loop. Three
-calls, no signup:
+The gate only grants paid calls against **verified value**. A plain
+`fund_escrow` records a self-asserted bookkeeping entry, not money, so by
+design it does **not** satisfy the paywall — the gate refuses it
+`not_cash_funded`. Use one of the three paths below instead.
+
+### 1. Human-backed agent — prepaid credits (one checkout funds many calls)
+
+The common case: a developer or company funds their agent's calls once. A
+micro-price like $0.25 is below the economics of a single card payment, so
+size the checkout to a batch — one payment, many calls.
 
 ```bash
-# 1. Open an escrow payable to the agent you want (price is in the 402 envelope)
-curl -s https://mcp.viridisconservation.com/escrow/mcp \
+# a. Ask the gate for a Stripe Checkout link sized to a batch
+#    (500 cents = 20 regulatory-radar calls at $0.25; credits never expire)
+curl -s https://mcp.viridisconservation.com/payments/mcp \
   -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"open_escrow","arguments":{"payer":"agent:you","payee":"viridis:regulatory-radar","amount_minor":25,"currency":"USD","terms":"1 scan"}}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"create_payment","arguments":{"amount_cents":500,"product_name":"viridis regulatory-radar credits"}}}'
+# -> returns a Stripe Checkout `url` and `session_id`. A human opens url and pays.
 
-# 2. Fund it (returns state FUNDED; note the escrow_id)
-curl -s https://mcp.viridisconservation.com/escrow/mcp \
+# b. After payment, redeem the session for prepaid credits on that agent
+curl -s https://mcp.viridisconservation.com/payments/mcp \
   -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fund_escrow","arguments":{"escrow_id":"esc_000001","payment_ref":"your-tx-ref"}}}'
-
-# 3. Retry the gated call with payment_ref=<escrow_id> — served instantly
-curl -s https://mcp.viridisconservation.com/regulatory-radar/mcp \
-  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"scan_regulations","arguments":{"jurisdiction":"EU","payment_ref":"esc_000001"}}}'
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"redeem_payment","arguments":{"session_id":"cs_...","agent":"regulatory-radar"}}}'
+# -> credits = floor(amount_paid / per-call price); spent 1 per call, no expiry.
+#    redeem_payment is idempotent — replaying a session never double-credits.
 ```
 
-The gate verifies the escrow (funded, right payee, amount >= price),
-consumes it exactly once through the escrow agent's own tamper-evident
-state machine, and grants `floor(amount/price)` call credits. A replayed
-`payment_ref` never double-credits. Overfund deliberately to prepay a batch:
-a 500-minor escrow against a 25-minor agent = 20 calls.
+### 2. Cash escrow — agent-to-agent, settled in real USD
+
+For agents transacting with each other. A plain `fund` is refused; cash-confirm
+the escrow through Stripe Checkout so the gate sees verified value:
+
+```bash
+# a. Open an escrow payable to the agent (price is in the 402 envelope)
+curl -s https://mcp.viridisconservation.com/escrow/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"open_escrow","arguments":{"payer":"agent:you","payee":"viridis:regulatory-radar","amount_minor":500,"currency":"USD","terms":"20 scans"}}}'
+
+# b. Get a Stripe Checkout URL for the escrow; a human pays the URL
+curl -s https://mcp.viridisconservation.com/payments/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"escrow_checkout","arguments":{"escrow_id":"esc_00000X"}}}'
+
+# c. Confirm the cash funding (pull-verified against Stripe — this is what the gate trusts)
+curl -s https://mcp.viridisconservation.com/payments/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"confirm_escrow_funding","arguments":{"escrow_id":"esc_00000X"}}}'
+
+# d. Retry the gated call with payment_ref=<escrow_id> — served; floor(amount/price) credits
+curl -s https://mcp.viridisconservation.com/regulatory-radar/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"scan_regulations","arguments":{"jurisdiction":"EU","payment_ref":"esc_00000X"}}}'
+```
+
+Overfund deliberately to prepay a batch: a 500-minor cash escrow against a
+25-minor agent = 20 calls. A replayed `payment_ref` never double-credits.
+
+### 3. Wallet-native agent — x402 USDC (no human, no signup)
+
+If your agent holds a Base wallet, pay the advertised x402 challenge in USDC
+and retry with the signed payment header; the facilitator settles directly to
+Viridis and your call is served. Overpay to prepay a batch
+(`floor(amount / price)` credits). See the x402 fixture above.
 
 ## Get paid as an agent (claim → balance → spend or cash)
 
