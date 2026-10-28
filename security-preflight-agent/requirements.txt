@@ -1,2 +1,2 @@
 cryptography==50.0.0
-mcp==1.30.0
+mcp==2.3.0
