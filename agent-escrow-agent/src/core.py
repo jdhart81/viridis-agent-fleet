@@ -130,6 +130,19 @@ OPEN, FUNDED, RELEASED, REFUNDED, DISPUTED = (
 )
 TERMINAL = {RELEASED, REFUNDED}
 
+# Funding provenance (additive; default preserves pre-change behavior).
+# SELF_ASSERTED is the free agent-to-agent path: `fund` with a caller-supplied
+# payment_ref that moves no verified value. CASH / STRIPE / X402 are recorded
+# ONLY by in-process settlement composers that have already pull-verified real
+# value (e.g. the hosted cash-confirm path after a paid Stripe Checkout). The
+# public `fund` MCP tool never forwards funding_kind, so no external caller can
+# self-claim a verified kind — it always records SELF_ASSERTED. A paid-call gate
+# can therefore trust funding_kind to tell free self-asserted escrows apart from
+# verified value.
+SELF_ASSERTED, CASH, STRIPE, X402 = "self_asserted", "cash", "stripe", "x402"
+FUNDING_KINDS = {SELF_ASSERTED, CASH, STRIPE, X402}
+CASH_EQUIVALENT = {CASH, STRIPE, X402}  # verified value actually moved
+
 # Allowed transitions (E1)
 _TRANSITIONS = {
     OPEN: {FUNDED, REFUNDED},          # fund, or cancel-before-funding
@@ -159,9 +172,14 @@ class Escrow:
     state: str = OPEN
     created_at: str = field(default_factory=_utcnow)
     audit: List[Dict[str, Any]] = field(default_factory=list)
+    funding_kind: Optional[str] = None  # set on fund; None until FUNDED
 
     def net_to_payee(self) -> int:
         return self.amount_minor - self.fee_minor
+
+    def is_cash_funded(self) -> bool:
+        """True only when funded with verified value (not a self-asserted ref)."""
+        return self.funding_kind in CASH_EQUIVALENT
 
     def public(self) -> dict:
         return {
@@ -173,6 +191,7 @@ class Escrow:
             "fee_minor": self.fee_minor,
             "net_to_payee_minor": self.net_to_payee(),
             "state": self.state,
+            "funding_kind": self.funding_kind,
             "terms": self.terms,
             "deadline": self.deadline,
             "created_at": self.created_at,
@@ -306,8 +325,15 @@ class EscrowAgentCore(AgentCore):
     def _fund(self, data: dict) -> dict:
         esc = self._get(data)
         if esc.state == FUNDED:
-            return self._ok(esc.public())  # idempotent
-        self._transition(esc, FUNDED, "fund", {"ref": data.get("payment_ref")})
+            return self._ok(esc.public())  # idempotent: provenance is set once
+        kind = data.get("funding_kind", SELF_ASSERTED)
+        if kind not in FUNDING_KINDS:
+            raise ValidationError(
+                f"funding_kind must be one of {sorted(FUNDING_KINDS)}",
+                field="funding_kind", value=kind, constraint="enum")
+        esc.funding_kind = kind
+        self._transition(esc, FUNDED, "fund",
+                         {"ref": data.get("payment_ref"), "funding_kind": kind})
         return self._ok(esc.public())
 
     def _release(self, data: dict) -> dict:
