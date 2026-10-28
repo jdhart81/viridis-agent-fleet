@@ -1622,7 +1622,7 @@ def test_container_runtime_dependencies_are_exactly_pinned():
     ).read_text().splitlines()
     pins = {line for line in requirements if line and not line.startswith("#")}
     assert pins == {
-        "mcp==1.28.1",
+        "mcp==1.30.0",
         "uvicorn==0.51.0",
         "starlette==1.3.1",
         "cryptography==50.0.0",
