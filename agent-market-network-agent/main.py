@@ -27,9 +27,8 @@ async def healthz(_request):
 async def catalog(_request):
     payload = agent.public_catalog()
     payload["distribution"] = {
-        "smithery": (
-            "https://smithery.ai/servers/hartjustin6/agent-market-network"
-        ),
+        "mcp_registry": "io.github.jdhart81/agent-market-network",
+        "remote": "https://mcp.viridisconservation.com/network/mcp",
         "source": "https://github.com/jdhart81/viridis-agent-fleet",
     }
     return JSONResponse(payload)

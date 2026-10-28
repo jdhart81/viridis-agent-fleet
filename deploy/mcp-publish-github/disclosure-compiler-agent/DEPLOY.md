@@ -11,14 +11,10 @@ mcp-publisher publish deploy/mcp-publish-github/disclosure-compiler-agent/server
 
 Official registry identity: `io.github.jdhart81/disclosure-compiler` v0.1.0.
 
-Smithery target: public listing `hartjustin6/disclosure-compiler`, repository
-`https://github.com/jdhart81/viridis-agent-fleet`, homepage
-`https://mcp.viridisconservation.com`, remote
-`https://mcp.viridisconservation.com/disclosure-compiler/mcp`, and pricing copy:
-“10 free disclosure drafts/day, then $2.00 per draft via redeem_payment. B2B
-energy, climate, and compliance seats are available when Stripe Checkout is
-configured.” The Continue button requires a second click in a separate action
-after the form loses focus.
+Pricing copy: “10 free disclosure drafts/day, then $2.00 per draft via
+redeem_payment. B2B energy, climate, and compliance seats are available when
+Stripe Checkout is configured.” Smithery is no longer a publish target: its
+proxy and accounts shut down on 2026-10-31.
 
 Publishing mutates the official registry and requires the owner account; do
 not publish before production health, version, pricing, and live tool-list
