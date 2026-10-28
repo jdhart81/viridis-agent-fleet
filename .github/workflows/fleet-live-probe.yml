@@ -1,0 +1,47 @@
+name: fleet-live-probe
+
+# Synthetic health check of every hosted MCP server listed in the official
+# MCP registry. Every 30 minutes: initialize + tools/list (no tool calls).
+# Once a day: also calls the free, read-only describe_agent tool.
+# A red run means at least one listed server failed the handshake.
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      call_describe:
+        description: "Also call describe_agent on each server"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fleet-live-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Probe hosted fleet
+        env:
+          CALL_DESCRIBE: ${{ github.event.schedule == '17 6 * * *' || inputs.call_describe == true }}
+        run: |
+          args="--json fleet_probe.json --summary $GITHUB_STEP_SUMMARY"
+          if [ "$CALL_DESCRIBE" = "true" ]; then args="$args --call-describe"; fi
+          python3 scripts/fleet_live_probe.py $args
+      - name: Keep the probe result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fleet-probe-${{ github.run_id }}
+          path: fleet_probe.json
+          retention-days: 30
