@@ -49,7 +49,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def register_genesis(agent_id: str, parent_id: Optional[str] = None,
                      artifact_hash: str = "") -> str:
     """Register an agent's birth. Issues a content-addressed genesis
@@ -60,38 +73,38 @@ async def register_genesis(agent_id: str, parent_id: Optional[str] = None,
                  "parent_id": parent_id, "artifact_hash": artifact_hash})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_certificate(agent_id: str) -> str:
     """Fetch an agent's genesis certificate + recall/quarantine status."""
     return await _run({"action": "get_certificate", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_certificate(certificate: Dict[str, Any]) -> str:
     """Verify a certificate: recompute its content hash and check the ledger."""
     return await _run({"action": "verify_certificate", "certificate": certificate})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def lineage(agent_id: str) -> str:
     """Full ancestry and descendants of an agent, plus its generation number."""
     return await _run({"action": "lineage", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_DESTRUCTIVE)
 async def recall(agent_id: str, reason: str = "") -> str:
     """Recall an agent: flags it and quarantines every transitive descendant.
     Reports exactly which agents were quarantined."""
     return await _run({"action": "recall", "agent_id": agent_id, "reason": reason})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_records(epoch: Optional[int] = None) -> str:
     """List genesis records, optionally by epoch (0 = founding cohort)."""
     return await _run({"action": "list", "epoch": epoch})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def register_artifact(artifact_id: str, artifact_hash: str,
                             producer_agent_id: str,
                             parent_hashes: Optional[List[str]] = None,
@@ -109,28 +122,30 @@ async def register_artifact(artifact_id: str, artifact_hash: str,
                        "metadata_digest": metadata_digest})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_artifact(artifact_id: str) -> str:
     """Fetch one registered artifact by artifact_id."""
     return await _run({"action": "get_artifact", "artifact_id": artifact_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_artifact(artifact: Dict[str, Any]) -> str:
     """Recompute an artifact record hash and verify it against the DAG ledger."""
     return await _run({"action": "verify_artifact", "artifact": artifact})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_artifacts(producer_agent_id: Optional[str] = None) -> str:
     """List artifacts, optionally filtered by producer agent."""
     return await _run({"action": "list_artifacts",
                        "producer_agent_id": producer_agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
-    """Fleet-standard self-description."""
+    """Describe this agent: name, version, purpose, every action it supports
+    and the inputs each one takes. Read-only and free; call it first to learn
+    how to use this server."""
     return json.dumps(agent.describe(), default=str, indent=2)
 
 

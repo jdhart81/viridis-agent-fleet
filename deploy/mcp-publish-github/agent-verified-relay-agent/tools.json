@@ -127,7 +127,7 @@
     },
     {
       "name": "describe_agent",
-      "description": "Fleet-standard self-description.",
+      "description": "Describe this agent: name, version, purpose, every action it supports and the inputs each one takes. Read-only and free; call it first to learn how to use this server.",
       "inputSchema": {
         "type": "object",
         "properties": {},

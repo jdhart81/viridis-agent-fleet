@@ -48,7 +48,20 @@ mcp = _mk_mcp(
 agent = SmartScaleCore()
 
 
-@mcp.tool(structured_output=True)
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(structured_output=True, annotations=_WRITE)
 def credit_card_photo_instructions(
     measurement_goal: str = "",
     objects_to_measure: Optional[List[str]] = None,
@@ -65,7 +78,7 @@ def credit_card_photo_instructions(
     return structured_result(result)
 
 
-@mcp.tool(structured_output=True)
+@mcp.tool(structured_output=True, annotations=_WRITE)
 def scale_objects_from_credit_card(
     image_id: str,
     credit_card_pixel_width: float,
@@ -97,7 +110,7 @@ def scale_objects_from_credit_card(
     return structured_result(result)
 
 
-@mcp.tool(structured_output=True)
+@mcp.tool(structured_output=True, annotations=_READ)
 def describe() -> FleetToolResult:
     """Return SmartScale capabilities and input contract."""
     return structured_result({
@@ -105,7 +118,7 @@ def describe() -> FleetToolResult:
     })
 
 
-@mcp.tool(structured_output=True)
+@mcp.tool(structured_output=True, annotations=_READ)
 def health() -> FleetToolResult:
     """Return SmartScale health status."""
     return structured_result(agent.health())

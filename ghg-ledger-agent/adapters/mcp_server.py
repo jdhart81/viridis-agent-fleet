@@ -48,7 +48,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2, default=str)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_READ)
 async def calculate_inventory(activities: List[Dict[str, Any]],
                               options: Optional[Dict[str, Any]] = None,
                               payment_ref: Optional[str] = None,
@@ -67,28 +80,28 @@ async def calculate_inventory(activities: List[Dict[str, Any]],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def classify_activity(activity: Dict[str, Any]) -> str:
     """Suggest scope and Scope 3 category from the bundled deterministic map.
     No inference is used; unknown activity types return no suggestion."""
     return await _run({"action": "classify_activity", "activity": activity})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_factor_packs() -> str:
     """List the bundled pack version/digest, supported regions and years,
     activity types, GWP set, and explicit MVP coverage."""
     return await _run({"action": "list_factor_packs"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_factor_pack(region: str, year: int) -> str:
     """Return factors, GWP values, conversions, sources, and pack SHA for one
     exact bundled region/year. No nearest-region or nearest-year substitution."""
     return await _run({"action": "get_factor_pack", "region": region, "year": year})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_result(result_json: str) -> str:
     """Recompute a prior inventory's audit hash and conservation checks. Pass
     the prior result object as JSON; tampering or stale factor lineage is flagged."""
@@ -100,7 +113,7 @@ async def verify_result(result_json: str) -> str:
     return await _run({"action": "verify_result", "result": result})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return fleet-standard capabilities, version, pack digest, and pricing."""
     return json.dumps(agent.describe(), indent=2)

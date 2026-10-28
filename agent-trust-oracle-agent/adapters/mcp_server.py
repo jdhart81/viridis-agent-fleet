@@ -50,7 +50,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def record_outcome(agent_id: str, kind: str, weight: float = 1.0,
                    counterparty: str = "", note: str = "") -> str:
     """Record an interaction outcome for an agent. kind: success | delivered |
@@ -60,35 +73,37 @@ async def record_outcome(agent_id: str, kind: str, weight: float = 1.0,
                  "weight": weight, "counterparty": counterparty, "note": note})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def score_agent(agent_id: str) -> str:
     """Get an agent's decay-weighted trust score in [0,1] and tier. Unknown
     agents get a neutral 0.5 prior — no blind trust, no unfair zero."""
     return await _run({"action": "score", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def attest(agent_id: str, claim: str = "reputation-snapshot") -> str:
     """Issue a tamper-evident (hash-chained) trust attestation for an agent."""
     return await _run({"action": "attest", "agent_id": agent_id, "claim": claim})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_attestation(agent_id: str, attestation_id: str) -> str:
     """Verify a previously issued attestation by recomputing its hash."""
     return await _run({"action": "verify_attestation", "agent_id": agent_id,
                  "attestation_id": attestation_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def history(agent_id: str) -> str:
     """Full outcome history + attestation count + current score for an agent."""
     return await _run({"action": "history", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
-    """Fleet-standard self-description."""
+    """Describe this agent: name, version, purpose, every action it supports
+    and the inputs each one takes. Read-only and free; call it first to learn
+    how to use this server."""
     return json.dumps(agent.describe(), default=str, indent=2)
 
 

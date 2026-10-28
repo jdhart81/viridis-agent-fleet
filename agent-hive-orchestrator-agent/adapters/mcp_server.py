@@ -248,7 +248,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2, default=str)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def solve(problem: str, budget_minor: int,
                 subtasks: Optional[List[str]] = None,
                 depth: int = 0, redundancy: int = 2,
@@ -289,13 +302,13 @@ async def solve(problem: str, budget_minor: int,
     return await _run(req)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def job_status(job_id: str) -> str:
     """Return job state, plan hash, and live budget conservation books."""
     return await _run({"action": "job_status", "job_id": job_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def audit_job(job_id: str) -> str:
     """Return the full content-addressed lineage of a completed job: plan,
     hires (including refused ones with reasons), contributions, reviews,
@@ -303,7 +316,7 @@ async def audit_job(job_id: str) -> str:
     return await _run({"action": "audit_job", "job_id": job_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_audit(audit_json: str) -> str:
     """Recompute the audit digest from a presented lineage (never trusts the
     embedded hash) and report whether it matches a job this hive ran."""
@@ -316,14 +329,14 @@ async def verify_audit(audit_json: str) -> str:
     return await _run({"action": "verify_audit", "audit": audit})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_solvers() -> str:
     """List the registered solver pool: id, kind (worker|hive), price,
     capabilities."""
     return await _run({"action": "list_solvers"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return fleet-standard capabilities, actions, invariants, and pricing."""
     described = agent.describe()

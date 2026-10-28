@@ -54,7 +54,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def build_brain(content: str, format: str = "auto",
                       include_document: bool = False,
                       request_id: Optional[str] = None) -> str:
@@ -72,7 +85,7 @@ async def build_brain(content: str, format: str = "auto",
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_brain(content: str, brain_id: str = "",
                        content_hash: str = "", format: str = "auto") -> str:
     """Machine-check a cognition claim: recompute the brain from the
@@ -88,7 +101,7 @@ async def verify_brain(content: str, brain_id: str = "",
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def detect_format(content: str) -> str:
     """Detect which supported agent-file format the content is
     (verdigraph_genome, claude_project_export, openai_assistant,
@@ -96,7 +109,7 @@ async def detect_format(content: str) -> str:
     return await _run({"action": "detect_format", "content": content})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return capabilities and input contract."""
     return json.dumps(agent.describe(), indent=2)

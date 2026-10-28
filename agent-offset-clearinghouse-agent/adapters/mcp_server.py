@@ -52,7 +52,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_READ)
 async def list_credit(issuer: str, project_id: str, mass_g: int,
                 price_minor_per_kg: int, verification_ref: str,
                 registry: str = "", vcs_project_id: str = "", vintage: str = "",
@@ -69,7 +82,7 @@ async def list_credit(issuer: str, project_id: str, mass_g: int,
                  "serial_number": serial_number, "methodology": methodology})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def delist_credit(credit_id: str, reason: str) -> str:
     """Admin operation: remove a credit from the active fill path while
     retaining its listing and retirement history for audit. Idempotent for an
@@ -78,7 +91,7 @@ async def delist_credit(credit_id: str, reason: str) -> str:
                        "reason": reason})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def verra_supply() -> str:
     """The tradeable Verra VCS book: verified credits carrying genuine Verra
     provenance (project id + serial + vintage), cross-referenceable on
@@ -87,7 +100,7 @@ async def verra_supply() -> str:
     return await _run({"action": "verra_supply"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def verra_retirement_record(purchase_id: str,
                                   retirement_reason: str = "") -> str:
     """Generate the Verra-portal-ready retirement record(s) for a retirement
@@ -102,7 +115,7 @@ async def verra_retirement_record(purchase_id: str,
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def buy_offset(buyer: str, purchase_id: str, mass_g: int,
                      dry_run: bool = False) -> str:
     """Retire mass_g of verified credits for a buyer: cheapest-first matching,
@@ -114,7 +127,7 @@ async def buy_offset(buyer: str, purchase_id: str, mass_g: int,
                  "dry_run": dry_run})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def buy_offset_budget(buyer: str, purchase_id: str, budget_minor: int,
                             dry_run: bool = False) -> str:
     """Money-denominated offset purchase: retire the maximum cheapest-first
@@ -127,7 +140,7 @@ async def buy_offset_budget(buyer: str, purchase_id: str, budget_minor: int,
                  "dry_run": dry_run})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def settlement_batch(buyer: str, since: str = "") -> str:
     """Read-only cash-settlement summary for a buyer: the list + exact sums
     (purchases, mass_g, cost_minor) of their retirements, optionally since an
@@ -138,32 +151,32 @@ async def settlement_batch(buyer: str, since: str = "") -> str:
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def net_position(buyer: str, emitted_g: float) -> str:
     """Buyer's carbon position: emitted (from agent-compute-ledger) minus
     retired. carbon_accountable == true when fully offset."""
     return await _run({"action": "net_position", "buyer": buyer, "emitted_g": emitted_g})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_certificate(certificate: Dict[str, Any]) -> str:
     """Verify an offset certificate: recompute its hash and check the ledger."""
     return await _run({"action": "verify_certificate", "certificate": certificate})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def book() -> str:
     """The full credit book with per-credit and book-wide mass conservation totals."""
     return await _run({"action": "book"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_purchase(purchase_id: str) -> str:
     """Fetch a past purchase / offset certificate by id."""
     return await _run({"action": "get_purchase", "purchase_id": purchase_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_retirement(purchase_id: str, required_g: int = 0) -> str:
     """x402-C C4 check: confirm a retirement (offset_ref = purchase_id)
     actually retires at least required_g grams of verified conservation
@@ -174,7 +187,7 @@ async def verify_retirement(purchase_id: str, required_g: int = 0) -> str:
                        "required_g": required_g})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def register_project(project_id: str, verification_ref: str,
                            name: str = "", location: str = "",
                            methodology: str = "", beneficiary: str = "",
@@ -189,7 +202,7 @@ async def register_project(project_id: str, verification_ref: str,
                        "beneficiary": beneficiary, "registry_ref": registry_ref})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def project_funding(project_id: str = "") -> str:
     """Supply-side disbursement ledger: how much each restoration project has
     earned from retirements and is owed (gross_proceeds_minor + retired_g).
@@ -201,13 +214,13 @@ async def project_funding(project_id: str = "") -> str:
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_projects() -> str:
     """List all registered restoration projects with their metadata."""
     return await _run({"action": "list_projects"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def disbursement_schedule(project_id: str = "") -> str:
     """Automated disbursement preview: for each verified restoration project,
     splits its newly-accrued proceeds into the Viridis Conservation withhold
@@ -220,7 +233,7 @@ async def disbursement_schedule(project_id: str = "") -> str:
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def certify_disbursement(batch_id: str) -> str:
     """Freeze the current disbursement schedule into a certified, tamper-evident
     batch (content-addressed, hash-chained). Idempotent on batch_id; only
@@ -230,16 +243,18 @@ async def certify_disbursement(batch_id: str) -> str:
     return await _run({"action": "certify_disbursement", "batch_id": batch_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_disbursement() -> str:
     """Recompute the disbursement certificate hash chain and confirm whole-book
     conservation of disbursed proceeds. Any party can audit disbursements."""
     return await _run({"action": "verify_disbursement"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
-    """Fleet-standard self-description."""
+    """Describe this agent: name, version, purpose, every action it supports
+    and the inputs each one takes. Read-only and free; call it first to learn
+    how to use this server."""
     return json.dumps(agent.describe(), default=str, indent=2)
 
 

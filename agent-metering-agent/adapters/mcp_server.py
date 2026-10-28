@@ -49,7 +49,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def create_meter(provider: str, consumer: str, unit: str,
                  price_minor_per_unit: float, currency: str = "USD",
                  sla_target: float = 0.99) -> str:
@@ -62,7 +75,7 @@ async def create_meter(provider: str, consumer: str, unit: str,
                  "currency": currency, "sla_target": sla_target})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def record_usage(meter_id: str, event_id: str, quantity: float,
                  outcome: str = "ok", metadata: Optional[Dict[str, Any]] = None) -> str:
     """Record a usage event. Idempotent on event_id (safe to retry — never
@@ -71,38 +84,38 @@ async def record_usage(meter_id: str, event_id: str, quantity: float,
                  "quantity": quantity, "outcome": outcome, "metadata": metadata or {}})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def usage_summary(meter_id: str) -> str:
     """Totals for a meter: event count, total quantity, accrued minor units."""
     return await _run({"action": "usage_summary", "meter_id": meter_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def sla_report(meter_id: str) -> str:
     """Pure SLA report: success_rate vs sla_target, breach flag. No mutation."""
     return await _run({"action": "sla_report", "meter_id": meter_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_DESTRUCTIVE)
 async def close_period(meter_id: str) -> str:
     """Freeze all open events into an immutable invoice (exactly-once).
     The invoice amount is what agent-escrow-agent should settle."""
     return await _run({"action": "close_period", "meter_id": meter_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_chain(meter_id: str) -> str:
     """Verify the tamper-evident event hash chain for a meter."""
     return await _run({"action": "verify_chain", "meter_id": meter_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_meters() -> str:
     """List all meters with event/invoice counts."""
     return await _run({"action": "list_meters"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_events(meter_id: Optional[str] = None, provider: Optional[str] = None,
                       consumer_class: Optional[str] = None, channel: Optional[str] = None,
                       outcome: Optional[str] = None, since: Optional[str] = None,
@@ -122,7 +135,7 @@ async def list_events(meter_id: Optional[str] = None, provider: Optional[str] = 
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def usage_timeseries(bucket: str = "day", provider: Optional[str] = None,
                            meter_id: Optional[str] = None,
                            consumer_class: Optional[str] = None,
@@ -143,7 +156,7 @@ async def usage_timeseries(bucket: str = "day", provider: Optional[str] = None,
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def flag_meter(meter_id: str, is_test: bool, admin_token: str,
                      note: str = "") -> str:
     """Admin: flag/unflag a meter as test/synthetic so its events are
@@ -155,9 +168,11 @@ async def flag_meter(meter_id: str, is_test: bool, admin_token: str,
                        "note": note})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
-    """Fleet-standard self-description."""
+    """Describe this agent: name, version, purpose, every action it supports
+    and the inputs each one takes. Read-only and free; call it first to learn
+    how to use this server."""
     return json.dumps(agent.describe(), default=str, indent=2)
 
 

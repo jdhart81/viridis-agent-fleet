@@ -56,7 +56,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def create_agent(genome: Dict[str, Any],
                        request_id: Optional[str] = None) -> str:
     """Create a developmental agent from a digital genome:
@@ -68,7 +81,7 @@ async def create_agent(genome: Dict[str, Any],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def submit_evaluation(agent_id: str, evaluation: Dict[str, Any],
                             request_id: Optional[str] = None) -> str:
     """Evolve an agent with one task outcome: {task_id, task_type,
@@ -83,20 +96,20 @@ async def submit_evaluation(agent_id: str, evaluation: Dict[str, Any],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_agent(agent_id: str) -> str:
     """Full current state: genome, cognitive graph (nodes/edges with
     weights and trust), and summary counts."""
     return await _run({"action": "get_agent", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_agents() -> str:
     """All developmental agents on this mount, with summary counts."""
     return await _run({"action": "list_agents"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def best_next_steps(agent_id: str, from_node: str, limit: int = 3) -> str:
     """Routing recommendation: the strongest next cognitive steps from a
     given node, by learned edge weight and trust."""
@@ -104,7 +117,7 @@ async def best_next_steps(agent_id: str, from_node: str, limit: int = 3) -> str:
                        "from_node": from_node, "limit": limit})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_ledger(agent_id: str, limit: int = 100) -> str:
     """The append-only developmental ledger: every growth, pruning, and
     evaluation event with reasons (NG3 — returned verbatim)."""
@@ -112,14 +125,14 @@ async def get_ledger(agent_id: str, limit: int = 100) -> str:
                        "limit": limit})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def export_state(agent_id: str) -> str:
     """Portable state document for an agent (import_state recreates it
     anywhere — including a self-hosted verdigraph-neurogenesis)."""
     return await _run({"action": "export_state", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def import_state(state: Dict[str, Any],
                        request_id: Optional[str] = None) -> str:
     """Recreate an agent from an export_state document."""
@@ -128,7 +141,7 @@ async def import_state(state: Dict[str, Any],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_DESTRUCTIVE)
 async def delete_agent(agent_id: str,
                        request_id: Optional[str] = None) -> str:
     """Remove a developmental agent from this mount."""
@@ -137,7 +150,7 @@ async def delete_agent(agent_id: str,
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def register_compute_profile(profile: Dict[str, Any],
                                    request_id: Optional[str] = None) -> str:
     """Register a caller-owned Wu Wei execution profile: reuse/cache,
@@ -151,7 +164,7 @@ async def register_compute_profile(profile: Dict[str, Any],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def route_task(task: Dict[str, Any],
                      request_id: Optional[str] = None) -> str:
     """Choose the least-burden eligible route for a task. Hard constraints
@@ -164,7 +177,7 @@ async def route_task(task: Dict[str, Any],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def record_route_outcome(decision_id: str, success_score: float,
                                actual_cost_usd: Optional[float] = None,
                                actual_latency_ms: Optional[float] = None,
@@ -186,7 +199,7 @@ async def record_route_outcome(decision_id: str, success_score: float,
     })
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def compute_efficiency_report(limit: int = 50) -> str:
     """Free read: decision/outcome receipts, route modes, compute avoided,
     predicted savings, predicted-vs-observed cost/latency/energy coverage,
@@ -195,7 +208,7 @@ async def compute_efficiency_report(limit: int = 50) -> str:
                        "limit": limit})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return capabilities and input contract."""
     return json.dumps(agent.describe(), indent=2)

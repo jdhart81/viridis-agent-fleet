@@ -101,7 +101,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def intake(user_id: str, dialogue: List[Dict[str, str]]) -> str:
     """Distill a user's dialogue into an intention wavefunction (explicit
     intentions + confidence). dialogue: [{role, content}, ...]."""
@@ -109,7 +122,7 @@ async def intake(user_id: str, dialogue: List[Dict[str, str]]) -> str:
                        "dialogue": dialogue})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def collapse(user_id: str, stake_amount: float = 100.0) -> str:
     """Collapse the user's wavefunction into an actionable commitment,
     weighted by stake."""
@@ -117,14 +130,14 @@ async def collapse(user_id: str, stake_amount: float = 100.0) -> str:
                        "stake_amount": stake_amount})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def find_matches(user_id: str) -> str:
     """Match the user's collapsed intention to constitutionally-aligned
     agents/collectives, ranked by alignment score."""
     return await _run({"stage": "find_matches", "user_id": user_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def register_collective(collective_id: str, name: str, mission: str,
                               domain_profile: Optional[Dict[str, float]] = None,
                               constitutional_scores: Optional[Dict[str, float]] = None,
@@ -139,7 +152,7 @@ async def register_collective(collective_id: str, name: str, mission: str,
                        "capacity": capacity})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return capabilities and input contract."""
     return json.dumps(agent.describe(), indent=2)
