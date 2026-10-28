@@ -3,6 +3,8 @@
 # intentionally, then rebuild and repeat the complete non-serving gate.
 # Security refresh 2026-10-07: cryptography 50.0.0 and PyJWT 2.15.0;
 # the compatible MCP 1.28.1 contract and all other pins are retained.
+# Security refresh 2026-10-28: mcp 1.30.0 (Dependabot alert); dry-run
+# resolution against every other pin here needed no further changes.
 annotated-types==0.7.0
 anyio==4.14.2
 attrs==26.1.0
@@ -17,7 +19,7 @@ httpx-sse==0.4.3
 idna==3.18
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
-mcp==1.28.1
+mcp==1.30.0
 pycparser==3.0
 pydantic==2.13.4
 pydantic-settings==2.14.2
