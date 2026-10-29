@@ -159,6 +159,14 @@ async def main():
     await mcp.run_async()
 
 
+try:  # report {"status": "error"} results to MCP clients as tool errors (isError)
+    from fleet_utils.mcp_errors import flag_error_results
+except ImportError:  # pragma: no cover - adapter copied without fleet_utils
+    def flag_error_results(server):
+        return 0
+flag_error_results(mcp)
+
+
 if __name__ == "__main__":
     logger.info(f"Launching {AGENT_NAME} as MCP Server")
     asyncio.run(main())
