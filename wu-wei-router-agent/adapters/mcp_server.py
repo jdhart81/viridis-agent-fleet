@@ -86,3 +86,11 @@ if os.environ.get("WU_WEI_V2_ENABLED") == "1":
     async def import_state(state: dict) -> str:
         """Validate and import portable Wilson state through the admission gate."""
         return json.dumps(await agent.process({"action": "import_state", "state": state}))
+
+
+try:  # report {"status": "error"} results to MCP clients as tool errors (isError)
+    from fleet_utils.mcp_errors import flag_error_results
+except ImportError:  # pragma: no cover - adapter copied without fleet_utils
+    def flag_error_results(server):
+        return 0
+flag_error_results(mcp)

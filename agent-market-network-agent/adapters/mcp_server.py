@@ -349,3 +349,11 @@ async def describe_network() -> MarketToolResult:
 
 
 __all__ = ["agent", "mcp", "canonical_action"]
+
+
+try:  # report {"status": "error"} results to MCP clients as tool errors (isError)
+    from fleet_utils.mcp_errors import flag_error_results
+except ImportError:  # pragma: no cover - adapter copied without fleet_utils
+    def flag_error_results(server):
+        return 0
+flag_error_results(mcp)
