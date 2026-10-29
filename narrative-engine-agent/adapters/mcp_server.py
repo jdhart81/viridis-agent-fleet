@@ -60,7 +60,20 @@ mcp = _mk_mcp(
 agent = CoreCls()
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def translate_narrative(agent_output: Dict[str, Any], audience_type: str,
                         format_type: str, key_message: Optional[str] = None,
                         payment_ref: Optional[str] = None,
@@ -82,7 +95,7 @@ async def translate_narrative(agent_output: Dict[str, Any], audience_type: str,
     }), default=str, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Fleet-standard self-description: capabilities, inputs, outputs."""
     return json.dumps(agent.describe(), default=str, indent=2)

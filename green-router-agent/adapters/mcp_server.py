@@ -54,7 +54,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_READ)
 async def quote_footprint(workload: Dict[str, Any]) -> str:
     """FREE: honest energy/carbon footprint for an agent workload —
     {backend_id? (frontier_cloud | efficient_cloud | local_small),
@@ -66,7 +79,7 @@ async def quote_footprint(workload: Dict[str, Any]) -> str:
     return await _run({"action": "quote_footprint", "workload": workload})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def green_route(workload: Dict[str, Any],
                       allowed_backends: Optional[List[str]] = None) -> str:
     """FREE: rank compute backends by carbon for this workload — the
@@ -79,7 +92,7 @@ async def green_route(workload: Dict[str, Any],
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def certify(workload: Dict[str, Any],
                   request_id: Optional[str] = None) -> str:
     """PAID ($0.50 after free tier): compute the workload footprint, then
@@ -92,7 +105,7 @@ async def certify(workload: Dict[str, Any],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_green_certificate(certificate_id: str) -> str:
     """FREE forever (GR5): recompute a certificate's footprint from its
     stored workload, compare against the certified numbers, and surface
@@ -102,14 +115,14 @@ async def verify_green_certificate(certificate_id: str) -> str:
                        "certificate_id": certificate_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_green_certificates(limit: int = 50) -> str:
     """FREE: the certificate ledger — counts, total grams retired, total
     clearinghouse cost (honest books, GR8)."""
     return await _run({"action": "list_certificates", "limit": limit})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return capabilities and input contract."""
     return json.dumps(agent.describe(), indent=2)

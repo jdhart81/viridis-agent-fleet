@@ -50,7 +50,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def register_agent(agent_id: str, capabilities: List[str], name: str = "",
                    endpoint: str = "", pubkey: str = "",
                    pricing: Optional[Dict[str, Any]] = None,
@@ -63,35 +76,37 @@ async def register_agent(agent_id: str, capabilities: List[str], name: str = "",
                  "pricing": pricing or {}, "reputation_hint": reputation_hint})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def resolve_agent(agent_id: str = "", did: str = "") -> str:
     """Resolve an identity by agent_id or DID to its full public registration."""
     return await _run({"action": "resolve", "agent_id": agent_id or None, "did": did or None})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def discover_agents(capabilities: List[str], limit: int = 25) -> str:
     """Find ACTIVE agents matching ALL requested capabilities (AND semantics),
     deterministically ordered by match count then reputation."""
     return await _run({"action": "discover", "capabilities": capabilities, "limit": limit})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_DESTRUCTIVE)
 async def revoke_agent(agent_id: str = "", did: str = "") -> str:
     """Revoke an identity: it disappears from discovery (terminal) but its
     record is retained for auditability."""
     return await _run({"action": "revoke", "agent_id": agent_id or None, "did": did or None})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_registrations(status: Optional[str] = None) -> str:
     """List registrations, optionally filtered by status (ACTIVE|REVOKED)."""
     return await _run({"action": "list", "status": status})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
-    """Fleet-standard self-description."""
+    """Describe this agent: name, version, purpose, every action it supports
+    and the inputs each one takes. Read-only and free; call it first to learn
+    how to use this server."""
     return json.dumps(agent.describe(), default=str, indent=2)
 
 

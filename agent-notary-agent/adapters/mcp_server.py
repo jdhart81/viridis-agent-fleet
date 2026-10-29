@@ -54,7 +54,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def commit(committer: str, nonce: str, commit_hash: str, deadline: str,
                  context: str = "") -> str:
     """Commit to a deliverable BEFORE handover. commit_hash =
@@ -65,7 +78,7 @@ async def commit(committer: str, nonce: str, commit_hash: str, deadline: str,
                        "deadline": deadline, "context": context})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def reveal(commitment_id: str, salt: str, content_digest: str) -> str:
     """Reveal the committed content's digest + salt after handover. Verifies
     against the commitment (one bit of drift fails); returns a delivery_proof
@@ -74,7 +87,7 @@ async def reveal(commitment_id: str, salt: str, content_digest: str) -> str:
                        "salt": salt, "content_digest": content_digest})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify(commitment_id: str, content_digest: Optional[str] = None) -> str:
     """Independently verify a revealed commitment; optionally check it against
     the digest of content you received."""
@@ -84,20 +97,20 @@ async def verify(commitment_id: str, content_digest: Optional[str] = None) -> st
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def commitment_status(commitment_id: str) -> str:
     """Current record for a commitment (pre-reveal, salt/digest stay hidden)."""
     return await _run({"action": "status", "commitment_id": commitment_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_commitments(state: Optional[str] = None) -> str:
     """List commitments, optionally filtered by state
     (PENDING|REVEALED|EXPIRED)."""
     return await _run({"action": "list", "state": state})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def seal_outcome_receipt(output: Dict[str, Any],
                                subject: Optional[Dict[str, Any]] = None,
                                profile: str = "generic",
@@ -113,14 +126,14 @@ async def seal_outcome_receipt(output: Dict[str, Any],
                        "excludes": excludes or [], "bindings": bindings or {}})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_orc_commitment(commitment: str) -> str:
     """Registry lookup: is this ORC commitment sealed by this notary? Returns
     digest, issuer, profile, attestation and registered_at, or NotFound."""
     return await _run({"action": "get_commitment", "commitment": commitment})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return capabilities and input contract."""
     return json.dumps(agent.describe(), indent=2)

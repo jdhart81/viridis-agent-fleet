@@ -7,7 +7,20 @@ from src.core import WuWeiRouterCore
 mcp=FastMCP('wu-wei-router-agent')
 agent=WuWeiRouterCore()
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def plan_workload(profiles:list[dict],tasks:list[dict])->str:
     """$1 workload routing plan from declared costs and representative evaluation counts.
 
@@ -18,7 +31,7 @@ async def plan_workload(profiles:list[dict],tasks:list[dict])->str:
     error=agent._paid_preflight(payload)
     return json.dumps(error if error else await agent.process(payload))
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent()->str:
     """Free scope and price discovery."""
     return json.dumps(agent.describe())
@@ -27,7 +40,7 @@ async def describe_agent()->str:
 # Only the approved Wilson routing/state surface is exposed; no lifecycle tools.
 import os
 if os.environ.get("WU_WEI_V2_ENABLED") == "1":
-    @mcp.tool()
+    @mcp.tool(annotations=_WRITE)
     async def register_compute_profile(profile: dict) -> str:
         """Register declared Wilson evaluation/cost data and optional power_w.
 
@@ -35,7 +48,7 @@ if os.environ.get("WU_WEI_V2_ENABLED") == "1":
         """
         return json.dumps(await agent.process({"action": "register_compute_profile", "profile": profile}))
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ)
     async def route_task(task: dict, profiles: list[dict] | None = None) -> str:
         """Recommend one workload group's Wilson-eligible route; never execute it.
 
@@ -47,7 +60,7 @@ if os.environ.get("WU_WEI_V2_ENABLED") == "1":
             payload["profiles"] = profiles
         return json.dumps(await agent.process(payload))
 
-    @mcp.tool()
+    @mcp.tool(annotations=_WRITE)
     async def record_route_outcome(decision_id: str, successes: int, trials: int,
                                    duration_ms: int | None = None,
                                    cost_microusd: int | None = None) -> str:
@@ -59,17 +72,17 @@ if os.environ.get("WU_WEI_V2_ENABLED") == "1":
                 payload[key] = value
         return json.dumps(await agent.process(payload))
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ)
     async def compute_efficiency_report() -> str:
         """Free modeled routing audit; caller reports are not adoption evidence."""
         return json.dumps(await agent.process({"action": "compute_efficiency_report"}))
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ)
     async def export_state() -> str:
         """Free portable routing state, including separate audit-event identities."""
         return json.dumps(await agent.process({"action": "export_state"}))
 
-    @mcp.tool()
+    @mcp.tool(annotations=_WRITE)
     async def import_state(state: dict) -> str:
         """Validate and import portable Wilson state through the admission gate."""
         return json.dumps(await agent.process({"action": "import_state", "state": state}))

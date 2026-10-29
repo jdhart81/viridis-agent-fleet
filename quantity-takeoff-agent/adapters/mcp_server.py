@@ -48,7 +48,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2, default=str)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_READ)
 async def calculate_takeoff(items: List[Dict[str, Any]],
                             options: Optional[Dict[str, Any]] = None,
                             payment_ref: Optional[str] = None,
@@ -64,35 +77,35 @@ async def calculate_takeoff(items: List[Dict[str, Any]],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_assemblies() -> str:
     """List supported assemblies, required dimensions, formulas, waste
     defaults, and the current material-pack digest."""
     return await _run({"action": "list_assemblies"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_assembly(assembly_type: str) -> str:
     """Return one assembly's formula, required dimensions, material factors,
     purchase increment, sources, and material-pack lineage."""
     return await _run({"action": "get_assembly", "assembly_type": assembly_type})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_material_pack() -> str:
     """List the bundled material pack version, digest, coverage, shapes,
     rebar sizes, roof pitches, and explicit unsupported policy."""
     return await _run({"action": "list_material_pack"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_material_pack() -> str:
     """Return the bundled factors, densities, coverages, waste defaults,
     purchase increments, unit conversions, sources, and raw-pack SHA."""
     return await _run({"action": "get_material_pack"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_result(result_json: str) -> str:
     """Recompute a takeoff audit hash, notary payload, pack currency, and QT9
     unit-resolved conservation. Pass the prior result object as JSON."""
@@ -104,7 +117,7 @@ async def verify_result(result_json: str) -> str:
     return await _run({"action": "verify_result", "result": result})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return fleet-standard capabilities, version, pack digest, disclaimer,
     composition role, and pricing."""

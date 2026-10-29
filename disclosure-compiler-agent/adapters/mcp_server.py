@@ -48,7 +48,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2, default=str)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def compile_disclosure(framework: str, company_facts: Dict[str, Any],
                              ghg_result: Optional[Dict[str, Any]] = None,
                              options: Optional[Dict[str, Any]] = None,
@@ -65,21 +78,21 @@ async def compile_disclosure(framework: str, company_facts: Dict[str, Any],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_frameworks() -> str:
     """List bundled framework IDs, coverage, source lineage, version, and the
     framework-pack digest."""
     return await _run({"action": "list_frameworks"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_framework(framework: str) -> str:
     """Return one bundled framework's required datapoints, mappings, sources,
     and framework-pack lineage."""
     return await _run({"action": "get_framework", "framework": framework})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_result(result_json: str) -> str:
     """Recompute a disclosure draft audit hash, notary payload, structural
     invariants, and framework-pack currency. Pass the prior result as JSON."""
@@ -91,7 +104,7 @@ async def verify_result(result_json: str) -> str:
     return await _run({"action": "verify_result", "result": result})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return deterministic capabilities, version, pack digest, pricing,
     composition, and the professional-review disclaimer."""

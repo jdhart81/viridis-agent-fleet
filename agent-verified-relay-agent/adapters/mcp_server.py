@@ -49,7 +49,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def register_service(url: str, provider: str, description: str = "",
                            fee_minor: int = 2,
                            payment_ref: Optional[str] = None,
@@ -65,7 +78,7 @@ async def register_service(url: str, provider: str, description: str = "",
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def call_verified(service_id: str, tool: str, call_id: str,
                         arguments: Optional[Dict[str, Any]] = None,
                         timeout_s: int = 20,
@@ -84,34 +97,36 @@ async def call_verified(service_id: str, tool: str, call_id: str,
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_receipt(receipt_id: str) -> str:
     """Fetch a single delivery receipt by id."""
     return await _run({"action": "get_receipt", "receipt_id": receipt_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_receipts(service_id: str) -> str:
     """Recompute a service's full receipt hash chain and fee ledger.
     Any party can audit Viridis Verified from receipts alone."""
     return await _run({"action": "verify_receipts", "service_id": service_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_services() -> str:
     """List registered services with call/fee counters."""
     return await _run({"action": "list_services"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def service_stats(service_id: str) -> str:
     """Call counts, error counts, and accrued fees for one service."""
     return await _run({"action": "service_stats", "service_id": service_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
-    """Fleet-standard self-description."""
+    """Describe this agent: name, version, purpose, every action it supports
+    and the inputs each one takes. Read-only and free; call it first to learn
+    how to use this server."""
     return json.dumps(agent.describe(), default=str, indent=2)
 
 

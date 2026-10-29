@@ -49,7 +49,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def record_work(agent_id: str, entry_id: str, power_w: float, duration_s: float,
                 task: str = "", bit_ops: Optional[float] = None,
                 temperature_k: float = 300.0,
@@ -66,39 +79,39 @@ async def record_work(agent_id: str, entry_id: str, power_w: float, duration_s: 
                  "price_minor_per_kwh": price_minor_per_kwh})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def footprint(agent_id: str) -> str:
     """Aggregate footprint for an agent: total J, kWh, gCO2e, cost, and mean
     Landauer efficiency. Totals are exact sums of the ledger entries."""
     return await _run({"action": "footprint", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def attest(entry_id: str) -> str:
     """Issue a content-addressed attestation for a ledger entry (verifiable
     green-compute / energy claim)."""
     return await _run({"action": "attest", "entry_id": entry_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_attestation(attestation: Dict[str, Any]) -> str:
     """Verify an attestation by recomputing the entry hash."""
     return await _run({"action": "verify_attestation", "attestation": attestation})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_chain(agent_id: str) -> str:
     """Verify the tamper-evident hash chain of an agent's ledger."""
     return await _run({"action": "verify_chain", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_entries(agent_id: str) -> str:
     """List all ledger entries for an agent."""
     return await _run({"action": "list_entries", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def carbon_receipt(entry_id: str, offset_ref: str = "") -> str:
     """Emit an x402-C carbon receipt for a recorded work entry — the
     physically-grounded {version, g_co2e, energy_j, method, landauer_*, ...}
@@ -113,7 +126,7 @@ async def carbon_receipt(entry_id: str, offset_ref: str = "") -> str:
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def record_inventory(agent_id: str, inventory_id: str, mass_g: int,
                            content_digest: str, factor_pack_version: str,
                            factor_pack_digest: str,
@@ -129,27 +142,29 @@ async def record_inventory(agent_id: str, inventory_id: str, mass_g: int,
                        "source_ids": source_ids or []})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_inventory(inventory_id: str) -> str:
     """Fetch one immutable inventory record by inventory_id."""
     return await _run({"action": "get_inventory", "inventory_id": inventory_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_inventories(agent_id: str) -> str:
     """List the separate GHG inventory chain for an agent."""
     return await _run({"action": "list_inventories", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_inventory_chain(agent_id: str) -> str:
     """Verify an agent's inventory hash chain independently of compute work."""
     return await _run({"action": "verify_inventory_chain", "agent_id": agent_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
-    """Fleet-standard self-description."""
+    """Describe this agent: name, version, purpose, every action it supports
+    and the inputs each one takes. Read-only and free; call it first to learn
+    how to use this server."""
     return json.dumps(agent.describe(), default=str, indent=2)
 
 

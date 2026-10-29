@@ -48,7 +48,20 @@ mcp = _mk_mcp(
 agent = ProtoGenCore()
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def create_cad_workspace(
     project_name: str,
     owner_agent: str,
@@ -72,7 +85,7 @@ async def create_cad_workspace(
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def generate_cad_design(
     workspace_id: str,
     part_name: str,
@@ -100,7 +113,7 @@ async def generate_cad_design(
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def export_cad_design(design_id: str, export_format: str = "openscad",
                             payment_ref: Optional[str] = None) -> str:
     """Export a CAD design as OpenSCAD, STEP contract metadata, or manufacturing brief."""
@@ -113,7 +126,7 @@ async def export_cad_design(design_id: str, export_format: str = "openscad",
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def manufacturing_plan_from_spec(product_spec: Dict[str, Any],
                                        payment_ref: Optional[str] = None,
                                        request_id: Optional[str] = None) -> str:
@@ -127,13 +140,13 @@ async def manufacturing_plan_from_spec(product_spec: Dict[str, Any],
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 def describe() -> str:
     """Return ProtoGen capabilities and current CAD environment status."""
     return json.dumps(agent.describe(), indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 def health() -> str:
     """Return ProtoGen health and workspace counts."""
     return json.dumps(agent.health(), indent=2)

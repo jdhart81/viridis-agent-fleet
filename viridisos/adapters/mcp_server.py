@@ -60,44 +60,57 @@ def _call(name: str, args: Dict[str, Any]) -> str:
     return json.dumps(dispatch_tool(name, args), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_READ)
 def viridis_list_modules() -> str:
     """List ViridisOS modules and their LIVE/BLOCKED state (A-1 against the live canon)."""
     return _call("viridis_list_modules", {})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 def viridis_certify(module_id: str, subject: str, inputs: Dict[str, Any]) -> str:
     """Certify a subject (parcel/portfolio) with a module -> a certificate. Errors if the module's
     backing theorem is not gate-passed (BLOCKED)."""
     return _call("viridis_certify", {"module_id": module_id, "subject": subject, "inputs": inputs})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 def viridis_certify_envelope(module_id: str, subject: str, inputs: Dict[str, Any]) -> str:
     """Certify then return a 'Certified by ViridisOS' mark envelope (profile conservation-claim)."""
     return _call("viridis_certify_envelope", {"module_id": module_id, "subject": subject, "inputs": inputs})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 def viridis_verify_mark(envelope: Dict[str, Any], profile: str = "") -> str:
     """Verify a 'Certified by ViridisOS' envelope against the shared trust root."""
     return _call("viridis_verify_mark", {"envelope": envelope, "profile": profile})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 def viridis_bind_did(agent_id: str, pubkey: str) -> str:
     """Derive the canonical did:viridis identity for an agent (fleet R1 formula) under the shared root."""
     return _call("viridis_bind_did", {"agent_id": agent_id, "pubkey": pubkey})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 def viridis_agent_attestation(event: Dict[str, Any]) -> str:
     """Issue a mark-stamped agent-attestation envelope under the shared trust root."""
     return _call("viridis_agent_attestation", {"event": event})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 def viridis_compute_toll(amount_minor: int, payee_tier: str) -> str:
     """Compute the unified Viridis protocol margin (the take) + pass-through card cost for a settlement."""
     return _call("viridis_compute_toll", {"amount_minor": amount_minor, "payee_tier": payee_tier})

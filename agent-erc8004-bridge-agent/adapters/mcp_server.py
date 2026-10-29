@@ -57,7 +57,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def import_registration(chain_id: int, token_id: int, agent_uri: str,
                               owner: str,
                               metadata: Optional[Dict[str, Any]] = None) -> str:
@@ -72,7 +85,7 @@ async def import_registration(chain_id: int, token_id: int, agent_uri: str,
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def resolve_agent(bridge_did: str = "", chain_id: Optional[int] = None,
                         token_id: Optional[int] = None) -> str:
     """Resolve an imported ERC-8004 registration by bridge DID or by
@@ -87,7 +100,7 @@ async def resolve_agent(bridge_did: str = "", chain_id: Optional[int] = None,
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def import_feedback(chain_id: int, token_id: int,
                           feedback: List[Dict[str, Any]]) -> str:
     """Import ERC-8004 Reputation Registry feedback records for an agent.
@@ -97,7 +110,7 @@ async def import_feedback(chain_id: int, token_id: int,
                        "token_id": token_id, "feedback": feedback})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def score_agent(bridge_did: str = "", chain_id: Optional[int] = None,
                       token_id: Optional[int] = None) -> str:
     """Decay-weighted trust score in [0,1] + tier over the agent's imported
@@ -113,7 +126,7 @@ async def score_agent(bridge_did: str = "", chain_id: Optional[int] = None,
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def bind_identity(fleet_did: str, chain_id: int, token_id: int,
                         proof_note: str = "") -> str:
     """Bind a fleet DID to an ERC-8004 identity. Produces an order-independent,
@@ -123,7 +136,7 @@ async def bind_identity(fleet_did: str, chain_id: int, token_id: int,
                        "proof_note": proof_note})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def export_attestation(chain_id: int, token_id: int) -> str:
     """Export the agent's current trust score as an UNSIGNED
     ERC-8004 Validation Registry-shaped payload, content-addressed and ready
@@ -132,19 +145,19 @@ async def export_attestation(chain_id: int, token_id: int) -> str:
                        "token_id": token_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_attestation(payload: Dict[str, Any]) -> str:
     """Recompute a payload's content hash and report whether it is intact."""
     return await _run({"action": "verify", "payload": payload})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_registrations() -> str:
     """List all imported ERC-8004 registrations."""
     return await _run({"action": "list"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def export_validation_response(receipt: Dict[str, Any], request_hash: str,
                                      response_uri: str, replay_ok: bool) -> str:
     """Build UNSIGNED ERC-8004 Validation Registry validationResponse args
@@ -157,7 +170,7 @@ async def export_validation_response(receipt: Dict[str, Any], request_hash: str,
                        "response_uri": response_uri, "replay_ok": replay_ok})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return the bridge's capabilities and input contract."""
     return json.dumps(agent.describe(), indent=2)

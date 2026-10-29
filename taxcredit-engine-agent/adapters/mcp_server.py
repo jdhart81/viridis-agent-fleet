@@ -48,7 +48,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2, default=str)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_READ)
 async def calculate_tax_credit(credit: str, facts: Dict[str, Any],
                                payment_ref: Optional[str] = None,
                                request_id: Optional[str] = None) -> str:
@@ -64,19 +77,19 @@ async def calculate_tax_credit(credit: str, facts: Dict[str, Any],
                           if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_rule_packs() -> str:
     """List supported credits and the current bundled rule-pack digest."""
     return await _run({"action": "list_rule_packs"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def get_rule_pack(credit: str) -> str:
     """Return the bundled rules and official source metadata for one credit."""
     return await _run({"action": "get_rule_pack", "credit": credit})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_tax_credit_result(result_json: str) -> str:
     """Verify an engine result's audit_sha256. Pass the prior result object as
     JSON; any changed amount, fact, rule step, or source digest fails."""
@@ -88,7 +101,7 @@ async def verify_tax_credit_result(result_json: str) -> str:
     return await _run({"action": "verify_result", "result": result})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return fleet-standard capabilities, version, and pricing."""
     return json.dumps(agent.describe(), indent=2)

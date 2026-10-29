@@ -61,7 +61,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def scan_regulations(jurisdiction: str, sector: Optional[str] = None,
                            query: Optional[str] = None,
                            payment_ref: Optional[str] = None,
@@ -81,7 +94,7 @@ async def scan_regulations(jurisdiction: str, sector: Optional[str] = None,
                     if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def assess_compliance(company_name: str, sector: str, jurisdiction: str,
                       disclosures: Optional[List[str]] = None,
                       payment_ref: Optional[str] = None,
@@ -96,7 +109,7 @@ async def assess_compliance(company_name: str, sector: str, jurisdiction: str,
                     if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def monitor_changes(jurisdiction: str, since_days: int = 90,
                           topics: Optional[List[str]] = None,
                           payment_ref: Optional[str] = None,
@@ -113,7 +126,7 @@ async def monitor_changes(jurisdiction: str, since_days: int = 90,
                     if request_id is not None else {})})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def build_evidence_pack(
     jurisdiction: str,
     topics: Optional[List[str]] = None,
@@ -141,7 +154,7 @@ async def build_evidence_pack(
     })
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Fleet-standard self-description: capabilities, inputs, outputs."""
     return json.dumps(agent.describe(), default=str, indent=2)

@@ -56,7 +56,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def post_bond(principal_agent: str, principal: int, expires_at: str,
                     coverage: str = "", currency: str = "USD") -> str:
     """Post a surety bond behind an agent's promises. principal is a positive
@@ -67,7 +80,7 @@ async def post_bond(principal_agent: str, principal: int, expires_at: str,
                        "coverage": coverage, "currency": currency})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def activate_bond(bond_id: str, funding_ref: str = "") -> str:
     """Mark a POSTED bond ACTIVE (idempotent). funding_ref links the payment
     rail transaction that funded the stake."""
@@ -75,7 +88,7 @@ async def activate_bond(bond_id: str, funding_ref: str = "") -> str:
                        "funding_ref": funding_ref})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def file_claim(bond_id: str, claimant: str, amount_minor: int,
                      reason: str = "") -> str:
     """File a claim against an ACTIVE bond. Claims pay out ONLY when an
@@ -85,7 +98,7 @@ async def file_claim(bond_id: str, claimant: str, amount_minor: int,
                        "reason": reason})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_DESTRUCTIVE)
 async def slash_bond(bond_id: str, claim_id: str, ruling_case_id: str,
                      ruling_hash: str, upheld: bool = True) -> str:
     """Execute an arbitration ruling against a claim. Requires the ruling's
@@ -97,33 +110,33 @@ async def slash_bond(bond_id: str, claim_id: str, ruling_case_id: str,
                        "ruling_hash": ruling_hash, "upheld": upheld})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_DESTRUCTIVE)
 async def release_bond(bond_id: str) -> str:
     """Release the remaining stake to the principal after the coverage window
     elapses — refused while any claim is still open."""
     return await _run({"action": "release", "bond_id": bond_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def bond_status(bond_id: str) -> str:
     """Current record for a bond (state, balances, claims, audit head)."""
     return await _run({"action": "status", "bond_id": bond_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_bonds(state: Optional[str] = None) -> str:
     """List bonds, optionally filtered by state
     (POSTED|ACTIVE|RELEASED|EXHAUSTED)."""
     return await _run({"action": "list", "state": state})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_audit(bond_id: str) -> str:
     """Validate the tamper-evident audit hash chain for a bond."""
     return await _run({"action": "verify_audit", "bond_id": bond_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def price_bond(coverage_minor: int, duration_days: int,
                      attestations: int = 0, successful_deliveries: int = 0,
                      bonds_completed: int = 0, slashes: int = 0,
@@ -143,7 +156,7 @@ async def price_bond(coverage_minor: int, duration_days: int,
                                    "slashed_minor": slashed_minor}})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
     """Return capabilities and input contract."""
     return json.dumps(agent.describe(), indent=2)

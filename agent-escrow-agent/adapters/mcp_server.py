@@ -54,7 +54,20 @@ async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
 
 
-@mcp.tool()
+try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
+    def _ToolAnnotations(**kw):
+        return kw
+_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                         idempotentHint=True, openWorldHint=False)
+_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                          idempotentHint=False, openWorldHint=False)
+_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                idempotentHint=False, openWorldHint=False)
+
+
+@mcp.tool(annotations=_WRITE)
 async def open_escrow(payer: str, payee: str, amount_minor: int, currency: str = "USD",
                 terms: str = "", deadline: str = "", fee_bps: Optional[int] = None,
                 open_ref: str = "") -> str:
@@ -73,14 +86,14 @@ async def open_escrow(payer: str, payee: str, amount_minor: int, currency: str =
     return await _run(payload)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def fund_escrow(escrow_id: str, payment_ref: str = "") -> str:
     """Mark an OPEN escrow as FUNDED (idempotent). payment_ref links the
     payment-rail transaction."""
     return await _run({"action": "fund", "escrow_id": escrow_id, "payment_ref": payment_ref})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_DESTRUCTIVE)
 async def release_escrow(escrow_id: str, delivery_proof: str = "") -> str:
     """Release a FUNDED/DISPUTED escrow to the payee (exactly-once — a repeat
     release returns the existing terminal record, never a double payout)."""
@@ -88,42 +101,44 @@ async def release_escrow(escrow_id: str, delivery_proof: str = "") -> str:
                  "delivery_proof": delivery_proof})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_DESTRUCTIVE)
 async def refund_escrow(escrow_id: str, reason: str = "") -> str:
     """Refund an OPEN/FUNDED/DISPUTED escrow to the payer (exactly-once).
     Refunding an OPEN escrow is a cancel."""
     return await _run({"action": "refund", "escrow_id": escrow_id, "reason": reason})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_WRITE)
 async def dispute_escrow(escrow_id: str, reason: str = "") -> str:
     """Move a FUNDED escrow to DISPUTED. An arbiter (agent-arbitration-agent)
     then resolves it to release or refund."""
     return await _run({"action": "dispute", "escrow_id": escrow_id, "reason": reason})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def escrow_status(escrow_id: str) -> str:
     """Current record for an escrow."""
     return await _run({"action": "status", "escrow_id": escrow_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def list_escrows(state: Optional[str] = None) -> str:
     """List escrows, optionally filtered by state
     (OPEN|FUNDED|RELEASED|REFUNDED|DISPUTED)."""
     return await _run({"action": "list", "state": state})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def verify_audit(escrow_id: str) -> str:
     """Validate the tamper-evident audit hash chain for an escrow."""
     return await _run({"action": "verify_audit", "escrow_id": escrow_id})
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ)
 async def describe_agent() -> str:
-    """Fleet-standard self-description."""
+    """Describe this agent: name, version, purpose, every action it supports
+    and the inputs each one takes. Read-only and free; call it first to learn
+    how to use this server."""
     return json.dumps(agent.describe(), default=str, indent=2)
 
 
