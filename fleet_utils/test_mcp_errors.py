@@ -153,9 +153,8 @@ ADAPTERS = sorted(
 def test_every_fleet_adapter_flags_errors(adapter):
     """Each adapter wraps all of its registered tools at import time."""
     code = (
-        "import importlib.util, sys\n"
-        f"spec = importlib.util.spec_from_file_location('adapter', {str(adapter)!r})\n"
-        "mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)\n"
+        "import importlib\n"
+        "mod = importlib.import_module('adapters.mcp_server')\n"
         "tools = mod.mcp._tool_manager.list_tools()\n"
         "bare = [t.name for t in tools if not getattr(t.fn, '__fleet_flags_errors__', False)]\n"
         "assert tools and not bare, bare\n"
