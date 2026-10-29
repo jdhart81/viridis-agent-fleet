@@ -1012,7 +1012,7 @@ pyyaml==6.0.1
     optional_deps = []
 
     if "http" in spec.description.lower():
-        optional_deps.append("aiohttp==3.14.3")
+        optional_deps.append("aiohttp==3.14.4")
 
     if "postgres" in spec.description.lower() or "database" in spec.description.lower():
         optional_deps.append("psycopg[binary]==3.9")
