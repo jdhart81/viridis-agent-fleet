@@ -166,3 +166,33 @@ def test_every_fleet_adapter_flags_errors(adapter):
     r = subprocess.run([sys.executable, "-c", code], cwd=agent, env=env,
                        capture_output=True, text=True, timeout=120)
     assert r.returncode == 0, r.stderr[-2000:]
+
+
+GATEWAY_LOAD = """
+import importlib.util, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+assert str(root) not in sys.path  # the gateway runs from deploy/gateway/
+for adapter in sys.argv[2:]:
+    agent = pathlib.Path(adapter).parents[1]
+    for name in [m for m in list(sys.modules) if m == "src" or m.startswith("src.")]:
+        del sys.modules[name]
+    sys.path.insert(0, str(agent))
+    spec = importlib.util.spec_from_file_location("gw_" + agent.name.replace("-", "_"), adapter)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    tools = mod.mcp._tool_manager.list_tools()
+    bare = [t.name for t in tools if not getattr(t.fn, "__fleet_flags_errors__", False)]
+    assert tools and not bare, (agent.name, bare)
+"""
+
+
+def test_adapters_flag_errors_when_loaded_like_the_gateway(tmp_path):
+    """The hosted gateway loads each adapter by file path, in mount order,
+    without the fleet root on sys.path; every tool must still be wrapped."""
+    hosted = [str(p) for p in ADAPTERS if p.parts[-3] != "agent-market-network-agent"]
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    r = subprocess.run([sys.executable, "-c", GATEWAY_LOAD, str(ROOT), *hosted],
+                       cwd=tmp_path, env=env, capture_output=True, text=True,
+                       timeout=600)
+    assert r.returncode == 0, r.stderr[-3000:]
