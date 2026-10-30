@@ -19,6 +19,8 @@ jobs:
       - run: python3 run_fleet_tests.py
       - name: Verify tool errors reach MCP clients as isError
         run: PYTHONPATH=. python3 -m pytest -q -p no:cacheprovider fleet_utils/test_mcp_errors.py
+      - name: Verify the live probe and fleet watch alerting
+        run: python3 -m pytest -q -p no:cacheprovider scripts/test_fleet_live_probe.py scripts/test_fleet_watch.py
       - name: Verify patched template MCP transport
         working-directory: _AGENT_TEMPLATE
         run: PYTHONPATH=. python3 -m pytest -q tests/test_mcp_adapter.py tests/test_core.py
