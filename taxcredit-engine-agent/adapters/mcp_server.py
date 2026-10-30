@@ -107,6 +107,22 @@ async def describe_agent() -> str:
     return json.dumps(agent.describe(), indent=2)
 
 
+try:  # report {"status": "error"} results to MCP clients as tool errors (isError)
+    from fleet_utils.mcp_errors import flag_error_results
+except ImportError:  # loaded without the fleet root on sys.path, as the gateway does
+    import sys as _sys
+    from pathlib import Path as _Path
+    _fleet_root = _Path(__file__).resolve().parents[2]
+    if (_fleet_root / "fleet_utils").is_dir() and str(_fleet_root) not in _sys.path:
+        _sys.path.append(str(_fleet_root))
+    try:
+        from fleet_utils.mcp_errors import flag_error_results
+    except ImportError:  # pragma: no cover - adapter copied without fleet_utils
+        def flag_error_results(server):
+            return 0
+flag_error_results(mcp)
+
+
 if __name__ == "__main__":
     if "--serve" in sys.argv:
         mcp.run()

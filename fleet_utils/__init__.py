@@ -9,6 +9,7 @@ Provides reusable patterns extracted from individual agents:
 - RangeNormalizer: clamp/winsorize numerics into a target range (from D-Score + Bounty Hunter)
 - clamp_to_range: one-shot warn+clamp primitive (no normalizer instance required)
 - error_envelope: fleet-canonical structured error response builder (unifies guard + unknown-action schemas)
+- flag_error_results: report {"status": "error"} tool results to MCP clients with isError=True
 """
 
 from fleet_utils.scoring import WeightedBooleanScorer, MultiFactorScorer
@@ -20,6 +21,7 @@ from fleet_utils.validation import (
 from fleet_utils.normalization import RangeNormalizer, NormalizeResult, clamp_to_range
 from fleet_utils.errors import error_envelope, ERROR_ENVELOPE_KEYS
 from fleet_utils.mcp_output import FleetToolResult, structured_result
+from fleet_utils.mcp_errors import flag_error_results, is_error_result
 
 __all__ = [
     "WeightedBooleanScorer",
@@ -34,4 +36,6 @@ __all__ = [
     "ERROR_ENVELOPE_KEYS",
     "FleetToolResult",
     "structured_result",
+    "flag_error_results",
+    "is_error_result",
 ]

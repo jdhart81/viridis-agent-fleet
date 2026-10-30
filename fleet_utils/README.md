@@ -22,6 +22,7 @@ This README documents:
 | `validation`      | `ValidationError`, `require_number`, `bind_to_error`                 | Carbon-Bridge (Night 18)        |
 | `normalization`   | `RangeNormalizer`, `NormalizeResult`, `clamp_to_range`               | D-Score + Bounty Hunter (N19)   |
 | `mcp_output`      | `FleetToolResult`, `structured_result`                               | Agent Market Network (FS8)      |
+| `mcp_errors`      | `flag_error_results`, `is_error_result`                              | Fleet health scorecard (Oct 28) |
 
 All symbols are re-exported at package level:
 
@@ -49,6 +50,16 @@ from fleet_utils import (
   serialization. This is the one fleet pattern for removing double-encoded
   MCP responses; adapters migrate individually and then regenerate
   `tools.json`.
+
+### `mcp_errors`
+
+- Call `flag_error_results(mcp)` once, after the last `@mcp.tool`.
+- A tool result whose top-level `status` is `"error"` then reaches MCP
+  clients with `isError=True`. The text and structured content are
+  unchanged; only the flag flips. Before this, FastMCP set `isError` only
+  when a tool raised, so failed calls were reported as successes.
+- Direct Python calls to the tool functions are unchanged, and it is a
+  no-op under the stdlib smoke shim.
 
 ### `scoring`
 

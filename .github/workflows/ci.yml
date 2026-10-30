@@ -17,6 +17,8 @@ jobs:
         with: {python-version: "3.12"}
       - run: pip install -r requirements-dev.txt
       - run: python3 run_fleet_tests.py
+      - name: Verify tool errors reach MCP clients as isError
+        run: PYTHONPATH=. python3 -m pytest -q -p no:cacheprovider fleet_utils/test_mcp_errors.py
       - name: Verify patched template MCP transport
         working-directory: _AGENT_TEMPLATE
         run: PYTHONPATH=. python3 -m pytest -q tests/test_mcp_adapter.py tests/test_core.py

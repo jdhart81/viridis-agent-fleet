@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
+from mcp.types import CallToolResult
 
 ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(ROOT))
@@ -21,7 +22,11 @@ mcp = market_mcp.mcp
 
 
 def call_tool(name, arguments):
-    _content, structured = asyncio.run(mcp.call_tool(name, arguments))
+    result = asyncio.run(mcp.call_tool(name, arguments))
+    if isinstance(result, CallToolResult):  # error envelopes are sent with isError
+        structured = result.structuredContent
+    else:
+        _content, structured = result
     schema = next(
         tool.outputSchema for tool in asyncio.run(mcp.list_tools())
         if tool.name == name)
@@ -119,6 +124,11 @@ def test_mcp_result_schema_accepts_success_and_error_envelopes():
     error = call_tool("get_work", {"work_id": "missing-work"})
     assert error["status"] == "error"
     assert error["error_type"] == "ValidationError"
+    raw = asyncio.run(mcp.call_tool("get_work", {"work_id": "missing-work"}))
+    assert isinstance(raw, CallToolResult) and raw.isError is True
+
+    success_raw = asyncio.run(mcp.call_tool("network_status", {}))
+    assert not isinstance(success_raw, CallToolResult)
 
 
 def test_mcp_full_signed_work_funnel_validates_every_result(tmp_path, monkeypatch):

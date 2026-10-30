@@ -1,0 +1,118 @@
+name: Retire stale verdigraph-mcp registry listing
+
+# Retires io.github.jdhart81/verdigraph-mcp (May 2026 Workers copy that now
+# answers initialize with HTTP 401) in the official MCP registry so agents
+# resolve to the live io.github.jdhart81/verdigraph listing.
+#
+# Invariants checked by this job:
+#   R1  Only io.github.jdhart81/verdigraph-mcp changes; the replacement is never touched.
+#   R2  Before: the replacement is active and its remote answers MCP initialize.
+#   R3  Status is deprecated (default) or deleted, both reversible with
+#       `mcp-publisher status --status active --all-versions <name>`.
+#   R4  After: every version of the stale listing reports the requested status
+#       and the replacement is still active.
+#   R5  Pinned publisher binary, checksum enforced.
+
+on:
+  workflow_dispatch:
+    inputs:
+      status:
+        description: Registry status for the stale listing
+        type: choice
+        options: [deprecated, deleted]
+        default: deprecated
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: retire-verdigraph-mcp
+  cancel-in-progress: false
+
+env:
+  STALE: io.github.jdhart81/verdigraph-mcp
+  LIVE: io.github.jdhart81/verdigraph
+  REGISTRY: https://registry.modelcontextprotocol.io
+
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check replacement is active and answering (R1, R2)
+        run: |
+          python3 - <<'CHECK'
+          import json, os, urllib.parse, urllib.request
+          reg, live, stale = os.environ['REGISTRY'], os.environ['LIVE'], os.environ['STALE']
+          assert live != stale
+          def versions(name):
+              url = f"{reg}/v0/servers/{urllib.parse.quote(name, safe='')}/versions"
+              with urllib.request.urlopen(url, timeout=30) as r:
+                  return json.load(r)['servers']
+          live_entries = versions(live)
+          meta = lambda e: e['_meta']['io.modelcontextprotocol.registry/official']
+          latest = [e for e in live_entries if meta(e).get('isLatest')]
+          assert latest and meta(latest[0])['status'] == 'active', 'replacement listing is not active'
+          remote = latest[0]['server']['remotes'][0]['url']
+          body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+              "protocolVersion": "2025-06-18", "capabilities": {},
+              "clientInfo": {"name": "viridis-retire-check", "version": "1"}}}).encode()
+          req = urllib.request.Request(remote, data=body, headers={
+              "Content-Type": "application/json", "Accept": "application/json, text/event-stream"})
+          with urllib.request.urlopen(req, timeout=30) as r:
+              text = r.read().decode()
+              assert r.status == 200 and '"serverInfo"' in text, f'replacement did not initialize: {text[:200]}'
+          print(f'{live} active, {remote} initializes')
+          print(f'{stale} versions:', [(e["server"]["version"], meta(e)["status"]) for e in versions(stale)])
+          CHECK
+      - name: Install pinned MCP publisher (R5)
+        run: |
+          curl --fail --location 'https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz' -o /tmp/mcp-publisher.tar.gz
+          echo 'ab128162b0616090b47cf245afe0a23f3ef08936fdce19074f5ba0a4469281ac  /tmp/mcp-publisher.tar.gz' | sha256sum --check --strict
+          tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
+          chmod +x /tmp/mcp-publisher
+          /tmp/mcp-publisher status --help >/dev/null
+      - name: Authenticate with existing GitHub OIDC method
+        run: /tmp/mcp-publisher login github-oidc
+      - name: Set stale listing status (R1, R3)
+        env:
+          NEW_STATUS: ${{ inputs.status }}
+        run: |
+          for attempt in 1 2 3; do
+            if /tmp/mcp-publisher status --status "$NEW_STATUS" --all-versions \
+                --message "Superseded by $LIVE (https://mcp.viridisconservation.com/verdigraph/mcp)" \
+                "$STALE"; then exit 0; fi
+            echo "status update failed (attempt $attempt), retrying"; sleep $((attempt * 20))
+          done
+          exit 1
+      - name: Verify registry state (R4)
+        env:
+          NEW_STATUS: ${{ inputs.status }}
+        run: |
+          python3 - <<'CHECK'
+          import json, os, time, urllib.error, urllib.parse, urllib.request
+          reg, live, stale, want = (os.environ[k] for k in ('REGISTRY', 'LIVE', 'STALE', 'NEW_STATUS'))
+          def versions(name):
+              url = f"{reg}/v0/servers/{urllib.parse.quote(name, safe='')}/versions"
+              with urllib.request.urlopen(url, timeout=30) as r:
+                  return json.load(r)['servers']
+          meta = lambda e: e['_meta']['io.modelcontextprotocol.registry/official']
+          def stale_ok():
+              try:
+                  got = [meta(e)['status'] for e in versions(stale)]
+              except urllib.error.HTTPError as err:
+                  if err.code == 404 and want == 'deleted':
+                      return True, 'hidden (404)'
+                  raise
+              if not got and want == 'deleted':
+                  return True, 'hidden (no versions listed)'
+              return bool(got) and all(s == want for s in got), got
+          for _ in range(6):
+              ok, got = stale_ok()
+              if ok:
+                  break
+              time.sleep(10)
+          assert ok, f'{stale} statuses {got}, wanted {want}'
+          assert any(meta(e)['status'] == 'active' and meta(e).get('isLatest') for e in versions(live)), f'{live} no longer active'
+          print(f'{stale}: all versions {want}; {live}: active')
+          CHECK

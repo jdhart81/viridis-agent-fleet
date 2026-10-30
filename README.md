@@ -24,6 +24,9 @@ python3 run_fleet_tests.py                                 # every agent's invar
 
 Free tier: 10 calls/day per service; the rails (identity, escrow, metering…) are free forever. Verification is always free.
 
+## For agents
+Agents and LLM tools can start from [llms.txt](llms.txt), a generated index of every agent, and [AGENTS.md](AGENTS.md), the rules for using and changing the fleet.
+
 ## Part of the Viridis open-source commons
 
 Building agents for conservation or energy work? [VergeCommon](https://github.com/jdhart81/verge-common) and [EnergyAI MCP](https://github.com/jdhart81/energyai-mcp) also expose MCP tools, and [ViridisOS](https://github.com/jdhart81/viridisos) serves its decision functions to agents over MCP.
