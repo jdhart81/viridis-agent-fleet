@@ -45,7 +45,7 @@ def describe() -> dict:
 | 2 | **Bounty Hunter** | `bounty-hunter-agent/` | **RUNNING** | $5K–$500K/finding, 95% margin | Claude Code Skill + Workflows |
 | 3 | **Viridis Trading Agent** | `viridis-trading-agent/` | **PROTOTYPE** | Polymarket PRISM (4 engines) + Tradovate MCL/MGC daily compounding | FastAPI + MCP |
 | 4 | **EcoInvest AI** | `ecoinvest-agent/` | **MVP** | ESG fund selection, AUM-based fees, thermodynamic risk scoring | FastAPI |
-| 5 | **Thermo-Arbitrage Agent** | `thermo-arbitrage-agent/` | **PROTOTYPE** | Biodiversity mispricing detection via Intelligence Bound theorem as systematic investing edge; trading profits, advisory ($50K–$500K), data licensing | FastAPI |
+| 5 | **Thermo-Arbitrage Agent** | `thermo-arbitrage-agent/` | **PROTOTYPE** | Biodiversity mispricing detection via Intelligence Bound conjecture as systematic investing edge; trading profits, advisory ($50K–$500K), data licensing | FastAPI |
 | 22 | **SmartScale** | `smartscale-agent/` | **Near-ready** | Credit-card calibrated photo measurement for contractors, ecommerce, makers, inspectors, and Viridis agent workflows. Self-serve API/plugin ($99-$299/mo), SMB packages ($500-$2K/mo), custom operations consulting ($3K-$8K/mo). | MCP + FastAPI + Docker |
 | 14 | **ProtoGen** | `protogen-agent/` | **MVP** | MCP CAD services for Viridis agents and external customers: CAD design briefs ($99-$499), maker/contractor/product workflows ($500-$2.5K/mo), CAD-to-manufacturing ops packages ($3K-$15K/mo). | MCP + FastAPI |
 | 33 | **Compute Exchange** | `compute-exchange-agent/` | **PROTOTYPE** | Policy-safe compute capacity marketplace for Viridis agents and external customers: compliant internal budget routing, owned/local/cloud worker orchestration, exchange fees (10%-20%), managed compute coordination ($500-$5K/mo). Explicitly does not broker non-transferable credits, shared API keys, or shared accounts. | MCP + FastAPI |
@@ -63,7 +63,7 @@ def describe() -> dict:
 
 | # | Agent | Role | Status | Deploy Target |
 |---|-------|------|--------|---|
-| 6 | **Viridis Science Agent** | Research orchestrator for Intelligence Bound theorem; absorbs institute specs (D-Score, HDFM, Biodiversity Credits, Implementation Monitor, Thermodynamic Valuation, Master Agent) | **MVP+** | FastAPI + MCP |
+| 6 | **Viridis Science Agent** | Research orchestrator for Intelligence Bound conjecture; absorbs institute specs (D-Score, HDFM, Biodiversity Credits, Implementation Monitor, Thermodynamic Valuation, Master Agent) | **MVP+** | FastAPI + MCP |
 | 7 | **Evoterra** | Regenerative landscape design, biome generation, carbon modeling | **MVP** | TypeScript + Python |
 | 8 | **GaiaSim** | Earth system modeling, weather integration, macro-scale climate forecasting | **MVP** | TypeScript MCP |
 | 9 | **Sentinel-Watch Agent** | Satellite remote sensing for land-use change, deforestation monitoring, restoration verification | **PROTOTYPE** | FastAPI |
@@ -142,7 +142,7 @@ def describe() -> dict:
 ### Additions (v2.0 → v3.0)
 
 **Pillar 1 Revenue Extension**
-- `thermo-arbitrage-agent` — Scales Pillar 1 beyond energy/prediction markets into structured trading on biodiversity mispricing using Intelligence Bound theorem as systematic edge. Advisory + data licensing unlock $50K–$500K revenue paths.
+- `thermo-arbitrage-agent` — Scales Pillar 1 beyond energy/prediction markets into structured trading on biodiversity mispricing using Intelligence Bound conjecture as systematic edge. Advisory + data licensing unlock $50K–$500K revenue paths.
 - `smartscale-agent`, `protogen-agent`, and `compute-exchange-agent` — Convert the fleet into a sellable MCP services layer: measurement, CAD generation, and compliant compute orchestration for other agents and external customers.
 
 **Pillar 2 Climate Intelligence Expansion**

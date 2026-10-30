@@ -6,7 +6,7 @@
 
 ## Why Validation Matters
 
-The Intelligence Bound theorem states: `dI/dt ≤ P·D/k_B·T·ln 2`. Garbage-in-garbage-out is a form of wasted power (P) — it generates entropy instead of intelligence. Validation is the trust barrier at every agent's entry point: it ensures only well-formed inputs reach the business logic, protecting the fleet's signal quality.
+The Intelligence Bound conjecture proposes: `dI/dt ≤ P·D/k_B·T·ln 2`. Garbage-in-garbage-out is a form of wasted power (P) — it generates entropy instead of intelligence. Validation is the trust barrier at every agent's entry point: it ensures only well-formed inputs reach the business logic, protecting the fleet's signal quality.
 
 ---
 

@@ -7,8 +7,8 @@ owner: "justin@viridis.earth"
 a2a_role: "accounting"
 
 thesis_connection: |
-  The literal P-variable accounting layer of the Intelligence Bound
-  (dI/dt <= P*D / kB*T*ln2): every unit of agent cognition is physical work,
+  The P-variable accounting layer of the Intelligence Bound conjecture
+  (dI/dt <= P*D / kB*T*ln2, a working premise): every unit of agent cognition is physical work,
   and this ledger prices it in joules and grams of CO2. Landauer-floor
   validation makes thermodynamics an input validator - physically impossible
   workload claims are rejected. Bridges the fleet to Viridis conservation

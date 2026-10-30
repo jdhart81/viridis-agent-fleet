@@ -18,7 +18,7 @@ Each agent follows the standard template: `src/core.py` (business logic), `adapt
 
 ## Agent 1: viridis-science-agent
 
-**Purpose:** Research orchestrator grounded in Intelligence Bound theorem. Biodiversity valuation engine.
+**Purpose:** Research orchestrator grounded in Intelligence Bound conjecture. Biodiversity valuation engine.
 
 **Location:** `/sessions/sweet-zen-knuth/mnt/Agents to deploy  copy/viridis-science-agent/`
 

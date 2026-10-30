@@ -8,7 +8,7 @@
 
 ### The Thesis Connection
 
-The Intelligence Bound — `dI/dt ≤ P·D/(k_B·T·ln 2)` — says the rate at which a system can create intelligence is bounded by available power (P), data richness (D), and temperature (T). Regulatory friction acts as a hidden tax on **D** — the quality and accessibility of the data a system can act on. When a project drowns in permit timelines, compliance ambiguity, and legal discovery costs, the data flowing through the decision loop becomes noisy, delayed, and expensive to obtain.
+The Intelligence Bound — `dI/dt ≤ P·D/(k_B·T·ln 2)` — is Viridis's conjecture that the rate at which a system can create intelligence is bounded by available power (P), data richness (D), and temperature (T). Regulatory friction acts as a hidden tax on **D** — the quality and accessibility of the data a system can act on. When a project drowns in permit timelines, compliance ambiguity, and legal discovery costs, the data flowing through the decision loop becomes noisy, delayed, and expensive to obtain.
 
 Regulatory Radar exists to **reduce regulatory friction (T↓) by turning compliance from a cost center into a knowledge asset**. Every regulation understood early is an incentive unlocked, a timeline mastered, a risk mitigated before it becomes a crisis. When T↓, D↑ — the system gains clearer signals about what works, where, and why. This sharpens every downstream agent's ability to design and execute.
 

@@ -39,7 +39,7 @@ All ten hard invariants (§1) apply without exception.
 - Spec invariance: every non-trivial output includes a verification report against stated invariants
 
 ## Domain Terminology
-- **Intelligence Bound:** dI/dt ≤ P·D/(k_B·T·ln 2) — the thermodynamic ceiling on information processing
+- **Intelligence Bound:** dI/dt ≤ P·D/(k_B·T·ln 2) — Viridis's working conjecture for a thermodynamic ceiling on intelligence creation (a premise, not a proved law)
 - **Wavefunction:** A query modeled as a superposition of agent capabilities
 - **Collapse:** The routing decision — selecting one or more agents from the superposition
 - **Entanglement:** Cross-agent synergies where routing to A increases the value of also routing to B

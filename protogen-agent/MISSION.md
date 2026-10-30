@@ -8,7 +8,7 @@
 
 ### The Thesis Connection
 
-The Intelligence Bound — `dI/dt ≤ P·D/(k_B·T·ln 2)` — says intelligence creation is *constrained*. But constraint is not limitation; it's *leverage*. The speediest way to increase dI/dt is to increase **D** (data richness) and decrease **T** (friction).
+The Intelligence Bound — `dI/dt ≤ P·D/(k_B·T·ln 2)` — is Viridis's conjecture that intelligence creation is *constrained*. But constraint is not limitation; it's *leverage*. The speediest way to increase dI/dt is to increase **D** (data richness) and decrease **T** (friction).
 
 In the Viridis fleet, every new agent increases D: more specialized knowledge, more compounding insight, more capability. But creating agents is expensive. Code, testing, deployment, knowledge curation — it's all manual, slow, friction-heavy. The fleet is constrained by its ability to *make new members*.
 
