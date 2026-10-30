@@ -27,6 +27,32 @@ Free tier: 10 calls/day per service; the rails (identity, escrow, metering…) a
 ## For agents
 Agents and LLM tools can start from [llms.txt](llms.txt), a generated index of every agent, and [AGENTS.md](AGENTS.md), the rules for using and changing the fleet.
 
+## Part of the Viridis open-source commons
+
+Building agents for conservation or energy work? [VergeCommon](https://github.com/jdhart81/verge-common) and [EnergyAI MCP](https://github.com/jdhart81/energyai-mcp) also expose MCP tools, and [ViridisOS](https://github.com/jdhart81/viridisos) serves its decision functions to agents over MCP.
+
+This project is one of a connected set of open tools from Viridis. Each stands on its own; together they run from field evidence to checked decisions.
+
+**Conservation commons**
+
+- [VergeCommon](https://github.com/jdhart81/verge-common): community conservation co-ops with consent-based land mapping, field evidence and group decisions
+- [Dendritic Forest Management (DFM)](https://github.com/jdhart81/hdfm-framework): compare forest-retention options around roads and waterways, with traceable inputs and portable reports
+- [Global Soil Intelligence Project (GSIP)](https://github.com/global-soil-intelligence/gsip): contribute soil observations and explore open soil maps with explicit uncertainty
+
+**Verifiable science**
+
+- [Viridis Canon](https://github.com/jdhart81/viridis-canon): machine-checked Lean 4 mathematics for ecological decisions, with a DOI for every result
+- [ViridisOS](https://github.com/jdhart81/viridisos): open reference runtime for DOI-backed decision modules and recomputable results
+- [Viridis Research](https://github.com/jdhart81/viridis-research): the nightly public research record, each claim labeled by what a verifier actually checked
+- [ProofLens](https://github.com/jdhart81/prooflens): see what a Lean statement means before reading the proof
+
+**Agent tools**
+
+- **Viridis Agent Fleet** (this repository): open-source MCP agents with deterministic, auditable cores
+- [EnergyAI MCP](https://github.com/jdhart81/energyai-mcp): energy-planning estimates and incentive sources for AI agents
+
+Browse every project on the [Viridis profile](https://github.com/jdhart81). If this one is useful to you, a star helps other people find it.
+
 ## Boundary
 This repo contains agent cores, MCP adapters, tests, standards and self-host tooling. The hosted service layer (gateway, payment and settlement, seats, signing authority, operations, telemetry and customer data) is proprietary and is not in this repo. Please don't open PRs that add it.
 
