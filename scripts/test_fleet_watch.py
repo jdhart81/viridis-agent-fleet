@@ -207,3 +207,109 @@ def test_send_failure_does_not_change_exit(tmp_path):
     finally:
         os.environ.pop("FLEET_ALERT_SLACK_WEBHOOK", None)
         srv.shutdown()
+
+
+# W11
+class FakeGitHub(BaseHTTPRequestHandler):
+    issues = {}
+    calls = []
+
+    def log_message(self, *a):
+        pass
+
+    def _send(self, code, obj):
+        b = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(b)
+
+    def _body(self):
+        n = int(self.headers.get("Content-Length") or 0)
+        return json.loads(self.rfile.read(n) or b"{}")
+
+    def do_GET(self):
+        FakeGitHub.calls.append(("GET", self.path, self.headers.get("Authorization")))
+        if self.path.startswith("/repos/o/r/issues?state=open"):
+            self._send(200, [i for i in FakeGitHub.issues.values() if i["state"] == "open"])
+        elif self.path == "/healthz":
+            self._send(200, HEALTHY)
+        elif self.path == "/.well-known/x402.json":
+            self._send(200, {"accepts": [1]})
+        else:
+            self._send(404, {})
+
+    def do_POST(self):
+        body = self._body()
+        FakeGitHub.calls.append(("POST", self.path, body))
+        if self.path == "/repos/o/r/issues":
+            num = len(FakeGitHub.issues) + 1
+            FakeGitHub.issues[num] = {"number": num, "title": body["title"], "state": "open",
+                                      "user": {"login": "github-actions[bot]"},
+                                      "comments": [body["body"]]}
+            self._send(201, FakeGitHub.issues[num])
+        elif self.path.endswith("/comments"):
+            num = int(self.path.split("/")[-2])
+            FakeGitHub.issues[num]["comments"].append(body["body"])
+            self._send(201, {})
+        elif self.path == "/stripe/webhook":
+            self._send(400, {"error": "signature"})
+        else:
+            self._send(404, {})
+
+    def do_PATCH(self):
+        body = self._body()
+        FakeGitHub.calls.append(("PATCH", self.path, body))
+        num = int(self.path.split("/")[-1])
+        FakeGitHub.issues[num].update(body)
+        self._send(200, FakeGitHub.issues[num])
+
+
+def test_github_issue_channel_without_slack(tmp_path, capsys, monkeypatch):
+    FakeGitHub.issues, FakeGitHub.calls = {}, []
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), FakeGitHub)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    monkeypatch.delenv("FLEET_ALERT_SLACK_WEBHOOK", raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "ghs_secret_token_value")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "o/r")
+    monkeypatch.setenv("GITHUB_API_URL", base)
+    monkeypatch.setenv("FLEET_ALERT_MENTION", "jdhart81")
+    probe = tmp_path / "p.json"
+    args = ["--probe", str(probe), "--state", str(tmp_path / "s.json"), "--gateway", base]
+    try:
+        probe.write_text(json.dumps({"results": [
+            {"name": "a", "up": False, "error": "evil ```\n@someone else"}]}))
+        assert w.main(args) == 1                       # fault: one issue opened
+        assert len(FakeGitHub.issues) == 1
+        issue = FakeGitHub.issues[1]
+        assert issue["title"] == "Fleet alert: 1 fleet problem"
+        first = issue["comments"][0]
+        assert first.startswith("@jdhart81 \n```\n")
+        assert first.count("```") == 2                 # finding text can't break out
+        assert w.main(args) == 1                       # same fault: nothing sent
+        assert len(issue["comments"]) == 1
+        probe.write_text(json.dumps({"results": [{"name": "a", "up": False, "error": "x"},
+                                                 {"name": "b", "up": False, "error": "y"}]}))
+        w.main(args)                                   # change: comment, retitle
+        assert len(FakeGitHub.issues) == 1 and len(issue["comments"]) == 2
+        assert issue["title"] == "Fleet alert: 2 fleet problems"
+        probe.write_text(json.dumps({"results": [{"name": "a", "up": True},
+                                                 {"name": "b", "up": True}]}))
+        assert w.main(args) == 0                       # recovery: comment, close
+        assert issue["state"] == "closed" and "Recovered" in issue["comments"][-1]
+        assert "ghs_secret_token_value" not in capsys.readouterr().out
+        probe.write_text(json.dumps({"results": [{"name": "a", "up": False, "error": "z"}]}))
+        w.main(args)                                   # new outage: a fresh issue
+        assert len(FakeGitHub.issues) == 2
+    finally:
+        srv.shutdown()
+
+
+def test_no_channel_at_all_is_harmless(tmp_path, monkeypatch, capsys):
+    for k in ("FLEET_ALERT_SLACK_WEBHOOK", "GITHUB_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    d = {"active": {"server_down:a": {"since": 0, "detail": ""}}, "new": ["server_down:a"],
+         "recovered": [], "remind": False}
+    assert w.send_notice(d, "x") is False
+    assert "none configured" in capsys.readouterr().out

@@ -4,7 +4,10 @@
 Runs after scripts/fleet_live_probe.py in the fleet-live-probe workflow. It
 reads the probe's JSON, the gateway's public /healthz, the payment surfaces
 and (when the gateway serves it) per-tool outcome counts, decides what is
-broken, and posts to a Slack incoming webhook only when something changes.
+broken, and sends a notice only when something changes: to a Slack incoming
+webhook when one is configured, otherwise to one "Fleet alert" GitHub issue
+in this repository (opened on a fault, commented on each change, closed on
+recovery), which GitHub emails to the owner with no extra secret.
 
 Stdlib only. Nothing here calls a paid tool or moves money.
 
@@ -29,6 +32,11 @@ Invariants (checked by scripts/test_fleet_watch.py):
       threshold with at least --min-calls real calls; payment-required and
       caller-input errors never count as failures
   W10 exit code is 0 iff no non-ignored finding is active
+  W11 with no Slack webhook, notices go to at most one open "Fleet alert"
+      issue: opened when faults appear, commented on each later change and
+      closed when all recover; finding text is fenced so it can't mention
+      anyone, only FLEET_ALERT_MENTION is mentioned, and the token comes only
+      from the environment and is never printed
 """
 from __future__ import annotations
 
@@ -219,6 +227,65 @@ def send_slack(text: str) -> bool:
     return 200 <= status < 300
 
 
+ISSUE_TITLE = "Fleet alert"
+
+
+def _gh(method: str, path: str, token: str, payload: dict | None = None):
+    api = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+    body = json.dumps(payload).encode() if payload is not None else None
+    hdr = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
+           "X-GitHub-Api-Version": "2022-11-28"}
+    if body is not None:
+        hdr["Content-Type"] = "application/json"
+    status, text = http(method, api + path, body, hdr)
+    try:
+        return status, json.loads(text)
+    except ValueError:
+        return status, None
+
+
+def send_issue(d: dict, text: str, run_url: str = "") -> bool:
+    """W11: one open "Fleet alert" issue per outage; W4 rules for the token."""
+    token = os.environ.get("GITHUB_TOKEN", "").strip()
+    repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    if not token or not repo:
+        print("alert channel: none configured (no Slack webhook, no GITHUB_TOKEN)")
+        return False
+    st, issues = _gh("GET", f"/repos/{repo}/issues?state=open&per_page=50", token)
+    if st != 200 or not isinstance(issues, list):
+        print(f"alert channel: github issues answered {st}")
+        return False
+    mine = [i for i in issues if not i.get("pull_request")
+            and str(i.get("title", "")).startswith(ISSUE_TITLE)
+            and (i.get("user") or {}).get("login") == "github-actions[bot]"]
+    who = os.environ.get("FLEET_ALERT_MENTION", "").strip().lstrip("@")
+    ping = f"@{who} " if who and all(c.isalnum() or c == "-" for c in who) else ""
+    fenced = text.replace("`", "'")          # W11: no way out of the fence
+    body = f"{ping}\n```\n{fenced}\n```\n{run_url}".strip()
+    n = len(d["active"])
+    title = f"{ISSUE_TITLE}: {n} fleet problem" + ("s" if n != 1 else "")
+    if mine:
+        num = mine[0]["number"]
+        st, _ = _gh("POST", f"/repos/{repo}/issues/{num}/comments", token, {"body": body})
+        patch = {"title": title} if n else {"state": "closed", "state_reason": "completed"}
+        st2, _ = _gh("PATCH", f"/repos/{repo}/issues/{num}", token, patch)
+        print(f"alert channel: github issue #{num} updated ({st}/{st2})")
+        return st == 201 and st2 == 200
+    if not n:
+        print("alert channel: all clear and no open alert issue; nothing to send")
+        return True
+    st, _ = _gh("POST", f"/repos/{repo}/issues", token, {"title": title, "body": body})
+    print(f"alert channel: github issue opened ({st})")
+    return st == 201
+
+
+def send_notice(d: dict, text: str, run_url: str = "") -> bool:
+    """Slack when a webhook is configured, otherwise the GitHub issue."""
+    if os.environ.get("FLEET_ALERT_SLACK_WEBHOOK", "").strip():
+        return send_slack(text)
+    return send_issue(d, message(d), run_url)
+
+
 # ------------------------------------------------------------------ main --
 
 def main(argv=None) -> int:
@@ -276,7 +343,10 @@ def main(argv=None) -> int:
         with open(a.summary, "a") as f:
             f.write("\n## Fleet watch\n\n```\n" + report + "```\n")
     if d["notify"]:
-        send_slack(text)
+        try:
+            send_notice(d, text, run_url)
+        except Exception as e:  # W4: a failed send never changes the exit code
+            print(f"alert channel: send failed ({type(e).__name__})")
     return 1 if d["active"] else 0
 
 

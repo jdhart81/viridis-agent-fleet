@@ -4,7 +4,8 @@ name: fleet-live-probe
 # MCP registry. Every 30 minutes: initialize + tools/list (no tool calls).
 # Once a day: also calls the free, read-only describe_agent tool.
 # Then scripts/fleet_watch.py checks the gateway's /healthz, payment surfaces
-# and per-tool outcomes, and posts to Slack only when something changes.
+# and per-tool outcomes, and alerts only when something changes: to Slack if
+# FLEET_ALERT_SLACK_WEBHOOK is set, otherwise a "Fleet alert" issue here.
 # A red run means at least one non-ignored problem is active.
 on:
   schedule:
@@ -19,6 +20,7 @@ on:
 
 permissions:
   contents: read
+  issues: write   # fleet_watch opens/closes one "Fleet alert" issue when Slack isn't set
 
 concurrency:
   group: fleet-live-probe
@@ -52,10 +54,14 @@ jobs:
       - name: Watch gateway, payments and tools; alert on change
         if: always()
         env:
-          # Slack incoming webhook for #viridis-agent-coordination. Unset = no posts.
+          # Optional Slack incoming webhook. Unset = alerts go to a GitHub issue.
           FLEET_ALERT_SLACK_WEBHOOK: ${{ secrets.FLEET_ALERT_SLACK_WEBHOOK }}
-          # Comma-separated registry names or subjects that never alert.
-          FLEET_ALERT_IGNORE: ${{ vars.FLEET_ALERT_IGNORE }}
+          GITHUB_TOKEN: ${{ github.token }}
+          # Who the alert issue mentions (GitHub emails them).
+          FLEET_ALERT_MENTION: ${{ vars.FLEET_ALERT_MENTION || github.repository_owner }}
+          # Comma-separated registry names or subjects that never alert. Default:
+          # the stale verdigraph-mcp listing until retire-verdigraph-mcp has run.
+          FLEET_ALERT_IGNORE: ${{ vars.FLEET_ALERT_IGNORE || 'io.github.jdhart81/verdigraph-mcp' }}
           # "1" once the Stripe webhook signing secret is meant to be live.
           STRIPE_WEBHOOK_EXPECTED: ${{ vars.STRIPE_WEBHOOK_EXPECTED || '0' }}
         run: python3 scripts/fleet_watch.py --probe fleet_probe.json --summary "$GITHUB_STEP_SUMMARY"
