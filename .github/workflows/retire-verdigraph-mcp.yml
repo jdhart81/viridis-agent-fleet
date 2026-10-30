@@ -79,7 +79,9 @@ jobs:
           NEW_STATUS: ${{ inputs.status }}
         run: |
           for attempt in 1 2 3; do
-            if /tmp/mcp-publisher status --status "$NEW_STATUS" --all-versions \
+            # mcp-publisher v1.7.9 asks "Continue? [y/N]" for --all-versions and has no
+            # --yes flag; with no TTY it reads EOF and aborts (run 41049870951). Answer it.
+            if printf 'y\n' | /tmp/mcp-publisher status --status "$NEW_STATUS" --all-versions \
                 --message "Superseded by $LIVE (https://mcp.viridisconservation.com/verdigraph/mcp)" \
                 "$STALE"; then exit 0; fi
             echo "status update failed (attempt $attempt), retrying"; sleep $((attempt * 20))
