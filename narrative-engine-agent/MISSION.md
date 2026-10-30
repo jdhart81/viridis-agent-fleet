@@ -8,7 +8,7 @@
 
 ### The Thesis Connection
 
-The Intelligence Bound — `dI/dt ≤ P·D/(k_B·T·ln 2)` — says the rate at which a system can create intelligence is bounded by available power (P), data richness (D), and temperature (T). Communication friction acts as a hidden damping force on **D** — it degrades signal quality, slows decision feedback loops, and creates cascading misunderstandings between stakeholders who should be aligned.
+The Intelligence Bound — `dI/dt ≤ P·D/(k_B·T·ln 2)` — is Viridis's conjecture that the rate at which a system can create intelligence is bounded by available power (P), data richness (D), and temperature (T). Communication friction acts as a hidden damping force on **D** — it degrades signal quality, slows decision feedback loops, and creates cascading misunderstandings between stakeholders who should be aligned.
 
 Narrative Engine exists to **reduce communication friction (T↓) by translating intelligence into resonance**. A brilliant conservation study that no funder reads, a conflict between two allies that could have been resolved with one reframed conversation, a community that could have moved together but heard only noise — these are leaks in the system. When T↓ by clearing misunderstanding, improving signal clarity, and finding shared ground, D↑. The system gains better feedback, faster alignment, and the ability to compound knowledge across disparate audiences.
 

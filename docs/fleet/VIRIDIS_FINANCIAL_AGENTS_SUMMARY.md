@@ -12,7 +12,7 @@
 Two novel financial-layer agents operationalize Viridis's core intellectual property:
 
 1. **Carbon Bridge Agent** — TFAC origination, verification, pricing, market routing
-2. **Thermo Arbitrage Agent** — Systematic biodiversity mispricing detection via Intelligence Bound theorem
+2. **Thermo Arbitrage Agent** — Systematic biodiversity mispricing detection via Intelligence Bound conjecture
 
 Both implement the thermodynamic economics framework (I_ceiling = P·D/(k_B·T·ln 2)) as production code with real physics, real finance, and comprehensive test coverage.
 
@@ -502,7 +502,7 @@ Both agents read from environment:
 ## Key Innovation Points
 
 ### 1. TFAC Pricing (Carbon Bridge)
-- First implementation of Intelligence Bound theorem as financial instrument
+- First implementation of Intelligence Bound conjecture as financial instrument
 - Thermodynamically consistent valuation
 - 5x premium over carbon due to irreversibility
 - Addresses biodiversity loss (non-reversible) vs carbon (can be emitted again)

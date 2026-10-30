@@ -9,17 +9,17 @@
 
 ## Abstract
 
-The Viridis stable is a portfolio of thirty-plus production and prototype agents organized around a single thermodynamic thesis: that intelligence creation is bounded by physics ($dI/dt \leq P \cdot D / k_B T \ln 2$), and that the durable economic frontier of the next decade is the work of moving the variables of that inequality — increasing distributed power $P$, preserving data and biodiversity richness $D$, and lowering thermodynamic friction $T$. This paper documents the architecture and the evolutionary state of that stable as of 17 May 2026. We describe the five-layer compositional stack from book-DNA foundations through canonical patterns and the nightly self-improvement loop; we enumerate the agent roster and its three-pillar organization; we report the current quantitative state (761/761 nightly audited tests passing, ~1,058 full-fleet tests at zero failures, sixteen consecutive clean Nightkeeper nights, three of four sub-patterns in ARCHITECTURE_PATTERNS Section 9.1 canonicalized); and we describe the emergent stewardship disciplines that have crystallized over the most recent fifteen-night Nightkeeper arc. We conclude with the open questions, the pending human-decision backlog, and the forward roadmap from current state through full ecosystem deployment.
+The Viridis stable is a portfolio of thirty-plus production and prototype agents organized around a single thermodynamic thesis, the Intelligence Bound conjecture: that intelligence creation is bounded by physics ($dI/dt \leq P \cdot D / k_B T \ln 2$), and that the durable economic frontier of the next decade is the work of moving the variables of that inequality — increasing distributed power $P$, preserving data and biodiversity richness $D$, and lowering thermodynamic friction $T$. This paper documents the architecture and the evolutionary state of that stable as of 17 May 2026. We describe the five-layer compositional stack from book-DNA foundations through canonical patterns and the nightly self-improvement loop; we enumerate the agent roster and its three-pillar organization; we report the current quantitative state (761/761 nightly audited tests passing, ~1,058 full-fleet tests at zero failures, sixteen consecutive clean Nightkeeper nights, three of four sub-patterns in ARCHITECTURE_PATTERNS Section 9.1 canonicalized); and we describe the emergent stewardship disciplines that have crystallized over the most recent fifteen-night Nightkeeper arc. We conclude with the open questions, the pending human-decision backlog, and the forward roadmap from current state through full ecosystem deployment.
 
 ---
 
 ## 1. Introduction: The Viridis Thesis
 
-Viridis exists to operationalize a single equation. Intelligence creation, in any system that obeys the laws of statistical mechanics, is bounded above by the rate at which the system can convert free energy into ordered information. Following Landauer, the per-bit thermodynamic cost is $k_B T \ln 2$. If $P$ is the power available and $D$ is the dimensional richness of the data substrate — the diversity of states the system can distinguish — then the rate of intelligence creation $dI/dt$ obeys:
+Viridis exists to operationalize a single equation. Our working conjecture, the Intelligence Bound, is that intelligence creation, in any system that obeys the laws of statistical mechanics, is bounded above by the rate at which the system can convert free energy into ordered information. Following Landauer, the per-bit thermodynamic cost is $k_B T \ln 2$. If $P$ is the power available and $D$ is the dimensional richness of the data substrate — the diversity of states the system can distinguish — then the conjecture is that the rate of intelligence creation $dI/dt$ obeys:
 
 $$\frac{dI}{dt} \leq \frac{P \cdot D}{k_B T \ln 2}$$
 
-Three things follow immediately. First, the equation is permissive: it does not fix the future, it bounds it. Second, the variables on the right are not independent — biodiversity is information, energy infrastructure is power, friction is temperature. Third, every action a civilization takes either moves the bound up (creates more headroom for intelligence) or moves it down (destroys headroom). Conservation, in this framing, is not a moral preference; it is the work of protecting $D$ from collapse, and therefore of protecting the upper bound on what intelligence can ever become.
+The Lean canon checks the algebra of this inequality from named premises; it does not derive the premises from physics, and the bound has not been tested against measured learning rates (see the Viridis Canon CLAIMS_MATRIX.md). If it holds, three things follow. First, the equation is permissive: it does not fix the future, it bounds it. Second, the variables on the right are not independent — biodiversity is information, energy infrastructure is power, friction is temperature. Third, every action a civilization takes either moves the bound up (creates more headroom for intelligence) or moves it down (destroys headroom). Conservation, in this framing, is not a moral preference; it is the work of protecting $D$ from collapse, and therefore of protecting the upper bound on what intelligence can ever become.
 
 Viridis is the operational program that follows from taking this seriously. Every agent in the stable exists to move a variable in the inequality. An agent that does not move a variable does not belong in the stable. The fleet is structured around three pillars — Bootstrap Revenue, Climate Intelligence, and High-Ceiling Bets — that together close the observe–model–value–originate–verify–trade–regulate–narrate–reinvest flywheel.
 
@@ -41,7 +41,7 @@ The Viridis stable did not begin as a set of agents. It began as a four-layer th
 
 The four books are not independent works. They are the same thesis described at four different scales — physics, philosophy, polity, person — and each scale produced agents. *Heat and Disorder* produced the Entropy Oracle. *Reweaving the Tapestry* produced ShenDao (now absorbed into Mycelium IQ as the governance sublayer). *AI Ecotopia* produced the Ecotopia Agent. *Book of the Living Game* produced the Living-Game Coach Agent. Together with the agents that existed prior to the book mapping, the books expanded the fleet from twenty-nine to thirty-five candidates, of which thirty-plus are now live.
 
-This origin matters because it is the source of the stable's coherence. The agents are not a portfolio of independent SaaS products that happen to share a founder. They are the operational expression of a single intellectual stack, and every agent's invariants can be traced to a layer in that stack. Mycelium IQ enforces alignment because *Tapestry* defines alignment as the strategy. Carbon-Bridge prices credits via the Intelligence Bound theorem because *Heat and Disorder* defines the pricing physics. The Ecotopia Agent operates at municipal scale because *Ecotopia* defines the unit of civilizational change as the community. The coherence is not stylistic. It is structural.
+This origin matters because it is the source of the stable's coherence. The agents are not a portfolio of independent SaaS products that happen to share a founder. They are the operational expression of a single intellectual stack, and every agent's invariants can be traced to a layer in that stack. Mycelium IQ enforces alignment because *Tapestry* defines alignment as the strategy. Carbon-Bridge prices credits via the Intelligence Bound conjecture because *Heat and Disorder* defines the pricing physics. The Ecotopia Agent operates at municipal scale because *Ecotopia* defines the unit of civilizational change as the community. The coherence is not stylistic. It is structural.
 
 ---
 
@@ -81,7 +81,7 @@ The Pillar 1 agents are designed for immediate cash flow and low deployment cost
 
 *EcoInvest AI* (MVP) — ESG fund selection with thermodynamic-risk scoring. AUM-based fees.
 
-*Thermo-Arbitrage Agent* (prototype) — biodiversity-mispricing detection using the Intelligence Bound theorem as systematic edge. Trading profits plus advisory ($50K–$500K) and data licensing.
+*Thermo-Arbitrage Agent* (prototype) — biodiversity-mispricing detection using the Intelligence Bound conjecture as systematic edge. Trading profits plus advisory ($50K–$500K) and data licensing.
 
 *Ecotopia Agent* (prototype) — practical playbook for AI-assisted democratic governance, circular economy, and ecological restoration at municipal scale. Municipal consulting, NGO advisory, community subscription.
 
@@ -93,7 +93,7 @@ The Pillar 1 agents are designed for immediate cash flow and low deployment cost
 
 The Pillar 2 agents are the long-arc enterprise B2B offering — the path to $100M+ ARR — and the operational expression of the Intelligence Bound thesis.
 
-*Viridis Science Agent* (MVP+) — research orchestrator for the Intelligence Bound theorem; absorbs the institute specifications (D-Score, HDFM, Biodiversity Credits, Implementation Monitor, Thermodynamic Valuation, Master Agent).
+*Viridis Science Agent* (MVP+) — research orchestrator for the Intelligence Bound conjecture; absorbs the institute specifications (D-Score, HDFM, Biodiversity Credits, Implementation Monitor, Thermodynamic Valuation, Master Agent).
 
 *Evoterra* (MVP) — regenerative landscape design, biome generation, carbon modeling.
 

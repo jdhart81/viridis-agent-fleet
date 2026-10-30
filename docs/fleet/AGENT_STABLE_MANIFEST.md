@@ -269,7 +269,7 @@ tools:
 |--------|---------------------|---------------|
 | D-Score Methodology | Biodiversity measurement frameworks, validated metrics | Each application refines the methodology |
 | HDFM Optimization Data | Corridor designs validated against connectivity outcomes | Real-world implementations validate graph-theoretic models |
-| Intelligence Bound Applications | Empirical tests of dI/dt ≤ P·D/kBT ln 2 | Each paper adds evidence for or refines the theorem |
+| Intelligence Bound Applications | Empirical tests of dI/dt ≤ P·D/kBT ln 2 | Each paper tests or refines the conjecture |
 | Cross-Disciplinary Synthesis | Connections between ecology, thermodynamics, information theory | Every paper deepens the intellectual framework |
 
 ---

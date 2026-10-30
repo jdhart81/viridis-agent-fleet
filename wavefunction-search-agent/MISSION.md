@@ -8,7 +8,7 @@
 
 ### The Intelligence Bound and Coordination Theory
 
-The Intelligence Bound — `dI/dt ≤ P·D/(k_B·T·ln 2)` — establishes that the rate at which a system can create intelligence is bounded by three variables: available power (P), data richness (D), and thermodynamic temperature (T) acting as a friction coefficient.
+The Intelligence Bound — `dI/dt ≤ P·D/(k_B·T·ln 2)` — is Viridis's conjecture that the rate at which a system can create intelligence is bounded by three variables: available power (P), data richness (D), and thermodynamic temperature (T) acting as a friction coefficient.
 
 Wavefunction Search operates on **both D and T simultaneously**:
 
@@ -1017,7 +1017,7 @@ No single platform controls routing; Wavefunction is infrastructure, not gatekee
 
 ### The Discovery Problem at Scale
 
-The Intelligence Bound is a scaling law for civilization. As MCP becomes standard and thousands of agents proliferate, the discovery problem becomes critical:
+If the Intelligence Bound holds, it is a scaling law for civilization. As MCP becomes standard and thousands of agents proliferate, the discovery problem becomes critical:
 
 - **Without discovery:** Agents are silos. Users don't find them. Communities remain fragmented.
 - **With keyword search:** Filter bubbles. Users find similar agents; polarization increases.

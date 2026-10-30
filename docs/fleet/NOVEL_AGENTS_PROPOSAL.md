@@ -109,7 +109,7 @@ D-Score" — Shannon entropy applied to sound spectrograms rather than species l
 
 **Why it's genuinely novel:** This is the most scientifically groundbreaking agent in
 the fleet. Ecoacoustics is an emerging field; computing D-Score from audio is a Viridis
-innovation that directly extends the Intelligence Bound theorem into a new measurement
+innovation that directly extends the Intelligence Bound conjecture into a new measurement
 domain. The information-theoretic foundation (acoustic entropy = biospheric data richness)
 is a natural fit for the thesis.
 
@@ -131,7 +131,7 @@ Intelligence Bound empirically. Strengthens the entire Viridis IP moat.
 ---
 
 ### ④ THERMODYNAMIC ARBITRAGE — "The Edge Finder"
-**What it does:** Operationalizes the Intelligence Bound theorem as a systematic
+**What it does:** Operationalizes the Intelligence Bound conjecture as a systematic
 investing edge. Identifies geographic regions where the gap between ecological value
 (Intelligence Bound ceiling: P·D/k_B·T·ln 2) and market price is largest — then
 recommends conservation investment, carbon credit pre-purchase, land acquisition, or
@@ -271,8 +271,9 @@ OBSERVE                    MODEL                     VALUE
 8. NARRATE → translate into decisions by funders, policymakers, investors
 9. REINVEST → profits fund more observation and modeling → loop tightens
 
-Every dollar generated validates the Intelligence Bound thesis.
-Every validated thesis attracts more capital.
+Every dollar generated tests the business case built on the Intelligence Bound thesis
+(revenue is not evidence for the physical bound).
+Every business case that holds attracts more capital.
 The loop compounds.
 </content>
 </invoke>

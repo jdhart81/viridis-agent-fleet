@@ -38,7 +38,7 @@ All ten hard invariants (§1) apply without exception.
 - Spec invariance: every non-trivial output includes a verification report against stated invariants
 
 ## Domain Terminology
-- **Intelligence Bound:** dI/dt ≤ P·D/(k_B·T·ln 2) — the thermodynamic ceiling on information processing
+- **Intelligence Bound:** dI/dt ≤ P·D/(k_B·T·ln 2) — Viridis's working conjecture for a thermodynamic ceiling on intelligence creation (a premise, not a proved law)
 - **D-Score:** Biodiversity density metric normalized to [0, 1]
 - **HDFM:** Hierarchical Dendritic Forest Management — graph-theoretic corridor design
 - **Pillar:** Agent classification (revenue / climate-intelligence / high-ceiling / infrastructure)

@@ -6,9 +6,10 @@ status: "mvp"
 owner: "justin@viridisconservation.com"
 a2a_role: "entropy-settlement"
 thesis_connection: |
-  THE restoration function of the Intelligence Bound, as a product:
-  dI/dt <= P*D/(kB*T*ln2) means every bit an agent produces dissipates
-  energy — green-router turns that dissipation into funded restoration.
+  THE restoration function of the Intelligence Bound thesis, as a product:
+  agent compute dissipates real energy (Landauer's k_B T ln 2 per erased bit
+  is the physical yardstick; dI/dt <= P*D/(kB*T*ln2) is Viridis's working
+  conjecture) — green-router turns that dissipation into funded restoration.
   Free quotes spread the standard (Landauer-grounded, assumptions stated);
   paid certificates retire real Verra-provenance offsets through the
   fleet's own clearinghouse, fail-closed. Composes with neurogenesis
