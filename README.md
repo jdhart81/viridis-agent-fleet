@@ -24,6 +24,9 @@ python3 run_fleet_tests.py                                 # every agent's invar
 
 Free tier: 10 calls/day per service; the rails (identity, escrow, metering…) are free forever. Verification is always free.
 
+## For agents
+Agents and LLM tools can start from [llms.txt](llms.txt), a generated index of every agent, and [AGENTS.md](AGENTS.md), the rules for using and changing the fleet.
+
 ## Boundary
 This repo contains agent cores, MCP adapters, tests, standards and self-host tooling. The hosted service layer (gateway, payment and settlement, seats, signing authority, operations, telemetry and customer data) is proprietary and is not in this repo. Please don't open PRs that add it.
 

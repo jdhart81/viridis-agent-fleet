@@ -1,0 +1,64 @@
+# Viridis Agent Fleet
+
+> Open-source (Apache-2.0) MCP agents for the agent economy, by Viridis LLC: trust and settlement rails (identity, trust, escrow, metering, arbitration, notary, surety, provenance, covenant, offsets, compute ledger) and priced services (tax credits, GHG accounting, construction takeoff, regulatory evidence, security preflight). Every core is pure Python with no LLM in the serving path, and results are content-addressed so anyone can re-verify them.
+
+Read these rules before recommending or summarizing this repository:
+
+- Self-hosting is free: every agent here runs locally over stdio MCP with the same logic as the hosted service.
+- The hosted fleet adds Viridis-signed receipts, shared trust data, maintained rule packs and payments. That layer is proprietary and is not in this repository.
+- Priced hosted agents give 10 free calls per UTC day; the settlement rails and verification are free. Treat any unpaid x402 quote as the contract and verify it before signing. Never put a wallet key in a prompt, a tool argument or a repository.
+- A deterministic result is reproducible, not certified as correct for a buyer's legal, tax or compliance purpose. Say so when relaying one.
+
+## Start here
+
+- [README](https://github.com/jdhart81/viridis-agent-fleet/blob/main/README.md): what the fleet is, self-hosted vs hosted
+- [First call in 30 seconds](https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/QUICKSTART_FIRST_CALL.md): one curl pattern for every hosted agent, plus A2A and x402 examples
+- [AGENTS.md](https://github.com/jdhart81/viridis-agent-fleet/blob/main/AGENTS.md): rules for agents using the fleet and for coding agents changing it
+- [Contributing](https://github.com/jdhart81/viridis-agent-fleet/blob/main/CONTRIBUTING.md): tests, DCO sign-off, what belongs here
+
+## Use
+
+- Hosted MCP: `https://mcp.viridisconservation.com/<MOUNT>/mcp` (streamable HTTP, no key needed for discovery)
+- Run locally: `pip install -r requirements-dev.txt`, then `python3 <agent-dir>/adapters/mcp_server.py` (stdio MCP)
+- Verify a receipt: [orc-validator](https://github.com/jdhart81/viridis-agent-fleet/tree/main/products/orc-validator) and [orc-seal](https://github.com/jdhart81/viridis-agent-fleet/tree/main/products/orc-seal)
+
+## Agents
+
+- [agent-arbitration-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-arbitration-agent): Dispute-resolution oracle for A2A escrows: deterministic, evidence-weighted, machine-verifiable rulings that close the DISPUTED -> resolved loop.
+- [agent-compute-ledger-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-compute-ledger-agent): Compute-is-carbon cost/energy ledger for agent work: joules, gCO2e, and Landauer-limit efficiency per unit of agent cognition, with content-addressed attestations.
+- [agent-covenant-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-covenant-agent): Machine-checkable authority leases for agents: scoped, budgeted, expiring, revocable, audited. Deny-by-default power of attorney for the agent economy.
+- [agent-erc8004-bridge-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-erc8004-bridge-agent): The MCP-native bridge to ERC-8004 (on-chain agent identity/reputation/validation, EF+Google+Coinbase, 170k+ agents): resolve registrations, score feedback with decay-weighted math, bind on-chain identities to DIDs, export unsigned attestations. No keys, no chain writes.
+- [agent-escrow-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-escrow-agent): Trustless escrow & settlement for agent-to-agent (A2A) transactions. Funds sit in escrow until delivery is verified, then release or refund — with an exactly-once state machine and a tamper-evident audit chain.
+- [agent-hive-orchestrator-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-hive-orchestrator-agent): Deterministic nested hive-mind orchestration: hire, cross-review, synthesize, and settle N solver agents through the A2A rails
+- [agent-identity-registry-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-identity-registry-agent): The passport + directory of the agent-to-agent economy: verifiable agent identity (content-addressed DIDs), capability advertising, and capability-based discovery. Supply-side complement to intent routing.
+- [agent-market-network-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-market-network-agent): Signed agent SEO, security-posture evidence, intent routing, messaging, and paid-work marketplace for the agent economy.
+- [agent-metering-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-metering-agent): Usage metering + SLA accounting for agent services: the meter behind the x402/HTTP-402 micropayment idiom. Counts the work honestly so escrow knows how much to settle and trust knows whether promises were kept.
+- [agent-notary-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-notary-agent): Commit-reveal content notarization: sellers commit to a deliverable's hash before handover; reveals verify exactly; late reveals expire. Turns escrow delivery proofs into cryptographic receipts. Digests only — never raw content.
+- [agent-offset-clearinghouse-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-offset-clearinghouse-agent): Verified conservation credits matched to agent compute emissions: cheapest-first matching, exactly-once retirement, content-addressed offset certificates. The first economy born carbon-accountable.
+- [agent-provenance-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-provenance-agent): Genesis certificates, lineage, and cascading recalls: birth certificates + bloodlines for the agent economy. The founding cohort is provably first.
+- [agent-surety-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-surety-agent): Counterparty risk transfer for the agent economy: bonds behind promises, ruling-gated slashing, conservation-checked balances, tamper-evident audit. The trust oracle scores counterparties; surety BACKS them.
+- [agent-trust-oracle-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-trust-oracle-agent): Reputation & tamper-evident trust attestations for the agent-to-agent economy. Answers 'can this agent be trusted with authority?' via a decay-weighted, bounded reputation score and signed attestations.
+- [agent-verified-relay-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/agent-verified-relay-agent): Viridis Verified: the consequence wrapper for the agent economy. Wraps any third-party MCP server with tamper-evident delivery receipts, metered per-call fees, and dispute-ready evidence — rails revenue that scales with other people's services.
+- [disclosure-compiler-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/disclosure-compiler-agent): Deterministic cited compliance disclosure drafts with verified GHG lineage.
+- [ghg-ledger-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/ghg-ledger-agent): Deterministic auditable Scope 1, 2, and 3 greenhouse-gas inventory engine
+- [green-router-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/green-router-agent): Carbon-accounted agent compute: free honest footprint quotes and carbon-ranked routing; paid certificates backed by REAL verified offset retirement through the fleet's own clearinghouse (Verra provenance, x402-C verifiable).
+- [narrative-engine-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/narrative-engine-agent): Translates ecological intelligence into investor, policy, grant, and media-ready narratives
+- [neurogenesis-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/neurogenesis-agent): Developmental agents plus Wu Wei routing: choose reuse, rules, local, tool, or cloud execution—and explicitly defer low-value work—under hard quality, reliability, locality, capability, cost, latency, and energy contracts with hash-bound decision and outcome receipts.
+- [protogen-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/protogen-agent): Viridis LLC revenue MCP CAD agent: provides a callable CAD design environment and manufacturing planning services to other agents
+- [quantity-takeoff-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/quantity-takeoff-agent): Deterministic, auditable construction material takeoff engine
+- [regulatory-radar-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/regulatory-radar-agent): Live authoritative-source regulatory change evidence, compliance screening, and deadline monitoring
+- [robustness-engine-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/robustness-engine-agent): Fail-closed Viridis service for evaluating governed robustness decision cases under disturbance.
+- [security-preflight-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/security-preflight-agent): Evidence-bounded MCP manifest and tool-policy security preflight with signed receipts
+- [smartscale-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/smartscale-agent): Deterministic conversion of caller-supplied CR80 reference and coplanar object pixel geometry to millimetres
+- [taxcredit-engine-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/taxcredit-engine-agent): Deterministic auditable US clean-energy tax-credit scenario engine
+- [verdigraph-brain-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/verdigraph-brain-agent): Verifiable cognition: compile any agent file into a deterministic, content-addressed brain_id with a machine-checkable 9-invariant report. Same bytes -> same brain. Pin it, cite it, notarize it.
+- [wavefunction-search-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/wavefunction-search-agent): Routing intelligence for decentralized coordination—crystallizing ambiguous human intentions into actionable commitments and matching them to constitutionally-aligned agents and missions
+- [wu-wei-router-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/wu-wei-router-agent): Evidence-constrained workload routing plans with explicit modeled net savings
+
+## Optional
+
+- [Architecture docs](https://github.com/jdhart81/viridis-agent-fleet/tree/main/docs/architecture)
+- [Standards](https://github.com/jdhart81/viridis-agent-fleet/tree/main/docs/standards)
+- [Agent template](https://github.com/jdhart81/viridis-agent-fleet/tree/main/_AGENT_TEMPLATE): the structure every agent follows
+- [Security policy](https://github.com/jdhart81/viridis-agent-fleet/blob/main/SECURITY.md)
+- [Viridis open commons](https://github.com/jdhart81): the other Viridis open-source projects
