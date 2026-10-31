@@ -79,7 +79,7 @@ jobs:
           NEW_STATUS: ${{ inputs.status }}
         run: |
           for attempt in 1 2 3; do
-            if /tmp/mcp-publisher status --status "$NEW_STATUS" --all-versions \
+            if /tmp/mcp-publisher status --status "$NEW_STATUS" --all-versions --yes \
                 --message "Superseded by $LIVE (https://mcp.viridisconservation.com/verdigraph/mcp)" \
                 "$STALE"; then exit 0; fi
             echo "status update failed (attempt $attempt), retrying"; sleep $((attempt * 20))
