@@ -26,6 +26,8 @@ td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top} td:fi
 code{font:12px ui-monospace,Menlo,monospace;word-break:break-all}
 .cta{margin-top:36px;padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
 .cta h2{margin:0 0 6px;font-size:18px}
+.cta pre{margin:8px 0;padding:10px;border:1px solid var(--line);border-radius:8px;overflow-x:auto;font-size:13px;white-space:pre-wrap;word-break:break-all}
+#seal-own{margin-top:16px}
 .fine{font-size:12px;color:var(--dim)}
 </style>
 </head>
@@ -40,6 +42,15 @@ code{font:12px ui-monospace,Menlo,monospace;word-break:break-all}
 <button id="go" type="button">Verify</button>
 <div id="out" aria-live="polite"></div>
 <div id="cta" class="cta"></div>
+<section id="seal-own" class="cta">
+<h2>Seal your own MCP server</h2>
+<p>Put orc-seal in front of any stdio MCP server and every tool result carries a receipt this page can check. No code changes, and your outputs never leave your machine.</p>
+<pre>pip install orc-seal
+orc-seal --issuer did:web:yourdomain.com -- &lt;your server command&gt;</pre>
+<p>Or with Node, no install:</p>
+<pre>npx -y orc-seal --issuer did:web:yourdomain.com -- &lt;your server command&gt;</pre>
+<p class="fine"><a href="https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/standards/OUTCOME_RECEIPT_v0.1.md">Read the ORC v0.1 standard</a></p>
+</section>
 <p class="fine">What is checked: (1) the result digest recomputes from the report's contents, which proves nothing was edited after sealing; (2) SHA-256(salt + digest) equals the sealed commitment. (3) the Viridis registry is asked whether it recorded this exact seal (ISSUED). Works for Signed Cliff Checks and any Outcome Receipt (ORC v0.1). A scenario estimate, not tax advice. Viridis LLC · viridisconservation.com</p>
 </main>
 

@@ -1,0 +1,19 @@
+{
+  "name": "orc-seal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Outcome Receipts (ORC v0.1) for any MCP server: every tool result gets a receipt a stranger can verify.",
+  "license": "Apache-2.0",
+  "author": "Viridis LLC",
+  "type": "module",
+  "main": "./index.js",
+  "exports": { ".": "./index.js" },
+  "bin": { "orc-seal": "bin/orc-seal.js" },
+  "files": ["index.js", "lib/", "bin/", "README.md", "LICENSE"],
+  "engines": { "node": ">=18.17" },
+  "scripts": { "test": "node --test test/*.test.js" },
+  "keywords": ["mcp", "agents", "receipts", "verification", "erc-8004", "x402"],
+  "homepage": "https://github.com/jdhart81/viridis-agent-fleet/tree/main/products/orc-seal-js",
+  "repository": { "type": "git", "url": "git+https://github.com/jdhart81/viridis-agent-fleet.git", "directory": "products/orc-seal-js" },
+  "bugs": { "url": "https://github.com/jdhart81/viridis-agent-fleet/issues" }
+}
