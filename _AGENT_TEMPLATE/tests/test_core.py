@@ -42,7 +42,8 @@ def test_generated_agent_preserves_security_pins_and_package_contract(tmp_path, 
     root = Path(__file__).resolve().parents[1]
     generated = requirements(output / "requirements.txt")
     template = requirements(root / "requirements.txt")
-    assert generated["pytest"] == template["pytest"]
+    for package, version in template.items():
+        assert generated[package] == version, package
 
     if has_http:
         fleet_root = root.parent

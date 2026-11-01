@@ -986,16 +986,16 @@ if __name__ == "__main__":
 def generate_requirements_txt(spec: AgentSpec) -> str:
     """Generate requirements.txt with base and conditional dependencies."""
     reqs = """# Core agent framework
-fastapi==0.142.2
+fastapi==0.162.0
 uvicorn[standard]==0.54.0
-pydantic==2.13.5
+pydantic==2.14.1
 
 # MCP Server support
-fastmcp==3.4.10
+fastmcp==3.4.11
 
 # Testing
-pytest==9.0.3
-pytest-asyncio==0.21.1
+pytest==9.1.1
+pytest-asyncio==1.4.1
 pytest-cov==4.1.0
 httpx==0.28.1
 
@@ -1012,7 +1012,7 @@ pyyaml==6.0.1
     optional_deps = []
 
     if "http" in spec.description.lower():
-        optional_deps.append("aiohttp==3.14.4")
+        optional_deps.append("aiohttp==3.14.5")
 
     if "postgres" in spec.description.lower() or "database" in spec.description.lower():
         optional_deps.append("psycopg[binary]==3.9")

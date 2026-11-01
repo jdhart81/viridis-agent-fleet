@@ -1623,9 +1623,9 @@ def test_container_runtime_dependencies_are_exactly_pinned():
     pins = {line for line in requirements if line and not line.startswith("#")}
     assert pins == {
         "mcp==1.30.0",
-        "uvicorn==0.51.0",
-        "starlette==1.3.1",
-        "cryptography==50.0.0",
+        "uvicorn==0.54.0",
+        "starlette==1.10.0",
+        "cryptography==50.0.2",
     }
     lock = (
         Path(__file__).parents[1] / "requirements.lock"
