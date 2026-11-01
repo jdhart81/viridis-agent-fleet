@@ -1,6 +1,6 @@
 {
   "server": "agent-compute-ledger-agent",
-  "tool_count": 12,
+  "tool_count": 13,
   "tools": [
     {
       "name": "record_work",
@@ -139,6 +139,65 @@
         "required": [
           "entry_id"
         ]
+      }
+    },
+    {
+      "name": "intelligence_bound",
+      "description": "Thermodynamic ceiling on information processing for a power budget.\nReturns the Landauer ceiling P / (k_B*T*ln 2) on irreversible bit\noperations per second (established physics), the Intelligence Bound\nmin(rho*B, P / (k_B*T*ln 2)) (Viridis's working conjecture), which term\nbinds, and, if you pass a measured rate, how far your workload sits below\nit. Free, read-only and deterministic.",
+      "inputSchema": {
+        "properties": {
+          "power_w": {
+            "title": "Power W",
+            "type": "number"
+          },
+          "temperature_k": {
+            "default": 300.0,
+            "title": "Temperature K",
+            "type": "number"
+          },
+          "bandwidth_bits_per_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bandwidth Bits Per S"
+          },
+          "measured_bits_per_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Measured Bits Per S"
+          }
+        },
+        "required": [
+          "power_w"
+        ],
+        "title": "intelligence_boundArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "intelligence_boundOutput",
+        "type": "object"
       }
     },
     {

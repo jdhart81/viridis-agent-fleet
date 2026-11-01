@@ -126,6 +126,25 @@ async def carbon_receipt(entry_id: str, offset_ref: str = "") -> str:
     return await _run(payload)
 
 
+@mcp.tool(annotations=_READ)
+async def intelligence_bound(power_w: float, temperature_k: float = 300.0,
+                             bandwidth_bits_per_s: Optional[float] = None,
+                             measured_bits_per_s: Optional[float] = None) -> str:
+    """Thermodynamic ceiling on information processing for a power budget.
+    Returns the Landauer ceiling P / (k_B*T*ln 2) on irreversible bit
+    operations per second (established physics), the Intelligence Bound
+    min(rho*B, P / (k_B*T*ln 2)) (Viridis's working conjecture), which term
+    binds, and, if you pass a measured rate, how far your workload sits below
+    it. Free, read-only and deterministic."""
+    payload = {"action": "intelligence_bound", "power_w": power_w,
+               "temperature_k": temperature_k}
+    if bandwidth_bits_per_s is not None:
+        payload["bandwidth_bits_per_s"] = bandwidth_bits_per_s
+    if measured_bits_per_s is not None:
+        payload["measured_bits_per_s"] = measured_bits_per_s
+    return await _run(payload)
+
+
 @mcp.tool(annotations=_WRITE)
 async def record_inventory(agent_id: str, inventory_id: str, mass_g: int,
                            content_digest: str, factor_pack_version: str,

@@ -49,6 +49,21 @@ X4  C3 (no detachment): attestation_hash binds the carbon object to the
 X5  carbon_receipt is pure/read-only and never mutates the ledger; unknown
     entry_id -> error envelope.
 
+--- INTELLIGENCE BOUND INVARIANTS (intelligence_bound; pure, read-only) ---
+IB1 Landauer ceiling: landauer_bits_per_s = P / (kB*T*ln2); P and T positive
+    and finite.
+IB2 Bound: I_dot <= min(rho_B, P/(kB*T*ln2)) when bandwidth_bits_per_s
+    (rho*B) is given, else the Landauer term alone; binding_term names it.
+IB3 measured_bits_per_s, if given, must be > 0 and <= the bound (above it is
+    physically impossible and rejected, as L4 does); efficiency =
+    measured / bound is in (0, 1].
+IB4 orders_below_bound = log10(bound / measured) >= 0.
+IB5 Pure and deterministic: never reads or mutates ledger state.
+IB6 Every result states that the bound counts irreversible bit operations,
+    that real hardware runs far above it, and that the Landauer term is
+    established physics while min(rho*B, P/(kB*T*ln2)) is Viridis's working
+    conjecture, not a proved law, so nothing overclaims.
+
 --- INVENTORY DOMAIN INVARIANTS (separate from L1-L8) ---
 I1  Inventory accounting is a separate namespace. Inventory mass never enters
     the physical-compute ledger or changes footprint() totals.
@@ -168,6 +183,19 @@ def _pos_finite(data: dict, f: str) -> float:
     return float(v)
 
 
+def _opt_pos_finite(data: dict, f: str) -> Optional[float]:
+    """Optional positive finite number; absent or None -> None."""
+    if data.get(f) is None:
+        return None
+    return _pos_finite(data, f)
+
+
+def _pos_finite_default(data: dict, f: str, default: float) -> float:
+    if data.get(f) is None:
+        return float(default)
+    return _pos_finite(data, f)
+
+
 def _sha256_hex(data: dict, field: str) -> str:
     """Return a bare lowercase SHA-256 digest or fail loud."""
     value = data.get(field)
@@ -210,6 +238,7 @@ class ComputeLedgerAgentCore(AgentCore):
                 "get_inventory": self._get_inventory,
                 "list_inventories": self._list_inventories,
                 "verify_inventory_chain": self._verify_inventory_chain,
+                "intelligence_bound": self._intelligence_bound,
             }.get(action)
             if handler is None:
                 return self._err(f"unknown action '{action}'", error_type="ValidationError",
@@ -218,7 +247,7 @@ class ComputeLedgerAgentCore(AgentCore):
                                             "verify_attestation, verify_chain, list_entries, "
                                             "carbon_receipt, "
                                             "record_inventory, get_inventory, list_inventories, "
-                                            "verify_inventory_chain")
+                                            "verify_inventory_chain, intelligence_bound")
             return handler(input_data)
         except ValidationError as e:
             return self._err(str(e), error_type="ValidationError", field=e.field,
@@ -538,6 +567,53 @@ class ComputeLedgerAgentCore(AgentCore):
                          "inventory_count": len(ledger)})
 
     # ------------------------------------------------------------------ #
+    def _intelligence_bound(self, data: dict) -> dict:
+        """IB1-IB6: the Intelligence Bound for a power budget. Pure."""
+        power_w = _pos_finite(data, "power_w")                        # IB1
+        temp_k = _pos_finite_default(data, "temperature_k", DEFAULT_TEMP_K)
+        e_bit = KB * temp_k * LN2
+        landauer = power_w / e_bit                                    # IB1
+        bandwidth = _opt_pos_finite(data, "bandwidth_bits_per_s")
+        if bandwidth is not None and bandwidth < landauer:            # IB2
+            bound, binding = bandwidth, "bandwidth"
+        else:
+            bound, binding = landauer, "power"
+        out = {
+            "formula": "I_dot <= min(rho*B, P / (k_B * T * ln 2))",
+            "inputs": {"power_w": power_w, "temperature_k": temp_k,
+                       "bandwidth_bits_per_s": bandwidth},
+            "landauer_j_per_bit": e_bit,
+            "landauer_bits_per_s": landauer,
+            "bound_bits_per_s": bound,
+            "binding_term": binding,
+            "note": ("The bound counts irreversible bit operations (erasures) "
+                     "at temperature T. Today's processors dissipate many orders "
+                     "of magnitude more energy per operation than k_B*T*ln 2, so "
+                     "real workloads sit far below the bound; reversible "
+                     "computation is not limited by this term."),   # IB6
+            "status": ("The Landauer term (k_B*T*ln 2 per irreversible bit) is "
+                       "established physics. The Intelligence Bound, "
+                       "min(rho*B, P/(k_B*T*ln 2)), is Viridis's working "
+                       "conjecture, not a proved law."),                # IB6
+            "reference": "J. Hart, The Intelligence Bound (manuscript in preparation)",
+            "next": ["record_work: log a measured workload with Landauer validation",
+                     "carbon_receipt: emit an x402-C carbon receipt for that work"],
+        }
+        measured = _opt_pos_finite(data, "measured_bits_per_s")
+        if measured is not None:
+            if measured > bound:                                      # IB3
+                raise ValidationError(
+                    ("measured rate exceeds the Landauer ceiling for irreversible "
+                     "operations (physically impossible)") if binding == "power" else
+                    "measured rate exceeds the declared bandwidth_bits_per_s",
+                    field="measured_bits_per_s", value=measured,
+                    constraint=f"<= {bound:.6g} bits/s for these inputs")
+            out["measured_bits_per_s"] = measured
+            out["efficiency_vs_bound"] = measured / bound             # IB3
+            out["orders_below_bound"] = math.log10(bound / measured)  # IB4
+        return self._ok(out)
+
+    # ------------------------------------------------------------------ #
     async def health(self) -> dict:
         h = await super().health()
         h["checks"] = {"accounts": len(self._ledgers),
@@ -556,7 +632,7 @@ class ComputeLedgerAgentCore(AgentCore):
                              "verify_attestation", "verify_chain", "list_entries",
                              "carbon_receipt",
                              "record_inventory", "get_inventory", "list_inventories",
-                             "verify_inventory_chain"],
+                             "verify_inventory_chain", "intelligence_bound"],
             "inputs": {"action": "str", "agent_id": "str", "entry_id": "str",
                        "power_w": "number > 0", "duration_s": "number > 0",
                        "bit_ops": "number > 0 (optional)",
@@ -567,7 +643,9 @@ class ComputeLedgerAgentCore(AgentCore):
                        "content_digest": "sha256 hex",
                        "factor_pack_version": "str",
                        "factor_pack_digest": "sha256 hex",
-                       "source_ids": "list[str]"},
+                       "source_ids": "list[str]",
+                       "bandwidth_bits_per_s": "number > 0 (optional, rho*B)",
+                       "measured_bits_per_s": "number > 0 (optional)"},
             "outputs": {"status": "str (ok|error)", "data": "dict"},
             "a2a_role": "accounting",
         }
