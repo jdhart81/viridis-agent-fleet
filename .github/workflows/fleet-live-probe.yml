@@ -31,8 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Probe hosted fleet
@@ -46,7 +46,7 @@ jobs:
           python3 scripts/fleet_live_probe.py $args
       - name: Restore the last alert state
         if: always()
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .fleet-watch
           key: fleet-watch-${{ github.run_id }}
@@ -67,13 +67,13 @@ jobs:
         run: python3 scripts/fleet_watch.py --probe fleet_probe.json --summary "$GITHUB_STEP_SUMMARY"
       - name: Save the alert state
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .fleet-watch
           key: fleet-watch-${{ github.run_id }}
       - name: Keep the probe result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fleet-probe-${{ github.run_id }}
           path: fleet_probe.json
