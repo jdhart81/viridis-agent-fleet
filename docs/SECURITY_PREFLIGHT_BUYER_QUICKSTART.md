@@ -1,5 +1,7 @@
 # One assessment, then check real changes
 
+> **Start here instead:** the server's own documentation, with tools, inputs, outputs, an example, client configuration and the x402 payment flow, is in [`security-preflight-agent/README.md`](../security-preflight-agent/README.md). The helper scripts named below (`scripts/viridis_preflight_*.py`, `examples/security-preflight-inputs.json`) are part of Viridis' private buyer tooling and are **not** in this repository; any x402 v2 client works with the HTTP routes documented in that README.
+
 Security Preflight checks the MCP manifest, tool schemas, policy and samples
 you supply. It does not fetch, execute or certify the deployed service.
 
@@ -106,7 +108,7 @@ schema. Only the buyer chooses that outcome; successful transport alone does
 not establish usefulness.
 
 [Service contract](https://mcp.viridis-security.com/security-preflight/service.json)
-and [change-check details](SECURITY_PREFLIGHT_CHANGE_CHECK.md).
+and the [live quickstart](https://mcp.viridis-security.com/security-preflight/quickstart).
 
 ## Agent integration verification
 
