@@ -24,6 +24,11 @@ python3 run_fleet_tests.py                                 # every agent's invar
 
 Free tier: 10 calls/day per service; the rails (identity, escrow, metering…) are free forever. Verification is always free.
 
+## Hosted MCP servers and their docs
+Each hosted server has its own entry in the official MCP registry under `io.github.jdhart81/*` and its own directory here. The hosted services are published and operated by ViridisNorth LLC (Montana).
+
+- **Security Preflight** (`io.github.jdhart81/security-preflight`): static security checks for agent manifests, tool policies, inline source and text, with signed receipts. Full docs, tool reference, client config and payment details: [security-preflight-agent/README.md](security-preflight-agent/README.md).
+
 ## For agents
 Agents and LLM tools can start from [llms.txt](llms.txt), a generated index of every agent, and [AGENTS.md](AGENTS.md), the rules for using and changing the fleet.
 
@@ -56,4 +61,4 @@ Browse every project on the [Viridis profile](https://github.com/jdhart81). If t
 ## Boundary
 This repo contains agent cores, MCP adapters, tests, standards and self-host tooling. The hosted service layer (gateway, payment and settlement, seats, signing authority, operations, telemetry and customer data) is proprietary and is not in this repo. Please don't open PRs that add it.
 
-"Viridis", "Viridis Conservation" and the Viridis marks are trademarks of Viridis LLC; see `TRADEMARKS.md`.
+Use of the "Viridis" and "Viridis Conservation" names and marks is covered by [TRADEMARKS.md](TRADEMARKS.md).
