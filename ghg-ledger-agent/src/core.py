@@ -16,6 +16,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
+import re
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -147,6 +149,25 @@ GWP_PROFILE_SHA256 = _digest(PACK["gwp_profile"])
 _SOURCES = {source["id"]: source for source in PACK["sources"]}
 
 
+
+# B1: build identity. The deploy sets VIRIDIS_BUILD_SHA to the git commit it
+# built from; describe_agent reports it so a caller can tie live behaviour to
+# a commit. Unset or malformed values are reported as such, never guessed.
+_BUILD_SHA_RE = re.compile(r"^[0-9a-f]{7,40}$")
+
+
+def build_info() -> dict:
+    raw = os.environ.get("VIRIDIS_BUILD_SHA", "").strip().lower()
+    if not raw:
+        return {"git_sha": None, "status": "not_set",
+                "source": "env:VIRIDIS_BUILD_SHA"}
+    if not _BUILD_SHA_RE.match(raw):
+        return {"git_sha": None, "status": "invalid",
+                "source": "env:VIRIDIS_BUILD_SHA"}
+    return {"git_sha": raw, "status": "reported",
+            "source": "env:VIRIDIS_BUILD_SHA"}
+
+
 class GHGLedgerCore:
     KNOWN_ACTIONS = frozenset({
         "calculate_inventory", "classify_activity", "list_factor_packs",
@@ -192,11 +213,12 @@ class GHGLedgerCore:
             "outputs": {"line_items": "gas-resolved CO2e calculations",
                         "scope_2_dual_reporting": "location + market methods",
                         "audit_sha256": "content digest for notary"},
-            "pricing": {"free_calls_per_day": 100, "price_usd_per_call": "1.00",
+            "pricing": {"free_calls_per_day": 10, "price_usd_per_call": "1.00",
                         "future_gtm": "B2B monthly seat"},
             "factor_pack": {"version": PACK["pack_version"],
                             "sha256": FACTOR_PACK_SHA256},
             "a2a_role": "ghg-accounting",
+            "build": build_info(),
         }
 
     def _err(self, message: str, *, error_type: str = "Error", field: str = "",

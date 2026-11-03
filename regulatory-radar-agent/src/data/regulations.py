@@ -380,6 +380,8 @@ def build_regulations(Regulation, Jurisdiction, Sector, datetime):
                 "2027+ are left to a separate rulemaking."
             ),
             source_verified_on="2026-11-03",
+            # A6: applicability gate, from the scope note above.
+            min_annual_revenue_usd=1_000_000_000,
         ),
         "tnfd-sector-guidance-2025": Regulation(
             id="tnfd-sector-2025",

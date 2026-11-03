@@ -165,11 +165,25 @@ def validate_compliance_assessment_input(data: dict) -> Dict[str, Any]:
         ))
         existing_compliance = {}
 
+    # Annual revenue — optional; gates size-limited obligations (A6)
+    annual_revenue_usd = data.get("annual_revenue_usd")
+    if annual_revenue_usd is not None:
+        if (isinstance(annual_revenue_usd, bool)
+                or not isinstance(annual_revenue_usd, (int, float))
+                or annual_revenue_usd != annual_revenue_usd
+                or annual_revenue_usd in (float("inf"), float("-inf"))):
+            raise ValidationError("annual_revenue_usd", annual_revenue_usd,
+                                  "must be a finite number")
+        if annual_revenue_usd < 0:
+            raise ValidationError("annual_revenue_usd", annual_revenue_usd,
+                                  "must be non-negative")
+
     validated = {
         "company_name": str(company_name).strip(),
         "jurisdiction": jurisdiction,
         "sector": sector,
         "existing_compliance": existing_compliance,
+        "annual_revenue_usd": annual_revenue_usd,
         "_validation_warnings": warnings,
     }
 
