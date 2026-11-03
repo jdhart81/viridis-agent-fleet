@@ -102,13 +102,20 @@ async def scan_regulations(jurisdiction: str, sector: Optional[str] = None,
 @mcp.tool(annotations=_READ)
 async def assess_compliance(company_name: str, sector: str, jurisdiction: str,
                       disclosures: Optional[List[str]] = None,
+                      annual_revenue_usd: Optional[float] = None,
                       payment_ref: Optional[str] = None,
                       request_id: Optional[str] = None) -> str:
-    """Assess a company's compliance posture against applicable regulations.
+    """Screen a company's posture against applicable regulations.
 
-    Returns compliance level, percentage, gaps, and remediation priorities."""
+    Returns compliance level, percentage, gaps, and remediation priorities.
+    Size-gated obligations (e.g. California SB 253 at $1B revenue) count only
+    when `annual_revenue_usd` is supplied; without it they are listed under
+    applicability_unconfirmed and the level is "undetermined", never
+    "compliant". Screening only, not legal advice."""
     return await _run({"action": "assess", "company_name": company_name, "sector": sector,
                  "jurisdiction": jurisdiction, "disclosures": disclosures or [],
+                 **({"annual_revenue_usd": annual_revenue_usd}
+                    if annual_revenue_usd is not None else {}),
                  **({"payment_ref": payment_ref} if payment_ref else {}),
                  **({"request_id": request_id}
                     if request_id is not None else {})})

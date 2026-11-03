@@ -18,7 +18,7 @@ and deadlines with the cited authority or qualified counsel.
 |---|---|---|---|
 | `describe_agent` | free, read-only | none | Capabilities, inputs and outputs |
 | `scan_regulations` | $0.25 (10 free/day over MCP) | `jurisdiction` (required: e.g. `US`, `EU`, `california`, `CA` for Canada), `sector`, `query` | Applicable regulations with effective dates, deadlines, urgency flags, legal status and source URL |
-| `assess_compliance` | $0.25 (10 free/day over MCP), read-only | `company_name`, `sector`, `jurisdiction` (required), `disclosures` | Compliance level and percentage, gaps, remediation priorities |
+| `assess_compliance` | $0.25 (10 free/day over MCP), read-only | `company_name`, `sector`, `jurisdiction` (required), `disclosures`, `annual_revenue_usd` | Compliance level and percentage, gaps, remediation priorities. Revenue-gated obligations (SB 253, $1B) count only when `annual_revenue_usd` is given; otherwise they are listed under `applicability_unconfirmed` and the level is `undetermined` |
 | `monitor_changes` | $0.25 (10 free/day over MCP) | `jurisdiction` (required), `since_days` (1–365), `topics` | Recently effective and upcoming dates/deadlines inside the window |
 | `build_evidence_pack` | $0.25 (10 free/day over MCP) | `jurisdiction` (required), `topics`, `company_profile`, `source_ids`, `since_days`, `persist_snapshot` | Source-hashed change evidence pack fetched only from registry-owned regulator URLs |
 
