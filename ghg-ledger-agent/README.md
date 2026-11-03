@@ -27,7 +27,20 @@ python3 adapters/mcp_server.py --serve
 Tools: `calculate_inventory`, `classify_activity`, `list_factor_packs`,
 `get_factor_pack`, `verify_result`, and `describe_agent`.
 
-Hosted route: `https://mcp.viridisconservation.com/ghg-ledger/mcp`.
+Registry name: `io.github.jdhart81/ghg-ledger`. Hosted route (Streamable
+HTTP, no account or API key): `https://mcp.viridisconservation.com/ghg-ledger/mcp`.
+Client setup for Claude, ChatGPT, VS Code and the Claude, OpenAI and xAI APIs,
+payment options and how the hosted service relates to this repo:
+[docs/HOSTED_MCP.md](../docs/HOSTED_MCP.md).
+
+| Tool | Price | Inputs | Output |
+|---|---|---|---|
+| `calculate_inventory` | $1.00 (10 free/day) | `activities[]` (`activity_type`, `quantity`, `unit`, `region`, `year`), `options` | Per-line CO2e, Scope 1/2/3 and category rollups, dual Scope 2, factor lineage, `audit_sha256` |
+| `classify_activity` | free | `activity` | Suggested scope / Scope 3 category from the bundled map |
+| `list_factor_packs` | free, read-only | none | Pack version/digest, regions, years, activity types |
+| `get_factor_pack` | free, read-only | `region`, `year` | Factors, GWP values, sources, pack SHA |
+| `verify_result` | free, read-only | `result_json` | Recomputed audit hash and conservation checks |
+| `describe_agent` | free, read-only | none | Capabilities, version, pricing |
 Pricing: 10 free inventory calculations per UTC day, then $1.00 each through
 the fleet payment-credit gate. Classification, factor reads, and verification
 remain free.
