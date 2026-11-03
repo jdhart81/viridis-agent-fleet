@@ -91,9 +91,11 @@ async def test_mcp_tool_returns_json_object():
     assert isinstance(body["result"], dict)
 
 
-def test_tool_hints_match_behavior():
+async def test_tool_hints_match_behavior():
     from adapters import mcp_server
-    tools = mcp_server.mcp._tool_manager._tools
+    listed = await mcp_server.mcp.list_tools()  # public API, stable across SDK versions
+    tools = {t.name: t for t in listed}
+
     def h(n):
         a = tools[n].annotations
         return a if isinstance(a, dict) else a.model_dump(exclude_none=True)
