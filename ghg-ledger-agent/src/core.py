@@ -440,6 +440,10 @@ class GHGLedgerCore:
     @staticmethod
     def _convert(quantity: Decimal, from_unit: str, to_unit: str,
                  preferred_group: Optional[str] = None) -> tuple[Decimal, str]:
+        # U1: unit names are case-insensitive ("kWh" == "kwh"); the pack's
+        # tables are lowercase. The audited input keeps the caller's spelling.
+        from_unit = str(from_unit).strip().lower()
+        to_unit = str(to_unit).strip().lower()
         groups = PACK["unit_conversions"]
         order = ([preferred_group] if preferred_group else []) + [
             group for group in groups if group != preferred_group]
@@ -919,6 +923,12 @@ class GHGLedgerCore:
                     raise AssertionError("GH9 market-based grand-total drift")
 
     def verify_result(self, result: dict) -> dict:
+        # V1: accept the full tool envelope {"status": "ok", "data": {...}} as
+        # returned by calculate_inventory, not only the inner data object.
+        if (isinstance(result, dict) and "audit_sha256" not in result
+                and isinstance(result.get("data"), dict)
+                and "audit_sha256" in result["data"]):
+            result = result["data"]
         supplied = str(result.get("audit_sha256", ""))
         content = deepcopy(result)
         for field in _DERIVED_AUDIT_FIELDS:

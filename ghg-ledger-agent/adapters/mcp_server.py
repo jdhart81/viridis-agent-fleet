@@ -80,7 +80,7 @@ async def calculate_inventory(activities: List[Dict[str, Any]],
                           if request_id is not None else {})})
 
 
-@mcp.tool(annotations=_WRITE)
+@mcp.tool(annotations=_READ)
 async def classify_activity(activity: Dict[str, Any]) -> str:
     """Suggest scope and Scope 3 category from the bundled deterministic map.
     No inference is used; unknown activity types return no suggestion."""
