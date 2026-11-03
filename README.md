@@ -31,6 +31,10 @@ Each registered MCP server has a README with its tools, inputs and outputs, an e
 | Registry name | Remote endpoint | Docs |
 |---|---|---|
 | `io.github.jdhart81/security-preflight` | `https://mcp.viridis-security.com/security-preflight/mcp` | [security-preflight-agent/README.md](security-preflight-agent/README.md) |
+| `io.github.jdhart81/regulatory-radar` | `https://mcp.viridisconservation.com/regulatory-radar/mcp` | [regulatory-radar-agent/README.md](regulatory-radar-agent/README.md) |
+| `io.github.jdhart81/ghg-ledger` | `https://mcp.viridisconservation.com/ghg-ledger/mcp` | [ghg-ledger-agent/README.md](ghg-ledger-agent/README.md) |
+
+Connecting any hosted server (Claude, ChatGPT, VS Code, APIs), payments and ownership: [docs/HOSTED_MCP.md](docs/HOSTED_MCP.md).
 
 ## For agents
 Agents and LLM tools can start from [llms.txt](llms.txt), a generated index of every agent, and [AGENTS.md](AGENTS.md), the rules for using and changing the fleet.
