@@ -355,11 +355,11 @@ def build_regulations(Regulation, Jurisdiction, Sector, datetime):
             name="California SB 253 — First Mandatory Scope 1+2 Filing",
             jurisdiction=Jurisdiction.CALIFORNIA,
             sector=None,
-            effective_date=datetime(2026, 1, 1),
-            reporting_deadline=datetime(2026, 8, 10),
+            effective_date=datetime(2026, 10, 12),
+            reporting_deadline=datetime(2026, 11, 10),
             requirements=[
                 "First mandatory Scope 1 and Scope 2 GHG disclosure for entities with >$1B revenue",
-                "Third-party limited assurance on Scope 1+2 (reasonable assurance from 2030)",
+                "CARB accepts 2026 submissions with or without limited assurance (reasonable assurance from 2030)",
                 "GHG Protocol aligned reporting",
                 "California-specific data granularity",
             ],
@@ -371,10 +371,15 @@ def build_regulations(Regulation, Jurisdiction, Sector, datetime):
             date_type="first_reporting_deadline",
             scope_note=(
                 "Applies to U.S.-based entities with more than $1 billion in "
-                "annual revenue doing business in California. Scope 3 "
-                "reporting begins in 2027."
+                "annual revenue doing business in California. CARB's "
+                "Initial Regulation (17 CCR 96070-96077) took effect "
+                "2026-10-12 and set the first Scope 1+2 deadline to "
+                "2026-11-10 (moved from 2026-08-10). Entities not collecting "
+                "Scope 1+2 data as of 2024-12-05 may file a statement of "
+                "non-reporting for the first year. Scope 3 and assurance for "
+                "2027+ are left to a separate rulemaking."
             ),
-            source_verified_on="2026-07-25",
+            source_verified_on="2026-11-03",
         ),
         "tnfd-sector-guidance-2025": Regulation(
             id="tnfd-sector-2025",

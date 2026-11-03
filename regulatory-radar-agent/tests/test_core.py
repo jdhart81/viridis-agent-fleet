@@ -130,8 +130,11 @@ class TestScanRegulations:
         assert "injunction" in sb261.scope_note.lower()
         assert sb261.source_verified_on == "2026-07-25"
         assert sb253.jurisdiction == Jurisdiction.CALIFORNIA
-        assert sb253.reporting_deadline == datetime(2026, 8, 10)
-        assert sb253.source_verified_on == "2026-07-25"
+        # CARB Initial Regulation effective 2026-10-12 moved the first
+        # Scope 1+2 deadline from 2026-08-10 to 2026-11-10.
+        assert sb253.reporting_deadline == datetime(2026, 11, 10)
+        assert sb253.effective_date == datetime(2026, 10, 12)
+        assert sb253.source_verified_on == "2026-11-03"
 
     @pytest.mark.asyncio
     async def test_scan_does_not_count_past_deadline_as_urgent(self, agent):
