@@ -128,8 +128,10 @@ class ComplianceGap:
     gap_description: str
     remediation_steps: List[str]
     estimated_effort_hours: int
-    deadline_days: int
+    deadline_days: Optional[int]  # days until key date; negative = overdue; None = no date
     risk_level: str  # "critical", "high", "medium", "low"
+    deadline_status: str = "not_applicable"  # upcoming | due_today | past | not_applicable
+    legal_status: Optional[str] = None
 
 
 @dataclass
@@ -158,6 +160,84 @@ class ComplianceAssessment:
     gaps: List[ComplianceGap]
     priority_actions: List[str]
     summary: str
+    # Applicable entries that are not currently enforceable obligations
+    # (voluntary frameworks, intergovernmental instruments, stayed or enjoined
+    # rules). Reported for context; never counted as gaps.
+    not_currently_binding: List[Dict] = field(default_factory=list)
+    binding_obligations_assessed: int = 0
+
+
+def obligation_class(reg) -> str:
+    """A1: classify a regulation's enforceability from its legal_status.
+
+    binding         -> enforceable obligation (counted, may produce gaps)
+    not_enforceable -> stayed / enjoined (context only)
+    voluntary       -> voluntary or intergovernmental framework (context only)
+    """
+    status = (getattr(reg, "legal_status", None) or "binding").lower()
+    if "enjoined" in status or "stayed" in status:
+        return "not_enforceable"
+    if status.startswith("binding"):
+        return "binding"
+    return "voluntary"
+
+
+def _norm_token(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(text).lower())
+
+
+def assessment_to_dict(a: "ComplianceAssessment") -> Dict:
+    """A2: JSON-safe, stable representation of an assessment."""
+    def reg_row(r):
+        return {
+            "id": r.id,
+            "name": r.name,
+            "jurisdiction": r.jurisdiction.value,
+            "legal_status": r.legal_status,
+            "obligation": obligation_class(r),
+            "deadline": r.reporting_deadline.date().isoformat() if r.reporting_deadline else None,
+            "deadline_status": r.deadline_status(),
+            "days_until_deadline": r.days_until_deadline(),
+            "source_url": r.resource_link,
+            "source_verified_on": r.source_verified_on,
+        }
+    return {
+        "company_name": a.company_name,
+        "jurisdiction": a.jurisdiction.value,
+        "sector": a.sector.value if a.sector else None,
+        "assessment_date": a.assessment_date.isoformat(timespec="seconds"),
+        "overall_compliance_level": a.overall_compliance_level.value,
+        "compliance_percentage": a.compliance_percentage,
+        "binding_obligations_assessed": a.binding_obligations_assessed,
+        "summary": a.summary,
+        "priority_actions": list(a.priority_actions),
+        "gaps": [
+            {
+                "regulation_id": g.regulation_id,
+                "regulation_name": g.regulation_name,
+                "legal_status": g.legal_status,
+                "missing_requirements": g.requirement,
+                "gap_description": g.gap_description,
+                "remediation_steps": list(g.remediation_steps),
+                "estimated_effort_hours": g.estimated_effort_hours,
+                "deadline_status": g.deadline_status,
+                "days_until_deadline": g.deadline_days,
+                "risk_level": g.risk_level,
+            }
+            for g in a.gaps
+        ],
+        "not_currently_binding": list(a.not_currently_binding),
+        "applicable_regulations": [reg_row(r) for r in a.applicable_regulations],
+    }
+
+
+def _gap_sort_key(g) -> Tuple[int, int]:
+    """Upcoming/due-today first (soonest first), then overdue, then undated."""
+    if g.deadline_status in ("upcoming", "due_today"):
+        return (0, g.deadline_days)
+    if g.deadline_status == "past":
+        return (1, -(g.deadline_days or 0))
+    return (2, 0)
 
 
 @dataclass
@@ -357,8 +437,10 @@ class RegulatoryRadarCore:
                     company_name=validated["company_name"],
                     jurisdiction=jurisdiction,
                     sector=sector,
-                    current_practices=input_data.get("current_practices", {}),
+                    current_practices=input_data.get("current_practices") or {},
+                    disclosures=input_data.get("disclosures") or [],
                 )
+                result = {"result": assessment_to_dict(result)}
             elif action == "monitor_changes":
                 validated = validate_monitor_changes_input(input_data)
                 validation_warnings = [
@@ -564,15 +646,29 @@ class RegulatoryRadarCore:
         jurisdiction: Jurisdiction,
         sector: Sector,
         current_practices: Dict[str, bool],
+        disclosures: Optional[List[str]] = None,
     ) -> ComplianceAssessment:
         """
         Assess company's compliance against applicable regulations.
+
+        Invariants:
+          A1 Only binding obligations produce gaps or count toward the
+             compliance percentage; voluntary, intergovernmental, stayed and
+             enjoined entries are listed under not_currently_binding.
+          A3 A past key date is reported as overdue (deadline_status="past",
+             negative days), never as "due in N days"; "critical" means a
+             binding key date 0-89 days ahead.
+          A4 priority_actions carry the gap's real risk level and date wording.
+          A5 `disclosures` (ids, standards or requirement text) satisfy matching
+             requirements, in addition to `current_practices` keys.
 
         Args:
             company_name: Company identifier
             jurisdiction: Where company operates
             sector: Industry sector
             current_practices: Dict of {"practice_name": bool} for current implementations
+            disclosures: Optional list of regulation ids, standard names or
+                requirement texts the company already satisfies
 
         Returns:
             ComplianceAssessment with gaps and recommendations
@@ -580,53 +676,99 @@ class RegulatoryRadarCore:
         try:
             applicable_regs = self.db.get_regulations_by_jurisdiction(jurisdiction)
             applicable_regs = [r for r in applicable_regs if r.sector is None or r.sector == sector]
+            disclosed = {_norm_token(d) for d in (disclosures or []) if str(d).strip()}
+
+            def req_met(reg, req) -> bool:
+                if current_practices.get(req.lower().replace(" ", "_"), False):
+                    return True
+                if not disclosed:
+                    return False
+                if _norm_token(req) in disclosed or _norm_token(reg.id) in disclosed:
+                    return True
+                return any(_norm_token(st) in disclosed for st in reg.standards)
 
             gaps: List[ComplianceGap] = []
+            not_binding: List[Dict] = []
+            binding_count = 0
             compliant_count = 0
 
             for reg in applicable_regs:
-                # Simple compliance check: map requirements to practices
-                reg_compliant = all(
-                    current_practices.get(req.lower().replace(" ", "_"), False)
-                    for req in reg.requirements
-                )
-
-                if not reg_compliant:
-                    missing_reqs = [
-                        req for req in reg.requirements
-                        if not current_practices.get(req.lower().replace(" ", "_"), False)
-                    ]
-
-                    gap = ComplianceGap(
-                        regulation_id=reg.id,
-                        regulation_name=reg.name,
-                        requirement=" | ".join(missing_reqs[:2]),
-                        gap_description=f"Missing {len(missing_reqs)} of {len(reg.requirements)} requirements",
-                        remediation_steps=[
-                            f"Implement {req}" for req in missing_reqs[:3]
-                        ],
-                        estimated_effort_hours=40 * len(missing_reqs),
-                        deadline_days=max(1, reg.days_until_deadline() or 365),
-                        risk_level="critical" if reg.days_until_deadline() and reg.days_until_deadline() < 90
-                        else "high" if reg.days_until_deadline() and reg.days_until_deadline() < 180
-                        else "medium",
-                    )
-                    gaps.append(gap)
-                else:
+                klass = obligation_class(reg)
+                if klass != "binding":
+                    not_binding.append({
+                        "regulation_id": reg.id,
+                        "regulation_name": reg.name,
+                        "legal_status": reg.legal_status,
+                        "obligation": klass,
+                        "note": reg.scope_note,
+                        "source_url": reg.resource_link,
+                    })
+                    continue
+                binding_count += 1
+                missing_reqs = [req for req in reg.requirements if not req_met(reg, req)]
+                if not missing_reqs:
                     compliant_count += 1
+                    continue
+                days = reg.days_until_deadline()
+                status = reg.deadline_status()
+                if status in ("upcoming", "due_today"):
+                    risk = "critical" if days < 90 else "high" if days < 180 else "medium"
+                elif status == "past":
+                    risk = "high"
+                else:
+                    risk = "medium"
+                gaps.append(ComplianceGap(
+                    regulation_id=reg.id,
+                    regulation_name=reg.name,
+                    requirement=" | ".join(missing_reqs[:2]),
+                    gap_description=f"Missing {len(missing_reqs)} of {len(reg.requirements)} requirements",
+                    remediation_steps=[f"Implement {req}" for req in missing_reqs[:3]],
+                    estimated_effort_hours=40 * len(missing_reqs),
+                    deadline_days=days,
+                    risk_level=risk,
+                    deadline_status=status,
+                    legal_status=reg.legal_status,
+                ))
 
-            compliance_percentage = (compliant_count / len(applicable_regs) * 100) if applicable_regs else 0
-
+            if binding_count:
+                compliance_percentage = compliant_count / binding_count * 100
+            elif applicable_regs:
+                # Only voluntary / stayed / enjoined items apply: nothing binding is unmet.
+                compliance_percentage = 100.0
+            else:
+                compliance_percentage = 0.0  # nothing in scope: conservative pin
             overall_level = (
                 ComplianceLevel.COMPLIANT if compliance_percentage >= 90
                 else ComplianceLevel.PARTIAL if compliance_percentage >= 50
                 else ComplianceLevel.NON_COMPLIANT
             )
 
-            priority_actions = [
-                f"[CRITICAL] {g.regulation_name}: Due in {g.deadline_days} days"
-                for g in sorted(gaps, key=lambda x: x.deadline_days)[:3]
-            ]
+            def action_text(g: ComplianceGap) -> str:
+                if g.deadline_status == "past":
+                    when = f"key date passed {-g.deadline_days} days ago (overdue)"
+                elif g.deadline_status == "due_today":
+                    when = "due today"
+                elif g.deadline_status == "upcoming":
+                    when = f"due in {g.deadline_days} days"
+                else:
+                    when = "no fixed deadline"
+                return f"[{g.risk_level.upper()}] {g.regulation_name}: {when}"
+
+            priority_actions = [action_text(g) for g in sorted(gaps, key=_gap_sort_key)[:3]]
+
+            if binding_count:
+                summary = (
+                    f"{company_name}: {compliant_count} of {binding_count} binding "
+                    f"obligations met ({overall_level.value}). {len(gaps)} gap{'' if len(gaps) == 1 else 's'}, "
+                    f"estimated {sum(g.estimated_effort_hours for g in gaps)} hours to remediate."
+                )
+            else:
+                summary = f"{company_name}: no binding obligations in scope for this jurisdiction and sector."
+            if not_binding:
+                summary += (
+                    f" {len(not_binding)} voluntary, stayed or enjoined items listed "
+                    "for context, not counted."
+                )
 
             assessment = ComplianceAssessment(
                 company_name=company_name,
@@ -638,8 +780,9 @@ class RegulatoryRadarCore:
                 applicable_regulations=applicable_regs,
                 gaps=gaps,
                 priority_actions=priority_actions,
-                summary=f"{company_name} is {overall_level.value} with environmental regulations. "
-                        f"{len(gaps)} compliance gaps identified, estimated {sum(g.estimated_effort_hours for g in gaps)} hours to remediate."
+                summary=summary,
+                not_currently_binding=not_binding,
+                binding_obligations_assessed=binding_count,
             )
 
             logger.info(f"Compliance assessment for {company_name}: {compliance_percentage:.1f}%")

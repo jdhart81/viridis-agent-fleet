@@ -213,6 +213,10 @@ class TestComplianceAssessment:
             "ensure_environmental_integrity_of_credits": True,
         }
 
+        # Satisfy every requirement of every applicable entry (binding ones count).
+        for reg in agent.db.get_regulations_by_jurisdiction(Jurisdiction.EU):
+            for req in reg.requirements:
+                practices[req.lower().replace(" ", "_")] = True
         assessment = await agent.assess_compliance(
             company_name="Eco Corp",
             jurisdiction=Jurisdiction.EU,
@@ -261,7 +265,8 @@ class TestComplianceAssessment:
             assert gap.requirement
             assert gap.remediation_steps
             assert gap.estimated_effort_hours > 0
-            assert gap.deadline_days > 0
+            assert gap.deadline_days is None or isinstance(gap.deadline_days, int)
+            assert gap.deadline_status in ("upcoming", "due_today", "past", "not_applicable")
             assert gap.risk_level in ["critical", "high", "medium", "low"]
 
     @pytest.mark.asyncio
@@ -309,9 +314,12 @@ class TestComplianceAssessmentInvariants:
 
     @staticmethod
     def _craft_partial_practices(agent_obj, jurisdiction, sector, n_regs_satisfied):
-        """Build practices dict satisfying the first n applicable regulations."""
+        """Build practices dict satisfying the first n applicable *binding* regulations
+        (only binding obligations count toward compliance; invariant A1)."""
+        from src.core import obligation_class
         regs = agent_obj.db.get_regulations_by_jurisdiction(jurisdiction)
-        regs = [r for r in regs if r.sector is None or r.sector == sector]
+        regs = [r for r in regs if (r.sector is None or r.sector == sector)
+                and obligation_class(r) == "binding"]
         practices = {}
         for reg in regs[:n_regs_satisfied]:
             for req in reg.requirements:
@@ -323,11 +331,11 @@ class TestComplianceAssessmentInvariants:
         """
         Compliance percentage in [50, 90) must yield ComplianceLevel.PARTIAL.
 
-        Pins core.py:473-477 band thresholds. EU FORESTRY has 9 applicable
-        regs; satisfying 5/9 = 55.6% lands squarely in the PARTIAL band.
+        Pins the band thresholds. EU FORESTRY has 5 binding obligations;
+        satisfying 3/5 = 60% lands squarely in the PARTIAL band.
         """
         practices, n_regs = self._craft_partial_practices(
-            agent, Jurisdiction.EU, Sector.FORESTRY, n_regs_satisfied=5
+            agent, Jurisdiction.EU, Sector.FORESTRY, n_regs_satisfied=3
         )
         assessment = await agent.assess_compliance(
             company_name="PartialCo",
@@ -361,7 +369,8 @@ class TestComplianceAssessmentInvariants:
         # Reconstruct the deadline-ordered gap list and verify priority_actions
         # mirror that ordering by name (priority_action strings embed the
         # regulation_name).
-        sorted_gaps = sorted(assessment.gaps, key=lambda g: g.deadline_days)
+        from src.core import _gap_sort_key
+        sorted_gaps = sorted(assessment.gaps, key=_gap_sort_key)
         for action_str, gap in zip(assessment.priority_actions, sorted_gaps):
             assert gap.regulation_name in action_str, (
                 f"priority_action {action_str!r} should reference "
@@ -378,9 +387,9 @@ class TestComplianceAssessmentInvariants:
         truncate it to a single action.
         """
         practices, _ = self._craft_partial_practices(
-            agent, Jurisdiction.EU, Sector.FORESTRY, n_regs_satisfied=2
+            agent, Jurisdiction.EU, Sector.FORESTRY, n_regs_satisfied=0
         )
-        # 2/9 satisfied → 7 gaps → priority_actions should still be capped at 3
+        # 0/5 binding satisfied → 5 gaps → priority_actions should still be capped at 3
         assessment = await agent.assess_compliance(
             company_name="CapTestCo",
             jurisdiction=Jurisdiction.EU,
