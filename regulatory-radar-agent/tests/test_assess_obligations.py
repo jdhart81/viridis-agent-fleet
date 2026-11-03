@@ -93,12 +93,14 @@ async def test_mcp_tool_returns_json_object():
 
 async def test_tool_hints_match_behavior():
     from adapters import mcp_server
-    listed = await mcp_server.mcp.list_tools()  # public API, stable across SDK versions
-    tools = {t.name: t for t in listed}
+    if mcp_server.HAS_MCP:   # real SDK: public list_tools API
+        anns = {t.name: t.annotations for t in await mcp_server.mcp.list_tools()}
+    else:                    # stdlib shim records the declared annotations
+        anns = {n: fn.__mcp_annotations__ for n, fn in mcp_server.mcp.tools.items()}
 
     def h(n):
-        a = tools[n].annotations
-        return a if isinstance(a, dict) else a.model_dump(exclude_none=True)
+        a = anns[n]
+        return a if isinstance(a, dict) else a.model_dump(by_alias=True, exclude_none=True)
     for n in ("scan_regulations", "monitor_changes", "assess_compliance", "describe_agent"):
         assert h(n)["readOnlyHint"] is True and h(n)["openWorldHint"] is False, n
     ep = h("build_evidence_pack")

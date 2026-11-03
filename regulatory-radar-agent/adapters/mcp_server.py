@@ -30,6 +30,7 @@ except ImportError:  # pragma: no cover - deploy-time dependency guard
         def tool(self, *a, **k):
             def deco(fn):
                 self.tools[fn.__name__] = fn
+                fn.__mcp_annotations__ = k.get("annotations")
                 return fn
             return deco
 
