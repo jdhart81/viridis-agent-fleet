@@ -24,6 +24,14 @@ python3 run_fleet_tests.py                                 # every agent's invar
 
 Free tier: 10 calls/day per service; the rails (identity, escrow, metering…) are free forever. Verification is always free.
 
+## Registry servers with their own docs
+
+Each registered MCP server has a README with its tools, inputs and outputs, an example, client config and pricing:
+
+| Registry name | Remote endpoint | Docs |
+|---|---|---|
+| `io.github.jdhart81/security-preflight` | `https://mcp.viridis-security.com/security-preflight/mcp` | [security-preflight-agent/README.md](security-preflight-agent/README.md) |
+
 ## For agents
 Agents and LLM tools can start from [llms.txt](llms.txt), a generated index of every agent, and [AGENTS.md](AGENTS.md), the rules for using and changing the fleet.
 
