@@ -30,6 +30,7 @@ except ImportError:  # pragma: no cover - deploy-time dependency guard
         def tool(self, *a, **k):
             def deco(fn):
                 self.tools[fn.__name__] = fn
+                fn.__mcp_annotations__ = k.get("annotations")
                 return fn
             return deco
 
@@ -72,9 +73,13 @@ _WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
                           idempotentHint=False, openWorldHint=False)
 _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
                                 idempotentHint=False, openWorldHint=False)
+# build_evidence_pack fetches registry-owned official regulator pages (open
+# world) and may persist a snapshot; it never deletes or overwrites user data.
+_LIVE_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                               idempotentHint=False, openWorldHint=True)
 
 
-@mcp.tool(annotations=_WRITE)
+@mcp.tool(annotations=_READ)
 async def scan_regulations(jurisdiction: str, sector: Optional[str] = None,
                            query: Optional[str] = None,
                            payment_ref: Optional[str] = None,
@@ -109,7 +114,7 @@ async def assess_compliance(company_name: str, sector: str, jurisdiction: str,
                     if request_id is not None else {})})
 
 
-@mcp.tool(annotations=_WRITE)
+@mcp.tool(annotations=_READ)
 async def monitor_changes(jurisdiction: str, since_days: int = 90,
                           topics: Optional[List[str]] = None,
                           payment_ref: Optional[str] = None,
@@ -126,7 +131,7 @@ async def monitor_changes(jurisdiction: str, since_days: int = 90,
                     if request_id is not None else {})})
 
 
-@mcp.tool(annotations=_WRITE)
+@mcp.tool(annotations=_LIVE_WRITE)
 async def build_evidence_pack(
     jurisdiction: str,
     topics: Optional[List[str]] = None,

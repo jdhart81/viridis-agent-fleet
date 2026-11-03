@@ -17,12 +17,11 @@ def core():
     return RegulatoryRadarCore()
 
 
-_TS = re.compile(r"datetime\.datetime\([^)]*\)")
-
-
-def _normalize(result: str) -> str:
+def _normalize(result: dict) -> dict:
     # The only intended run-to-run variation is the assessment timestamp.
-    return _TS.sub("datetime.datetime(<ts>)", result)
+    out = dict(result)
+    out.pop("assessment_date", None)
+    return out
 
 
 ASSESS = {
