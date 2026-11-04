@@ -117,6 +117,55 @@ def validate_scan_input(data: dict) -> Dict[str, Any]:
     return validated
 
 
+def _optional_revenue(data: Dict[str, Any], name: str):
+    """A finite, non-negative revenue figure, or None when absent."""
+    value = data.get(name)
+    if value is None:
+        return None
+    if (isinstance(value, bool) or not isinstance(value, (int, float))
+            or value != value or value in (float("inf"), float("-inf"))):
+        raise ValidationError(name, value, "must be a finite number")
+    if value < 0:
+        raise ValidationError(name, value, "must be non-negative")
+    return value
+
+
+def _optional_entity_profile(profile):
+    """entity_profile for applicability gates (A6); every field optional."""
+    from .applicability import ENTITY_FORMS, ENTITY_PROFILE_FIELDS, EXEMPTIONS
+    if profile is None:
+        return None
+    if not isinstance(profile, dict):
+        raise ValidationError("entity_profile", type(profile).__name__,
+                              "must be an object when provided")
+    unknown = sorted(set(profile) - set(ENTITY_PROFILE_FIELDS))
+    if unknown:
+        raise ValidationError("entity_profile", unknown,
+                              f"unsupported fields; allowed: {list(ENTITY_PROFILE_FIELDS)}")
+    cleaned: Dict[str, Any] = {}
+    for key, value in profile.items():
+        if value is None:
+            continue
+        if key in ("formed_under_us_law", "does_business_in_california"):
+            if not isinstance(value, bool):
+                raise ValidationError(f"entity_profile.{key}", value,
+                                      "must be true or false")
+            cleaned[key] = value
+        elif key == "entity_form":
+            norm = str(value).strip().lower() if isinstance(value, str) else value
+            if norm not in ENTITY_FORMS:
+                raise ValidationError(f"entity_profile.{key}", value,
+                                      f"must be one of: {list(ENTITY_FORMS)}")
+            cleaned[key] = norm
+        elif key == "exemption":
+            norm = str(value).strip().lower() if isinstance(value, str) else value
+            if norm not in EXEMPTIONS:
+                raise ValidationError(f"entity_profile.{key}", value,
+                                      f"must be one of: {list(EXEMPTIONS)}")
+            cleaned[key] = norm
+    return cleaned
+
+
 def validate_compliance_assessment_input(data: dict) -> Dict[str, Any]:
     """
     Validate input for assess_compliance().
@@ -165,18 +214,12 @@ def validate_compliance_assessment_input(data: dict) -> Dict[str, Any]:
         ))
         existing_compliance = {}
 
-    # Annual revenue — optional; gates size-limited obligations (A6)
-    annual_revenue_usd = data.get("annual_revenue_usd")
-    if annual_revenue_usd is not None:
-        if (isinstance(annual_revenue_usd, bool)
-                or not isinstance(annual_revenue_usd, (int, float))
-                or annual_revenue_usd != annual_revenue_usd
-                or annual_revenue_usd in (float("inf"), float("-inf"))):
-            raise ValidationError("annual_revenue_usd", annual_revenue_usd,
-                                  "must be a finite number")
-        if annual_revenue_usd < 0:
-            raise ValidationError("annual_revenue_usd", annual_revenue_usd,
-                                  "must be non-negative")
+    # Revenue and entity profile — optional; gate size- and entity-limited
+    # obligations (A6). annual_revenue_usd is the most recent completed
+    # fiscal year; prior_year_revenue_usd is the year before it.
+    annual_revenue_usd = _optional_revenue(data, "annual_revenue_usd")
+    prior_year_revenue_usd = _optional_revenue(data, "prior_year_revenue_usd")
+    entity_profile = _optional_entity_profile(data.get("entity_profile"))
 
     validated = {
         "company_name": str(company_name).strip(),
@@ -184,6 +227,8 @@ def validate_compliance_assessment_input(data: dict) -> Dict[str, Any]:
         "sector": sector,
         "existing_compliance": existing_compliance,
         "annual_revenue_usd": annual_revenue_usd,
+        "prior_year_revenue_usd": prior_year_revenue_usd,
+        "entity_profile": entity_profile,
         "_validation_warnings": warnings,
     }
 

@@ -370,8 +370,12 @@ def build_regulations(Regulation, Jurisdiction, Sector, datetime):
             legal_status="binding",
             date_type="first_reporting_deadline",
             scope_note=(
-                "Applies to U.S.-based entities with more than $1 billion in "
-                "annual revenue doing business in California. CARB's "
+                "Applies to business entities formed under U.S. state, DC or "
+                "federal law that do business in California with revenue over "
+                "$1 billion, measured as the lesser of the two previous fiscal "
+                "years; tax-exempt non-profits, insurers, government-owned "
+                "entities and entities whose only California activity is "
+                "wholesale electricity or payroll are exempt. CARB's "
                 "Initial Regulation (17 CCR 96070-96077) took effect "
                 "2026-10-12 and set the first Scope 1+2 deadline to "
                 "2026-11-10 (moved from 2026-08-10). Entities not collecting "
@@ -379,9 +383,29 @@ def build_regulations(Regulation, Jurisdiction, Sector, datetime):
                 "non-reporting for the first year. Scope 3 and assurance for "
                 "2027+ are left to a separate rulemaking."
             ),
-            source_verified_on="2026-11-03",
-            # A6: applicability gate, from the scope note above.
-            min_annual_revenue_usd=1_000_000_000,
+            source_verified_on="2026-11-04",
+            # A6: applicability gate. 17 CCR 96072(a)(11): a "reporting
+            # entity" is a partnership, corporation, LLC or other business
+            # entity with total annual revenues in excess of $1,000,000,000
+            # that does business in California; revenue is the lesser of the
+            # entity's two previous fiscal years (gross receipts, R&T Code
+            # 25120(f)(2), per 96072(a)(13)). H&S Code 38532(b)(2) adds
+            # formation under the law of a US state, DC or an Act of
+            # Congress. 96071(b) lists the exempt entities.
+            applicability_gate={
+                "revenue_exceeds_usd": 1_000_000_000,
+                "revenue_fiscal_years": 2,
+                "entity_conditions": [
+                    "entity_form",
+                    "formed_under_us_law",
+                    "does_business_in_california",
+                    "exemption",
+                ],
+                "citation": (
+                    "17 CCR 96071(b), 96072(a)(8), (a)(11), (a)(13); "
+                    "Cal. Health & Safety Code 38532(b)(2)"
+                ),
+            },
         ),
         "tnfd-sector-guidance-2025": Regulation(
             id="tnfd-sector-2025",

@@ -6,15 +6,22 @@ A3 Past key dates are overdue (never "due in N days"); critical = binding, 0-89 
 A4 priority_actions carry the gap's real risk level.
 A5 `disclosures` satisfy matching requirements (ids, standards, requirement text).
 
-SB 253 is revenue-gated (A6, test_assess_applicability.py), so tests that
-need it assessed supply a covered annual revenue.
+SB 253 is applicability-gated (A6, test_assess_applicability.py), so tests
+that need it assessed supply covered revenue and entity inputs (COVERED).
 """
 import json
 from datetime import datetime, timedelta
 
 from src.core import (RegulatoryRadarCore, Jurisdiction, Sector, obligation_class)
 
-COVERED_REVENUE = 1_500_000_000  # above SB 253's $1B gate
+# Inputs that put SB 253 in scope: revenue over $1B in both previous fiscal
+# years and a US-formed, non-exempt business entity doing business in CA.
+COVERED = {
+    "annual_revenue_usd": 1_500_000_000,
+    "prior_year_revenue_usd": 1_400_000_000,
+    "entity_profile": {"entity_form": "corporation", "formed_under_us_law": True,
+                       "does_business_in_california": True, "exemption": "none"},
+}
 
 
 def core():
@@ -57,7 +64,7 @@ async def test_A3_past_binding_is_overdue_not_due(monkeypatch):
     sb253 = next(r for r in regs if r.id == "ca-sb253-2026")
     monkeypatch.setattr(sb253, "reporting_deadline", datetime.utcnow() - timedelta(days=12))
     a = await c.assess_compliance("T", Jurisdiction.CALIFORNIA, Sector.ENERGY, {},
-                                  annual_revenue_usd=COVERED_REVENUE)
+                                  **COVERED)
     g = next(g for g in a.gaps if g.regulation_id == "ca-sb253-2026")
     assert g.deadline_status == "past" and g.deadline_days < 0
     assert g.risk_level != "critical"
@@ -67,7 +74,7 @@ async def test_A3_past_binding_is_overdue_not_due(monkeypatch):
 
 async def test_A3_upcoming_binding_within_90_is_critical():
     a = await core().assess_compliance("T", Jurisdiction.CALIFORNIA, Sector.ENERGY, {},
-                                       annual_revenue_usd=COVERED_REVENUE)
+                                       **COVERED)
     for g in a.gaps:
         if g.deadline_status == "upcoming" and g.deadline_days < 90:
             assert g.risk_level == "critical"
@@ -84,9 +91,9 @@ async def test_A4_action_label_matches_risk():
 
 async def test_A5_disclosures_satisfy_requirements():
     c = core()
-    base = await _assess(c, annual_revenue_usd=COVERED_REVENUE)
+    base = await _assess(c, **COVERED)
     covered = await _assess(c, disclosures=["ca-sb253-2026"],
-                            annual_revenue_usd=COVERED_REVENUE)
+                            **COVERED)
     assert any(g["regulation_id"] == "ca-sb253-2026" for g in base["gaps"])
     assert not any(g["regulation_id"] == "ca-sb253-2026" for g in covered["gaps"])
     assert covered["compliance_percentage"] > base["compliance_percentage"]
