@@ -156,7 +156,7 @@ class TaxCreditEngineCore:
             "outputs": {"calculation_status": "eligible|ineligible|indeterminate",
                         "credit_amount_usd": "decimal string or null",
                         "audit_sha256": "content digest for notary"},
-            "pricing": {"free_calls_per_day": 100, "price_usd_per_call": "2.00"},
+            "pricing": {"free_calls_per_day": 10, "price_usd_per_call": "2.00"},
             "a2a_role": "clean-energy-tax-credit-calculation",
         }
 
