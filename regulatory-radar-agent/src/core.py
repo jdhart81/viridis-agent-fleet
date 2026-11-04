@@ -36,6 +36,9 @@ from .validation import (
     ValidationError,
     ValidationWarning,
 )
+from .applicability import (
+    OUT_OF_SCOPE, UNCONFIRMED, describe_gate, evaluate_gate,
+)
 from .live_sources import (
     PACK_SCHEMA,
     collect_source_evidence,
@@ -103,9 +106,9 @@ class Regulation:
     date_type: str = "reporting_deadline"
     scope_note: Optional[str] = None
     source_verified_on: Optional[str] = None
-    # A6: entity-size gate. When set, the entry is binding only for
-    # entities with at least this annual revenue (USD).
-    min_annual_revenue_usd: Optional[int] = None
+    # A6: applicability gate (plain dict, see applicability.py). When set,
+    # the entry is binding only when the gate is established from inputs.
+    applicability_gate: Optional[Dict] = None
 
     def days_until_deadline(self) -> Optional[int]:
         """Days remaining until the entry's key date."""
@@ -171,11 +174,13 @@ class ComplianceAssessment:
     # rules). Reported for context; never counted as gaps.
     not_currently_binding: List[Dict] = field(default_factory=list)
     binding_obligations_assessed: int = 0
-    # A6: binding entries whose size gate needs annual_revenue_usd, and
-    # entries the supplied revenue puts below the gate.
+    # A6: binding entries whose applicability gate can't be established from
+    # inputs, and entries the inputs put out of scope.
     applicability_unconfirmed: List[Dict] = field(default_factory=list)
     out_of_scope: List[Dict] = field(default_factory=list)
     annual_revenue_usd: Optional[float] = None
+    prior_year_revenue_usd: Optional[float] = None
+    entity_profile: Optional[Dict] = None
 
 
 # B1: build identity. The deploy sets VIRIDIS_BUILD_SHA to the git commit it
@@ -194,6 +199,11 @@ def build_info() -> dict:
                 "source": "env:VIRIDIS_BUILD_SHA"}
     return {"git_sha": raw, "status": "reported",
             "source": "env:VIRIDIS_BUILD_SHA"}
+
+
+SCREENING_DISCLAIMER = (
+    "Technology-assisted screening only, not legal advice; confirm "
+    "applicability and deadlines with the cited authority or qualified counsel.")
 
 
 def obligation_class(reg) -> str:
@@ -239,6 +249,10 @@ def assessment_to_dict(a: "ComplianceAssessment") -> Dict:
         "compliance_percentage": a.compliance_percentage,
         "binding_obligations_assessed": a.binding_obligations_assessed,
         "annual_revenue_usd": a.annual_revenue_usd,
+        "prior_year_revenue_usd": a.prior_year_revenue_usd,
+        "entity_profile": dict(a.entity_profile) if a.entity_profile else None,
+        "screening_only": True,
+        "disclaimer": SCREENING_DISCLAIMER,
         "summary": a.summary,
         "priority_actions": list(a.priority_actions),
         "gaps": [
@@ -472,6 +486,8 @@ class RegulatoryRadarCore:
                     current_practices=input_data.get("current_practices") or {},
                     disclosures=input_data.get("disclosures") or [],
                     annual_revenue_usd=validated.get("annual_revenue_usd"),
+                    prior_year_revenue_usd=validated.get("prior_year_revenue_usd"),
+                    entity_profile=validated.get("entity_profile"),
                 )
                 result = {"result": assessment_to_dict(result)}
             elif action == "monitor_changes":
@@ -681,6 +697,8 @@ class RegulatoryRadarCore:
         current_practices: Dict[str, bool],
         disclosures: Optional[List[str]] = None,
         annual_revenue_usd: Optional[float] = None,
+        prior_year_revenue_usd: Optional[float] = None,
+        entity_profile: Optional[Dict] = None,
     ) -> ComplianceAssessment:
         """
         Assess company's compliance against applicable regulations.
@@ -695,12 +713,14 @@ class RegulatoryRadarCore:
           A4 priority_actions carry the gap's real risk level and date wording.
           A5 `disclosures` (ids, standards or requirement text) satisfy matching
              requirements, in addition to `current_practices` keys.
-          A6 A binding entry with a revenue gate (min_annual_revenue_usd) is
-             counted only when annual_revenue_usd is supplied and meets the
-             gate. Without revenue it is listed under
-             applicability_unconfirmed, is neither met nor a gap, and the
-             overall level can never be "compliant" (it is "undetermined").
-             Revenue below the gate lists it under out_of_scope.
+          A6 A binding entry with an applicability_gate is counted only when
+             the gate is established from inputs (applicability.evaluate_gate:
+             revenue strictly over the threshold in each of the required
+             fiscal years, and every entity condition known and met). If any
+             input is missing it is listed under applicability_unconfirmed,
+             is neither met nor a gap, and the overall level can never be
+             "compliant" (it is "undetermined"). A known failing condition
+             lists it under out_of_scope.
 
         Args:
             company_name: Company identifier
@@ -746,28 +766,33 @@ class RegulatoryRadarCore:
                         "source_url": reg.resource_link,
                     })
                     continue
-                gate = getattr(reg, "min_annual_revenue_usd", None)
-                if gate is not None:
+                gate = getattr(reg, "applicability_gate", None)
+                if gate:
+                    verdict = evaluate_gate(gate, annual_revenue_usd,
+                                            prior_year_revenue_usd, entity_profile)
                     row = {
                         "regulation_id": reg.id,
                         "regulation_name": reg.name,
-                        "min_annual_revenue_usd": gate,
+                        "revenue_exceeds_usd": gate.get("revenue_exceeds_usd"),
+                        "revenue_fiscal_years": gate.get("revenue_fiscal_years", 1),
+                        "entity_conditions": list(gate.get("entity_conditions", ())),
+                        "applicability_citation": gate.get("citation"),
                         "deadline": (reg.reporting_deadline.date().isoformat()
                                      if reg.reporting_deadline else None),
                         "deadline_status": reg.deadline_status(),
                         "source_url": reg.resource_link,
                     }
-                    if annual_revenue_usd is None:
-                        row["action"] = (
-                            f"Confirm applicability: binding only at annual revenue of "
-                            f"${gate:,} or more; supply annual_revenue_usd")
-                        unconfirmed.append(row)
-                        continue
-                    if annual_revenue_usd < gate:
-                        row["reason"] = (
-                            f"supplied annual revenue ${annual_revenue_usd:,.0f} is below "
-                            f"the ${gate:,} gate")
+                    if verdict["status"] == OUT_OF_SCOPE:
+                        row["reasons"] = verdict["reasons"]
+                        row["reason"] = "; ".join(verdict["reasons"])
                         out_of_scope.append(row)
+                        continue
+                    if verdict["status"] == UNCONFIRMED:
+                        row["missing_inputs"] = verdict["missing_inputs"]
+                        row["action"] = (
+                            f"Confirm applicability: {describe_gate(gate)}; supply "
+                            + ", ".join(verdict["missing_inputs"]))
+                        unconfirmed.append(row)
                         continue
                 binding_count += 1
                 missing_reqs = [req for req in reg.requirements if not req_met(reg, req)]
@@ -839,15 +864,18 @@ class RegulatoryRadarCore:
             else:
                 summary = f"{company_name}: no binding obligations in scope for this jurisdiction and sector."
             if unconfirmed:
+                needed: List[str] = []
+                for row in unconfirmed:
+                    needed.extend(m for m in row["missing_inputs"] if m not in needed)
                 summary += (
-                    f" {len(unconfirmed)} size-gated binding obligation"
+                    f" {len(unconfirmed)} applicability-gated binding obligation"
                     f"{'' if len(unconfirmed) == 1 else 's'} not counted: supply "
-                    "annual_revenue_usd to confirm applicability. Overall level is "
+                    f"{', '.join(needed)} to confirm applicability. Overall level is "
                     f"{overall_level.value} until then.")
             if out_of_scope:
                 summary += (
                     f" {len(out_of_scope)} obligation{'' if len(out_of_scope) == 1 else 's'} "
-                    "out of scope for the supplied revenue.")
+                    "out of scope for the supplied inputs.")
             if not_binding:
                 summary += (
                     f" {len(not_binding)} voluntary, stayed or enjoined items listed "
@@ -871,6 +899,8 @@ class RegulatoryRadarCore:
                 applicability_unconfirmed=unconfirmed,
                 out_of_scope=out_of_scope,
                 annual_revenue_usd=annual_revenue_usd,
+                prior_year_revenue_usd=prior_year_revenue_usd,
+                entity_profile=dict(entity_profile) if entity_profile else None,
             )
 
             logger.info(f"Compliance assessment for {company_name}: "

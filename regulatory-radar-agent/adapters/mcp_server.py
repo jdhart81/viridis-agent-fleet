@@ -103,19 +103,31 @@ async def scan_regulations(jurisdiction: str, sector: Optional[str] = None,
 async def assess_compliance(company_name: str, sector: str, jurisdiction: str,
                       disclosures: Optional[List[str]] = None,
                       annual_revenue_usd: Optional[float] = None,
+                      prior_year_revenue_usd: Optional[float] = None,
+                      entity_profile: Optional[Dict[str, Any]] = None,
                       payment_ref: Optional[str] = None,
                       request_id: Optional[str] = None) -> str:
     """Screen a company's posture against applicable regulations.
 
     Returns compliance level, percentage, gaps, and remediation priorities.
-    Size-gated obligations (e.g. California SB 253 at $1B revenue) count only
-    when `annual_revenue_usd` is supplied; without it they are listed under
+    Gated obligations count only when their applicability is established from
+    inputs. California SB 253 needs revenue over $1B in each of the two
+    previous fiscal years (`annual_revenue_usd` = most recent year,
+    `prior_year_revenue_usd` = the year before) and an `entity_profile` with
+    entity_form (corporation|partnership|llc|other_business_entity),
+    formed_under_us_law, does_business_in_california and exemption
+    (none|tax_exempt_nonprofit|insurance|government_majority_owned|
+    wholesale_electricity_only|payroll_only). Missing inputs list it under
     applicability_unconfirmed and the level is "undetermined", never
     "compliant". Screening only, not legal advice."""
     return await _run({"action": "assess", "company_name": company_name, "sector": sector,
                  "jurisdiction": jurisdiction, "disclosures": disclosures or [],
                  **({"annual_revenue_usd": annual_revenue_usd}
                     if annual_revenue_usd is not None else {}),
+                 **({"prior_year_revenue_usd": prior_year_revenue_usd}
+                    if prior_year_revenue_usd is not None else {}),
+                 **({"entity_profile": entity_profile}
+                    if entity_profile is not None else {}),
                  **({"payment_ref": payment_ref} if payment_ref else {}),
                  **({"request_id": request_id}
                     if request_id is not None else {})})

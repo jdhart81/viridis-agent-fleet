@@ -134,7 +134,7 @@ class TestScanRegulations:
         # Scope 1+2 deadline from 2026-08-10 to 2026-11-10.
         assert sb253.reporting_deadline == datetime(2026, 11, 10)
         assert sb253.effective_date == datetime(2026, 10, 12)
-        assert sb253.source_verified_on == "2026-11-03"
+        assert sb253.source_verified_on == "2026-11-04"
 
     @pytest.mark.asyncio
     async def test_scan_does_not_count_past_deadline_as_urgent(self, agent):
