@@ -31,6 +31,9 @@ The registry only ever sees the commitment, digest, salt, profile, tool name, is
 [![ORC sealed](https://img.shields.io/badge/ORC-sealed-2e7d32)](https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/standards/OUTCOME_RECEIPT_v0.1.md)
 
 ## Library
+```bash
+npm install orc-seal
+```
 ```js
 import { Sealer, parse } from "orc-seal";
 const s = new Sealer({ id: "did:web:yourdomain.com" }, { agent: "my-server" });
