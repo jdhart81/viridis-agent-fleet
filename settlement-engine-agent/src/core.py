@@ -318,7 +318,7 @@ class SettlementEngineAgent:
                 "limits": {"max_series": MAX_SERIES, "max_slots": MAX_SLOTS, "max_strikes": MAX_STRIKES, "max_contracts": MAX_CONTRACTS}}
 
     async def health(self) -> Dict[str, Any]:
-        return {"ok": True, "agent": AGENT_NAME, "version": AGENT_VERSION, "series": len(self.store.series),
+        return {"status": "ok", "ok": True, "agent": AGENT_NAME, "version": AGENT_VERSION, "series": len(self.store.series),   # gateway /healthz needs status
                 "contracts": len(self.store.contracts), "settlements": len(self.store.settlements)}
 
     async def process(self, payload: Any) -> Dict[str, Any]:
