@@ -301,6 +301,10 @@ def model_p(agg: str, strike: Decimal, vals: List[Decimal], n_expected: int, tra
 
 # ----------------------------------------------------------------------------- the agent
 class SettlementEngineAgent:
+    # Fleet payment gate contract (payment_gate.attach): reads are free and bypass the gate; everything else is gated.
+    KNOWN_ACTIONS = frozenset(FREE_ACTIONS + PAID_ACTIONS)
+    READ_ACTIONS = frozenset(FREE_ACTIONS)
+
     def __init__(self, store: Optional[StateStore] = None):
         self.store = store or StateStore()
 

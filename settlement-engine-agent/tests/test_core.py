@@ -202,6 +202,10 @@ class Agent(unittest.TestCase):
         self.assertEqual(s["result"], "YES")
         self.assertTrue(run(self.a, action="verify_settlement", settlement=s["settlement"])["match"])
 
+    def test_gate_contract(self):                           # fleet payment gate: READ_ACTIONS subset of KNOWN_ACTIONS
+        a = build()
+        self.assertTrue(a.READ_ACTIONS <= a.KNOWN_ACTIONS); self.assertEqual(a.KNOWN_ACTIONS - a.READ_ACTIONS, {"compile_contract", "settle_contract"})
+
     def test_health_describe(self):
         h = asyncio.get_event_loop().run_until_complete(self.a.health())
         self.assertTrue(h["ok"]); self.assertIn("S5 decided means decided", self.a.describe()["invariants"])
