@@ -1,4 +1,9 @@
 from typing import Any, Dict, Optional
+
+# Bound at import time on purpose: the MCP gateway evicts every `src*` module
+# between agent loads, so a call-time relative import here would resolve
+# against another agent's `src` package (gateway G1/G2).
+from .dsl import MeasureOptions
 from .tools.measure import MeasurementService
 from .tools.specs import SpecsService
 
@@ -22,7 +27,6 @@ class Orchestrator:
             if not image_b64:
                 return {"type": "measure", "ok": False, "reason": "image_b64 required"}
             # Default options for NL path
-            from .dsl import MeasureOptions, MeasureArgs
             opts = MeasureOptions()
             # For NL, we require front-end to provide picks later; here we just run scale estimation
             result = self.tools.measure.measure_image_b64(image_b64, opts)
