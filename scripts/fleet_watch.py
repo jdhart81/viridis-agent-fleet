@@ -27,7 +27,12 @@ Invariants (checked by scripts/test_fleet_watch.py):
   W7  an unreachable or non-JSON /healthz is one gateway_down finding; when
       /healthz answers, every degraded agent and every mount error is its own
       finding
-  W8  every probed server that is not up is its own finding
+  W8  every probed server that is not up is its own finding; a probe whose
+      registry read failed is one registry_unreachable finding (info only:
+      the outage is the MCP registry's, and /healthz below still checks our
+      gateway), a missing or unreadable probe file is one probe_missing
+      alert, and only a registry that answered but listed none of our
+      servers is probe_empty
   W9  a tool alerts when its server-error rate over the window is above the
       threshold with at least --min-calls real calls; payment-required and
       caller-input errors never count as failures
@@ -80,8 +85,18 @@ def check_probe(probe: dict) -> list:
         if not r.get("up") or r.get("describe_ok") is False:
             out.append(_f("server_down", r.get("name", "?"),
                           r.get("error") or "not up"))
-    if not probe.get("results"):
-        out.append(_f("probe_empty", "registry", "probe found no servers to check"))
+    if probe.get("results"):
+        return out
+    if probe.get("registry_error"):
+        out.append(_f("registry_unreachable", "registry",
+                      "MCP registry unreachable, servers not probed this run: "
+                      + str(probe["registry_error"]), severity="info"))
+    elif probe.get("error"):
+        out.append(_f("probe_missing", "probe_file",
+                      "probe result missing or unreadable: " + str(probe["error"])))
+    else:
+        out.append(_f("probe_empty", "registry",
+                      "registry answered but lists none of our servers"))
     return out
 
 

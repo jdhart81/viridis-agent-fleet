@@ -19,6 +19,11 @@ Invariants (checked by scripts/test_fleet_live_probe.py):
   I4  the Mcp-Session-Id header from initialize is sent on later requests
   I5  the probe never calls a tool other than describe_agent, and only with --call-describe
   I6  exit code is 0 iff every probed server is UP (and describe calls succeed when requested)
+  I7  a registry read that fails transiently (refused, reset, timeout, HTTP 429
+      or 5xx) is retried up to REGISTRY_TRIES times with backoff; if it still
+      fails, the probe JSON is still written, with results [] and a
+      registry_error, so fleet_watch can tell "registry unreachable" from
+      "registry lists none of our servers"
 """
 from __future__ import annotations
 
@@ -35,9 +40,32 @@ NAMESPACES = ("io.github.jdhart81/", "io.github.viridis-security/")
 UA = "viridis-fleet-probe/1.0 (+synthetic health check; exclude from usage stats)"
 PROTOCOL = "2025-06-18"
 SHORT_DESC = 40
+REGISTRY_TRIES = 3
+REGISTRY_BACKOFF = 5.0  # seconds; doubles each retry
 
 
-def registry_entries(base: str = REGISTRY, namespaces=NAMESPACES) -> dict:
+def _registry_get(url: str, tries: int | None = None,
+                  backoff: float | None = None, sleep=time.sleep) -> dict:
+    """I7: GET one registry page, retrying transient failures."""
+    tries = REGISTRY_TRIES if tries is None else tries
+    backoff = REGISTRY_BACKOFF if backoff is None else backoff
+    for attempt in range(1, tries + 1):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code != 429 and e.code < 500 or attempt == tries:
+                raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if attempt == tries:
+                raise
+        sleep(backoff * 2 ** (attempt - 1))
+    raise AssertionError("unreachable")
+
+
+def registry_entries(base: str = REGISTRY, namespaces=NAMESPACES,
+                     sleep=time.sleep) -> dict:
     out: dict = {}
     for ns in namespaces:
         cursor = None
@@ -46,10 +74,7 @@ def registry_entries(base: str = REGISTRY, namespaces=NAMESPACES) -> dict:
                  "limit": "100"}
             if cursor:
                 q["cursor"] = cursor
-            req = urllib.request.Request(f"{base}?{urllib.parse.urlencode(q)}",
-                                         headers={"User-Agent": UA})
-            with urllib.request.urlopen(req, timeout=30) as r:
-                data = json.load(r)
+            data = _registry_get(f"{base}?{urllib.parse.urlencode(q)}", sleep=sleep)
             for item in data.get("servers", []):
                 srv = item.get("server", item)
                 meta = item.get("_meta", {}).get(
@@ -176,11 +201,19 @@ def main(argv=None) -> int:
     ap.add_argument("--json", default="fleet_probe.json")
     ap.add_argument("--summary", default="", help="append markdown here (e.g. $GITHUB_STEP_SUMMARY)")
     a = ap.parse_args(argv)
-    entries = registry_entries(a.registry)
+    registry_error = ""
+    try:
+        entries = registry_entries(a.registry)
+    except Exception as e:  # I7: still write the probe file
+        entries, registry_error = {}, f"{type(e).__name__}: {e}"[:300]
     results = [probe(n, e["url"], a.call_describe) for n, e in sorted(entries.items())]
+    out = {"checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+           "results": results}
+    if registry_error:
+        out["registry_error"] = registry_error
+        print(f"registry unreachable after {REGISTRY_TRIES} tries: {registry_error}")
     with open(a.json, "w") as f:
-        json.dump({"checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                   "results": results}, f, indent=1)
+        json.dump(out, f, indent=1)
     md = markdown(results)
     print(md)
     if a.summary:

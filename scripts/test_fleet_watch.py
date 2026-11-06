@@ -313,3 +313,14 @@ def test_no_channel_at_all_is_harmless(tmp_path, monkeypatch, capsys):
          "recovered": [], "remind": False}
     assert w.send_notice(d, "x") is False
     assert "none configured" in capsys.readouterr().out
+
+
+# W8: tell a registry outage, a missing probe file and a real empty listing apart
+def test_registry_outage_is_info_not_empty_alert():
+    fs = w.check_probe({"results": [], "registry_error": "URLError: Connection refused"})
+    assert keys(fs) == [] and keys(fs, "info") == ["registry_unreachable:registry"]
+
+
+def test_missing_probe_file_is_its_own_alert():
+    fs = w.check_probe({"results": [], "error": "No such file: fleet_probe.json"})
+    assert keys(fs) == ["probe_missing:probe_file"]

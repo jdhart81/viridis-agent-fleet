@@ -119,3 +119,78 @@ def test_invariants(tmp_path):
         assert "2/2 healthy" in md
     finally:
         srv.shutdown()
+
+
+class Flaky(BaseHTTPRequestHandler):
+    """Registry that fails the first FAILS GETs with 503, then lists one server."""
+    FAILS = 0
+    seen = 0
+
+    def log_message(self, *a):
+        pass
+
+    def do_GET(self):
+        type(self).seen += 1
+        if type(self).seen <= type(self).FAILS:
+            self.send_response(503)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        body = json.dumps({"servers": [
+            {"server": {"name": "io.github.jdhart81/a", "version": "1",
+                        "remotes": [{"url": "http://127.0.0.1:9/mcp"}]},
+             "_meta": {"io.modelcontextprotocol.registry/official": {"isLatest": True}}}],
+            "metadata": {}}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+def _flaky(fails):
+    Flaky.FAILS, Flaky.seen = fails, 0
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), Flaky)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv
+
+
+# I7: transient registry failures are retried
+def test_registry_retries_transient_failures():
+    srv = _flaky(p.REGISTRY_TRIES - 1)
+    waits = []
+    try:
+        got = p.registry_entries(f"http://127.0.0.1:{srv.server_port}/v0/servers",
+                                 ("io.github.jdhart81/",), sleep=waits.append)
+    finally:
+        srv.shutdown()
+    assert list(got) == ["io.github.jdhart81/a"]
+    assert len(waits) == p.REGISTRY_TRIES - 1 and waits == sorted(waits)
+
+
+def test_client_errors_are_not_retried():
+    import urllib.error
+    import pytest
+    calls = []
+
+    def boom(*a, **k):
+        calls.append(1)
+        raise urllib.error.HTTPError("u", 404, "nf", {}, None)
+    orig = p.urllib.request.urlopen
+    p.urllib.request.urlopen = boom
+    try:
+        with pytest.raises(urllib.error.HTTPError):
+            p._registry_get("http://x", sleep=lambda s: None)
+    finally:
+        p.urllib.request.urlopen = orig
+    assert calls == [1]
+
+
+# I7: a registry that stays down still yields a probe file with registry_error
+def test_unreachable_registry_still_writes_probe_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(p, "REGISTRY_BACKOFF", 0)
+    out = tmp_path / "o.json"
+    # port 9 (discard) on loopback refuses connections
+    assert p.main(["--registry", "http://127.0.0.1:9/v0/servers", "--json", str(out)]) == 1
+    data = json.loads(out.read_text())
+    assert data["results"] == [] and "registry_error" in data
