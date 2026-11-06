@@ -38,6 +38,14 @@ class Fake(BaseHTTPRequestHandler):
             {"server": {"name": "io.github.jdhart81/down", "version": "1",
                         "remotes": [{"url": base + "/down/mcp"}]},
              "_meta": {"io.modelcontextprotocol.registry/official": {"isLatest": True}}},
+            {"server": {"name": "io.github.jdhart81/gated", "version": "1",
+                        "remotes": [{"url": base + "/gated/mcp", "headers": [
+                            {"name": "Authorization", "isRequired": True, "isSecret": True}]}]},
+             "_meta": {"io.modelcontextprotocol.registry/official": {"isLatest": True}}},
+            {"server": {"name": "io.github.jdhart81/undeclared", "version": "1",
+                        "remotes": [{"url": base + "/undeclared/mcp", "headers": [
+                            {"name": "Authorization", "isRequired": False}]}]},
+             "_meta": {"io.modelcontextprotocol.registry/official": {"isLatest": True}}},
             {"server": {"name": "io.github.jdhart81/json-ok", "version": "0",
                         "remotes": [{"url": base + "/old/mcp"}]},
              "_meta": {"io.modelcontextprotocol.registry/official": {"isLatest": False}}},
@@ -54,6 +62,9 @@ class Fake(BaseHTTPRequestHandler):
                       (body.get("params") or {}).get("name")))
         if kind == "down":
             return self._send(502, "bad gateway", "text/plain")
+        if kind in ("gated", "undeclared"):
+            return self._send(401, '{"jsonrpc":"2.0","error":{"code":-32000,"message":"token required"},"id":null}',
+                              "application/json", {"WWW-Authenticate": 'Bearer realm="x"'})
         if "id" not in body:
             return self._send(202, b"")
         m = body["method"]
@@ -86,8 +97,12 @@ def test_invariants(tmp_path):
     try:
         entries = p.registry_entries(base + "/v0/servers", ("io.github.jdhart81/",))
         # I1: latest entries only, own namespace only, each once
-        assert sorted(entries) == ["io.github.jdhart81/down", "io.github.jdhart81/json-ok",
-                                   "io.github.jdhart81/sse-ok"]
+        assert sorted(entries) == ["io.github.jdhart81/down", "io.github.jdhart81/gated",
+                                   "io.github.jdhart81/json-ok", "io.github.jdhart81/sse-ok",
+                                   "io.github.jdhart81/undeclared"]
+        assert entries["io.github.jdhart81/gated"]["auth_required"] is True
+        assert entries["io.github.jdhart81/undeclared"]["auth_required"] is False
+        assert entries["io.github.jdhart81/json-ok"]["auth_required"] is False
         assert entries["io.github.jdhart81/json-ok"]["url"].endswith("/json/mcp")
         CALLS.clear()
         r_json = p.probe("json-ok", entries["io.github.jdhart81/json-ok"]["url"], True)
@@ -117,5 +132,15 @@ def test_invariants(tmp_path):
         assert {r["name"].split("/")[-1] for r in data["results"]} >= {"json-ok", "sse-ok", "down"}
         md = p.markdown([r_json, r_sse])
         assert "2/2 healthy" in md
+        # I7: a declared token gate answering 401 + Bearer challenge is up, not down
+        r_gated = p.probe("gated", entries["io.github.jdhart81/gated"]["url"], False, True)
+        assert r_gated["up"] and r_gated["auth_gated"]
+        # ...but the same 401 without a declared required header is down
+        r_undeclared = p.probe("undeclared", entries["io.github.jdhart81/undeclared"]["url"], False,
+                               entries["io.github.jdhart81/undeclared"]["auth_required"])
+        assert not r_undeclared["up"] and "HTTP 401" in r_undeclared["error"]
+        # ...and a declared gate does not excuse a server error
+        assert not p.probe("down", entries["io.github.jdhart81/down"]["url"], False, True)["up"]
+        assert "token-gated" in p.markdown([r_gated])
     finally:
         srv.shutdown()
