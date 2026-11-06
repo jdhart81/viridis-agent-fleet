@@ -24,6 +24,15 @@ python3 run_fleet_tests.py                                 # every agent's invar
 
 Free tier: 10 calls/day per service; the rails (identity, escrow, metering…) are free forever. Verification is always free.
 
+## Independent tool-list baseline
+[Dominion Observatory](https://dominionobservatory.com), an independent service that watches MCP tool manifests for changes, signed a baseline of the hosted network endpoint `https://mcp.viridisconservation.com/network/mcp` on 5 November 2026 ([issue #122](https://github.com/jdhart81/viridis-agent-fleet/issues/122)):
+
+- 23 tools, captured 2026-11-05T02:31:15Z
+- Signed (Ed25519, key `capture-a46fe710c055398f3b6f43a1`) over each tool's `name`, `description` and `inputSchema`, sorted by name; SHA-256 `6eb8564d1975f2601773a3384360a528ab2b6426d5739080d1d221145820c0b6`
+- Public record: [Dominion capture history](https://dominionobservatory.com/api/drift?server=https%3A%2F%2Fmcp.viridisconservation.com%2Fnetwork%2Fmcp), verification key: [capture-jwks.json](https://dominionobservatory.com/.well-known/capture-jwks.json)
+
+Anyone can compare a fresh `tools/list` from the endpoint against that record. The `annotations` and `outputSchema` fields are outside the signature. The baseline is a dated observation by a third party, not a claim about tool safety, behaviour or current availability.
+
 ## Registry servers with their own docs
 
 Each registered MCP server has a README with its tools, inputs and outputs, an example, client config and pricing:
