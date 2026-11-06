@@ -1,0 +1,51 @@
+name: "settlement-engine-agent"
+version: "0.1.0"
+description: "Progressive-settlement engine that reports what an officially published series has already decided and settles outcome contracts on it with recomputable evidence"
+pillar: "conservation"
+status: "mvp"
+owner: "justin@viridisconservation.com"
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["docker"]
+dependencies:
+  services: []
+  agents: ["agent-notary-agent", "agent-verified-relay-agent", "agent-escrow-agent", "ghg-ledger-agent", "regulatory-radar-agent"]
+env_vars: []
+capabilities:
+  inputs: ["series definition (unit, aggregate, slots, declared bounds, strikes)", "observations with source URL and source sha256", "outcome contract (strike, rule, closing time)"]
+  outputs: ["published share and aggregate", "required remainder per strike", "decided strikes by arithmetic alone", "labelled model estimate (separate)", "content-addressed contracts", "immutable recomputable settlements"]
+a2a_role: "outcome-settlement"
+thesis_connection: |
+  Sixty days of preregistered prediction-market research (Viridis count lane,
+  ENERGY-1, DECIDE-1/US-1, MAKER-1, DATA-1) found one mechanism that pays and
+  one that never does: forecasting loses to the price; reading the official,
+  progressively published number before anyone has done the arithmetic wins.
+  Restoration finance is stuck at linear capital because nobody trusts the
+  settlement of ecological outcomes. This agent is the settlement layer:
+  published facts with source hashes, "decided" only by arithmetic plus
+  declared physical bounds, settlements any party can recompute. Capital that
+  pays only on verified outcomes is circular capital, and the settlement seat
+  earns on every dollar of it. Thermodynamically, settlement converts already-
+  paid-for information (dI/dt <= P*D/(kB*T*ln2)) into work - capital moved -
+  with no new information generated. We do not forecast; we count.
+revenue_model: |
+  Facts, decided-strike detection, explanations and settlement verification
+  are free forever (rails doctrine: the standard spreads because checking it
+  costs nothing). compile_contract and settle_contract are the taxed
+  transactions via the fleet gate: $1.00 per compile, $5.00 per settlement at
+  launch, enterprise terms for a carried share of outcome value on restoration
+  contracts verified through VergeCommon D-Score. First series: ERCOT North /
+  Houston / West real-time average price (Energy AI Settlement Feed), then
+  restoration survival and canopy series (VergeCommon, HDFM corridors), then
+  election counts (count lane racemaps).
+engine: |
+  Pure Python stdlib + Decimal (src/core.py), no network, no LLM, no keys in
+  the serving path. Ingestion adapters in examples/ (ERCOT NP6-905-CD via the
+  ENERGY-1 feed.json; restoration survival CSV). Invariants S1-S10 in the core
+  docstring; 27 tests, 12/12 arithmetic mutants killed (2026-11-06).
+composes_with:
+  - ghg-ledger-agent (grid-intensity series as a Scope 2 settlement input)
+  - regulatory-radar-agent (buyers under disclosure deadlines)
+  - agent-notary-agent / agent-verified-relay-agent (receipt hardening of settlements)
+  - agent-escrow-agent (release on a YES settlement)
+  - green-router-agent (certificates settle on retired mass series)
