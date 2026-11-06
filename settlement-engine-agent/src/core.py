@@ -145,7 +145,8 @@ def q(x: Optional[Decimal], places: int = 6) -> Optional[str]:
 
 
 def err(code: str, message: str, fix: str, **extra) -> Dict[str, Any]:
-    e = {"ok": False, "error": {"code": code, "message": message, "fix": fix}}
+    e = {"ok": False, "status": "error", "error_type": code, "message": message,          # fleet error envelope (isError)
+         "error": {"code": code, "message": message, "fix": fix}}
     e.update(extra)
     return e
 

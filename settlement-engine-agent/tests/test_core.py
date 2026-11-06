@@ -69,7 +69,7 @@ class Agent(unittest.TestCase):
     def test_never_raises_and_errors_teach(self):           # S6
         for bad in (None, 3, "x", {}, {"action": "nope"}, {"action": "_a_ingest"}, {"action": "ingest", "series_id": 5}):
             r = run(self.a, **(bad if isinstance(bad, dict) else {"action": bad}))
-            self.assertFalse(r["ok"]); self.assertIn("fix", r["error"])
+            self.assertFalse(r["ok"]); self.assertIn("fix", r["error"]); self.assertEqual(r["status"], "error")   # fleet envelope
 
     def test_register_validates(self):
         r = run(self.a, action="register_series", name="x", unit="u", source="s", n_expected=0, period_start="2026-01-01T00:00:00Z",
