@@ -55,3 +55,13 @@ See Harness Playbook §8.3 for class-specific defaults. Override in agent.yaml o
 
 ---
 *Template — Harness Playbook v1.1*
+
+## Hosted-gateway contract (run before any deploy)
+
+```bash
+PYTHONPATH=. python3 scripts/fleet_contract_check.py <agent-dir> --gated
+```
+C1 adapter exposes `mcp` and `agent` · C2 `health()` returns `status: "ok"` · C3 unknown action → `{"status": "error", …}`,
+never raises · C4 every tool wrapped by `fleet_utils.mcp_errors.flag_error_results` · C5 gated agents declare
+`READ_ACTIONS ⊆ KNOWN_ACTIONS` (frozensets) · C6 state attributes pickle (the gateway persists them). A miss on C2 fails
+the gateway health gate at swap time and rolls the deploy back (settlement-engine-agent, 2026-11-06).
