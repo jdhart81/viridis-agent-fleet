@@ -1,37 +1,27 @@
 name: "wavefunction-search-agent"
-version: "0.2.0"
-description: "Routing intelligence for decentralized coordination—crystallizing ambiguous human intentions into actionable commitments and matching them to constitutionally-aligned agents and missions"
-pillar: "revenue"
+version: "0.3.0"
+description: "Wavefunction Field: post a goal before you know who can do it; agents sense open work, verified results build trust-scoped routing trails"
+pillar: "infrastructure"
 status: "prototype"
-owner: "justin@viridis.earth"
-revenue_model: "Coordination-as-a-service platform ($5K–$50K/month for organizations), licensing to internal Viridis fleet routing, future external API monetization. Draws revenue from all agents by improving match quality."
+owner: "justin@viridisconservation.com"
+implementation: "wavefunction-field 0.1.0a1 (Apache-2.0, vendored wheel)"
+revenue_model: "Free routing reads and writes during v0.1; hosted field and verification-as-a-service, routing demand into paid fleet services"
 deploy_targets:
-  primary: "fastapi"
-  secondary: ["mcp"]
+  primary: "mcp-server"
+  secondary: ["http"]
 dependencies:
   services: []
   agents: []
-env_vars: []
+env_vars: ["WF_DB_PATH", "WF_FIELD_KEY_FILE", "WF_PUBLIC_URL", "WF_TRUSTED_EMITTERS", "WF_TRUSTED_VERIFIERS", "WF_OPERATORS"]
 capabilities:
   inputs:
-    - "user_superposition (initial ambiguous intentions, implicit patterns, value signals)"
-    - "dialogue_context (conversation history, shadow detection)"
-    - "agent_registry (mission profiles, constitutional principles, capabilities)"
-    - "external_network_index (non-Viridis agents, DAOs, collectives)"
+    - "signed intents: goal, hypotheses, acceptance criteria (json_schema | digest | designated), capability tags"
+    - "signed deposits: signal, hypothesis, claim, partial"
+    - "signed results and designated verifications"
   outputs:
-    - "crystallized_intention (structured, testable, transformation-grounded commitment)"
-    - "intention_vector (value hierarchy, domain distribution, shadow-work context)"
-    - "candidate_matches (ranked agents/collectives with alignment scores)"
-    - "constitutional_threshold_check (S_C ≥ 0.5 enforcement—all four principles satisfied)"
-    - "routing_explanation (transparent reasoning for each route)"
-    - "transformation_pathway (evidence chain: user → intention → action → completion → reward)"
-    - "coordination_friction_metric (T reduction; elimination of misdirection, double-matching, re-discovery)"
-    - "wavefunction_collapse_record (dialogue metadata, intention evolution, decision boundary)"
-ports:
-  http: 8080
-  health: /health
-thesis_connection: |
-  Demand-side discovery for the whole fleet: routes caller intention to the
-  agent/collective that reduces coordination friction most — the wavefunction
-  collapse IS the network effect made searchable. Free rail: a priced front
-  door would tax every other agent's funnel.
+    - "sense rankings of open intents for an agent"
+    - "full routing distribution with amplitudes (sum psi^2 = 1)"
+    - "public audit stream of signed, hash-chained events"
+invariants:
+  I-6: "sum(psi^2) = 1 across candidates (INV-RT1)"
+  I-7: "resonance links are symmetric and bounded (INV-RT5)"

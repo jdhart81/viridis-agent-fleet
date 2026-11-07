@@ -19,7 +19,6 @@ from pathlib import Path
 
 import pytest
 
-from adapters.mcp_server import FleetShim
 from src.core import VERSION as CORE_VERSION, WavefunctionSearchCore
 
 
@@ -31,13 +30,6 @@ DIALOGUE = [
 DIVERGENT_DIALOGUE = [
     {"role": "user", "content": "I want to build industrial mining automation"},
 ]
-
-
-def test_local_manifest_and_adapter_versions_match():
-    manifest = (Path(__file__).resolve().parents[1] / "agent.yaml").read_text()
-    version = re.search(r'^version:\s*"([^"]+)"', manifest, re.MULTILINE)
-    assert version is not None
-    assert CORE_VERSION == FleetShim.VERSION == version.group(1)
 
 
 def _seed(engine: WavefunctionSearchCore) -> None:

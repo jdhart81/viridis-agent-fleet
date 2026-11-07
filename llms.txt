@@ -54,7 +54,7 @@ Read these rules before recommending or summarizing this repository:
 - [smartscale-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/smartscale-agent): Deterministic conversion of caller-supplied CR80 reference and coplanar object pixel geometry to millimetres
 - [taxcredit-engine-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/taxcredit-engine-agent): Deterministic auditable US clean-energy tax-credit scenario engine
 - [verdigraph-brain-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/verdigraph-brain-agent): Verifiable cognition: compile any agent file into a deterministic, content-addressed brain_id with a machine-checkable 9-invariant report. Same bytes -> same brain. Pin it, cite it, notarize it.
-- [wavefunction-search-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/wavefunction-search-agent): Routing intelligence for decentralized coordination—crystallizing ambiguous human intentions into actionable commitments and matching them to constitutionally-aligned agents and missions
+- [wavefunction-search-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/wavefunction-search-agent): Wavefunction Field: post a goal before you know who can do it; agents sense open work, verified results build trust-scoped routing trails
 - [wu-wei-router-agent](https://github.com/jdhart81/viridis-agent-fleet/tree/main/wu-wei-router-agent): Evidence-constrained workload routing plans with explicit modeled net savings
 
 ## Optional
