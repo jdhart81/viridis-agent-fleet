@@ -49,8 +49,8 @@ checkout or the caller's own x402 wallet). See
 
 ## Troubleshooting
 
-- `payment_required`: the free daily allowance is used up; the response gives
-  the price and how to pay. Free tools keep working.
+- `payment_required`: you called a paid tool; the response gives the exact
+  price and how to pay. Nothing is charged, and read-only tools keep working.
 - Connection refused or 404: check the URL ends in `/mcp` and the transport is
   Streamable HTTP, not SSE.
 
