@@ -19,6 +19,9 @@ Invariants (checked by scripts/test_fleet_live_probe.py):
   I4  the Mcp-Session-Id header from initialize is sent on later requests
   I5  the probe never calls a tool other than describe_agent, and only with --call-describe
   I6  exit code is 0 iff every probed server is UP (and describe calls succeed when requested)
+  I7  a server whose registry entry declares a required Authorization header is UP
+      (auth-gated) when initialize answers 401 with a Bearer challenge; any other
+      failure, or a 401 from a server that declares no required header, is DOWN
 """
 from __future__ import annotations
 
@@ -59,9 +62,13 @@ def registry_entries(base: str = REGISTRY, namespaces=NAMESPACES) -> dict:
                     continue
                 if meta.get("status", "active") != "active":
                     continue
-                remotes = [x.get("url") for x in srv.get("remotes", []) if x.get("url")]
+                remotes = [x for x in srv.get("remotes", []) if x.get("url")]
                 if remotes:
-                    out[name] = {"version": srv.get("version"), "url": remotes[0]}
+                    auth_required = any(
+                        h.get("isRequired") and str(h.get("name", "")).lower() == "authorization"
+                        for h in remotes[0].get("headers") or [])
+                    out[name] = {"version": srv.get("version"), "url": remotes[0]["url"],
+                                 "auth_required": auth_required}
             cursor = data.get("metadata", {}).get("nextCursor")
             if not cursor:
                 break
@@ -107,7 +114,8 @@ def rpc(url: str, body: dict, session: str | None = None, timeout: float = 30):
     ms = int((time.monotonic() - t0) * 1000)
     msg = _parse_body(raw, hdrs.get("Content-Type", ""))
     out = {"ok": 200 <= status < 300, "status": status, "ms": ms, "msg": msg,
-           "session": hdrs.get("Mcp-Session-Id")}
+           "session": hdrs.get("Mcp-Session-Id"),
+           "www_authenticate": hdrs.get("WWW-Authenticate") or ""}
     if not out["ok"] or msg is None:
         out["ok"] = False
         out["error"] = f"HTTP {status}: {raw[:200]}"
@@ -117,13 +125,20 @@ def rpc(url: str, body: dict, session: str | None = None, timeout: float = 30):
     return out
 
 
-def probe(name: str, url: str, call_describe: bool = False) -> dict:
+def probe(name: str, url: str, call_describe: bool = False,
+          auth_required: bool = False) -> dict:
     res = {"name": name, "url": url, "up": False}
     init = rpc(url, {"jsonrpc": "2.0", "id": 1, "method": "initialize",
                      "params": {"protocolVersion": PROTOCOL, "capabilities": {},
                                 "clientInfo": {"name": "viridis-fleet-probe",
                                                "version": "1.0"}}})
     res["init_ms"] = init.get("ms")
+    # I7: the listing says a token is required and the server is enforcing it.
+    if (auth_required and init.get("status") == 401
+            and init.get("www_authenticate", "").lower().startswith("bearer")):
+        res["up"] = True
+        res["auth_gated"] = True
+        return res
     if not init["ok"]:
         res["error"] = "initialize: " + init.get("error", "")
         return res
@@ -162,7 +177,9 @@ def markdown(results: list) -> str:
              "|---|---|---|---|---|---|---|"]
     for r in sorted(results, key=lambda x: (x["up"], x["name"])):
         lines.append("| {} | {} | {} | {} | {} | {} | {} |".format(
-            r["name"].split("/")[-1], "yes" if r["up"] else "NO", r.get("tools", "-"),
+            r["name"].split("/")[-1],
+            ("yes (token-gated)" if r.get("auth_gated") else "yes") if r["up"] else "NO",
+            r.get("tools", "-"),
             r.get("init_ms", "-"), r.get("list_ms", "-"), len(r.get("unannotated", [])),
             (r.get("error") or "").replace("|", "/")[:120]))
     return "\n".join(lines) + "\n"
@@ -177,7 +194,8 @@ def main(argv=None) -> int:
     ap.add_argument("--summary", default="", help="append markdown here (e.g. $GITHUB_STEP_SUMMARY)")
     a = ap.parse_args(argv)
     entries = registry_entries(a.registry)
-    results = [probe(n, e["url"], a.call_describe) for n, e in sorted(entries.items())]
+    results = [probe(n, e["url"], a.call_describe, e.get("auth_required", False))
+               for n, e in sorted(entries.items())]
     with open(a.json, "w") as f:
         json.dump({"checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                    "results": results}, f, indent=1)
