@@ -5,6 +5,7 @@
 - Live on the Viridis fleet since 2026-11-07 at `https://mcp.viridisconservation.com/eco-funding/mcp` (free rail).
 - Fleet adapter: inside a fleet tree, tools are wrapped with `fleet_utils.mcp_errors.flag_error_results`, so error envelopes reach MCP clients with `isError` (fleet contract C4). Standalone this is a no-op. No change to any output or to `vef-method/0.1.0`.
 - `deploy/fleet/MOUNT.md` now records the shipped layout (`eco-funding-agent/`, no x402 catalog entry).
+- Registry name `io.github.jdhart81/eco-funding`, following the fleet convention (agent folder and mount name).
 
 ## 0.1.0 (2026-11-07)
 

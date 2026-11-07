@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.jdhart81/viridis-eco-funding",
+  "name": "io.github.jdhart81/eco-funding",
   "description": "Ecological complexity valuation with re-runnable receipts and pledge-pool simulation. Read-only.",
   "version": "0.1.0",
   "repository": {
