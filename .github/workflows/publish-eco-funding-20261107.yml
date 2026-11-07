@@ -1,0 +1,44 @@
+name: Publish eco-funding to the MCP Registry
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-eco-funding-20261107
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the reviewed public manifest
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 6998b156da025b073f20892d3192a4328f5e5b9e
+      - name: Assert exact publication scope
+        run: |
+          python3 - <<'CHECK'
+          import json
+          with open('deploy/mcp-publish-github/eco-funding-agent/server.json') as f:
+              manifest = json.load(f)
+          assert manifest['name'] == 'io.github.jdhart81/eco-funding'
+          assert manifest['version'] == '0.1.0'
+          assert manifest['remotes'] == [{'type': 'streamable-http', 'url': 'https://mcp.viridisconservation.com/eco-funding/mcp'}]
+          assert 'packages' not in manifest
+          CHECK
+      - name: Install pinned MCP publisher
+        run: |
+          curl --fail --location 'https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz' -o /tmp/mcp-publisher.tar.gz
+          echo 'ab128162b0616090b47cf245afe0a23f3ef08936fdce19074f5ba0a4469281ac  /tmp/mcp-publisher.tar.gz' | sha256sum --check --strict
+          tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
+          chmod +x /tmp/mcp-publisher
+      - name: Validate before publishing
+        run: /tmp/mcp-publisher validate deploy/mcp-publish-github/eco-funding-agent/server.json
+      - name: Authenticate with existing GitHub OIDC method
+        run: /tmp/mcp-publisher login github-oidc
+      - name: Publish eco-funding 0.1.0
+        run: /tmp/mcp-publisher publish deploy/mcp-publish-github/eco-funding-agent/server.json
