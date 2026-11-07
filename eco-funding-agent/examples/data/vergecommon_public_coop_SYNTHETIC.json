@@ -1,0 +1,37 @@
+{
+  "coop": {
+    "id": "5b0e2c1a-7d4f-4e8a-9c3b-2f6a1d8e4b70",
+    "name": "Mad River Commons (SYNTHETIC EXAMPLE)",
+    "region": "Vermont",
+    "country": "US",
+    "summary": "Synthetic record in the exact shape of GET https://vergecommon.com/api/network?id=<uuid>. No real co-op, people or land. The live public directory listed zero co-ops on 2026-11-07.",
+    "projects": [
+      {
+        "id": "proj-woodland-01",
+        "name": "Upper Meadow Woodlot and Hedgerow Link (SYNTHETIC)",
+        "summary": "Two woodland cores joined by a hedgerow corridor; old-growth spine candidate.",
+        "region": "Washington County, Vermont",
+        "kind": "woodland",
+        "status": "active"
+      },
+      {
+        "id": "proj-ecohedge-02",
+        "name": "Roadside Ecohedge (SYNTHETIC)",
+        "summary": "A planted hedge along a town road.",
+        "region": "Washington County, Vermont",
+        "kind": "ecohedge",
+        "status": "proposed"
+      }
+    ],
+    "events": [],
+    "organization": null,
+    "updates": [
+      {
+        "id": "upd-1",
+        "projectId": "proj-woodland-01",
+        "text": "Spring survey complete; corridor check passed for both cores.",
+        "createdAt": 1775000000000
+      }
+    ]
+  }
+}

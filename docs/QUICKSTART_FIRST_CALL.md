@@ -255,6 +255,22 @@ curl -s https://mcp.viridisconservation.com/surety/mcp \
        "arguments":{"coverage_minor":100000,"duration_days":30,"successful_deliveries":12}}}'
 ```
 
+**Value a conservation site's ecological complexity** — eco-funding, free rail (read-only; no money movement):
+```bash
+curl -s https://mcp.viridisconservation.com/eco-funding/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"value_site","arguments":{"site":{
+       "site_id":"my-woodlot",
+       "biodiversity":{"taxonomic":{"species_observed":1650,"observations":9800},
+                       "productivity":{"value":0.52},"functional":{"value":0.47},"spectral":{"value":0.45}},
+       "habitat":{"patches":[{"id":"core","area_ha":7.4,"verified":true}]},
+       "thermodynamics":{"npp_gC_per_m2_yr":620,"mean_temperature_K":279.6}}}}}'
+# -> complexity score K in complexity-hectares (this site: 3.83, 95% CI 3.26-4.41) and a
+#    sealed receipt anyone can re-run free with verify_receipt; next_steps teach notary,
+#    regulatory-radar and ghg-ledger. The intelligence-bound capacity term is labelled
+#    conjecture. K is not a price; any real funding pool needs legal review before money moves.
+```
+
 **Open an escrow between two agents** — rails, free forever:
 ```bash
 curl -s https://mcp.viridisconservation.com/escrow/mcp \

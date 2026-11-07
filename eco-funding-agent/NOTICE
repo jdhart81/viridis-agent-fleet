@@ -1,0 +1,14 @@
+viridis-eco-funding
+Copyright 2026 Viridis LLC
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Notice on funding pools: any real funding pool needs legal review before money moves.
+This software holds, moves and releases no funds; it computes ecological measures and
+models pledge and release rules. Viridis LLC builds and licenses software only.
+
+Scientific notice: the intelligence-bound complexity-capacity term is a conjecture and
+is labelled as such in every output that uses it.
+
+The D-Score method and Run 7 validation data are by J. D. Hart (Viridis LLC), data
+deposited at https://doi.org/10.5281/zenodo.19543988 under CC BY 4.0.

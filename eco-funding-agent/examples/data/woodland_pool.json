@@ -1,0 +1,67 @@
+{
+  "schema": "vef-pool/0.1",
+  "pool_id": "mad-river-woodland-pool-SYNTHETIC",
+  "name": "Upper Meadow Woodlot pledge pool (SYNTHETIC MODEL)",
+  "site_id": "mad-river-commons/proj-woodland-01",
+  "unit": {
+    "code": "USD",
+    "minor_per_major": 100
+  },
+  "horizon_periods": 8,
+  "period_label": "quarter",
+  "calendar": {
+    "start": "2026-10-01",
+    "period_months": 3
+  },
+  "pledges": [
+    {
+      "id": "pledge-a",
+      "pledger": "neighbor-household-1",
+      "amount_minor": 250000,
+      "period": 0
+    },
+    {
+      "id": "pledge-b",
+      "pledger": "land-trust-partner",
+      "amount_minor": 1000000,
+      "period": 0
+    },
+    {
+      "id": "pledge-c",
+      "pledger": "donor-agent-7",
+      "amount_minor": 400000,
+      "period": 3
+    }
+  ],
+  "rules": [
+    {
+      "id": "m1-baseline-receipt",
+      "type": "milestone",
+      "metric": "complexity_score",
+      "comparator": ">=",
+      "threshold": 7.0,
+      "release_bps": 1500,
+      "requires_receipt": true,
+      "description": "Verified baseline receipt shows K >= 7.0 complexity-ha"
+    },
+    {
+      "id": "m2-stepping-stone-verified",
+      "type": "milestone",
+      "metric": "verified_area_ha",
+      "comparator": ">=",
+      "threshold": 15.0,
+      "release_bps": 2000,
+      "earliest_period": 2,
+      "description": "Stepping-stone patch surveyed and verified (verified area >= 15 ha)"
+    },
+    {
+      "id": "o1-connectivity",
+      "type": "outcome_linked",
+      "metric": "eca_ha",
+      "baseline": 12.0,
+      "target": 15.0,
+      "release_bps": 4000,
+      "description": "Outcome-linked release in proportion to ECA growth from 12 to 15 ha"
+    }
+  ]
+}
