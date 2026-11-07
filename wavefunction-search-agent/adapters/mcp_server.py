@@ -1,182 +1,46 @@
 """
-MCP adapter for wavefunction-search-agent — the DEMAND SIDE of the fleet.
+MCP adapter for wavefunction-search-agent: the Wavefunction Field (v0.1).
 
-Discovery loop it completes: find an agent/collective (here) -> verify it
-(identity / erc8004 bridge) -> trust it (oracle) -> hire it (escrow+metering).
+This replaces the prototype intent-routing core with the open-source
+wavefunction-field reference implementation (Apache-2.0), vendored as a
+pure-Python wheel in ../vendor and imported straight from the zip.
 
-The core is a prototype with a stage-based process(); this adapter wraps it
-in a fleet-standard shim (health/describe + action routing) WITHOUT touching
-the core — its 34 tests stay canonical.
+Gateway contract: this module exposes
+  mcp   - FastMCP server, mounted by the gateway at /wavefunction (tools + REST)
+  agent - fleet core with async process()/health() and describe()
+
+State: the field persists to its own append-only, hash-chained SQLite log
+(WF_DB_PATH, default /data/wavefunction_field.sqlite3). `agent` carries no
+instance state, so gateway StateStore snapshots stay empty. The legacy
+prototype module (src/core.py) is imported if present so an existing
+pre-upgrade snapshot still unpickles (PS2/PS11); its restored attributes are
+inert.
 """
 import asyncio
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+_WHEELS = sorted((ROOT / "vendor").glob("wavefunction_field-*.whl"))
+if not _WHEELS:
+    raise RuntimeError("vendored wavefunction_field wheel missing")
+if str(_WHEELS[-1]) not in sys.path:
+    sys.path.insert(0, str(_WHEELS[-1]))
 
-try:
-    from mcp.server.fastmcp import FastMCP
-    HAS_MCP = True
-except ImportError:  # pragma: no cover
-    HAS_MCP = False
+try:  # legacy prototype: kept importable for snapshot compatibility only
+    import src.core  # noqa: F401
+except Exception:  # pragma: no cover - absent in fresh checkouts
+    pass
 
-    class FastMCP:  # stdlib shim so smoke tests run anywhere
-        def __init__(self, name, **kw): self.name, self.tools = name, {}
-        def tool(self, *a, **k):
-            def deco(fn): self.tools[fn.__name__] = fn; return fn
-            return deco
-        def run(self): raise RuntimeError("`mcp` SDK not installed - pip install mcp")
+from wavefunction_field.fleet.gateway import build_gateway_surface  # noqa: E402
 
-from src.core import VERSION as CORE_VERSION, WavefunctionSearchCore
-
-
-class FleetShim:
-    """Fleet-standard surface over the prototype core (health/describe/process)."""
-
-    NAME = "wavefunction-search-agent"
-    VERSION = CORE_VERSION
-
-    def __init__(self):
-        self.core = WavefunctionSearchCore()
-
-    async def health(self) -> dict:
-        return {"status": "ok", "agent": self.NAME, "version": self.VERSION,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "checks": {"wavefunctions": len(
-                               getattr(self.core, "user_wavefunctions", {})),
-                           "collectives": len(getattr(self.core, "collectives", {}))}}
-
-    def describe(self) -> dict:
-        return {"name": self.NAME, "version": self.VERSION,
-                "capabilities": ["intake", "collapse", "find_matches",
-                                 "register_collective"],
-                "inputs": {"stage": "intake|collapse|find_matches",
-                           "action": "register_collective"},
-                "outputs": {"status": "ok|error"},
-                "a2a_role": "discovery"}
-
-    async def process(self, input_data: dict) -> dict:
-        try:
-            if not isinstance(input_data, dict):
-                return {"status": "error", "reason": "input must be an object"}
-            if input_data.get("action") == "register_collective":
-                c = self.core.register_collective(
-                    input_data.get("collective_id", ""),
-                    input_data.get("name", ""),
-                    input_data.get("mission", ""),
-                    input_data.get("domain_profile") or {},
-                    input_data.get("constitutional_scores") or {},
-                    int(input_data.get("capacity", 10)))
-                return {"status": "ok", "collective_id": getattr(c, "collective_id",
-                        input_data.get("collective_id", ""))}
-            return await self.core.process(input_data)
-        except Exception as e:   # fleet contract: never raise
-            return {"status": "error", "reason": str(e)}
-
-
-def _mk_mcp(name, description=""):
-    try:
-        return FastMCP(name, instructions=description)
-    except TypeError:
-        try:
-            return FastMCP(name, description=description)
-        except TypeError:
-            return FastMCP(name)
-
-
-mcp = _mk_mcp("wavefunction-search-agent",
-              description="Demand-side discovery for the agent economy: turn "
-                          "ambiguous intentions into commitments and match them "
-                          "to constitutionally-aligned agents and collectives. "
-                          "Pairs with the identity registry and ERC-8004 bridge.")
-agent = FleetShim()
-
-
-async def _run(payload: Dict[str, Any]) -> str:
-    return json.dumps(await agent.process(payload), default=str, indent=2)
-
-
-try:  # MCP tool annotations: let hosts and registries see which tools are safe reads
-    from mcp.types import ToolAnnotations as _ToolAnnotations
-except ImportError:  # pragma: no cover - stdlib shim keeps smoke tests runnable
-    def _ToolAnnotations(**kw):
-        return kw
-_READ = _ToolAnnotations(readOnlyHint=True, destructiveHint=False,
-                         idempotentHint=True, openWorldHint=False)
-_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
-                          idempotentHint=False, openWorldHint=False)
-_DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
-                                idempotentHint=False, openWorldHint=False)
-
-
-@mcp.tool(annotations=_WRITE)
-async def intake(user_id: str, dialogue: List[Dict[str, str]]) -> str:
-    """Distill a user's dialogue into an intention wavefunction (explicit
-    intentions + confidence). dialogue: [{role, content}, ...]."""
-    return await _run({"stage": "intake", "user_id": user_id,
-                       "dialogue": dialogue})
-
-
-@mcp.tool(annotations=_WRITE)
-async def collapse(user_id: str, stake_amount: float = 100.0) -> str:
-    """Collapse the user's wavefunction into an actionable commitment,
-    weighted by stake."""
-    return await _run({"stage": "collapse", "user_id": user_id,
-                       "stake_amount": stake_amount})
-
-
-@mcp.tool(annotations=_READ)
-async def find_matches(user_id: str) -> str:
-    """Match the user's collapsed intention to constitutionally-aligned
-    agents/collectives, ranked by alignment score."""
-    return await _run({"stage": "find_matches", "user_id": user_id})
-
-
-@mcp.tool(annotations=_WRITE)
-async def register_collective(collective_id: str, name: str, mission: str,
-                              domain_profile: Optional[Dict[str, float]] = None,
-                              constitutional_scores: Optional[Dict[str, float]] = None,
-                              capacity: int = 10) -> str:
-    """Register an agent/collective into the match index (mission +
-    domain profile + constitutional alignment scores + capacity)."""
-    return await _run({"action": "register_collective",
-                       "collective_id": collective_id, "name": name,
-                       "mission": mission,
-                       "domain_profile": domain_profile or {},
-                       "constitutional_scores": constitutional_scores or {},
-                       "capacity": capacity})
-
-
-@mcp.tool(annotations=_READ)
-async def describe_agent() -> str:
-    """Return capabilities and input contract."""
-    return json.dumps(agent.describe(), indent=2)
-
-
-try:  # report {"status": "error"} results to MCP clients as tool errors (isError)
-    from fleet_utils.mcp_errors import flag_error_results
-except ImportError:  # loaded without the fleet root on sys.path, as the gateway does
-    import sys as _sys
-    from pathlib import Path as _Path
-    _fleet_root = _Path(__file__).resolve().parents[2]
-    if (_fleet_root / "fleet_utils").is_dir() and str(_fleet_root) not in _sys.path:
-        _sys.path.append(str(_fleet_root))
-    try:
-        from fleet_utils.mcp_errors import flag_error_results
-    except ImportError:  # pragma: no cover - adapter copied without fleet_utils
-        def flag_error_results(server):
-            return 0
-flag_error_results(mcp)
-
+mcp, agent = build_gateway_surface()
 
 if __name__ == "__main__":
     if "--serve" in sys.argv:
         mcp.run()
     else:
-        print(json.dumps(agent.describe(), indent=2))
         print(json.dumps(asyncio.run(agent.health()), indent=2))
