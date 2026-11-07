@@ -1,0 +1,214 @@
+{
+  "mount": "/eco-funding/mcp",
+  "server": "viridis-eco-funding",
+  "tool_count": 5,
+  "tools": [
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Describe the method: formulas, constants, declared defaults, statuses, the seven\ninvariants, citations and limits. Call first. Free rail.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_methodArguments",
+        "type": "object"
+      },
+      "name": "describe_method",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "describe_methodOutput",
+        "type": "object"
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Explain a valuation step by step: each quantity's formula, inputs, value, units,\nuncertainty and status (published method, v0.1 convention, input, or conjecture), plus\nlimits. Accepts a valuation (receipt.result) or raw site inputs. Free rail.",
+      "inputSchema": {
+        "properties": {
+          "valuation_or_site": {
+            "additionalProperties": true,
+            "title": "Valuation Or Site",
+            "type": "object"
+          }
+        },
+        "required": [
+          "valuation_or_site"
+        ],
+        "title": "explain_valuationArguments",
+        "type": "object"
+      },
+      "name": "explain_valuation",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "explain_valuationOutput",
+        "type": "object"
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Simulate a pledge pool (schema vef-pool/0.1) under milestone and outcome-linked release\nrules, given dated receipts or hypothetical readings per period. Integer accounting:\nreleases + remaining = pledges; nothing released without a met rule. SIMULATION ONLY: no\nfunds are held or moved; any real funding pool needs legal review before money moves.",
+      "inputSchema": {
+        "properties": {
+          "observations": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Observations"
+          },
+          "pool": {
+            "additionalProperties": true,
+            "title": "Pool",
+            "type": "object"
+          }
+        },
+        "required": [
+          "pool"
+        ],
+        "title": "simulate_poolArguments",
+        "type": "object"
+      },
+      "name": "simulate_pool",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "simulate_poolOutput",
+        "type": "object"
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "description": "Value a site's ecological complexity (schema vef-site/0.1: D-Score components, habitat\npatches and links, optional GSIP soil indicators, optional NPP and temperature). Produces\na sealed, reproducible receipt in which every quantity states its formula, units, inputs\nand uncertainty. bind_vergecommon=true reads the named VergeCommon public project (GET\nonly) as provenance. Intelligence-bound quantities are labelled 'conjecture'. Not a price.\nFree rail.",
+      "inputSchema": {
+        "properties": {
+          "bind_vergecommon": {
+            "default": false,
+            "title": "Bind Vergecommon",
+            "type": "boolean"
+          },
+          "site": {
+            "additionalProperties": true,
+            "title": "Site",
+            "type": "object"
+          }
+        },
+        "required": [
+          "site"
+        ],
+        "title": "value_siteArguments",
+        "type": "object"
+      },
+      "name": "value_site",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "value_siteOutput",
+        "type": "object"
+      }
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "description": "Re-run a valuation receipt offline and check its input, result and seal digests; valid\nonly if reproduced byte for byte. refetch_source=true also reads the bound VergeCommon\npublic record (GET only). Shows reproducibility, not truth of inputs. Free rail.",
+      "inputSchema": {
+        "properties": {
+          "receipt": {
+            "additionalProperties": true,
+            "title": "Receipt",
+            "type": "object"
+          },
+          "refetch_source": {
+            "default": false,
+            "title": "Refetch Source",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "receipt"
+        ],
+        "title": "verify_receiptArguments",
+        "type": "object"
+      },
+      "name": "verify_receipt",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "verify_receiptOutput",
+        "type": "object"
+      }
+    }
+  ]
+}

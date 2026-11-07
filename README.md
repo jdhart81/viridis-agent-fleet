@@ -1,6 +1,6 @@
 # Viridis Agent Fleet: open-source agents for the agent economy
 
-Deterministic, auditable MCP agents: trust and settlement rails (identity, trust, escrow, metering, arbitration, notary, surety, provenance, covenant, offsets, compute-ledger) and priced-grade services (tax credits, GHG accounting, construction takeoff, measurement, compliance). Every core is pure Python with no LLM in the serving path, and every result is content-addressed so anyone can re-verify it.
+Deterministic, auditable MCP agents: trust and settlement rails (identity, trust, escrow, metering, arbitration, notary, surety, provenance, covenant, offsets, compute-ledger), a free conservation-valuation rail ([eco-funding](eco-funding-agent/README.md): ecological complexity with re-runnable receipts), and priced-grade services (tax credits, GHG accounting, construction takeoff, measurement, compliance). Every core is pure Python with no LLM in the serving path, and every result is content-addressed so anyone can re-verify it.
 
 **Licensed Apache-2.0.** Run any agent yourself, fork it, embed it.
 

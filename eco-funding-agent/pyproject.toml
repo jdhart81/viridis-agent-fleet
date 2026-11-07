@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "viridis-eco-funding"
+version = "0.1.0"
+description = "Open tools for humans and AI agents to value, verify and model pooled funding for ecosystem complexity (D-Score + intelligence-bound conjecture). Read-only; no money movement."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Viridis LLC", email = "justin@viridisconservation.com" }]
+keywords = ["biodiversity", "D-Score", "conservation", "MCP", "landscape connectivity", "thermodynamics"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+# The valuation core, receipts, VergeCommon hook and pool simulator use only the
+# Python standard library. Keep it that way: see tests/test_invariant_5_no_money.py.
+dependencies = []
+
+[project.optional-dependencies]
+mcp = ["mcp>=2,<3", "uvicorn>=0.30"]
+dev = ["pytest>=8", "pytest-cov>=5", "nbformat>=5.9", "nbclient>=0.10", "ipykernel>=6"]
+
+[project.scripts]
+vef = "viridis_eco_funding.cli:main"
+vef-mcp = "viridis_eco_funding.mcp_server:main"
+
+[project.urls]
+Homepage = "https://viridisconservation.com"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+viridis_eco_funding = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "network: test needs live network access (skipped unless VEF_LIVE_NETWORK=1)",
+]
+
+[tool.coverage.run]
+source = ["viridis_eco_funding"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false

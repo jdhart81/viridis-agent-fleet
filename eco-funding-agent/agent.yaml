@@ -1,0 +1,50 @@
+name: "viridis-eco-funding"
+version: "0.1.0"
+description: "Ecological complexity valuation for agents and people: D-Score x equivalent connected area of verified habitat (HDFM links, GSIP soil) -> sealed, re-runnable receipts, plus pledge-pool simulation with milestone and outcome-linked release rules. Read-only; no money movement; the intelligence-bound capacity term is labelled conjecture."
+pillar: "rails"
+status: "mvp"
+owner: "justin@viridisconservation.com"
+a2a_role: "ecological-valuation"
+mount: "eco-funding"
+thesis_connection: |
+  The intelligence bound makes biosphere complexity the conservation kernel of the
+  Viridis thesis: protecting and building ecological complexity preserves the data
+  richness every intelligence, biological or artificial, draws on. This rail turns that
+  into something agents and people can reference freely and plan funding around: a
+  reproducible complexity score (K = D* x ECA) with a sealed receipt, and a pool
+  simulator in which releases follow verified ecological improvement only. It is the
+  funding step of the HDFM -> VergeCommon -> GSIP stack, and it keeps the conjecture
+  honestly labelled so the science can be tested rather than assumed.
+revenue_model: |
+  Declared FREE RAIL (AA2): valuation and receipt verification must be free so receipts
+  spread as shared trust references (the network effect is free verification). Revenue
+  comes from what it routes to and from: (1) taught edges into paid fleet mounts:
+  regulatory-radar evidence packs for TNFD/CSRD, and ghg-ledger inventories; notary
+  commitments of receipt seals; (2) Viridis software and hosted management infrastructure
+  for co-ops, land trusts and VergeCommon communities that run pools (Viridis builds and
+  sells software only; it never runs a co-op, holds funds or sells financial products);
+  (3) paid custom method calibration and integration work. Re-evaluate pricing on demand data.
+pricing:
+  model: "free_rail"
+  reason: "verification is the network effect: free, re-runnable receipts become shared trust references for co-ops, land trusts and donor agents"
+seo:
+  desc: "Ecological complexity valuation for agents: D-Score x verified connected habitat -> sealed, re-runnable receipts, plus pledge-pool release simulation. Read-only, free rail; intelligence-bound term labelled conjecture."
+  queries:
+    - "value the biodiversity and habitat connectivity of a conservation site"
+    - "verify a reproducible ecological valuation receipt"
+    - "simulate milestone and outcome-linked releases for a conservation pledge pool"
+    - "D-Score biodiversity index for a woodland or hedgerow project"
+network_edges:
+  - "value_site -> notary.commit (timestamp the receipt seal; digests only)"
+  - "value_site -> regulatory-radar.build_evidence_pack (TNFD/CSRD nature evidence)"
+  - "value_site -> ghg-ledger.calculate_inventory (carbon alongside complexity)"
+  - "verify_receipt -> notary.verify; simulate_pool -> eco-funding.value_site / verify_receipt"
+  - "deliberately none to escrow or settlement: pools are modelled, never funded (legal review first)"
+actions: [value_site, explain_valuation, verify_receipt, simulate_pool, describe_method]
+invariants: "I1-I7 (docs/INVARIANTS.md); one test file per invariant; fleet admission AA1-AA7 in tests/test_fleet_admission.py"
+credentials: []
+money_credentials: []
+dependencies: []
+deploy_targets:
+  - "mcp (adapters/mcp_server.py; mounted at /eco-funding/mcp on the gateway; mcp==1.28.1 compatible)"
+  - "mcp-stdio and streamable-http standalone (vef-mcp; mcp 2.x)"

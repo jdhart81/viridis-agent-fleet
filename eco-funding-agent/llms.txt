@@ -1,0 +1,32 @@
+# viridis-eco-funding
+
+> Open, read-only tools for people and AI agents to value a site's ecological complexity (K = D* x ECA, in complexity-hectares, from the published D-Score, GSIP soil indicators and HDFM-linked verified habitat), produce reproducible sealed receipts, and simulate pledge pools with milestone and outcome-linked release rules. Part of the Viridis Conservation open-source stack, alongside VergeCommon, HDFM and GSIP. The intelligence-bound complexity-capacity term is a conjecture and is labelled as one in every output. No money movement: no payments, wallets, keys or tokens. Any real funding pool needs legal review before money moves.
+
+Method version: vef-method/0.1.0. Fleet endpoint: https://mcp.viridisconservation.com/eco-funding/mcp (free rail; live once mounted). Standalone MCP server: `vef-mcp` (stdio) or `vef-mcp --transport streamable-http` (POST /mcp).
+
+## Start here
+
+- [README](README.md): what it does, quick start, the seven invariants
+- [AGENTS.md](AGENTS.md): how to call the tools and the rules for repeating their outputs
+- [METHOD.md](METHOD.md): every formula, constant, uncertainty and citation
+- [LIMITS.md](LIMITS.md): what the numbers do and do not mean
+
+## MCP tools (all read-only)
+
+- describe_method: formulas, constants, defaults, invariants, citations; call first
+- value_site: value a site (schema vef-site/0.1) and get back a sealed receipt; optionally bind a VergeCommon public project with a GET-only read
+- explain_valuation: a step-by-step explanation of each quantity's formula, inputs, units, uncertainty and status
+- verify_receipt: re-run a receipt offline and check its digests (shows reproducibility, not truth of inputs)
+- simulate_pool: simulate pledges and release rules (schema vef-pool/0.1); simulation only
+
+## Examples
+
+- [Woodland valuation notebook](examples/woodland_valuation.ipynb): one VergeCommon woodland project (synthetic record) valued, explained, receipted, verified and pooled
+- [Example site](examples/data/woodland_site.json)
+- [Example pool](examples/data/woodland_pool.json)
+
+## Optional
+
+- [Fleet mount kit](deploy/fleet/MOUNT.md): gateway wiring, registry manifest, quickstart
+- [Invariants and how each is enforced](docs/INVARIANTS.md)
+- [Changelog](CHANGELOG.md)

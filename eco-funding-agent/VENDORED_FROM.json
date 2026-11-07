@@ -1,0 +1,5 @@
+{
+  "repo": "jdhart81/viridis-eco-funding",
+  "sha": "5bdbc51352d6fd83152f558229ec92ac7a7fe210",
+  "note": "Vendored copy of the canonical public repository. Change it upstream, then re-vendor: git -C <viridis-eco-funding> archive <sha> | tar -x -C eco-funding-agent"
+}

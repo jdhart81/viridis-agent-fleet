@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it and the D-Score method it implements.
+title: "viridis-eco-funding: open tools to value, verify and model pooled funding for ecosystem complexity"
+version: 0.1.0
+date-released: 2026-11-07
+license: Apache-2.0
+authors:
+  - family-names: Hart
+    given-names: Justin D.
+    affiliation: Viridis LLC
+    orcid: "https://orcid.org/0009-0008-3082-2482"
+references:
+  - type: dataset
+    title: "D-Score validation dataset (Run 7)"
+    authors:
+      - family-names: Hart
+        given-names: Justin D.
+    doi: 10.5281/zenodo.19543988
