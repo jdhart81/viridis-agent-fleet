@@ -312,6 +312,7 @@ class SettlementEngineAgent:
     def describe(self) -> Dict[str, Any]:
         return {"name": AGENT_NAME, "version": AGENT_VERSION, "model_version": MODEL_VERSION,
                 "actions": {"free": list(FREE_ACTIONS), "paid": list(PAID_ACTIONS)},
+                "capabilities": list(FREE_ACTIONS) + list(PAID_ACTIONS),  # gateway directory (GET /) contract C7
                 "invariants": ["S1 facts/model separate", "S2 deterministic", "S3 no trading/keys/network", "S4 observations are evidence",
                                "S5 decided means decided", "S6 never raises", "S7 revisions visible", "S8 settlement recomputable",
                                "S9 bounded", "S10 closure declared"],

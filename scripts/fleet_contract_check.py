@@ -11,6 +11,8 @@ them offline:
   C4  every tool is wrapped by fleet_utils.mcp_errors.flag_error_results (__fleet_flags_errors__) [isError]
   C5  if the agent is gated: READ_ACTIONS and KNOWN_ACTIONS are frozensets, READ ⊆ KNOWN         [payment gate]
   C6  the core's state attributes pickle (the gateway StateStore persists them)                 [persistence]
+  C7  describe() has name, version and capabilities (the gateway's JSON directory, GET /)      [directory]
+      (settlement-engine-agent, 2026-11-06: no 'capabilities' -> GET / answered 500 for the whole fleet)
 
 Usage: python3 scripts/fleet_contract_check.py <agent-dir> [--gated]     (exit 1 on any failure)
 """
@@ -92,6 +94,12 @@ def main() -> int:
         except Exception as e:
             bad.append(f"{k}: {type(e).__name__}")
     check("C6", not bad, f"unpicklable state attrs: {bad[:4]}")
+    try:
+        described = agent.describe()
+        missing = [k for k in ("name", "version", "capabilities") if k not in (described or {})]
+        check("C7", isinstance(described, dict) and not missing, f"describe() missing directory keys: {missing}")
+    except Exception as e:
+        check("C7", False, f"describe() raised {type(e).__name__}: {e}")
     ok_all = all(ok for _, ok, _ in results)
     for code, ok, why in results:
         print(f"{code} {'ok  ' if ok else 'FAIL'} {why}")

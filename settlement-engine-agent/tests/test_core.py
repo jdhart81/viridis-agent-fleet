@@ -210,6 +210,9 @@ class Agent(unittest.TestCase):
         h = asyncio.get_event_loop().run_until_complete(self.a.health())
         self.assertTrue(h["ok"]); self.assertEqual(h["status"], "ok")      # the fleet gateway's /healthz gate reads status
         self.assertIn("S5 decided means decided", self.a.describe()["invariants"])
+        d = self.a.describe()  # fleet contract C7: the gateway directory needs these keys
+        self.assertTrue({"name", "version", "capabilities"} <= set(d))
+        self.assertEqual(set(d["capabilities"]), set(d["actions"]["free"]) | set(d["actions"]["paid"]))
 
 
 class Boundaries(unittest.TestCase):
