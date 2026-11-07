@@ -1,0 +1,347 @@
+{
+  "server": "settlement-engine-agent",
+  "tool_count": 12,
+  "tools": [
+    {
+      "name": "register_series",
+      "description": "FREE: declare a progressively published series. aggregate: mean (prices), sum (totals), share (survival/success 0/1 per\nslot), last (closing value). n_expected: number of observation slots in the period. value_min/value_max: the physical\nbounds of one observation; without them nothing is decided until the period is complete (S5).",
+      "inputSchema": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "aggregate": {
+            "title": "Aggregate",
+            "type": "string"
+          },
+          "n_expected": {
+            "title": "N Expected",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "period_start": {
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_end": {
+            "title": "Period End",
+            "type": "string"
+          },
+          "strikes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Strikes"
+          },
+          "value_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value Min"
+          },
+          "value_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value Max"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Meta"
+          }
+        },
+        "required": [
+          "name",
+          "unit",
+          "aggregate",
+          "n_expected",
+          "source",
+          "period_start",
+          "period_end"
+        ],
+        "title": "register_seriesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "ingest",
+      "description": "FREE: append observations [{slot, value, source_url, source_sha256 (64 hex of the source document), observed_at}].\nA re-posted slot replaces the value and is logged as a revision (S7). Each observation is hashed (S4).",
+      "inputSchema": {
+        "properties": {
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          },
+          "observations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Observations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "series_id",
+          "observations"
+        ],
+        "title": "ingestArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "period_status",
+      "description": "FREE: published share, published aggregate, remaining slots, and per strike the required remainder, the decided\nflag (arithmetic + declared bounds only) and a labelled model estimate kept separate from the facts (S1).",
+      "inputSchema": {
+        "properties": {
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "series_id"
+        ],
+        "title": "period_statusArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "required_remainder",
+      "description": "FREE: what the remaining slots must average / sum to / hit for the aggregate to reach the strike, plus decided.",
+      "inputSchema": {
+        "properties": {
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          },
+          "strike": {
+            "title": "Strike",
+            "type": "number"
+          }
+        },
+        "required": [
+          "series_id",
+          "strike"
+        ],
+        "title": "required_remainderArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "decided_strikes",
+      "description": "FREE: every strike across registered series that is decided by the published part alone.",
+      "inputSchema": {
+        "properties": {},
+        "title": "decided_strikesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "explain",
+      "description": "FREE: deterministic plain-language reading of a series (no LLM in the serving path).",
+      "inputSchema": {
+        "properties": {
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "series_id"
+        ],
+        "title": "explainArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "list_series",
+      "description": "FREE: registered series cards.",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_seriesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "compile_contract",
+      "description": "PAID: compile a Verified Outcome Contract v0 \u2014 a series, a strike, a settlement rule (above | at_or_above | below |\nat_or_below) and a closing time, content-addressed; the contract_id is the sha256 of its canonical form.",
+      "inputSchema": {
+        "properties": {
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          },
+          "strike": {
+            "title": "Strike",
+            "type": "number"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "closes_at": {
+            "title": "Closes At",
+            "type": "string"
+          },
+          "parties": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parties"
+          },
+          "terms": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Terms"
+          }
+        },
+        "required": [
+          "series_id",
+          "strike",
+          "rule",
+          "closes_at"
+        ],
+        "title": "compile_contractArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "get_contract",
+      "description": "FREE: a compiled contract and its settlement ids.",
+      "inputSchema": {
+        "properties": {
+          "contract_id": {
+            "title": "Contract Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_id"
+        ],
+        "title": "get_contractArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "settle_contract",
+      "description": "PAID: evaluate a contract against the ledger at an explicit time: YES / NO / UNDECIDED with the exact arithmetic and\nevery observation hash used. A decided strike settles before closure; an incomplete, undecided series at closure is\nUNDECIDED, never a guess (S10). Settlements are immutable and recomputable (S8).",
+      "inputSchema": {
+        "properties": {
+          "contract_id": {
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "now": {
+            "title": "Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_id",
+          "now"
+        ],
+        "title": "settle_contractArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "verify_settlement",
+      "description": "FREE: recompute a settlement from its stored evidence (hash, aggregate, result each checked separately).",
+      "inputSchema": {
+        "properties": {
+          "settlement_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Settlement Id"
+          },
+          "settlement": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Settlement"
+          }
+        },
+        "title": "verify_settlementArguments",
+        "type": "object"
+      }
+    },
+    {
+      "name": "describe_agent",
+      "description": "FREE: actions, invariants S1\u2013S10 and limits.",
+      "inputSchema": {
+        "properties": {},
+        "title": "describe_agentArguments",
+        "type": "object"
+      }
+    }
+  ]
+}
