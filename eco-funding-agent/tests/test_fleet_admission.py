@@ -170,7 +170,7 @@ def test_gateway_emulation_over_http():
 
 def test_AA6_registry_manifest_and_tools_json():
     server = json.loads((ROOT / "deploy" / "fleet" / "server.json").read_text())
-    assert server["name"] == "io.github.jdhart81/viridis-eco-funding"
+    assert server["name"] == "io.github.jdhart81/eco-funding"  # fleet convention: agent folder / mount name
     assert len(server["description"]) <= 100
     assert server["remotes"] == [{"type": "streamable-http",
                                   "url": "https://mcp.viridisconservation.com/eco-funding/mcp"}]
