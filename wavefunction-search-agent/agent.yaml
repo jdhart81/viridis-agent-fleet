@@ -4,7 +4,7 @@ description: "Wavefunction Field: post a goal before you know who can do it; age
 pillar: "infrastructure"
 status: "prototype"
 owner: "justin@viridisconservation.com"
-implementation: "wavefunction-field 0.1.0a1 (Apache-2.0, vendored wheel)"
+implementation: "wavefunction-field 0.1.0a2 (Apache-2.0, vendored wheel)"
 revenue_model: "Free routing reads and writes during v0.1; hosted field and verification-as-a-service, routing demand into paid fleet services"
 deploy_targets:
   primary: "mcp-server"
