@@ -39,6 +39,19 @@ from wavefunction_field.fleet.gateway import build_gateway_surface  # noqa: E402
 
 mcp, agent = build_gateway_surface()
 
+try:  # report {"status": "error"} results to MCP clients as tool errors (isError)
+    from fleet_utils.mcp_errors import flag_error_results
+except ImportError:  # loaded without the fleet root on sys.path, as the gateway does
+    _fleet_root = Path(__file__).resolve().parents[2]
+    if (_fleet_root / "fleet_utils").is_dir() and str(_fleet_root) not in sys.path:
+        sys.path.append(str(_fleet_root))
+    try:
+        from fleet_utils.mcp_errors import flag_error_results
+    except ImportError:  # pragma: no cover - adapter copied without fleet_utils
+        def flag_error_results(server):
+            return 0
+flag_error_results(mcp)
+
 if __name__ == "__main__":
     if "--serve" in sys.argv:
         mcp.run()
