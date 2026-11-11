@@ -79,6 +79,27 @@ FIRST_CALL_HELP = {
 }
 
 
+# CH1: a draft whose emission datapoints are missing names the fleet call that
+# produces them. The arguments are the GHG ledger's own published example.
+_EMISSION_GAP_PREFIXES = ("gross_scope_", "total_location_based", "total_market_based")
+NEXT_CALLS = [{
+    "agent": "ghg-ledger",
+    "tool": "calculate_inventory",
+    "why": ("compute the inventory, then call compile_disclosure again with "
+            "that response's data object as ghg_result to fill the emission gaps"),
+    "arguments": {
+        "activities": [
+            {"id": "office-electricity", "activity_type": "purchased_electricity",
+             "quantity": "12000", "unit": "kWh", "region": "US", "year": 2023},
+            {"id": "backup-generator", "activity_type": "stationary_combustion_diesel",
+             "quantity": "400", "unit": "gallons", "region": "US", "year": 2025},
+        ],
+        "options": {},
+    },
+    "replace_before_sending": ["activities"],
+}]
+
+
 @dataclass
 class AgentConfig:
     name: str = "disclosure-compiler-agent"
@@ -279,6 +300,14 @@ class DisclosureCompilerCore:
         if (isinstance(input_data, dict) and input_data.get("action") == "compile_disclosure"
                 and isinstance(response, dict) and response.get("status") != "ok"):
             response = {**response, "first_call_help": deepcopy(FIRST_CALL_HELP)}
+        elif (isinstance(input_data, dict) and input_data.get("action") == "compile_disclosure"
+                and isinstance(response, dict) and response.get("status") == "ok"
+                and input_data.get("ghg_result") is None
+                and any(str(gap.get("status", "")).removeprefix("MISSING: ")
+                        .startswith(_EMISSION_GAP_PREFIXES)
+                        for gap in (response.get("data") or {}).get("gaps", [])
+                        if isinstance(gap, dict))):
+            response = {**response, "next_calls": deepcopy(NEXT_CALLS)}  # CH1
         return response
 
     async def _process(self, input_data: dict) -> dict:
