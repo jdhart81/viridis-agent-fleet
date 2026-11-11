@@ -38,6 +38,47 @@ _PERCENT_QUANTUM = Decimal("0.01")
 _MISSING = object()
 
 
+# FC1: one complete request that computes. The tool description, describe() and
+# every failed compilation show this same request, and a test runs it.
+EXAMPLE_REQUEST = {
+    "framework": "esrs-e1",
+    "company_facts": {
+        "company_name": "Acme Climate Works",
+        "reporting_period": "2026",
+        "transition_plan": {
+            "status": "board-approved",
+            "target_year": 2035
+        },
+        "climate_targets": {
+            "scope": "Scopes 1-3",
+            "target": "50% by 2035"
+        },
+        "ghg_intensity": {
+            "value": "0.012",
+            "unit": "tCO2e/USDm revenue"
+        }
+    },
+    "options": {
+        "applicability": {
+            "framework": "esrs-e1",
+            "applies": True,
+            "reason": "company is in CSRD scope"
+        }
+    }
+}
+FIRST_CALL_HELP = {
+    "why": "the request did not produce a draft",
+    "example_request": EXAMPLE_REQUEST,
+    "example_tool": "compile_disclosure",
+    "discover_with": ["list_frameworks", "get_framework"],
+    "note": ("framework is one of the ids from list_frameworks, and "
+             "options.applicability must state framework, applies and reason. "
+             "The example yields a partial draft whose gaps are the emission "
+             "datapoints; pass the data object of a ghg-ledger "
+             "calculate_inventory result as ghg_result to fill them."),
+}
+
+
 @dataclass
 class AgentConfig:
     name: str = "disclosure-compiler-agent"
@@ -206,6 +247,7 @@ class DisclosureCompilerCore:
 
     def describe(self) -> dict:
         return {
+            "example_request": deepcopy(EXAMPLE_REQUEST),
             "name": self.config.name,
             "version": self.config.version,
             "description": ("Deterministic, cited, gap-flagged disclosure drafts "
@@ -232,6 +274,14 @@ class DisclosureCompilerCore:
                 "timestamp": _now()}
 
     async def process(self, input_data: dict) -> dict:
+        """FC1: a compilation that fails returns a working example beside the error."""
+        response = await self._process(input_data)
+        if (isinstance(input_data, dict) and input_data.get("action") == "compile_disclosure"
+                and isinstance(response, dict) and response.get("status") != "ok"):
+            response = {**response, "first_call_help": deepcopy(FIRST_CALL_HELP)}
+        return response
+
+    async def _process(self, input_data: dict) -> dict:
         try:
             if not isinstance(input_data, dict):
                 raise ValidationError("input must be an object", "input",

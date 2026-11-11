@@ -20,6 +20,8 @@ ENGINES = {
     "quantity-takeoff-agent": ("calculate_takeoff", "calculate_takeoff", "takeoff_status",
                                {"items": [{"type": "concrete slab", "length": 20, "width": 30,
                                            "thickness": 4}], "options": {}}),
+    "disclosure-compiler-agent": ("compile_disclosure", "compile_disclosure", "draft_status",
+                                  {"framework": "SB 253", "company_facts": {"name": "Acme Corp"}}),
     "taxcredit-engine-agent": ("calculate", "calculate_tax_credit", "calculation_status",
                                {"credit": "48E", "facts": {"project_cost": 2400000,
                                                            "capacity_mw": 1.5}}),
