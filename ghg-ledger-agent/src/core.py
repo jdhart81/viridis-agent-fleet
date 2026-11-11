@@ -73,6 +73,32 @@ FIRST_CALL_HELP = {
 }
 
 
+# CH1: a computed inventory names the next fleet call, with arguments that work
+# once the marked values are replaced. {"$ref": "this_response.data"} means:
+# pass this response's data object. A cross-engine test runs the hand-off.
+NEXT_CALLS = [{
+    "agent": "disclosure-compiler",
+    "tool": "compile_disclosure",
+    "why": ("turn this inventory into a cited disclosure draft; the emission "
+            "datapoints are filled from it and every other gap stays explicit"),
+    "arguments": {
+        "framework": "esrs-e1",
+        "company_facts": {
+            "company_name": "Acme Climate Works",
+            "reporting_period": "2026",
+            "transition_plan": {"status": "board-approved", "target_year": 2035},
+            "climate_targets": {"scope": "Scopes 1-3", "target": "50% by 2035"},
+            "ghg_intensity": {"value": "0.012", "unit": "tCO2e/USDm revenue"},
+        },
+        "ghg_result": {"$ref": "this_response.data"},
+        "options": {"applicability": {"framework": "esrs-e1", "applies": True,
+                                      "reason": "company is in CSRD scope"}},
+    },
+    "replace_before_sending": ["company_facts", "options.applicability",
+                               "framework (see list_frameworks)"],
+}]
+
+
 @dataclass
 class AgentConfig:
     name: str = "ghg-ledger-agent"
@@ -273,6 +299,11 @@ class GHGLedgerCore:
                      or (response.get("data") or {}).get("inventory_status")
                      in ("indeterminate", "partial_indeterminate"))):
             response = {**response, "first_call_help": deepcopy(FIRST_CALL_HELP)}
+        elif (isinstance(input_data, dict) and input_data.get("action") == "calculate_inventory"
+                and isinstance(response, dict) and response.get("status") == "ok"
+                and (response.get("data") or {}).get("inventory_status")
+                == "complete_for_supplied_activities"):
+            response = {**response, "next_calls": deepcopy(NEXT_CALLS)}  # CH1
         return response
 
     async def _process(self, input_data: dict) -> dict:
