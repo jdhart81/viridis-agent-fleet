@@ -93,3 +93,15 @@ class FirstCallSuccess(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PartialResultStillTeaches(unittest.TestCase):
+    def test_one_failed_line_among_good_ones_returns_the_help(self):
+        core = build()
+        response = asyncio.run(core.process({"action": "calculate_inventory", "activities": [
+            diesel("gallons"),
+            {"id": "fleet", "activity_type": "mobile_combustion_gasoline", "quantity": "500",
+             "unit": "gallons", "region": "US", "year": 2025}], "options": {}}))
+        self.assertEqual(response["data"]["inventory_status"], "partial_indeterminate")
+        self.assertIn("first_call_help", response)
+        self.assertNotIn("first_call_help", response["data"])

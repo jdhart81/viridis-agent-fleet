@@ -74,7 +74,7 @@ async def calculate_inventory(activities: List[Dict[str, Any]],
     /x402/ghg-ledger/calculate_inventory with Base USDC, cash-fund payment_ref
     through escrow_checkout + confirm_escrow_funding, or use /seats.
     If a call returns indeterminate, the response includes first_call_help.
-    Example arguments: {"activities": [{"id": "office-electricity", "activity_type": "purchased_electricity", "quantity": "12000", "unit": "kWh", "region": "US", "year": 2023}, {"id": "fleet-fuel", "activity_type": "mobile_combustion_gasoline", "quantity": "500", "unit": "gallons", "region": "US", "year": 2025}], "options": {}}"""
+    Example arguments: {"activities": [{"id": "office-electricity", "activity_type": "purchased_electricity", "quantity": "12000", "unit": "kWh", "region": "US", "year": 2023}, {"id": "backup-generator", "activity_type": "stationary_combustion_diesel", "quantity": "400", "unit": "gallons", "region": "US", "year": 2025}], "options": {}}"""
     return await _run({"action": "calculate_inventory", "activities": activities,
                        "options": options or {},
                        **({"payment_ref": payment_ref} if payment_ref else {}),
