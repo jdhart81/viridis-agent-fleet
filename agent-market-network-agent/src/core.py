@@ -704,6 +704,59 @@ class MarketNetworkCore:
                               field="agent_id")
         return row
 
+    # -- Public extension-auth interface ------------------------------------
+    # In-repo extensions (for example ``vcx``) authenticate against Market
+    # identities through these three methods only. They never consume a
+    # Market nonce or idempotency key: the extension owns replay protection
+    # in its own durable transaction.
+    def extension_profile(self, agent_id: str) -> dict:
+        """Public fields of an active, unexpired, caller-signed profile."""
+        with self._lock:
+            row = self._ensure_active(agent_id)
+            if row["auth_mode"] not in {"signed_ed25519", "operator_signed_ed25519"}:
+                raise MarketError("an active signed market profile is required",
+                                  error_type="AuthenticationError", field="agent_id")
+            return {
+                "agent_id": row["agent_id"],
+                "did": row["did"],
+                "profile_sha256": row["profile_sha256"],
+                "capabilities": json.loads(row["capabilities_json"]),
+                "expires_at": row["expires_at"],
+                "public_key_b64": row["public_key_b64"],
+            }
+
+    def verify_extension_action(self, action: str, actor_id: str, body: dict,
+                                auth: dict, *, now: Optional[datetime] = None) -> dict:
+        """Verify a signed canonical action without moving Market state.
+
+        ``now`` is the extension's own aware clock; it defaults to the Market
+        clock. Returns the signer's public profile fields.
+        """
+        if not isinstance(action, str) or not action or not isinstance(body, dict):
+            raise MarketError("invalid authorization", error_type="AuthenticationError")
+        if not isinstance(auth, dict) or set(auth) != {"nonce", "signed_at", "signature"}:
+            raise MarketError("invalid authorization", error_type="AuthenticationError",
+                              field="auth")
+        with self._lock:
+            profile = self.extension_profile(actor_id)
+            clock = now if now is not None else self._now()
+            if clock.tzinfo is None:
+                raise MarketError("an aware clock is required", field="now")
+            expires = self._parse_time(profile["expires_at"], "expires_at")
+            signed = self._parse_time(auth["signed_at"], "auth.signed_at")
+            if (expires <= clock
+                    or abs((clock - signed).total_seconds()) > AUTH_WINDOW_SECONDS):
+                raise MarketError("signature timestamp outside authorization window",
+                                  error_type="AuthenticationError", field="auth.signed_at")
+            self._verify_signature(action, actor_id, body, auth)
+            return profile
+
+    def extension_security_posture(self, agent_id: str) -> dict:
+        """Current security evidence for one active signed profile."""
+        with self._lock:
+            self.extension_profile(agent_id)
+            return self._security_posture(agent_id)
+
     def _operator_proof(self, row: sqlite3.Row) -> str:
         """Return a currently valid operator proof reference, or fail closed."""
         if (row["auth_mode"] == "operator_managed"

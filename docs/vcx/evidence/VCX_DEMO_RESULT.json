@@ -1,0 +1,1829 @@
+{
+  "actual_revenue_minor": 0,
+  "budgets": {
+    "buyer-alpha": {
+      "actor": "buyer-alpha",
+      "actual_settled_funds_minor": 0,
+      "allowed_reinvestment_minor": 0,
+      "available_budget_minor": 500,
+      "available_minor": 800,
+      "balance_type": "simulation",
+      "currency": "USD",
+      "held_minor": 0,
+      "initial_simulation_funding_minor": 1000,
+      "pending_earnings_minor": 0,
+      "policy": {
+        "max_exposure_minor": 500,
+        "max_spend_minor": 1000,
+        "reinvest_bps": 8000,
+        "reserve_minor": 0
+      },
+      "redeemable": false,
+      "service_credits": 0,
+      "simulation_only": true,
+      "spent_minor": 200
+    },
+    "buyer-beta": {
+      "actor": "buyer-beta",
+      "actual_settled_funds_minor": 0,
+      "allowed_reinvestment_minor": 0,
+      "available_budget_minor": 50,
+      "available_minor": 50,
+      "balance_type": "simulation",
+      "currency": "USD",
+      "held_minor": 0,
+      "initial_simulation_funding_minor": 300,
+      "pending_earnings_minor": 0,
+      "policy": {
+        "max_exposure_minor": 500,
+        "max_spend_minor": 1000,
+        "reinvest_bps": 8000,
+        "reserve_minor": 0
+      },
+      "redeemable": false,
+      "service_credits": 0,
+      "simulation_only": true,
+      "spent_minor": 250
+    },
+    "seller-accurate": {
+      "actor": "seller-accurate",
+      "actual_settled_funds_minor": 0,
+      "allowed_reinvestment_minor": 2,
+      "available_budget_minor": 50,
+      "available_minor": 50,
+      "balance_type": "simulation",
+      "currency": "USD",
+      "held_minor": 0,
+      "initial_simulation_funding_minor": 0,
+      "pending_earnings_minor": 40,
+      "policy": {
+        "max_exposure_minor": 500,
+        "max_spend_minor": 1000,
+        "reinvest_bps": 8000,
+        "reserve_minor": 0
+      },
+      "redeemable": false,
+      "service_credits": 0,
+      "simulation_only": true,
+      "spent_minor": 100
+    },
+    "seller-economy": {
+      "actor": "seller-economy",
+      "actual_settled_funds_minor": 0,
+      "allowed_reinvestment_minor": 76,
+      "available_budget_minor": 0,
+      "available_minor": 0,
+      "balance_type": "simulation",
+      "currency": "USD",
+      "held_minor": 0,
+      "initial_simulation_funding_minor": 0,
+      "pending_earnings_minor": 95,
+      "policy": {
+        "max_exposure_minor": 500,
+        "max_spend_minor": 1000,
+        "reinvest_bps": 8000,
+        "reserve_minor": 0
+      },
+      "redeemable": false,
+      "service_credits": 0,
+      "simulation_only": true,
+      "spent_minor": 0
+    },
+    "seller-specialist": {
+      "actor": "seller-specialist",
+      "actual_settled_funds_minor": 0,
+      "allowed_reinvestment_minor": 189,
+      "available_budget_minor": 0,
+      "available_minor": 0,
+      "balance_type": "simulation",
+      "currency": "USD",
+      "held_minor": 0,
+      "initial_simulation_funding_minor": 0,
+      "pending_earnings_minor": 237,
+      "policy": {
+        "max_exposure_minor": 500,
+        "max_spend_minor": 1000,
+        "reinvest_bps": 8000,
+        "reserve_minor": 0
+      },
+      "redeemable": false,
+      "service_credits": 0,
+      "simulation_only": true,
+      "spent_minor": 0
+    }
+  },
+  "claim_boundary": "Simulation demonstrates accounting and deterministic acceptance; it establishes no actual revenue, payout eligibility or research truth.",
+  "discovery_count": 4,
+  "earnings_before_reinvestment": {
+    "actor": "seller-accurate",
+    "actual_revenue_minor": 0,
+    "actual_settled_funds_minor": 0,
+    "allowed_reinvestment_minor": 152,
+    "balance_type": "simulation",
+    "currency": "USD",
+    "gross_service_revenue_minor": 200,
+    "marketplace_fees_paid_minor": 10,
+    "net_service_revenue_minor": 190,
+    "pending_earnings_kind": "simulation_proceeds",
+    "pending_earnings_minor": 190,
+    "realized_margin_minor": 190,
+    "redeemable": false,
+    "reinvested_minor": 0,
+    "service_credits": 0,
+    "simulation_only": true,
+    "spent_minor": 0
+  },
+  "earnings_funded_job": {
+    "attempt": 1,
+    "balance_kind": "simulation",
+    "buyer_id": "seller-accurate",
+    "buyer_profile_sha256": "f009aaf514764a2c096d82e436b191bfd5f1e9cbaf7f837b928de49561b21445",
+    "created_at": 1794400263,
+    "currency": "USD",
+    "deadline": 1794400863,
+    "excluded_listings": [],
+    "execution_token": "8a289e597ab8469bba910323c53c3151",
+    "fee_bps": 500,
+    "hold_id": "vcx-2eca951f0b15350b011de8790aa86d78:1",
+    "job_id": "vcx-2eca951f0b15350b011de8790aa86d78",
+    "lease_until": 0,
+    "listing_id": "seller-economy-sum",
+    "max_latency_seconds": 100,
+    "max_price_minor": 100,
+    "min_reliability_bps": 0,
+    "mode": "simulation",
+    "output": {
+      "count": 3,
+      "sum": 42
+    },
+    "output_sha256": "9cbd79daad0ecd16a17142b0b2687a3dacb42c150470b1347364bdc7f6b4ae66",
+    "payload": {
+      "values": [
+        7,
+        11,
+        24
+      ]
+    },
+    "payment_confirmed": true,
+    "prefer_energy": true,
+    "price_minor": 100,
+    "quote": {
+      "expires_at": 1794400323,
+      "fee_bps": 500,
+      "job_id": "vcx-2eca951f0b15350b011de8790aa86d78",
+      "listing_id": "seller-economy-sum",
+      "price_minor": 100,
+      "profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387",
+      "quote_id": "quote-1054b13595277948e61d9c2b6e339233",
+      "score": 491740,
+      "score_components_bps": {
+        "energy": 9174,
+        "latency": 8000,
+        "price": 0,
+        "reliability": 6000
+      },
+      "score_weights": {
+        "energy": 10,
+        "latency": 20,
+        "price": 30,
+        "reliability": 40
+      },
+      "seller_id": "seller-economy"
+    },
+    "quotes": [
+      {
+        "expires_at": 1794400323,
+        "fee_bps": 500,
+        "job_id": "vcx-2eca951f0b15350b011de8790aa86d78",
+        "listing_id": "seller-economy-sum",
+        "price_minor": 100,
+        "profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387",
+        "quote_id": "quote-1054b13595277948e61d9c2b6e339233",
+        "score": 491740,
+        "score_components_bps": {
+          "energy": 9174,
+          "latency": 8000,
+          "price": 0,
+          "reliability": 6000
+        },
+        "score_weights": {
+          "energy": 10,
+          "latency": 20,
+          "price": 30,
+          "reliability": 40
+        },
+        "seller_id": "seller-economy"
+      }
+    ],
+    "receipt": {
+      "bindings": {
+        "payment": {
+          "rail": "simulation",
+          "redeemable": false
+        }
+      },
+      "commitment": {
+        "salt": "82352a39bddd5dab5b945feb2ec8122a69bb60eeb980b0e69388ef13148d21cf",
+        "scheme": "sha256(salt||digest)",
+        "value": "2c79431df8916ffcaa131e1c47b3cee6850650d1119d6716fa1173dd8a305be6"
+      },
+      "digest": {
+        "alg": "sha256",
+        "canonicalization": "orc-canon/1",
+        "excludes": [],
+        "value": "9d0afb74959e80b3e20569ebe644d8def77f838ce317ba1ab327faa78c13d5b1"
+      },
+      "issued_at": "2026-11-11T12:31:03+00:00",
+      "issuer": {
+        "id": "vcx-local-simulation"
+      },
+      "orc": "0.1",
+      "output": {
+        "attempt": 1,
+        "balance_kind": "simulation",
+        "buyer_id": "seller-accurate",
+        "closed_at": 1794400263,
+        "created_at": 1794400263,
+        "currency": "USD",
+        "exchange_id": "sim-0cc6f9a6edc248e9",
+        "fault": null,
+        "fee_bps": 500,
+        "fee_minor": 5,
+        "identity_references": {
+          "buyer_profile_sha256": "f009aaf514764a2c096d82e436b191bfd5f1e9cbaf7f837b928de49561b21445",
+          "seller_profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387"
+        },
+        "input_sha256": "7d697cfcc730a9adb1b9dc2433032398220d5ad85973828701b6534081b9a4c9",
+        "job_id": "vcx-2eca951f0b15350b011de8790aa86d78",
+        "listing_id": "seller-economy-sum",
+        "mode": "simulation",
+        "outcome_reason": null,
+        "output_sha256": "9cbd79daad0ecd16a17142b0b2687a3dacb42c150470b1347364bdc7f6b4ae66",
+        "price_minor": 100,
+        "quote_id": "quote-1054b13595277948e61d9c2b6e339233",
+        "resource_usage": {
+          "input_bytes": 20,
+          "measured_energy": false,
+          "output_bytes": 20
+        },
+        "seller_id": "seller-economy",
+        "seller_net_minor": 95,
+        "service_id": "vcx.test.integer_sum.v1",
+        "service_version": "1",
+        "settled_at": 1794400263,
+        "settlement_state": "SETTLED",
+        "started_at": 1794400263,
+        "submitted_at": 1794400263,
+        "verification": {
+          "accepted": true,
+          "at": 1794400263,
+          "independent_research_validation": false,
+          "method": "deterministic_service_contract",
+          "performed_by": "exchange_recomputation"
+        }
+      },
+      "profile": "vcx-delivery/0.2",
+      "subject": {
+        "id": "vcx-2eca951f0b15350b011de8790aa86d78"
+      }
+    },
+    "request_digest": "1a99426d50812ad2150073720834fa5c256649a3c8350b7f7f8e4dee31974755",
+    "required_capabilities": [
+      "integer-sum"
+    ],
+    "security_posture": "",
+    "seller_id": "seller-economy",
+    "service_id": "vcx.test.integer_sum.v1",
+    "service_version": "1",
+    "settlement": {
+      "actual_settled_funds_minor": 0,
+      "balance_type": "simulation",
+      "buyer": "seller-accurate",
+      "currency": "USD",
+      "duplicate": false,
+      "fee_bps": 500,
+      "fee_minor": 5,
+      "job": "vcx-2eca951f0b15350b011de8790aa86d78:1",
+      "price_minor": 100,
+      "redeemable": false,
+      "seller": "seller-economy",
+      "seller_net_minor": 95,
+      "service_credits": 0,
+      "settlement_state": "SIMULATED_SETTLED",
+      "simulation_only": true
+    },
+    "started_at": 1794400263,
+    "state": "SETTLED",
+    "submitted_at": 1794400263,
+    "updated_at": 1794400263,
+    "verification": {
+      "accepted": true,
+      "at": 1794400263,
+      "independent_research_validation": false,
+      "method": "deterministic_service_contract",
+      "performed_by": "exchange_recomputation"
+    }
+  },
+  "failure_simulations": {
+    "cancelled": {
+      "attempt": 1,
+      "balance_kind": "simulation",
+      "buyer_id": "buyer-beta",
+      "buyer_profile_sha256": "70cbf80baea19a9179c147a04c8c346c01bd13d2a902228d8d6eee068af1488d",
+      "created_at": 1794400263,
+      "currency": "USD",
+      "deadline": 1794400863,
+      "excluded_listings": [],
+      "fault": "buyer",
+      "fee_bps": 500,
+      "hold_id": "vcx-8be67e736bdd5cc3e29db95a44714ab9:1",
+      "job_id": "vcx-8be67e736bdd5cc3e29db95a44714ab9",
+      "lease_until": 0,
+      "listing_id": "seller-economy-sum",
+      "max_latency_seconds": 100,
+      "max_price_minor": 100,
+      "min_reliability_bps": 0,
+      "mode": "simulation",
+      "outcome_reason": "buyer_cancelled",
+      "payload": {
+        "values": [
+          7,
+          11,
+          24
+        ]
+      },
+      "prefer_energy": true,
+      "price_minor": 100,
+      "quote": {
+        "expires_at": 1794400323,
+        "fee_bps": 500,
+        "job_id": "vcx-8be67e736bdd5cc3e29db95a44714ab9",
+        "listing_id": "seller-economy-sum",
+        "price_minor": 100,
+        "profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387",
+        "quote_id": "quote-173fb7b1a9dd6dc0b2e45a13b8a96225",
+        "score": 491740,
+        "score_components_bps": {
+          "energy": 9174,
+          "latency": 8000,
+          "price": 0,
+          "reliability": 6000
+        },
+        "score_weights": {
+          "energy": 10,
+          "latency": 20,
+          "price": 30,
+          "reliability": 40
+        },
+        "seller_id": "seller-economy"
+      },
+      "quotes": [
+        {
+          "expires_at": 1794400323,
+          "fee_bps": 500,
+          "job_id": "vcx-8be67e736bdd5cc3e29db95a44714ab9",
+          "listing_id": "seller-economy-sum",
+          "price_minor": 100,
+          "profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387",
+          "quote_id": "quote-173fb7b1a9dd6dc0b2e45a13b8a96225",
+          "score": 491740,
+          "score_components_bps": {
+            "energy": 9174,
+            "latency": 8000,
+            "price": 0,
+            "reliability": 6000
+          },
+          "score_weights": {
+            "energy": 10,
+            "latency": 20,
+            "price": 30,
+            "reliability": 40
+          },
+          "seller_id": "seller-economy"
+        }
+      ],
+      "receipt": {
+        "bindings": {
+          "payment": {
+            "rail": "simulation",
+            "redeemable": false
+          }
+        },
+        "commitment": {
+          "salt": "79e82a5ce7c002e7dffd7ab9403ec62248ae34d6b2c26557938284396f44a09a",
+          "scheme": "sha256(salt||digest)",
+          "value": "2b6d176bbfd36fe2733168ffe66781a61912f9d1aa3fac2c397264f4d13f2c8e"
+        },
+        "digest": {
+          "alg": "sha256",
+          "canonicalization": "orc-canon/1",
+          "excludes": [],
+          "value": "2e56870378550cff4e22fa755d914a907c7b31f6da8b540ff19e103a6bcd0b21"
+        },
+        "issued_at": "2026-11-11T12:31:03+00:00",
+        "issuer": {
+          "id": "vcx-local-simulation"
+        },
+        "orc": "0.1",
+        "output": {
+          "attempt": 1,
+          "balance_kind": "simulation",
+          "buyer_id": "buyer-beta",
+          "closed_at": 1794400263,
+          "created_at": 1794400263,
+          "currency": "USD",
+          "exchange_id": "sim-0cc6f9a6edc248e9",
+          "fault": "buyer",
+          "fee_bps": 500,
+          "fee_minor": null,
+          "identity_references": {
+            "buyer_profile_sha256": "70cbf80baea19a9179c147a04c8c346c01bd13d2a902228d8d6eee068af1488d",
+            "seller_profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387"
+          },
+          "input_sha256": "7d697cfcc730a9adb1b9dc2433032398220d5ad85973828701b6534081b9a4c9",
+          "job_id": "vcx-8be67e736bdd5cc3e29db95a44714ab9",
+          "listing_id": "seller-economy-sum",
+          "mode": "simulation",
+          "outcome_reason": "buyer_cancelled",
+          "output_sha256": null,
+          "price_minor": 100,
+          "quote_id": "quote-173fb7b1a9dd6dc0b2e45a13b8a96225",
+          "resource_usage": {
+            "input_bytes": 20,
+            "measured_energy": false,
+            "output_bytes": 2
+          },
+          "seller_id": "seller-economy",
+          "seller_net_minor": null,
+          "service_id": "vcx.test.integer_sum.v1",
+          "service_version": "1",
+          "settled_at": null,
+          "settlement_state": "CANCELLED",
+          "started_at": null,
+          "submitted_at": null,
+          "verification": null
+        },
+        "profile": "vcx-delivery/0.2",
+        "subject": {
+          "id": "vcx-8be67e736bdd5cc3e29db95a44714ab9"
+        }
+      },
+      "request_digest": "e6adddfe9e9355036d4f51d6b52af7197c290ac0dc1d9eadc799c79f4e4a31d5",
+      "required_capabilities": [
+        "integer-sum"
+      ],
+      "security_posture": "",
+      "seller_id": "seller-economy",
+      "service_id": "vcx.test.integer_sum.v1",
+      "service_version": "1",
+      "state": "CANCELLED",
+      "updated_at": 1794400263
+    },
+    "expired_authorization": {
+      "mode": "simulation",
+      "recovered": [
+        {
+          "attempt": 1,
+          "balance_kind": "simulation",
+          "buyer_id": "buyer-beta",
+          "buyer_profile_sha256": "70cbf80baea19a9179c147a04c8c346c01bd13d2a902228d8d6eee068af1488d",
+          "created_at": 1794400263,
+          "currency": "USD",
+          "deadline": 1794400863,
+          "excluded_listings": [],
+          "fault": "buyer",
+          "fee_bps": 500,
+          "hold_id": "vcx-63011326ffff9d96a6f9cc5db770827c:1",
+          "job_id": "vcx-63011326ffff9d96a6f9cc5db770827c",
+          "lease_until": 0,
+          "listing_id": "seller-economy-sum",
+          "max_latency_seconds": 100,
+          "max_price_minor": 100,
+          "min_reliability_bps": 0,
+          "mode": "simulation",
+          "outcome_reason": "recovered_expired_lease",
+          "payload": {
+            "values": [
+              7,
+              11,
+              24
+            ]
+          },
+          "payment_confirmed": true,
+          "prefer_energy": true,
+          "price_minor": 100,
+          "quote": {
+            "expires_at": 1794400323,
+            "fee_bps": 500,
+            "job_id": "vcx-63011326ffff9d96a6f9cc5db770827c",
+            "listing_id": "seller-economy-sum",
+            "price_minor": 100,
+            "profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387",
+            "quote_id": "quote-6e3cf7a2f780bd6c991240af79e6d961",
+            "score": 491740,
+            "score_components_bps": {
+              "energy": 9174,
+              "latency": 8000,
+              "price": 0,
+              "reliability": 6000
+            },
+            "score_weights": {
+              "energy": 10,
+              "latency": 20,
+              "price": 30,
+              "reliability": 40
+            },
+            "seller_id": "seller-economy"
+          },
+          "quotes": [
+            {
+              "expires_at": 1794400323,
+              "fee_bps": 500,
+              "job_id": "vcx-63011326ffff9d96a6f9cc5db770827c",
+              "listing_id": "seller-economy-sum",
+              "price_minor": 100,
+              "profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387",
+              "quote_id": "quote-6e3cf7a2f780bd6c991240af79e6d961",
+              "score": 491740,
+              "score_components_bps": {
+                "energy": 9174,
+                "latency": 8000,
+                "price": 0,
+                "reliability": 6000
+              },
+              "score_weights": {
+                "energy": 10,
+                "latency": 20,
+                "price": 30,
+                "reliability": 40
+              },
+              "seller_id": "seller-economy"
+            }
+          ],
+          "receipt": {
+            "bindings": {
+              "payment": {
+                "rail": "simulation",
+                "redeemable": false
+              }
+            },
+            "commitment": {
+              "salt": "0a83e81cd5b1883044fbee8c4a4c833ad6b72b85bebdfec38b7e88b6bd2a3e35",
+              "scheme": "sha256(salt||digest)",
+              "value": "17e02c6fcbfb5f640dbbfbeadfd8844265ed7fba1cf34c4a12a710e08e9736d5"
+            },
+            "digest": {
+              "alg": "sha256",
+              "canonicalization": "orc-canon/1",
+              "excludes": [],
+              "value": "b09685831f47f5394aa3eeefcaec0961e304f0518dc29cfb1f1b24e82b338fe2"
+            },
+            "issued_at": "2026-11-11T12:32:04+00:00",
+            "issuer": {
+              "id": "vcx-local-simulation"
+            },
+            "orc": "0.1",
+            "output": {
+              "attempt": 1,
+              "balance_kind": "simulation",
+              "buyer_id": "buyer-beta",
+              "closed_at": 1794400324,
+              "created_at": 1794400263,
+              "currency": "USD",
+              "exchange_id": "sim-0cc6f9a6edc248e9",
+              "fault": "buyer",
+              "fee_bps": 500,
+              "fee_minor": null,
+              "identity_references": {
+                "buyer_profile_sha256": "70cbf80baea19a9179c147a04c8c346c01bd13d2a902228d8d6eee068af1488d",
+                "seller_profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387"
+              },
+              "input_sha256": "7d697cfcc730a9adb1b9dc2433032398220d5ad85973828701b6534081b9a4c9",
+              "job_id": "vcx-63011326ffff9d96a6f9cc5db770827c",
+              "listing_id": "seller-economy-sum",
+              "mode": "simulation",
+              "outcome_reason": "recovered_expired_lease",
+              "output_sha256": null,
+              "price_minor": 100,
+              "quote_id": "quote-6e3cf7a2f780bd6c991240af79e6d961",
+              "resource_usage": {
+                "input_bytes": 20,
+                "measured_energy": false,
+                "output_bytes": 2
+              },
+              "seller_id": "seller-economy",
+              "seller_net_minor": null,
+              "service_id": "vcx.test.integer_sum.v1",
+              "service_version": "1",
+              "settled_at": null,
+              "settlement_state": "EXPIRED",
+              "started_at": null,
+              "submitted_at": null,
+              "verification": null
+            },
+            "profile": "vcx-delivery/0.2",
+            "subject": {
+              "id": "vcx-63011326ffff9d96a6f9cc5db770827c"
+            }
+          },
+          "request_digest": "de33f80fa980af8de013cc7cba5c08f1053e8e5cea8f42857f838967313dd99c",
+          "required_capabilities": [
+            "integer-sum"
+          ],
+          "security_posture": "",
+          "seller_id": "seller-economy",
+          "service_id": "vcx.test.integer_sum.v1",
+          "service_version": "1",
+          "state": "EXPIRED",
+          "updated_at": 1794400324
+        }
+      ]
+    }
+  },
+  "first_job": {
+    "attempt": 1,
+    "balance_kind": "simulation",
+    "buyer_id": "buyer-alpha",
+    "buyer_profile_sha256": "ae33b37e88d29b72ad045ef49d63322e49cd952f83bbd2a645997be58458d94c",
+    "created_at": 1794400263,
+    "currency": "USD",
+    "deadline": 1794400863,
+    "excluded_listings": [],
+    "execution_token": "8937c467981a4fef972540e75905ade2",
+    "fee_bps": 500,
+    "hold_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61:1",
+    "job_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61",
+    "lease_until": 0,
+    "listing_id": "seller-accurate-sum",
+    "max_latency_seconds": 100,
+    "max_price_minor": 300,
+    "min_reliability_bps": 0,
+    "mode": "simulation",
+    "output": {
+      "count": 3,
+      "sum": 42
+    },
+    "output_sha256": "9cbd79daad0ecd16a17142b0b2687a3dacb42c150470b1347364bdc7f6b4ae66",
+    "payload": {
+      "values": [
+        7,
+        11,
+        24
+      ]
+    },
+    "payment_confirmed": true,
+    "prefer_energy": true,
+    "price_minor": 200,
+    "quote": {
+      "expires_at": 1794400323,
+      "fee_bps": 500,
+      "job_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61",
+      "listing_id": "seller-accurate-sum",
+      "price_minor": 200,
+      "profile_sha256": "f009aaf514764a2c096d82e436b191bfd5f1e9cbaf7f837b928de49561b21445",
+      "quote_id": "quote-d7682dd8d587e15ad5f49d87bf5980ad",
+      "score": 785220,
+      "score_components_bps": {
+        "energy": 9523,
+        "latency": 9700,
+        "price": 3333,
+        "reliability": 9900
+      },
+      "score_weights": {
+        "energy": 10,
+        "latency": 20,
+        "price": 30,
+        "reliability": 40
+      },
+      "seller_id": "seller-accurate"
+    },
+    "quotes": [
+      {
+        "expires_at": 1794400323,
+        "fee_bps": 500,
+        "job_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61",
+        "listing_id": "seller-accurate-sum",
+        "price_minor": 200,
+        "profile_sha256": "f009aaf514764a2c096d82e436b191bfd5f1e9cbaf7f837b928de49561b21445",
+        "quote_id": "quote-d7682dd8d587e15ad5f49d87bf5980ad",
+        "score": 785220,
+        "score_components_bps": {
+          "energy": 9523,
+          "latency": 9700,
+          "price": 3333,
+          "reliability": 9900
+        },
+        "score_weights": {
+          "energy": 10,
+          "latency": 20,
+          "price": 30,
+          "reliability": 40
+        },
+        "seller_id": "seller-accurate"
+      },
+      {
+        "expires_at": 1794400323,
+        "fee_bps": 500,
+        "job_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61",
+        "listing_id": "seller-economy-sum",
+        "price_minor": 100,
+        "profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387",
+        "quote_id": "quote-1b932c52b2e42e412ece633d551e6b44",
+        "score": 691720,
+        "score_components_bps": {
+          "energy": 9174,
+          "latency": 8000,
+          "price": 6666,
+          "reliability": 6000
+        },
+        "score_weights": {
+          "energy": 10,
+          "latency": 20,
+          "price": 30,
+          "reliability": 40
+        },
+        "seller_id": "seller-economy"
+      },
+      {
+        "expires_at": 1794400323,
+        "fee_bps": 500,
+        "job_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61",
+        "listing_id": "seller-specialist-sum",
+        "price_minor": 300,
+        "profile_sha256": "bf4a9309658ea0ff099a941b92b6054f91d306339afb92f5e9d4d3fec1a0c0a7",
+        "quote_id": "quote-c343448c316e7a4be8851d502a94e769",
+        "score": 637560,
+        "score_components_bps": {
+          "energy": 9756,
+          "latency": 7000,
+          "price": 0,
+          "reliability": 10000
+        },
+        "score_weights": {
+          "energy": 10,
+          "latency": 20,
+          "price": 30,
+          "reliability": 40
+        },
+        "seller_id": "seller-specialist"
+      }
+    ],
+    "receipt": {
+      "bindings": {
+        "payment": {
+          "rail": "simulation",
+          "redeemable": false
+        }
+      },
+      "commitment": {
+        "salt": "2fa092c5fd995b2d09a4f3dd05593ebc86a90174e8e83bdc94ec247b622dbd83",
+        "scheme": "sha256(salt||digest)",
+        "value": "842034f3392c962e52acda6f0606fbe41813c0d2546831004d3242150e7935bf"
+      },
+      "digest": {
+        "alg": "sha256",
+        "canonicalization": "orc-canon/1",
+        "excludes": [],
+        "value": "4fd5740517cb609c70a63ba759e7bfffafdc196f31cc3bc62a03cabd5cc46410"
+      },
+      "issued_at": "2026-11-11T12:31:03+00:00",
+      "issuer": {
+        "id": "vcx-local-simulation"
+      },
+      "orc": "0.1",
+      "output": {
+        "attempt": 1,
+        "balance_kind": "simulation",
+        "buyer_id": "buyer-alpha",
+        "closed_at": 1794400263,
+        "created_at": 1794400263,
+        "currency": "USD",
+        "exchange_id": "sim-0cc6f9a6edc248e9",
+        "fault": null,
+        "fee_bps": 500,
+        "fee_minor": 10,
+        "identity_references": {
+          "buyer_profile_sha256": "ae33b37e88d29b72ad045ef49d63322e49cd952f83bbd2a645997be58458d94c",
+          "seller_profile_sha256": "f009aaf514764a2c096d82e436b191bfd5f1e9cbaf7f837b928de49561b21445"
+        },
+        "input_sha256": "7d697cfcc730a9adb1b9dc2433032398220d5ad85973828701b6534081b9a4c9",
+        "job_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61",
+        "listing_id": "seller-accurate-sum",
+        "mode": "simulation",
+        "outcome_reason": null,
+        "output_sha256": "9cbd79daad0ecd16a17142b0b2687a3dacb42c150470b1347364bdc7f6b4ae66",
+        "price_minor": 200,
+        "quote_id": "quote-d7682dd8d587e15ad5f49d87bf5980ad",
+        "resource_usage": {
+          "input_bytes": 20,
+          "measured_energy": false,
+          "output_bytes": 20
+        },
+        "seller_id": "seller-accurate",
+        "seller_net_minor": 190,
+        "service_id": "vcx.test.integer_sum.v1",
+        "service_version": "1",
+        "settled_at": 1794400263,
+        "settlement_state": "SETTLED",
+        "started_at": 1794400263,
+        "submitted_at": 1794400263,
+        "verification": {
+          "accepted": true,
+          "at": 1794400263,
+          "independent_research_validation": false,
+          "method": "deterministic_service_contract",
+          "performed_by": "exchange_recomputation"
+        }
+      },
+      "profile": "vcx-delivery/0.2",
+      "subject": {
+        "id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61"
+      }
+    },
+    "request_digest": "8058dd8977ba683312d737b51e3e07a030746cbba43d987b6694db45d31afd91",
+    "required_capabilities": [
+      "integer-sum"
+    ],
+    "security_posture": "",
+    "seller_id": "seller-accurate",
+    "service_id": "vcx.test.integer_sum.v1",
+    "service_version": "1",
+    "settlement": {
+      "actual_settled_funds_minor": 0,
+      "balance_type": "simulation",
+      "buyer": "buyer-alpha",
+      "currency": "USD",
+      "duplicate": false,
+      "fee_bps": 500,
+      "fee_minor": 10,
+      "job": "vcx-e702b00dcf7e556fe724d7d32c9c9a61:1",
+      "price_minor": 200,
+      "redeemable": false,
+      "seller": "seller-accurate",
+      "seller_net_minor": 190,
+      "service_credits": 0,
+      "settlement_state": "SIMULATED_SETTLED",
+      "simulation_only": true
+    },
+    "started_at": 1794400263,
+    "state": "SETTLED",
+    "submitted_at": 1794400263,
+    "updated_at": 1794400263,
+    "verification": {
+      "accepted": true,
+      "at": 1794400263,
+      "independent_research_validation": false,
+      "method": "deterministic_service_contract",
+      "performed_by": "exchange_recomputation"
+    }
+  },
+  "fleet_takeoff_job": {
+    "attempt": 1,
+    "balance_kind": "simulation",
+    "buyer_id": "buyer-beta",
+    "buyer_profile_sha256": "70cbf80baea19a9179c147a04c8c346c01bd13d2a902228d8d6eee068af1488d",
+    "created_at": 1794400324,
+    "currency": "USD",
+    "deadline": 1794400924,
+    "excluded_listings": [],
+    "execution_token": "e7d6e670637c49a9a5dc3f00455610aa",
+    "fee_bps": 500,
+    "hold_id": "vcx-a822f81b18951d00db33bf768debb9a2:1",
+    "job_id": "vcx-a822f81b18951d00db33bf768debb9a2",
+    "lease_until": 0,
+    "listing_id": "seller-specialist-takeoff",
+    "max_latency_seconds": 100,
+    "max_price_minor": 250,
+    "min_reliability_bps": 0,
+    "mode": "simulation",
+    "output": {
+      "assembly_rollups": [
+        {
+          "assembly": "concrete_slab",
+          "item_id": "item-0001",
+          "totals_by_unit": {
+            "yd3": {
+              "exact_qty": "7.778",
+              "net_qty": "7.407",
+              "purchase_qty": "7.780"
+            }
+          },
+          "trade": "concrete"
+        }
+      ],
+      "audit_sha256": "fe93c973776a4d8c5541ba74efcfd9feebaf47458ff377ef2bf09d556617529f",
+      "disclaimer": "Planning-grade deterministic quantity estimate only. Not a guaranteed material order, bid, professional-estimator certification, engineering design, or verification of field conditions, drawing completeness, constructability, code compliance, or supplier packaging. Bundled waste factors are industry-typical planning defaults; confirm project-specific waste, laps, cuts, openings, accessories, minimum orders, and conditions before procurement.",
+      "downstream": {
+        "audit_binding": "audit_sha256",
+        "cost_estimator_ready": true,
+        "quantity_source": "line_items"
+      },
+      "grand_rollup": {
+        "conservation_basis": "unit-resolved; unlike units are never summed",
+        "coverage_complete_for_supplied_items": true,
+        "determinate_line_count": 1,
+        "indeterminate_item_count": 0,
+        "totals_by_unit": {
+          "yd3": {
+            "exact_qty": "7.778",
+            "net_qty": "7.407",
+            "purchase_qty": "7.780"
+          }
+        }
+      },
+      "indeterminate": [],
+      "input_sha256": "62a3d96180b97eedd7cc3dec7d3dedc5e01d3cc303e06fb4dab3ef5314f3ab99",
+      "inputs": {
+        "items": [
+          {
+            "assembly": "concrete_slab",
+            "dimensions": {
+              "length": {
+                "unit": "ft",
+                "value": "20"
+              },
+              "thickness": {
+                "unit": "in",
+                "value": "4"
+              },
+              "width": {
+                "unit": "ft",
+                "value": "30"
+              }
+            },
+            "unit_system": "imperial"
+          }
+        ],
+        "options": {}
+      },
+      "line_items": [
+        {
+          "assembly": "concrete_slab",
+          "exact_qty": "7.778",
+          "formula": "length_ft * width_ft * thickness_ft / ft3_per_yd3",
+          "geometry": {
+            "conversions": [
+              {
+                "conversion_group": "length_ft",
+                "field": "length",
+                "input_unit": "ft",
+                "input_value": "20",
+                "output_unit": "ft",
+                "output_value": "20",
+                "source_id": "nist-sp811-unit-conversions"
+              },
+              {
+                "conversion_group": "length_ft",
+                "field": "width",
+                "input_unit": "ft",
+                "input_value": "30",
+                "output_unit": "ft",
+                "output_value": "30",
+                "source_id": "nist-sp811-unit-conversions"
+              },
+              {
+                "conversion_group": "length_ft",
+                "field": "thickness",
+                "input_unit": "in",
+                "input_value": "4",
+                "output_unit": "ft",
+                "output_value": "0.3333333333333333333333333333",
+                "source_id": "nist-sp811-unit-conversions"
+              }
+            ],
+            "measurement_source": null,
+            "unit_system": "imperial"
+          },
+          "id": "item-0001:ready_mix_concrete",
+          "item_id": "item-0001",
+          "material": "ready_mix_concrete",
+          "material_pack_version": "2026.07.13-v0.1.0",
+          "net_qty": "7.407",
+          "operands": {
+            "ft3_per_yd3": "27",
+            "length_ft": "20",
+            "net_ft3": "200",
+            "net_yd3": "7.407407407407407407407407407",
+            "thickness_ft": "0.3333333333333333333333333333",
+            "width_ft": "30"
+          },
+          "purchase_qty": "7.78",
+          "purchase_rounding": {
+            "increment": "0.01",
+            "mode": "ROUND_CEILING",
+            "note": null,
+            "source_id": "viridis-builder-spec-material-pack-v0.1.0",
+            "unit": "yd3"
+          },
+          "quantity_semantics": {
+            "exact_qty": "waste-adjusted calculation quantity at 0.001 output precision",
+            "net_qty": "geometry before waste",
+            "purchase_qty": "waste-adjusted quantity rounded up to purchase increment"
+          },
+          "source_ids": [
+            "aci-ct25-normalweight-concrete",
+            "nist-sp811-unit-conversions",
+            "viridis-builder-spec-material-pack-v0.1.0"
+          ],
+          "status": "determinate",
+          "trade": "concrete",
+          "unit": "yd3",
+          "waste": {
+            "basis": "material_pack_default",
+            "multiplier": "1.05",
+            "note": "Planning allowance; project placement and form conditions govern.",
+            "overridden": false,
+            "percent": "5",
+            "source_id": "viridis-builder-spec-material-pack-v0.1.0"
+          },
+          "weight": {
+            "density_lb_per_yd3": "4050",
+            "net_lb": "30000.000"
+          }
+        }
+      ],
+      "lineage": {
+        "input_sha256": "62a3d96180b97eedd7cc3dec7d3dedc5e01d3cc303e06fb4dab3ef5314f3ab99",
+        "material_pack": {
+          "sha256": "7d9ce8d96fd0999b721dd401550381e5e67104c2854f86caba46b957321272b6",
+          "version": "2026.07.13-v0.1.0"
+        },
+        "producer": {
+          "agent_id": "quantity-takeoff-agent",
+          "version": "0.1.0"
+        },
+        "source_ids_used": [
+          "aci-ct25-normalweight-concrete",
+          "nist-sp811-unit-conversions",
+          "viridis-builder-spec-material-pack-v0.1.0"
+        ],
+        "upstream_measurements": []
+      },
+      "material_pack": {
+        "effective_as_of": "2026-07-13",
+        "sha256": "7d9ce8d96fd0999b721dd401550381e5e67104c2854f86caba46b957321272b6",
+        "sources_used": [
+          {
+            "authority": "ACI Concrete Terminology CT-25",
+            "date": "2025",
+            "id": "aci-ct25-normalweight-concrete",
+            "publisher": "American Concrete Institute",
+            "title": "Concrete Terminology: normalweight concrete density definition",
+            "url": "https://www.concrete.org/portals/0/files/pdf/aci_concrete_terminology.pdf"
+          },
+          {
+            "authority": "NIST Special Publication 811",
+            "date": "2008",
+            "id": "nist-sp811-unit-conversions",
+            "publisher": "National Institute of Standards and Technology",
+            "title": "Guide for the Use of the International System of Units",
+            "url": "https://www.nist.gov/pml/special-publication-811"
+          },
+          {
+            "authority": "Non-authoritative Viridis builder-spec pin",
+            "date": "2026-07-13",
+            "id": "viridis-builder-spec-material-pack-v0.1.0",
+            "note": "Planning defaults compiled for deterministic MVP behavior. Confirm project, manufacturer, supplier, specification, lap, cut, accessory, compaction, and minimum-order requirements before procurement.",
+            "publisher": "Viridis",
+            "title": "MVP material constants, waste defaults, purchase increments, pitch multipliers, coverage and density pins",
+            "url": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/deployment/SOL_TASK_quantity-takeoff_build.md"
+          }
+        ],
+        "version": "2026.07.13-v0.1.0"
+      },
+      "notary_payload": {
+        "content_digest": "fe93c973776a4d8c5541ba74efcfd9feebaf47458ff377ef2bf09d556617529f",
+        "context": "quantity-takeoff:takeoff:qt-fe93c973776a4d8c5541ba74",
+        "digest_algorithm": "sha256"
+      },
+      "project_id": null,
+      "revision_id": null,
+      "takeoff_status": "complete_for_supplied_items",
+      "trade_rollups": {
+        "concrete": {
+          "totals_by_unit": {
+            "yd3": {
+              "exact_qty": "7.778",
+              "net_qty": "7.407",
+              "purchase_qty": "7.780"
+            }
+          }
+        }
+      }
+    },
+    "output_sha256": "caf255722108fbb49fe5261bdfd414e03dd986c4aa30733d05da6a9cfe409f54",
+    "payload": {
+      "items": [
+        {
+          "assembly": "concrete_slab",
+          "dimensions": {
+            "length": {
+              "unit": "ft",
+              "value": "20"
+            },
+            "thickness": {
+              "unit": "in",
+              "value": "4"
+            },
+            "width": {
+              "unit": "ft",
+              "value": "30"
+            }
+          },
+          "unit_system": "imperial"
+        }
+      ]
+    },
+    "payment_confirmed": true,
+    "prefer_energy": false,
+    "price_minor": 250,
+    "quote": {
+      "expires_at": 1794400384,
+      "fee_bps": 500,
+      "job_id": "vcx-a822f81b18951d00db33bf768debb9a2",
+      "listing_id": "seller-specialist-takeoff",
+      "price_minor": 250,
+      "profile_sha256": "bf4a9309658ea0ff099a941b92b6054f91d306339afb92f5e9d4d3fec1a0c0a7",
+      "quote_id": "quote-6e146aae1a85fb920fe8a7daaf18293c",
+      "score": 572000,
+      "score_components_bps": {
+        "energy": 0,
+        "latency": 9000,
+        "price": 0,
+        "reliability": 9800
+      },
+      "score_weights": {
+        "energy": 10,
+        "latency": 20,
+        "price": 30,
+        "reliability": 40
+      },
+      "seller_id": "seller-specialist"
+    },
+    "quotes": [
+      {
+        "expires_at": 1794400384,
+        "fee_bps": 500,
+        "job_id": "vcx-a822f81b18951d00db33bf768debb9a2",
+        "listing_id": "seller-specialist-takeoff",
+        "price_minor": 250,
+        "profile_sha256": "bf4a9309658ea0ff099a941b92b6054f91d306339afb92f5e9d4d3fec1a0c0a7",
+        "quote_id": "quote-6e146aae1a85fb920fe8a7daaf18293c",
+        "score": 572000,
+        "score_components_bps": {
+          "energy": 0,
+          "latency": 9000,
+          "price": 0,
+          "reliability": 9800
+        },
+        "score_weights": {
+          "energy": 10,
+          "latency": 20,
+          "price": 30,
+          "reliability": 40
+        },
+        "seller_id": "seller-specialist"
+      }
+    ],
+    "receipt": {
+      "bindings": {
+        "payment": {
+          "rail": "simulation",
+          "redeemable": false
+        }
+      },
+      "commitment": {
+        "salt": "076cceac7b0459320a58e6b43337e4293f62b133c6be1bc20c63a1ff93ffb97c",
+        "scheme": "sha256(salt||digest)",
+        "value": "5e642049b3cbee53f271982dc40b7ebf26393f04853a2cf938d2118bb3ebe5d9"
+      },
+      "digest": {
+        "alg": "sha256",
+        "canonicalization": "orc-canon/1",
+        "excludes": [],
+        "value": "fb471a6b07d9dc86353aaac48daa8ec1fde655e5e64ce1dfe83a853975dab3b3"
+      },
+      "issued_at": "2026-11-11T12:32:04+00:00",
+      "issuer": {
+        "id": "vcx-local-simulation"
+      },
+      "orc": "0.1",
+      "output": {
+        "attempt": 1,
+        "balance_kind": "simulation",
+        "buyer_id": "buyer-beta",
+        "closed_at": 1794400324,
+        "created_at": 1794400324,
+        "currency": "USD",
+        "exchange_id": "sim-0cc6f9a6edc248e9",
+        "fault": null,
+        "fee_bps": 500,
+        "fee_minor": 13,
+        "identity_references": {
+          "buyer_profile_sha256": "70cbf80baea19a9179c147a04c8c346c01bd13d2a902228d8d6eee068af1488d",
+          "seller_profile_sha256": "bf4a9309658ea0ff099a941b92b6054f91d306339afb92f5e9d4d3fec1a0c0a7"
+        },
+        "input_sha256": "d8313563df8dfff2616e66ba3bfafd0fa55b8188b73a8d5364b9354d67f70eca",
+        "job_id": "vcx-a822f81b18951d00db33bf768debb9a2",
+        "listing_id": "seller-specialist-takeoff",
+        "mode": "simulation",
+        "outcome_reason": null,
+        "output_sha256": "caf255722108fbb49fe5261bdfd414e03dd986c4aa30733d05da6a9cfe409f54",
+        "price_minor": 250,
+        "quote_id": "quote-6e146aae1a85fb920fe8a7daaf18293c",
+        "resource_usage": {
+          "input_bytes": 189,
+          "measured_energy": false,
+          "output_bytes": 5487
+        },
+        "seller_id": "seller-specialist",
+        "seller_net_minor": 237,
+        "service_id": "fleet.quantity_takeoff.v1",
+        "service_version": "1",
+        "settled_at": 1794400324,
+        "settlement_state": "SETTLED",
+        "started_at": 1794400324,
+        "submitted_at": 1794400324,
+        "verification": {
+          "accepted": true,
+          "at": 1794400324,
+          "independent_research_validation": false,
+          "method": "deterministic_service_contract",
+          "performed_by": "exchange_recomputation"
+        }
+      },
+      "profile": "vcx-delivery/0.2",
+      "subject": {
+        "id": "vcx-a822f81b18951d00db33bf768debb9a2"
+      }
+    },
+    "request_digest": "788a303d78c344c88ce53a86e51235651cc4b50a58b0d20e9e2f518660d39df8",
+    "required_capabilities": [
+      "quantity-takeoff"
+    ],
+    "security_posture": "",
+    "seller_id": "seller-specialist",
+    "service_id": "fleet.quantity_takeoff.v1",
+    "service_version": "1",
+    "settlement": {
+      "actual_settled_funds_minor": 0,
+      "balance_type": "simulation",
+      "buyer": "buyer-beta",
+      "currency": "USD",
+      "duplicate": false,
+      "fee_bps": 500,
+      "fee_minor": 13,
+      "job": "vcx-a822f81b18951d00db33bf768debb9a2:1",
+      "price_minor": 250,
+      "redeemable": false,
+      "seller": "seller-specialist",
+      "seller_net_minor": 237,
+      "service_credits": 0,
+      "settlement_state": "SIMULATED_SETTLED",
+      "simulation_only": true
+    },
+    "started_at": 1794400324,
+    "state": "SETTLED",
+    "submitted_at": 1794400324,
+    "updated_at": 1794400324,
+    "verification": {
+      "accepted": true,
+      "at": 1794400324,
+      "independent_research_validation": false,
+      "method": "deterministic_service_contract",
+      "performed_by": "exchange_recomputation"
+    }
+  },
+  "live_charges": 0,
+  "live_payouts": 0,
+  "mode": "simulation",
+  "name": "Viridis Compute Exchange v0.1 local demonstration",
+  "participants": {
+    "buyers": 2,
+    "identity": "ephemeral Ed25519 key possession in existing Market Network",
+    "sellers": 3
+  },
+  "ranking": {
+    "lowest_price_seller": "seller-economy",
+    "quotes": [
+      {
+        "expires_at": 1794400323,
+        "fee_bps": 500,
+        "job_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61",
+        "listing_id": "seller-accurate-sum",
+        "price_minor": 200,
+        "profile_sha256": "f009aaf514764a2c096d82e436b191bfd5f1e9cbaf7f837b928de49561b21445",
+        "quote_id": "quote-d7682dd8d587e15ad5f49d87bf5980ad",
+        "score": 785220,
+        "score_components_bps": {
+          "energy": 9523,
+          "latency": 9700,
+          "price": 3333,
+          "reliability": 9900
+        },
+        "score_weights": {
+          "energy": 10,
+          "latency": 20,
+          "price": 30,
+          "reliability": 40
+        },
+        "seller_id": "seller-accurate"
+      },
+      {
+        "expires_at": 1794400323,
+        "fee_bps": 500,
+        "job_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61",
+        "listing_id": "seller-economy-sum",
+        "price_minor": 100,
+        "profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387",
+        "quote_id": "quote-1b932c52b2e42e412ece633d551e6b44",
+        "score": 691720,
+        "score_components_bps": {
+          "energy": 9174,
+          "latency": 8000,
+          "price": 6666,
+          "reliability": 6000
+        },
+        "score_weights": {
+          "energy": 10,
+          "latency": 20,
+          "price": 30,
+          "reliability": 40
+        },
+        "seller_id": "seller-economy"
+      },
+      {
+        "expires_at": 1794400323,
+        "fee_bps": 500,
+        "job_id": "vcx-e702b00dcf7e556fe724d7d32c9c9a61",
+        "listing_id": "seller-specialist-sum",
+        "price_minor": 300,
+        "profile_sha256": "bf4a9309658ea0ff099a941b92b6054f91d306339afb92f5e9d4d3fec1a0c0a7",
+        "quote_id": "quote-c343448c316e7a4be8851d502a94e769",
+        "score": 637560,
+        "score_components_bps": {
+          "energy": 9756,
+          "latency": 7000,
+          "price": 0,
+          "reliability": 10000
+        },
+        "score_weights": {
+          "energy": 10,
+          "latency": 20,
+          "price": 30,
+          "reliability": 40
+        },
+        "seller_id": "seller-specialist"
+      }
+    ],
+    "selected_seller": "seller-accurate"
+  },
+  "reconciliation": {
+    "actual_settled_funds_minor": 0,
+    "available_minor": 900,
+    "balance_type": "simulation",
+    "conserved": true,
+    "currency": "USD",
+    "errors": [],
+    "external_payment_settlement_minor": 0,
+    "external_simulated_funding_minor": 1300,
+    "held_minor": 0,
+    "journal_net_minor": 0,
+    "marketplace_fees_minor": 28,
+    "operations": 16,
+    "pending_earnings_minor": 372,
+    "redeemable": false,
+    "service_credits": 0,
+    "simulation_only": true,
+    "simulation_released_minor": 200,
+    "status": "ok"
+  },
+  "redeemable": false,
+  "registered_capacity": [
+    {
+      "authorized_capacity": true,
+      "available_from": 1794400262,
+      "capabilities": [
+        "integer-sum"
+      ],
+      "currency": "USD",
+      "description": "Deterministic test provider summing bounded integers.",
+      "energy_millijoules": 500,
+      "energy_provenance": "seller_declared_simulation",
+      "expires_at": 1794403863,
+      "latency_seconds": 3,
+      "listing_id": "seller-accurate-sum",
+      "max_concurrent_jobs": 2,
+      "price_minor": 200,
+      "profile_sha256": "f009aaf514764a2c096d82e436b191bfd5f1e9cbaf7f837b928de49561b21445",
+      "reliability_bps": 9900,
+      "reliability_provenance": "seller_declared_simulation",
+      "resource_requirements": {
+        "max_input_bytes": 32768,
+        "max_output_bytes": 100000,
+        "network_access": false,
+        "runtime": "trusted_local_python"
+      },
+      "security_requirements": "signed_profile_and_fixed_pure_provider",
+      "seller_id": "seller-accurate",
+      "service_id": "vcx.test.integer_sum.v1",
+      "service_version": "1",
+      "task_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "values": {
+            "items": {
+              "maximum": 1000000000,
+              "minimum": -1000000000,
+              "type": "integer"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "values"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "authorized_capacity": true,
+      "available_from": 1794400262,
+      "capabilities": [
+        "integer-sum"
+      ],
+      "currency": "USD",
+      "description": "Deterministic test provider summing bounded integers.",
+      "energy_millijoules": 900,
+      "energy_provenance": "seller_declared_simulation",
+      "expires_at": 1794403863,
+      "latency_seconds": 20,
+      "listing_id": "seller-economy-sum",
+      "max_concurrent_jobs": 1,
+      "price_minor": 100,
+      "profile_sha256": "54eb3d070a5ed794ab8f22a461edfac7b073a48d208342a1fe58c6a448106387",
+      "reliability_bps": 6000,
+      "reliability_provenance": "seller_declared_simulation",
+      "resource_requirements": {
+        "max_input_bytes": 32768,
+        "max_output_bytes": 100000,
+        "network_access": false,
+        "runtime": "trusted_local_python"
+      },
+      "security_requirements": "signed_profile_and_fixed_pure_provider",
+      "seller_id": "seller-economy",
+      "service_id": "vcx.test.integer_sum.v1",
+      "service_version": "1",
+      "task_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "values": {
+            "items": {
+              "maximum": 1000000000,
+              "minimum": -1000000000,
+              "type": "integer"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "values"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "authorized_capacity": true,
+      "available_from": 1794400262,
+      "capabilities": [
+        "integer-sum"
+      ],
+      "currency": "USD",
+      "description": "Deterministic test provider summing bounded integers.",
+      "energy_millijoules": 250,
+      "energy_provenance": "seller_declared_simulation",
+      "expires_at": 1794403863,
+      "latency_seconds": 30,
+      "listing_id": "seller-specialist-sum",
+      "max_concurrent_jobs": 1,
+      "price_minor": 300,
+      "profile_sha256": "bf4a9309658ea0ff099a941b92b6054f91d306339afb92f5e9d4d3fec1a0c0a7",
+      "reliability_bps": 10000,
+      "reliability_provenance": "seller_declared_simulation",
+      "resource_requirements": {
+        "max_input_bytes": 32768,
+        "max_output_bytes": 100000,
+        "network_access": false,
+        "runtime": "trusted_local_python"
+      },
+      "security_requirements": "signed_profile_and_fixed_pure_provider",
+      "seller_id": "seller-specialist",
+      "service_id": "vcx.test.integer_sum.v1",
+      "service_version": "1",
+      "task_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "values": {
+            "items": {
+              "maximum": 1000000000,
+              "minimum": -1000000000,
+              "type": "integer"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "values"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "authorized_capacity": true,
+      "available_from": 1794400262,
+      "capabilities": [
+        "quantity-takeoff",
+        "construction-estimation"
+      ],
+      "currency": "USD",
+      "description": "Fleet material-pack takeoff for up to 25 concrete slabs.",
+      "energy_millijoules": 600,
+      "energy_provenance": "seller_declared_simulation",
+      "expires_at": 1794403863,
+      "latency_seconds": 10,
+      "listing_id": "seller-specialist-takeoff",
+      "max_concurrent_jobs": 1,
+      "price_minor": 250,
+      "profile_sha256": "bf4a9309658ea0ff099a941b92b6054f91d306339afb92f5e9d4d3fec1a0c0a7",
+      "reliability_bps": 9800,
+      "reliability_provenance": "seller_declared_simulation",
+      "resource_requirements": {
+        "max_input_bytes": 32768,
+        "max_output_bytes": 100000,
+        "network_access": false,
+        "runtime": "trusted_local_python"
+      },
+      "security_requirements": "signed_profile_and_fixed_pure_provider",
+      "seller_id": "seller-specialist",
+      "service_id": "fleet.quantity_takeoff.v1",
+      "service_version": "1",
+      "task_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "assembly": {
+                  "const": "concrete_slab"
+                },
+                "dimensions": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "length": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "unit": {
+                          "enum": [
+                            "ft",
+                            "in",
+                            "yd",
+                            "m",
+                            "cm",
+                            "mm"
+                          ]
+                        },
+                        "value": {
+                          "description": "Positive decimal, at most 1000000.",
+                          "oneOf": [
+                            {
+                              "maximum": 1000000,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            {
+                              "maxLength": 14,
+                              "pattern": "^(?:0|[1-9][0-9]{0,6})(?:\\.[0-9]{1,6})?$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "unit"
+                      ],
+                      "type": "object"
+                    },
+                    "thickness": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "unit": {
+                          "enum": [
+                            "ft",
+                            "in",
+                            "yd",
+                            "m",
+                            "cm",
+                            "mm"
+                          ]
+                        },
+                        "value": {
+                          "description": "Positive decimal, at most 1000000.",
+                          "oneOf": [
+                            {
+                              "maximum": 1000000,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            {
+                              "maxLength": 14,
+                              "pattern": "^(?:0|[1-9][0-9]{0,6})(?:\\.[0-9]{1,6})?$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "unit"
+                      ],
+                      "type": "object"
+                    },
+                    "width": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "unit": {
+                          "enum": [
+                            "ft",
+                            "in",
+                            "yd",
+                            "m",
+                            "cm",
+                            "mm"
+                          ]
+                        },
+                        "value": {
+                          "description": "Positive decimal, at most 1000000.",
+                          "oneOf": [
+                            {
+                              "maximum": 1000000,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            {
+                              "maxLength": 14,
+                              "pattern": "^(?:0|[1-9][0-9]{0,6})(?:\\.[0-9]{1,6})?$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "unit"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "length",
+                    "width",
+                    "thickness"
+                  ],
+                  "type": "object"
+                },
+                "id": {
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9.-]{0,39}$",
+                  "type": "string"
+                },
+                "unit_system": {
+                  "enum": [
+                    "imperial",
+                    "SI"
+                  ]
+                }
+              },
+              "required": [
+                "assembly",
+                "unit_system",
+                "dimensions"
+              ],
+              "type": "object"
+            },
+            "maxItems": 25,
+            "minItems": 1,
+            "type": "array"
+          },
+          "options": {
+            "maxProperties": 0,
+            "type": "object"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      }
+    }
+  ],
+  "reinvestment": {
+    "actor": "seller-accurate",
+    "actual_settled_funds_minor": 0,
+    "amount_minor": 150,
+    "balance_type": "simulation",
+    "budget": {
+      "actor": "seller-accurate",
+      "actual_settled_funds_minor": 0,
+      "allowed_reinvestment_minor": 2,
+      "available_budget_minor": 150,
+      "available_minor": 150,
+      "balance_type": "simulation",
+      "currency": "USD",
+      "held_minor": 0,
+      "initial_simulation_funding_minor": 0,
+      "pending_earnings_minor": 40,
+      "policy": {
+        "max_exposure_minor": 500,
+        "max_spend_minor": 1000,
+        "reinvest_bps": 8000,
+        "reserve_minor": 0
+      },
+      "redeemable": false,
+      "service_credits": 0,
+      "simulation_only": true,
+      "spent_minor": 0
+    },
+    "currency": "USD",
+    "duplicate": false,
+    "redeemable": false,
+    "request_id": "demo-25ff98b6c8354e92aa45038b5955595a",
+    "service_credits": 0,
+    "simulation_only": true
+  },
+  "seller_earnings": {
+    "seller-accurate": {
+      "actor": "seller-accurate",
+      "actual_revenue_minor": 0,
+      "actual_settled_funds_minor": 0,
+      "allowed_reinvestment_minor": 2,
+      "balance_type": "simulation",
+      "currency": "USD",
+      "gross_service_revenue_minor": 200,
+      "marketplace_fees_paid_minor": 10,
+      "net_service_revenue_minor": 190,
+      "pending_earnings_kind": "simulation_proceeds",
+      "pending_earnings_minor": 40,
+      "realized_margin_minor": 90,
+      "redeemable": false,
+      "reinvested_minor": 150,
+      "service_credits": 0,
+      "simulation_only": true,
+      "spent_minor": 100
+    },
+    "seller-economy": {
+      "actor": "seller-economy",
+      "actual_revenue_minor": 0,
+      "actual_settled_funds_minor": 0,
+      "allowed_reinvestment_minor": 76,
+      "balance_type": "simulation",
+      "currency": "USD",
+      "gross_service_revenue_minor": 100,
+      "marketplace_fees_paid_minor": 5,
+      "net_service_revenue_minor": 95,
+      "pending_earnings_kind": "simulation_proceeds",
+      "pending_earnings_minor": 95,
+      "realized_margin_minor": 95,
+      "redeemable": false,
+      "reinvested_minor": 0,
+      "service_credits": 0,
+      "simulation_only": true,
+      "spent_minor": 0
+    },
+    "seller-specialist": {
+      "actor": "seller-specialist",
+      "actual_revenue_minor": 0,
+      "actual_settled_funds_minor": 0,
+      "allowed_reinvestment_minor": 189,
+      "balance_type": "simulation",
+      "currency": "USD",
+      "gross_service_revenue_minor": 250,
+      "marketplace_fees_paid_minor": 13,
+      "net_service_revenue_minor": 237,
+      "pending_earnings_kind": "simulation_proceeds",
+      "pending_earnings_minor": 237,
+      "realized_margin_minor": 237,
+      "redeemable": false,
+      "reinvested_minor": 0,
+      "service_credits": 0,
+      "simulation_only": true,
+      "spent_minor": 0
+    }
+  }
+}

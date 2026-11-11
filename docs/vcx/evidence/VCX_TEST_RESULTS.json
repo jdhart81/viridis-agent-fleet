@@ -1,0 +1,181 @@
+{
+  "status": "local_simulation_mvp_passed",
+  "balance_type": "simulation",
+  "actual_revenue_minor": 0,
+  "live_charges": 0,
+  "live_payouts": 0,
+  "source": {
+    "repository": "jdhart81/viridis-agent-fleet",
+    "branch": "codex/vcx-v01-20261110",
+    "base_commit": "4a4e109750ac6c7a226d229c5a7fdc1b7336e7ee",
+    "verified_main_commit": "eb9e05d60c10bfc89ef7cef898d9ea54176885b5",
+    "identical_tree": "f3c2f4183d42c5435e8321ddad0bffcc1b62583c",
+    "complete_ancestry_available": false,
+    "service_inspected_commit": "20df076dfaf898138071783923070ba83fbe7fe2"
+  },
+  "runtime": {
+    "python": "3.14.3",
+    "platform": "Darwin"
+  },
+  "tests": {
+    "new_vcx": {
+      "passed": 99,
+      "failed": 0
+    },
+    "existing_market": {
+      "passed": 56,
+      "skipped": 1,
+      "failed": 0
+    },
+    "orc": {
+      "passed": 15,
+      "failed": 0
+    },
+    "targeted_total_passed": 170,
+    "broader_fleet_run": {
+      "passed": 1611,
+      "failed": 18,
+      "skipped": 5,
+      "clean_agents": 32,
+      "total_agents": 34,
+      "note": "Broader run preceded final additions; marketplace was 144 passed then, final marketplace rerun is 155 passed and 1 skipped."
+    },
+    "baseline": {
+      "settlement_failures": [
+        "tests/test_core.py::Agent::test_contract_settle_verify_roundtrip",
+        "tests/test_core.py::Agent::test_decided_before_closure_settles",
+        "tests/test_core.py::Agent::test_decided_strikes_across_series",
+        "tests/test_core.py::Agent::test_determinism",
+        "tests/test_core.py::Agent::test_health_describe",
+        "tests/test_core.py::Agent::test_ingest_evidence_and_bounds",
+        "tests/test_core.py::Agent::test_never_raises_and_errors_teach",
+        "tests/test_core.py::Agent::test_register_idempotent",
+        "tests/test_core.py::Agent::test_register_validates",
+        "tests/test_core.py::Agent::test_required_remainder_action_and_explain",
+        "tests/test_core.py::Agent::test_restoration_share_series",
+        "tests/test_core.py::Agent::test_revisions_visible",
+        "tests/test_core.py::Agent::test_rules_translate",
+        "tests/test_core.py::Agent::test_settlement_immutable_and_model_free",
+        "tests/test_core.py::Agent::test_status_facts_vs_model",
+        "tests/test_core.py::Boundaries::test_settlement_record_is_never_overwritten",
+        "tests/test_core.py::Boundaries::test_verify_each_check_separately"
+      ],
+      "eco_funding_failures": [
+        "tests/test_fleet_admission.py::test_gateway_emulation_over_http"
+      ],
+      "same_settlement_failures": true,
+      "same_eco_funding_failures": true,
+      "causes": [
+        "Python 3.14 get_event_loop() with no current loop",
+        "Sandbox denies loopback HTTP listener bind"
+      ]
+    },
+    "other_checks": [
+      "Python compileall passed",
+      "public boundary guard passed on staged implementation, tests and evidence",
+      "discovery index --check passed",
+      "real stdio MCP initialize/list_tools/list_capacity passed (17 tools)",
+      "independent review: 20 cross-connection cancellation/dispute vs settlement races conserved"
+    ]
+  },
+  "demo": {
+    "seller_agents": 3,
+    "buyer_agents": 2,
+    "listings": 4,
+    "settled_jobs": 3,
+    "first_price_minor": 200,
+    "first_fee_minor": 10,
+    "first_seller_pending_minor": 190,
+    "authorized_reinvestment_minor": 150,
+    "earnings_funded_job_price_minor": 100,
+    "fleet_takeoff_quantity_yd3": "7.407",
+    "reconciliation": {
+      "actual_settled_funds_minor": 0,
+      "available_minor": 900,
+      "balance_type": "simulation",
+      "conserved": true,
+      "currency": "USD",
+      "errors": [],
+      "external_payment_settlement_minor": 0,
+      "external_simulated_funding_minor": 1300,
+      "held_minor": 0,
+      "journal_net_minor": 0,
+      "marketplace_fees_minor": 28,
+      "operations": 16,
+      "pending_earnings_minor": 372,
+      "redeemable": false,
+      "service_credits": 0,
+      "simulation_only": true,
+      "simulation_released_minor": 200,
+      "status": "ok"
+    }
+  },
+  "external_side_effects": [
+    "Read-only GitHub repository inspection",
+    "Local filesystem, SQLite simulation databases and subprocesses only; no external execution in VCX"
+  ],
+  "not_performed": [
+    "push",
+    "merge",
+    "production deployment",
+    "live charges",
+    "payouts",
+    "production credential changes",
+    "paid service publication"
+  ],
+  "remaining_gates": [
+    "Fetch complete upstream ancestry in a network/Keychain-capable session before PR",
+    "Resolve separate pre-existing Fleet/environment test failures",
+    "Review exact VCX seller rights, account eligibility, funds flow, disputes and counsel requirements",
+    "Separately authorize and execute Stripe sandbox integration before considering any live mode"
+  ],
+  "review_2026_11_11": {
+    "reviewer": "independent review session (Claude)",
+    "runtime": {
+      "python": "3.10.12",
+      "platform": "Linux"
+    },
+    "pre_fix_reproduction": {
+      "new_vcx_passed": 99,
+      "market_passed": 155,
+      "market_skipped": 1,
+      "demo_reconciliation_identical": true
+    },
+    "post_fix": {
+      "new_vcx_passed": 125,
+      "market_passed": 181,
+      "market_skipped": 1,
+      "failed": 0,
+      "regression_tests_added": 26,
+      "existing_tests_updated": 2,
+      "demo_reconciliation_identical": true
+    },
+    "invariants_added": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5",
+      "R6",
+      "R7",
+      "R8",
+      "R9"
+    ],
+    "existing_tracked_files_changed": [
+      "agent-market-network-agent/src/core.py"
+    ],
+    "not_repeated": [
+      "broader Fleet run",
+      "20-race ad hoc concurrency review"
+    ],
+    "not_performed": [
+      "push",
+      "merge",
+      "production deployment",
+      "live charges",
+      "payouts",
+      "production credential changes",
+      "paid service publication"
+    ]
+  }
+}
