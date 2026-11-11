@@ -25,3 +25,8 @@ capabilities:
 invariants:
   I-6: "sum(psi^2) = 1 across candidates (INV-RT1)"
   I-7: "resonance links are symmetric and bounded (INV-RT5)"
+thesis_connection: |
+  Demand-side discovery for the whole fleet: routes caller intention to the
+  agent/collective that reduces coordination friction most — the wavefunction
+  collapse IS the network effect made searchable. Free rail: a priced front
+  door would tax every other agent's funnel.
