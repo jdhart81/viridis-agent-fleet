@@ -26,6 +26,13 @@ ENGINES = {
                                {"credit": "48E", "facts": {"project_cost": 2400000,
                                                            "capacity_mw": 1.5}}),
 }
+COMPUTES = {
+    "ghg-ledger-agent": {"complete_for_supplied_activities"},
+    "quantity-takeoff-agent": {"complete_for_supplied_items"},
+    "taxcredit-engine-agent": {"eligible"},
+    # A draft without a GHG result is complete in form with explicit gaps.
+    "disclosure-compiler-agent": {"partial"},
+}
 PROBE = r'''
 import asyncio, json, sys, inspect
 sys.path[:0] = [sys.argv[1], sys.argv[2]]
@@ -63,7 +70,10 @@ def probe(request):
 def test_published_example_computes_with_no_help_needed(probe):
     agent, status_key, got = probe
     assert got["good"]["status"] == "ok", agent
-    assert got["good"]["data"][status_key] not in ("indeterminate", None), agent
+    data = got["good"]["data"]
+    # Every line of the published example computes: no partial or indeterminate result.
+    assert data[status_key] in COMPUTES[agent], (agent, data[status_key])
+    assert not data.get("indeterminate"), (agent, data.get("indeterminate"))
     assert "first_call_help" not in got["good"], agent
 
 

@@ -54,9 +54,9 @@ EXAMPLE_REQUEST = {
             "year": 2023
         },
         {
-            "id": "fleet-fuel",
-            "activity_type": "mobile_combustion_gasoline",
-            "quantity": "500",
+            "id": "backup-generator",
+            "activity_type": "stationary_combustion_diesel",
+            "quantity": "400",
             "unit": "gallons",
             "region": "US",
             "year": 2025
@@ -270,7 +270,8 @@ class GHGLedgerCore:
         if (isinstance(input_data, dict) and input_data.get("action") == "calculate_inventory"
                 and isinstance(response, dict)
                 and (response.get("status") != "ok"
-                     or (response.get("data") or {}).get("inventory_status") == "indeterminate")):
+                     or (response.get("data") or {}).get("inventory_status")
+                     in ("indeterminate", "partial_indeterminate"))):
             response = {**response, "first_call_help": deepcopy(FIRST_CALL_HELP)}
         return response
 
