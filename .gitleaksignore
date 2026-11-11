@@ -1,10 +1,3 @@
 # false positive: empty DATADOG_API_KEY; regex spans newline into
 # PROMETHEUS_ENABLED=true. Reviewed by CEO agent 2026-09-28.
 protogen-agent/protogen-config-doc.md:generic-api-key:168
-# false positive: internal job-fencing values (not credentials) in the first,
-# superseded VCX evidence commit on the closed branch vcx-v01-simulation
-# (PR #160). The value is no longer emitted. Reviewed by CEO agent 2026-11-11;
-# remove these three lines once that branch is deleted.
-docs/vcx/evidence/VCX_DEMO_RESULT.json:generic-api-key:145
-docs/vcx/evidence/VCX_DEMO_RESULT.json:generic-api-key:652
-docs/vcx/evidence/VCX_DEMO_RESULT.json:generic-api-key:889
