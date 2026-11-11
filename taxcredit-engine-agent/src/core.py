@@ -37,6 +37,42 @@ RULE_PACK_SHA256 = hashlib.sha256(_RAW_RULES).hexdigest()
 CENT = Decimal("0.01")
 
 
+# FC1: one complete request that computes. The tool description, describe() and
+# every failed or empty calculation show this same request, and a test runs it.
+EXAMPLE_REQUEST = {
+    "credit": "48E",
+    "facts": {
+        "tax_year": 2026,
+        "tax_year_begin_date": "2026-01-01",
+        "lifecycle_emissions_g_co2e_per_kwh": "0",
+        "placed_in_service_date": "2026-01-01",
+        "construction_begin_date": "2025-01-01",
+        "produced_in_us": True,
+        "nameplate_capacity_mw": "2",
+        "pwa_met": True,
+        "specified_foreign_entity": False,
+        "foreign_influenced_entity": False,
+        "material_assistance_from_pfe": False,
+        "technology": "geothermal",
+        "tax_exempt_bond_financing_percent": "0",
+        "qualified_investment_usd": "1000000",
+        "claimed_45y": False,
+        "domestic_content_met": True,
+        "energy_community": True,
+        "low_income_bonus_percentage_points": "0",
+        "low_income_allocation_received": False,
+        "low_income_allocation_ratio_percent": "0"
+    }
+}
+FIRST_CALL_HELP = {
+    "why": "the request did not produce a determinate result",
+    "example_request": EXAMPLE_REQUEST,
+    "example_tool": "calculate_tax_credit",
+    "discover_with": ["list_rule_packs", "get_rule_pack"],
+    "note": ("facts uses the exact fact names of the credit's rule pack; a missing fact returns indeterminate. get_rule_pack lists the facts each credit requires."),
+}
+
+
 @dataclass
 class AgentConfig:
     name: str = "taxcredit-engine-agent"
@@ -145,6 +181,7 @@ class TaxCreditEngineCore:
 
     def describe(self) -> dict:
         return {
+            "example_request": deepcopy(EXAMPLE_REQUEST),
             "name": self.config.name,
             "version": self.config.version,
             "description": ("Deterministic, auditable scenario estimates for US "
@@ -167,6 +204,20 @@ class TaxCreditEngineCore:
                 "timestamp": _now()}
 
     async def process(self, input_data: dict) -> dict:
+        """FC1: a calculation that fails or computes nothing returns a working example.
+
+        The help sits beside ``data``, never inside it, so audit hashes and
+        verify_result are unaffected.
+        """
+        response = await self._process(input_data)
+        if (isinstance(input_data, dict) and input_data.get("action") == "calculate"
+                and isinstance(response, dict)
+                and (response.get("status") != "ok"
+                     or (response.get("data") or {}).get("calculation_status") == "indeterminate")):
+            response = {**response, "first_call_help": deepcopy(FIRST_CALL_HELP)}
+        return response
+
+    async def _process(self, input_data: dict) -> dict:
         try:
             if not isinstance(input_data, dict):
                 raise ValidationError("input must be an object", "input",

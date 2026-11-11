@@ -41,6 +41,38 @@ _DERIVED_AUDIT_FIELDS = {
 }
 
 
+# FC1: one complete request that computes. The tool description, describe() and
+# every failed or empty calculation show this same request, and a test runs it.
+EXAMPLE_REQUEST = {
+    "activities": [
+        {
+            "id": "office-electricity",
+            "activity_type": "purchased_electricity",
+            "quantity": "12000",
+            "unit": "kWh",
+            "region": "US",
+            "year": 2023
+        },
+        {
+            "id": "fleet-fuel",
+            "activity_type": "mobile_combustion_gasoline",
+            "quantity": "500",
+            "unit": "gallons",
+            "region": "US",
+            "year": 2025
+        }
+    ],
+    "options": {}
+}
+FIRST_CALL_HELP = {
+    "why": "the request did not produce a determinate result",
+    "example_request": EXAMPLE_REQUEST,
+    "example_tool": "calculate_inventory",
+    "discover_with": ["list_factor_packs", "get_factor_pack", "classify_activity"],
+    "note": ("Each activity needs activity_type, quantity, unit, region and year, matching a bundled factor exactly. list_factor_packs names every activity_type, region and year."),
+}
+
+
 @dataclass
 class AgentConfig:
     name: str = "ghg-ledger-agent"
@@ -200,6 +232,7 @@ class GHGLedgerCore:
 
     def describe(self) -> dict:
         return {
+            "example_request": deepcopy(EXAMPLE_REQUEST),
             "name": self.config.name,
             "version": self.config.version,
             "description": ("Deterministic Scope 1/2/3 GHG inventories with "
@@ -228,6 +261,20 @@ class GHGLedgerCore:
                 "timestamp": _now()}
 
     async def process(self, input_data: dict) -> dict:
+        """FC1: a calculation that fails or computes nothing returns a working example.
+
+        The help sits beside ``data``, never inside it, so audit hashes and
+        verify_result are unaffected.
+        """
+        response = await self._process(input_data)
+        if (isinstance(input_data, dict) and input_data.get("action") == "calculate_inventory"
+                and isinstance(response, dict)
+                and (response.get("status") != "ok"
+                     or (response.get("data") or {}).get("inventory_status") == "indeterminate")):
+            response = {**response, "first_call_help": deepcopy(FIRST_CALL_HELP)}
+        return response
+
+    async def _process(self, input_data: dict) -> dict:
         try:
             if not isinstance(input_data, dict):
                 raise ValidationError("input must be an object", "input",
@@ -446,9 +493,17 @@ class GHGLedgerCore:
                    if factor["activity_type"] == activity_type
                    and factor["region"] == region and factor["year"] == year]
         if not matches:
+            # T1: a failed lookup teaches the exact retry. GH6 is unchanged:
+            # the line still fails closed and no other year is substituted.
+            bundled = sorted({(factor["region"], factor["year"])
+                              for factor in PACK["factors"].values()
+                              if factor["activity_type"] == activity_type})
+            hint = ("; bundled region/year for this activity_type: "
+                    + ", ".join(f"{r} {y}" for r, y in bundled)
+                    if bundled else "; activity_type is not in this pack")
             raise ValidationError(
                 f"factor not in pack {PACK['pack_version']} for activity_type="
-                f"{activity_type}, region={region}, year={year}",
+                f"{activity_type}, region={region}, year={year}{hint}",
                 "activity_type/region/year",
                 {"activity_type": activity_type, "region": region, "year": year},
                 "exact bundled factor; nearest-year substitution is forbidden")
@@ -474,8 +529,35 @@ class GHGLedgerCore:
             if from_unit in table and to_unit in table:
                 converted = quantity * Decimal(table[from_unit]) / Decimal(table[to_unit])
                 return converted, group
-        raise ValidationError(f"no bundled conversion from {from_unit} to {to_unit}",
+        accepted = sorted(groups.get(preferred_group, {})) if preferred_group else []
+        hint = f"; accepted units: {', '.join(accepted)}" if accepted else ""
+        raise ValidationError(f"no bundled conversion from {from_unit} to {to_unit}{hint}",
                               "unit", from_unit, f"convertible to {to_unit}")
+
+    # U2: unambiguous spellings of a bundled unit. An alias only renames the
+    # unit; the conversion still goes through the bundled table (GH7), and the
+    # line records how the caller's unit was read.
+    _UNIT_ALIASES = {
+        "liters": "liter", "litres": "litre", "l": "litre",
+        "miles": "mile", "mi": "mile",
+        "kilometer": "km", "kilometre": "km", "kilometers": "km", "kilometres": "km",
+        "therms": "therm",
+        "tonne": "metric_tonne", "tonnes": "metric_tonne",
+        "metric_ton": "metric_tonne", "metric_tons": "metric_tonne",
+        "lbs": "lb", "pound": "lb", "pounds": "lb",
+        "kilowatt_hour": "kwh", "kilowatt_hours": "kwh",
+        "megawatt_hour": "mwh", "megawatt_hours": "mwh",
+    }
+    # "gallon" is read as a US gallon only against a US factor measured in US gallons.
+    _US_GALLON_ALIASES = {"gallon", "gallons", "gal", "us_gallon", "us_gallons"}
+
+    @classmethod
+    def _read_unit(cls, input_unit: str, factor: dict) -> str:
+        unit = str(input_unit).strip().lower().replace(" ", "_").replace("-", "_")
+        if (unit in cls._US_GALLON_ALIASES and factor["unit"] == "gallon_us"
+                and str(factor["region"]).startswith("US")):
+            return "gallon_us"
+        return cls._UNIT_ALIASES.get(unit, str(input_unit))
 
     @staticmethod
     def _mass_factor_to_kg(mass_unit: str) -> Decimal:
@@ -596,8 +678,9 @@ class GHGLedgerCore:
             raise ValidationError("missing required field: unit", "unit", None, "required")
         quantity = _decimal(activity["quantity"], "quantity", minimum=Decimal("0"))
         input_unit = str(activity["unit"])
+        read_unit = self._read_unit(input_unit, factor)
         converted, conversion_group = self._convert(
-            quantity, input_unit, factor["unit"], factor["conversion_group"])
+            quantity, read_unit, factor["unit"], factor["conversion_group"])
         classification = self._classification(activity, factor)
         raw_total, breakdown, contributions = self._factor_math(factor, converted)
         line_total = Decimal(_kg(raw_total))
@@ -620,7 +703,9 @@ class GHGLedgerCore:
                        "applicability": deepcopy(factor.get("applicability"))},
             "unit_conversion": {"group": conversion_group,
                                 "quantity_in_factor_unit": _plain(converted),
-                                "factor_unit": factor["unit"]},
+                                "factor_unit": factor["unit"],
+                                **({"input_unit_read_as": read_unit}
+                                   if read_unit != input_unit else {})},
             "gas_breakdown": breakdown,
             "kg_co2e": _kg(line_total),
         }
@@ -641,7 +726,7 @@ class GHGLedgerCore:
                                             "market_factor.kg_co2e_per_unit",
                                             minimum=Decimal("0"))
                     market_quantity, market_group = self._convert(
-                        quantity, input_unit, str(market["unit"]),
+                        quantity, read_unit, str(market["unit"]),
                         factor["conversion_group"])
                     market_internal = Decimal(_kg(market_quantity * market_value))
                     line["scope_2"] = {

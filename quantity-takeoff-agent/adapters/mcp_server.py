@@ -69,7 +69,9 @@ async def calculate_takeoff(items: List[Dict[str, Any]],
     """Calculate an auditable material takeoff from explicit geometry or a
     supported SmartScale/ProtoGen measurement payload. Returns net, explicit
     waste-adjusted, and conservative purchase quantities. This is a planning
-    estimate, not a guaranteed material order or professional certification."""
+    estimate, not a guaranteed material order or professional certification.
+    If a call returns indeterminate, the response includes first_call_help.
+    Example arguments: {"items": [{"id": "slab-1", "assembly": "concrete_slab", "unit_system": "imperial", "dimensions": {"length": {"value": "20", "unit": "ft"}, "width": {"value": "30", "unit": "ft"}, "thickness": {"value": "4", "unit": "in"}}}], "options": {}}"""
     return await _run({"action": "calculate_takeoff", "items": items,
                        "options": options or {},
                        **({"payment_ref": payment_ref} if payment_ref else {}),

@@ -72,7 +72,9 @@ async def calculate_inventory(activities: List[Dict[str, Any]],
     an offset-clearinghouse dry-run weave. This is calculation, not advice.
     Price: $1.00 per call after 10 free calls/day. Pay at
     /x402/ghg-ledger/calculate_inventory with Base USDC, cash-fund payment_ref
-    through escrow_checkout + confirm_escrow_funding, or use /seats."""
+    through escrow_checkout + confirm_escrow_funding, or use /seats.
+    If a call returns indeterminate, the response includes first_call_help.
+    Example arguments: {"activities": [{"id": "office-electricity", "activity_type": "purchased_electricity", "quantity": "12000", "unit": "kWh", "region": "US", "year": 2023}, {"id": "fleet-fuel", "activity_type": "mobile_combustion_gasoline", "quantity": "500", "unit": "gallons", "region": "US", "year": 2025}], "options": {}}"""
     return await _run({"action": "calculate_inventory", "activities": activities,
                        "options": options or {},
                        **({"payment_ref": payment_ref} if payment_ref else {}),

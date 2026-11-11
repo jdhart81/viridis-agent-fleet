@@ -70,7 +70,9 @@ async def calculate_tax_credit(credit: str, facts: Dict[str, Any],
     facts; missing facts return indeterminate. This is not tax or filing advice.
     Price: $2.00 per call after 10 free calls/day. Pay at
     /x402/taxcredit-engine/calculate_tax_credit with Base USDC, cash-fund
-    payment_ref through escrow_checkout + confirm_escrow_funding, or use /seats."""
+    payment_ref through escrow_checkout + confirm_escrow_funding, or use /seats.
+    If a call returns indeterminate, the response includes first_call_help.
+    Example arguments: {"credit": "48E", "facts": {"tax_year": 2026, "tax_year_begin_date": "2026-01-01", "lifecycle_emissions_g_co2e_per_kwh": "0", "placed_in_service_date": "2026-01-01", "construction_begin_date": "2025-01-01", "produced_in_us": true, "nameplate_capacity_mw": "2", "pwa_met": true, "specified_foreign_entity": false, "foreign_influenced_entity": false, "material_assistance_from_pfe": false, "technology": "geothermal", "tax_exempt_bond_financing_percent": "0", "qualified_investment_usd": "1000000", "claimed_45y": false, "domestic_content_met": true, "energy_community": true, "low_income_bonus_percentage_points": "0", "low_income_allocation_received": false, "low_income_allocation_ratio_percent": "0"}}"""
     return await _run({"action": "calculate", "credit": credit, "facts": facts,
                        **({"payment_ref": payment_ref} if payment_ref else {}),
                        **({"request_id": request_id}
