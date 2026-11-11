@@ -34,6 +34,41 @@ QTY_QUANTUM = Decimal("0.001")
 _DERIVED_AUDIT_FIELDS = {"audit_sha256", "notary_payload"}
 
 
+# FC1: one complete request that computes. The tool description, describe() and
+# every failed or empty calculation show this same request, and a test runs it.
+EXAMPLE_REQUEST = {
+    "items": [
+        {
+            "id": "slab-1",
+            "assembly": "concrete_slab",
+            "unit_system": "imperial",
+            "dimensions": {
+                "length": {
+                    "value": "20",
+                    "unit": "ft"
+                },
+                "width": {
+                    "value": "30",
+                    "unit": "ft"
+                },
+                "thickness": {
+                    "value": "4",
+                    "unit": "in"
+                }
+            }
+        }
+    ],
+    "options": {}
+}
+FIRST_CALL_HELP = {
+    "why": "the request did not produce a determinate result",
+    "example_request": EXAMPLE_REQUEST,
+    "example_tool": "calculate_takeoff",
+    "discover_with": ["list_assemblies", "get_assembly"],
+    "note": ("Each item needs assembly, unit_system and dimensions given as {value, unit} objects. list_assemblies names every assembly; get_assembly lists its required dimensions."),
+}
+
+
 @dataclass
 class AgentConfig:
     name: str = "quantity-takeoff-agent"
@@ -193,6 +228,7 @@ class QuantityTakeoffCore:
 
     def describe(self) -> dict:
         return {
+            "example_request": deepcopy(EXAMPLE_REQUEST),
             "name": self.config.name,
             "version": self.config.version,
             "description": ("Deterministic material quantities with explicit waste, "
@@ -225,6 +261,20 @@ class QuantityTakeoffCore:
                 "timestamp": _now()}
 
     async def process(self, input_data: dict) -> dict:
+        """FC1: a calculation that fails or computes nothing returns a working example.
+
+        The help sits beside ``data``, never inside it, so audit hashes and
+        verify_result are unaffected.
+        """
+        response = await self._process(input_data)
+        if (isinstance(input_data, dict) and input_data.get("action") == "calculate_takeoff"
+                and isinstance(response, dict)
+                and (response.get("status") != "ok"
+                     or (response.get("data") or {}).get("takeoff_status") == "indeterminate")):
+            response = {**response, "first_call_help": deepcopy(FIRST_CALL_HELP)}
+        return response
+
+    async def _process(self, input_data: dict) -> dict:
         try:
             if not isinstance(input_data, dict):
                 raise ValidationError("input must be an object", "input",

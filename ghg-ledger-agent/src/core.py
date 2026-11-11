@@ -41,6 +41,38 @@ _DERIVED_AUDIT_FIELDS = {
 }
 
 
+# FC1: one complete request that computes. The tool description, describe() and
+# every failed or empty calculation show this same request, and a test runs it.
+EXAMPLE_REQUEST = {
+    "activities": [
+        {
+            "id": "office-electricity",
+            "activity_type": "purchased_electricity",
+            "quantity": "12000",
+            "unit": "kWh",
+            "region": "US",
+            "year": 2023
+        },
+        {
+            "id": "fleet-fuel",
+            "activity_type": "mobile_combustion_gasoline",
+            "quantity": "500",
+            "unit": "gallons",
+            "region": "US",
+            "year": 2025
+        }
+    ],
+    "options": {}
+}
+FIRST_CALL_HELP = {
+    "why": "the request did not produce a determinate result",
+    "example_request": EXAMPLE_REQUEST,
+    "example_tool": "calculate_inventory",
+    "discover_with": ["list_factor_packs", "get_factor_pack", "classify_activity"],
+    "note": ("Each activity needs activity_type, quantity, unit, region and year, matching a bundled factor exactly. list_factor_packs names every activity_type, region and year."),
+}
+
+
 @dataclass
 class AgentConfig:
     name: str = "ghg-ledger-agent"
@@ -200,6 +232,7 @@ class GHGLedgerCore:
 
     def describe(self) -> dict:
         return {
+            "example_request": deepcopy(EXAMPLE_REQUEST),
             "name": self.config.name,
             "version": self.config.version,
             "description": ("Deterministic Scope 1/2/3 GHG inventories with "
@@ -228,6 +261,20 @@ class GHGLedgerCore:
                 "timestamp": _now()}
 
     async def process(self, input_data: dict) -> dict:
+        """FC1: a calculation that fails or computes nothing returns a working example.
+
+        The help sits beside ``data``, never inside it, so audit hashes and
+        verify_result are unaffected.
+        """
+        response = await self._process(input_data)
+        if (isinstance(input_data, dict) and input_data.get("action") == "calculate_inventory"
+                and isinstance(response, dict)
+                and (response.get("status") != "ok"
+                     or (response.get("data") or {}).get("inventory_status") == "indeterminate")):
+            response = {**response, "first_call_help": deepcopy(FIRST_CALL_HELP)}
+        return response
+
+    async def _process(self, input_data: dict) -> dict:
         try:
             if not isinstance(input_data, dict):
                 raise ValidationError("input must be an object", "input",
