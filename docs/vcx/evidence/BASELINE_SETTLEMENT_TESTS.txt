@@ -1,0 +1,218 @@
+.......FFFF.FFFFFFFFFFF.F.F.                                             [100%]
+=================================== FAILURES ===================================
+_________________ Agent.test_contract_settle_verify_roundtrip __________________
+tests/test_core.py:141: in test_contract_settle_verify_roundtrip
+    sid = ercot_series(self.a)
+          ^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+__________________ Agent.test_decided_before_closure_settles ___________________
+tests/test_core.py:166: in test_decided_before_closure_settles
+    sid = ercot_series(self.a, strikes=(10,))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+___________________ Agent.test_decided_strikes_across_series ___________________
+tests/test_core.py:134: in test_decided_strikes_across_series
+    s1 = ercot_series(self.a, strikes=(10,)); s2 = ercot_series(self.a, strikes=(2000,), n=4)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+____________________________ Agent.test_determinism ____________________________
+tests/test_core.py:121: in test_determinism
+    sid = ercot_series(a)
+          ^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+__________________________ Agent.test_health_describe __________________________
+tests/test_core.py:210: in test_health_describe
+    h = asyncio.get_event_loop().run_until_complete(self.a.health())
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+____________________ Agent.test_ingest_evidence_and_bounds _____________________
+tests/test_core.py:90: in test_ingest_evidence_and_bounds
+    sid = ercot_series(self.a)
+          ^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+___________________ Agent.test_never_raises_and_errors_teach ___________________
+tests/test_core.py:71: in test_never_raises_and_errors_teach
+    r = run(self.a, **(bad if isinstance(bad, dict) else {"action": bad}))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+________________________ Agent.test_register_idempotent ________________________
+tests/test_core.py:86: in test_register_idempotent
+    s1, s2 = ercot_series(self.a), ercot_series(self.a)
+             ^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+________________________ Agent.test_register_validates _________________________
+tests/test_core.py:75: in test_register_validates
+    r = run(self.a, action="register_series", name="x", unit="u", source="s", n_expected=0, period_start="2026-01-01T00:00:00Z",
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+_______________ Agent.test_required_remainder_action_and_explain _______________
+tests/test_core.py:126: in test_required_remainder_action_and_explain
+    sid = ercot_series(self.a)
+          ^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+_____________________ Agent.test_restoration_share_series ______________________
+tests/test_core.py:192: in test_restoration_share_series
+    r = run(self.a, action="register_series", name="Moretown riparian planting survival, year 1", unit="survived (0/1)", aggregate="share",
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+_________________________ Agent.test_revisions_visible _________________________
+tests/test_core.py:97: in test_revisions_visible
+    sid = ercot_series(self.a)
+          ^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+__________________________ Agent.test_rules_translate __________________________
+tests/test_core.py:174: in test_rules_translate
+    sid = ercot_series(self.a)
+          ^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+________________ Agent.test_settlement_immutable_and_model_free ________________
+tests/test_core.py:183: in test_settlement_immutable_and_model_free
+    sid = ercot_series(self.a)
+          ^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+_______________________ Agent.test_status_facts_vs_model _______________________
+tests/test_core.py:108: in test_status_facts_vs_model
+    sid = ercot_series(self.a, n=8, strikes=(10, 30, 1400))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+____________ Boundaries.test_settlement_record_is_never_overwritten ____________
+tests/test_core.py:254: in test_settlement_record_is_never_overwritten
+    a, r = self._settled(); sid = r["settlement_id"]
+           ^^^^^^^^^^^^^^^
+tests/test_core.py:237: in _settled
+    a = build(); sid = ercot_series(a)
+                       ^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+_________________ Boundaries.test_verify_each_check_separately _________________
+tests/test_core.py:243: in test_verify_each_check_separately
+    a, r = self._settled(); rec = r["settlement"]
+           ^^^^^^^^^^^^^^^
+tests/test_core.py:237: in _settled
+    a = build(); sid = ercot_series(a)
+                       ^^^^^^^^^^^^^^^
+tests/test_core.py:26: in ercot_series
+    r = run(agent, action="register_series", name="ERCOT North weekly RT avg", unit="$/MWh", aggregate="mean", n_expected=n,
+tests/test_core.py:18: in run
+    return asyncio.get_event_loop().run_until_complete(agent.process(payload))
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py:715: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+=========================== short test summary info ============================
+FAILED tests/test_core.py::Agent::test_contract_settle_verify_roundtrip - Run...
+FAILED tests/test_core.py::Agent::test_decided_before_closure_settles - Runti...
+FAILED tests/test_core.py::Agent::test_decided_strikes_across_series - Runtim...
+FAILED tests/test_core.py::Agent::test_determinism - RuntimeError: There is n...
+FAILED tests/test_core.py::Agent::test_health_describe - RuntimeError: There ...
+FAILED tests/test_core.py::Agent::test_ingest_evidence_and_bounds - RuntimeEr...
+FAILED tests/test_core.py::Agent::test_never_raises_and_errors_teach - Runtim...
+FAILED tests/test_core.py::Agent::test_register_idempotent - RuntimeError: Th...
+FAILED tests/test_core.py::Agent::test_register_validates - RuntimeError: The...
+FAILED tests/test_core.py::Agent::test_required_remainder_action_and_explain
+FAILED tests/test_core.py::Agent::test_restoration_share_series - RuntimeErro...
+FAILED tests/test_core.py::Agent::test_revisions_visible - RuntimeError: Ther...
+FAILED tests/test_core.py::Agent::test_rules_translate - RuntimeError: There ...
+FAILED tests/test_core.py::Agent::test_settlement_immutable_and_model_free - ...
+FAILED tests/test_core.py::Agent::test_status_facts_vs_model - RuntimeError: ...
+FAILED tests/test_core.py::Boundaries::test_settlement_record_is_never_overwritten
+FAILED tests/test_core.py::Boundaries::test_verify_each_check_separately - Ru...
+17 failed, 11 passed in 0.21s

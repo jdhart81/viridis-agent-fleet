@@ -1,0 +1,28 @@
+........................................................................ [ 30%]
+..............................F......................................... [ 61%]
+...........................................................s....s....... [ 91%]
+..............s.....                                                     [100%]
+=================================== FAILURES ===================================
+_______________________ test_gateway_emulation_over_http _______________________
+tests/test_fleet_admission.py:166: in test_gateway_emulation_over_http
+    assert out.returncode == 0, out.stderr[-3000:]
+E   AssertionError: Traceback (most recent call last):
+E       File "/private/tmp/vcx-baseline-20261110/eco-funding-agent/deploy/fleet/gateway_check.py", line 160, in <module>
+E         sys.exit(main(sys.argv[1:]))
+E                  ~~~~^^^^^^^^^^^^^^
+E       File "/private/tmp/vcx-baseline-20261110/eco-funding-agent/deploy/fleet/gateway_check.py", line 100, in main
+E         port = free_port()
+E       File "/private/tmp/vcx-baseline-20261110/eco-funding-agent/deploy/fleet/gateway_check.py", line 66, in free_port
+E         s.bind(("127.0.0.1", 0))
+E         ~~~~~~^^^^^^^^^^^^^^^^^^
+E     PermissionError: [Errno 1] Operation not permitted
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/opt/python@3.14/bin/python3.14', '-W', 'ignore', '/private/tmp/vcx-baseline-2026...ort\n    s.bind(("127.0.0.1", 0))\n    ~~~~~~^^^^^^^^^^^^^^^^^^\nPermissionError: [Errno 1] Operation not permitted\n').returncode
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_mcp_server.py:18: standalone vef-mcp server needs mcp 2.x
+SKIPPED [1] tests/test_invariant_6_read_only.py:183: standalone vef-mcp server needs mcp 2.x
+SKIPPED [1] tests/test_invariant_7_labels.py:66: standalone vef-mcp server needs mcp 2.x
+SKIPPED [1] tests/test_receipt_and_vergecommon.py:157: set VEF_LIVE_NETWORK=1 to read the live public directory
+FAILED tests/test_fleet_admission.py::test_gateway_emulation_over_http - Asse...
+1 failed, 232 passed, 4 skipped in 10.87s
