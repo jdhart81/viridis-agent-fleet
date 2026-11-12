@@ -106,3 +106,17 @@ def test_j2_ambiguous_or_uncovered_places_are_refused_not_guessed():
 def test_other_actions_and_evidence_packs_are_untouched():
     got = asyncio.run(ENGINE.process({"action": "no_such_action"}))
     assert got["status"] == "error" and "first_call_help" not in got
+
+
+def test_rg5_validation_binds_applicability_at_import_time():
+    """The gateway evicts `src*` modules between agent loads; a relative import
+    inside a function would then resolve against another agent's package."""
+    import ast
+    import src.validation as validation
+    assert hasattr(validation, "ENTITY_PROFILE_FIELDS")
+    tree = ast.parse(Path(validation.__file__).read_text())
+    late = [node.lineno for fn in ast.walk(tree)
+            if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef))
+            for node in ast.walk(fn)
+            if isinstance(node, ast.ImportFrom) and node.level > 0]
+    assert late == [], late
