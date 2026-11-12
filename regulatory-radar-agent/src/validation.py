@@ -16,6 +16,11 @@ Usage:
 import logging
 from typing import Any, Dict, List, Optional
 
+# Bound at import time on purpose: the MCP gateway evicts every `src*`
+# module between agent loads, so a call-time relative import here would
+# resolve against another agent's `src` package (RG5, gateway G1).
+from .applicability import ENTITY_FORMS, ENTITY_PROFILE_FIELDS, EXEMPTIONS
+
 logger = logging.getLogger(__name__)
 
 # Valid jurisdictions (must match Jurisdiction enum in core.py)
@@ -204,7 +209,6 @@ def _optional_revenue(data: Dict[str, Any], name: str):
 
 def _optional_entity_profile(profile):
     """entity_profile for applicability gates (A6); every field optional."""
-    from .applicability import ENTITY_FORMS, ENTITY_PROFILE_FIELDS, EXEMPTIONS
     if profile is None:
         return None
     if not isinstance(profile, dict):
