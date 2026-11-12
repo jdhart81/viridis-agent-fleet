@@ -28,6 +28,8 @@ from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 from enum import Enum
 
+from copy import deepcopy
+
 from .validation import (
     validate_scan_input,
     validate_compliance_assessment_input,
@@ -35,6 +37,7 @@ from .validation import (
     validate_evidence_pack_input,
     ValidationError,
     ValidationWarning,
+    jurisdiction_reading,
 )
 from .applicability import (
     OUT_OF_SCOPE, UNCONFIRMED, describe_gate, evaluate_gate,
@@ -394,6 +397,36 @@ class RegulatoryDatabase:
         return sorted(urgent, key=lambda r: r.reporting_deadline or datetime.max)
 
 
+# FC1: one request that returns regulations, published in the tool description,
+# in describe(), and beside any failed scan.
+EXAMPLE_REQUEST = {"jurisdiction": "california", "sector": "energy"}
+FIRST_CALL_HELP = {
+    "example_request": EXAMPLE_REQUEST,
+    "jurisdictions": sorted(j.value for j in Jurisdiction),
+    "sectors": sorted(s.value for s in Sector),
+    "notes": [
+        "jurisdiction is required; sector and query are optional filters",
+        "'ca' is Canada; use 'california' for the US state",
+        "a US state or EU member state is read as us or eu and the response "
+        "says so in input_read_as; that place's own rules are not in the dataset",
+    ],
+    "discover_with": "describe_agent",
+}
+_FC1_ACTIONS = frozenset({"scan", "assess", "monitor_changes"})
+
+
+def _sector_or_teach(value):
+    """Return the Sector, or a teaching error instead of an internal one."""
+    if not value:
+        return None
+    try:
+        return Sector(value)
+    except ValueError:
+        raise ValidationError(
+            "sector", value,
+            f"must be one of: {sorted(s.value for s in Sector)}") from None
+
+
 class RegulatoryRadarCore:
     """
     Core intelligence engine for regulatory monitoring and compliance assessment.
@@ -431,6 +464,21 @@ class RegulatoryRadarCore:
         logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
     async def process(self, input_data: dict) -> dict:
+        """Run one action; add caller guidance beside the result (FC1, J2)."""
+        response = await self._process(input_data)
+        if not isinstance(input_data, dict) or not isinstance(response, dict):
+            return response
+        action = input_data.get("action", "scan")
+        if action not in _FC1_ACTIONS:
+            return response
+        if response.get("status") == "error":
+            return {**response, "first_call_help": deepcopy(FIRST_CALL_HELP)}
+        reading = jurisdiction_reading(input_data.get("jurisdiction", ""))
+        if reading is not None:
+            return {**response, "input_read_as": {"jurisdiction": reading}}
+        return response
+
+    async def _process(self, input_data: dict) -> dict:
         """
         Fleet-standard process() router with input validation.
 
@@ -466,7 +514,7 @@ class RegulatoryRadarCore:
                     str(w) for w in validated.pop("_validation_warnings", [])
                 ]
                 jurisdiction = Jurisdiction(validated["jurisdiction"])
-                sector = Sector(validated["sector"]) if validated.get("sector") else None
+                sector = _sector_or_teach(validated.get("sector"))
                 result = await self.scan_regulations(
                     jurisdiction=jurisdiction,
                     sector=sector,
@@ -478,7 +526,7 @@ class RegulatoryRadarCore:
                     str(w) for w in validated.pop("_validation_warnings", [])
                 ]
                 jurisdiction = Jurisdiction(validated["jurisdiction"])
-                sector = Sector(validated["sector"]) if validated.get("sector") else None
+                sector = _sector_or_teach(validated.get("sector"))
                 result = await self.assess_compliance(
                     company_name=validated["company_name"],
                     jurisdiction=jurisdiction,
@@ -585,6 +633,7 @@ class RegulatoryRadarCore:
             "name": "regulatory-radar-agent",
             "description": "Environmental regulation monitoring, compliance scoring, and opportunity detection.",
             "pillar": "infrastructure",
+            "example_request": deepcopy(EXAMPLE_REQUEST),
             "capabilities": [
                 "regulatory_scan",
                 "compliance_assessment",
@@ -1650,6 +1699,7 @@ class RegulatoryRadarCore:
         return {
             "name": "regulatory-radar",
             "build": build_info(),
+            "example_request": deepcopy(EXAMPLE_REQUEST),
             "version": "0.2.0",
             "description": (
                 "Authoritative-source regulatory change evidence, compliance "
