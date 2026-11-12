@@ -80,7 +80,8 @@ _LIVE_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
 
 
 @mcp.tool(annotations=_READ)
-async def scan_regulations(jurisdiction: str, sector: Optional[str] = None,
+async def scan_regulations(jurisdiction: Optional[str] = None,
+                           sector: Optional[str] = None,
                            query: Optional[str] = None,
                            payment_ref: Optional[str] = None,
                            request_id: Optional[str] = None) -> str:
@@ -91,8 +92,16 @@ async def scan_regulations(jurisdiction: str, sector: Optional[str] = None,
     Returns regulations with urgency flags and effective dates. Price: $0.25
     per call after 10 free calls/day. Pay at
     /x402/regulatory-radar/scan_regulations with Base USDC, cash-fund payment_ref through
-    escrow_checkout + confirm_escrow_funding, or use /seats."""
-    return await _run({"action": "scan", "jurisdiction": jurisdiction, "sector": sector,
+    escrow_checkout + confirm_escrow_funding, or use /seats.
+
+    jurisdiction is one of eu, uk, us, california, ca (Canada), au, jp, sg,
+    global. A US state or EU member state is read as us or eu and the response
+    says so. sector is one of agriculture, consumer_goods, energy,
+    financial_services, fisheries, forestry, manufacturing, technology.
+
+    Example arguments: {"jurisdiction": "california", "sector": "energy"}"""
+    return await _run({"action": "scan", "jurisdiction": jurisdiction or "",
+                       "sector": sector,
                  **({"query": query} if query else {}),
                  **({"payment_ref": payment_ref} if payment_ref else {}),
                  **({"request_id": request_id}

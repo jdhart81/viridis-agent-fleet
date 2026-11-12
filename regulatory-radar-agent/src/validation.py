@@ -14,7 +14,7 @@ Usage:
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,59 @@ VALID_JURISDICTIONS = {
 JURISDICTION_ALIASES = {
     "us-ca": "california",
     "ca-us": "california",
+    # J1: other spellings of a covered jurisdiction. "ca" stays Canada.
+    "usa": "us", "u.s.": "us", "u.s.a.": "us", "united states": "us",
+    "united states of america": "us", "america": "us", "federal": "us",
+    "european union": "eu", "europe": "eu",
+    "united kingdom": "uk", "great britain": "uk", "britain": "uk", "gb": "uk",
+    "england": "uk", "scotland": "uk", "wales": "uk", "northern ireland": "uk",
+    "canada": "ca", "australia": "au", "japan": "jp", "singapore": "sg",
+    "worldwide": "global", "international": "global", "world": "global",
+}
+# J2: places inside a covered jurisdiction. The scan answers for the covering
+# jurisdiction and says so; rules made by the place itself are not in the
+# dataset, and the response states that rather than implying coverage.
+_EU_MEMBERS = (
+    "austria", "belgium", "bulgaria", "croatia", "cyprus", "czechia",
+    "czech republic", "denmark", "estonia", "finland", "france", "germany",
+    "greece", "hungary", "ireland", "italy", "latvia", "lithuania",
+    "luxembourg", "malta", "netherlands", "poland", "portugal", "romania",
+    "slovakia", "slovenia", "spain", "sweden",
+)
+# Georgia is omitted: it is also a country outside every covered jurisdiction.
+_US_STATES = (
+    "alabama", "alaska", "arizona", "arkansas", "colorado", "connecticut",
+    "delaware", "florida", "hawaii", "idaho", "illinois", "indiana", "iowa",
+    "kansas", "kentucky", "louisiana", "maine", "maryland", "massachusetts",
+    "michigan", "minnesota", "mississippi", "missouri", "montana", "nebraska",
+    "nevada", "new hampshire", "new jersey", "new mexico", "new york",
+    "north carolina", "north dakota", "ohio", "oklahoma", "oregon",
+    "pennsylvania", "rhode island", "south carolina", "south dakota",
+    "tennessee", "texas", "utah", "vermont", "virginia", "washington",
+    "west virginia", "wisconsin", "wyoming", "district of columbia",
+)
+JURISDICTION_WITHIN = {
+    **{name: "eu" for name in _EU_MEMBERS},
+    **{name: "us" for name in _US_STATES},
+}
+_WITHIN_NOTE = {
+    "eu": ("read as the EU: EU-level rules apply in this member state; its "
+           "national transposition and national-only rules are not in the dataset"),
+    "us": ("read as the US: federal rules apply in this state; the state's own "
+           "rules are not in the dataset (California is the one state covered)"),
+}
+SECTOR_ALIASES = {
+    "tech": "technology", "software": "technology", "saas": "technology",
+    "it": "technology", "information technology": "technology",
+    "data centers": "technology", "data center": "technology",
+    "finance": "financial_services", "financial": "financial_services",
+    "financial services": "financial_services", "banking": "financial_services",
+    "insurance": "financial_services", "asset management": "financial_services",
+    "power": "energy", "utilities": "energy", "utility": "energy",
+    "oil and gas": "energy", "oil & gas": "energy", "renewables": "energy",
+    "industrial": "manufacturing", "industry": "manufacturing",
+    "retail": "consumer_goods", "consumer goods": "consumer_goods",
+    "farming": "agriculture", "timber": "forestry", "fishing": "fisheries",
 }
 
 # Valid sectors (must match Sector enum in core.py)
@@ -65,8 +118,27 @@ class ValidationWarning:
 
 def normalize_jurisdiction(value: Any) -> str:
     """Return the canonical jurisdiction value; ``ca`` remains Canada."""
-    normalized = str(value).strip().lower()
-    return JURISDICTION_ALIASES.get(normalized, normalized)
+    normalized = " ".join(str(value).strip().lower().split())
+    normalized = JURISDICTION_ALIASES.get(normalized, normalized)
+    return JURISDICTION_WITHIN.get(normalized, normalized)
+
+
+def jurisdiction_reading(value: Any) -> Optional[Dict[str, str]]:
+    """J2: how a place name was read, when it is not itself a covered jurisdiction."""
+    given = " ".join(str(value).strip().lower().split())
+    given = JURISDICTION_ALIASES.get(given, given)
+    parent = JURISDICTION_WITHIN.get(given)
+    if parent is None:
+        return None
+    return {"given": str(value).strip(), "read_as": parent,
+            "note": _WITHIN_NOTE[parent]}
+
+
+def normalize_sector(value: Any) -> str:
+    """Return the canonical sector for a common synonym; unknown values pass through."""
+    normalized = " ".join(str(value).strip().lower().replace("-", " ").split())
+    normalized = SECTOR_ALIASES.get(normalized, normalized)
+    return normalized.replace(" ", "_")
 
 
 def validate_scan_input(data: dict) -> Dict[str, Any]:
@@ -96,7 +168,7 @@ def validate_scan_input(data: dict) -> Dict[str, Any]:
     # Sector — optional but must be valid
     sector = data.get("sector")
     if sector:
-        sector = str(sector).strip().lower()
+        sector = normalize_sector(sector)
         if sector not in VALID_SECTORS:
             warnings.append(ValidationWarning(
                 field="sector", original=sector, adjusted=sector,
@@ -197,7 +269,7 @@ def validate_compliance_assessment_input(data: dict) -> Dict[str, Any]:
     sector = data.get("sector", "")
     if not sector:
         raise ValidationError("sector", sector, "is required for compliance assessment")
-    sector = str(sector).strip().lower()
+    sector = normalize_sector(sector)
     if sector not in VALID_SECTORS:
         raise ValidationError(
             "sector", sector,
