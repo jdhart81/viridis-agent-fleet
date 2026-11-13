@@ -43,6 +43,6 @@ M1 result never changed · M2 every receipt verifies · M3 arguments and outputs
 If registration fails (bad key, quota, network), results still come back sealed as INTACT and `orc-seal` says why once on stderr. Use your own issuer id; `did:web:viridisconservation.com` is reserved.
 
 ## Get a registry key
-Email hartjustin6@gmail.com with your issuer id. Design partners get the free tier and help shape ORC v0.2.
+Open an issue titled "Registry key request" at [github.com/jdhart81/viridis-agent-fleet/issues](https://github.com/jdhart81/viridis-agent-fleet/issues/new?title=Registry+key+request) with your issuer id (for example `did:web:yourdomain.com`) and how to reach you privately, or email justin@viridisconservation.com. The key is sent privately and never posted in the issue. Design partners get the free tier (1,000 receipts a month) and help shape ORC v0.2.
 
 Apache-2.0 · Viridis LLC
