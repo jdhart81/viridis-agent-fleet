@@ -433,6 +433,31 @@ def _sector_or_teach(value):
             f"must be one of: {sorted(s.value for s in Sector)}") from None
 
 
+
+_QUERY_STOPWORDS = frozenset({
+    "the", "and", "for", "with", "from", "that", "this", "are", "any", "all",
+    "what", "which", "how", "does", "about", "into", "per", "new", "rule",
+    "rules", "law", "laws", "regulation", "regulations", "requirement",
+    "requirements", "compliance",
+})
+
+
+def _query_words(query: str) -> List[str]:
+    """Q2: the distinct meaningful words of a query, in order (3+ characters,
+    letters and digits only, common filler dropped)."""
+    seen: List[str] = []
+    for raw in re.split(r"[^a-z0-9]+", str(query).lower()):
+        if len(raw) >= 3 and raw not in _QUERY_STOPWORDS and raw not in seen:
+            seen.append(raw)
+    return seen[:12]
+
+
+def _reg_contains(reg, needle: str) -> bool:
+    return (needle in reg.name.lower()
+            or needle in reg.description.lower()
+            or any(needle in req.lower() for req in reg.requirements))
+
+
 class RegulatoryRadarCore:
     """
     Core intelligence engine for regulatory monitoring and compliance assessment.
@@ -698,15 +723,39 @@ class RegulatoryRadarCore:
             if sector:
                 regs = [r for r in regs if r.sector is None or r.sector == sector]
 
-            # Filter by text query if provided
+            # Filter by text query if provided (Q1-Q4)
+            query_read_as = None
             if query:
-                query_lower = query.lower()
-                regs = [
-                    r for r in regs
-                    if query_lower in r.name.lower()
-                    or query_lower in r.description.lower()
-                    or any(query_lower in req.lower() for req in r.requirements)
-                ]
+                before_query = regs
+                regs = [r for r in regs if _reg_contains(r, query.lower())]
+                if not regs:
+                    words = _query_words(query)
+                    hits = {}
+                    if len(words) >= 2:                              # Q2
+                        for r in before_query:
+                            found = [w for w in words if _reg_contains(r, w)]
+                            if found:
+                                hits[r.id] = found
+                    if hits:
+                        regs = [r for r in before_query if r.id in hits]
+                        query_read_as = {
+                            "query": query, "reading": "any_word",
+                            "words_matched": hits,
+                            "note": ("no regulation contains the full phrase; "
+                                     "showing those that contain at least one "
+                                     "of its words. query is a text filter "
+                                     "over names, descriptions and "
+                                     "requirements, not a question"),
+                        }
+                    else:                                            # Q3
+                        query_read_as = {
+                            "query": query, "reading": "no_match",
+                            "without_query_total": len(before_query),
+                            "note": ("query is a text filter over names, "
+                                     "descriptions and requirements; nothing "
+                                     "contains it. Resend without query to "
+                                     "get the regulations that apply"),
+                        }
 
             urgent = []
             overdue = []
@@ -750,6 +799,9 @@ class RegulatoryRadarCore:
                     "and deadlines with the cited authority or qualified counsel."
                 ),
             }
+
+            if query_read_as is not None:
+                result["query_read_as"] = query_read_as
 
             logger.info(f"Scanned {len(regs)} regulations for {jurisdiction.value}")
             return result
