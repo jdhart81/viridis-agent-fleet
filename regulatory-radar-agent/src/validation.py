@@ -451,6 +451,29 @@ def validate_monitor_changes_input(data: dict) -> Dict[str, Any]:
     return validated
 
 
+def validate_watch_changes_input(data: dict) -> Dict[str, Any]:
+    """Validate a watch_changes poll.
+
+    since is the cursor returned by the previous poll (0 = from the start of
+    the log); max_age_hours bounds how stale the last sweep may be before
+    this call refreshes it.
+    """
+    validated = validate_monitor_changes_input(data)
+    since = data.get("since", 0)
+    if isinstance(since, bool) or not isinstance(since, int) or since < 0:
+        raise ValidationError(
+            "since", since,
+            "must be a non-negative integer: the cursor from your last poll, or 0")
+    max_age = data.get("max_age_hours", 24)
+    if isinstance(max_age, bool) or not isinstance(max_age, int) \
+            or not 1 <= max_age <= 168:
+        raise ValidationError(
+            "max_age_hours", max_age, "must be an integer from 1 to 168")
+    validated["since"] = since
+    validated["max_age_hours"] = max_age
+    return validated
+
+
 def validate_evidence_pack_input(data: dict) -> Dict[str, Any]:
     """Validate an authoritative-source evidence-pack request."""
     validated = validate_monitor_changes_input(data)
