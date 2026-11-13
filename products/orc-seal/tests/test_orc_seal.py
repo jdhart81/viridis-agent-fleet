@@ -302,3 +302,80 @@ def test_cli_help_without_server_command(capsys):
         main(["--help"])
     assert exc.value.code == 0
     assert "usage: orc-seal" in capsys.readouterr().out
+
+
+# ---- M8: a failed registration is said once on stderr; nothing else changes ----
+def _http_error(code, body):
+    import io
+    import urllib.error
+    def op(req, timeout):
+        raise urllib.error.HTTPError(req.full_url, code, "x", {}, io.BytesIO(body))
+    return op
+
+
+def test_m8_registry_refusal_reason_is_reported_once_on_stderr(capsys):
+    reg = RegistryClient("https://reg.test", "orc_SECRETKEY", opener=_http_error(
+        400, json.dumps({"error": "the Viridis issuer id is reserved"}).encode()))
+    s = Sealer(ISSUER, registry=reg)
+    first = s.seal_tools_call(REQ, json.loads(json.dumps(RESP)))
+    second = s.seal_tools_call(REQ, json.loads(json.dumps(RESP)))
+    cap = capsys.readouterr()
+    assert cap.out == ""                                    # stdout is the MCP channel
+    assert cap.err.count("orc-seal: registration failed") == 1
+    assert "http 400: the Viridis issuer id is reserved" in cap.err
+    assert "INTACT" in cap.err and "orc_SECRETKEY" not in cap.err
+    for out in (first, second):                             # M1 + M4 unchanged
+        r = out["result"]["_meta"][META_KEY]
+        assert "issuer_proof" not in r and verify(r)["label"] == "INTACT"
+        assert {k: v for k, v in out["result"].items() if k != "_meta"} == \
+            {k: v for k, v in RESP["result"].items() if k != "_meta"}
+
+
+def test_m8_distinct_causes_each_reported_once_and_success_is_silent(capsys):
+    calls = {"n": 0}
+    cap_ok = []
+    def op(req, timeout):
+        calls["n"] += 1
+        if calls["n"] <= 2:
+            raise OSError("down")
+        if calls["n"] == 3:
+            return FakeResp(500, b"{}")
+        return opener_echo(cap_ok)(req, timeout)
+    s = Sealer(ISSUER, registry=RegistryClient("https://reg.test", "k", opener=op))
+    for _ in range(3):
+        s.seal("double", {"x": 1}, {"v": 2})
+    err = capsys.readouterr().err
+    assert err.count("registration failed") == 2
+    assert "(OSError)" in err and "(http 500)" in err
+    r = s.seal("double", {"x": 1}, {"v": 2})
+    assert "issuer_proof" in r and capsys.readouterr().err == ""
+
+
+def test_m8_unreadable_refusal_body_still_fails_open(capsys):
+    reg = RegistryClient("https://reg.test", "k", opener=_http_error(401, b"\xff not json"))
+    r = Sealer(ISSUER, registry=reg).seal("double", {"x": 1}, {"v": 2})
+    assert "issuer_proof" not in r and reg.last_error == "http 401"
+    assert "registration failed (http 401)" in capsys.readouterr().err
+
+
+def test_m8_no_registry_means_no_notice(capsys):
+    Sealer(ISSUER).seal("double", {"x": 1}, {"v": 2})
+    assert capsys.readouterr().err == ""
+
+
+def test_e3_five_minute_example_seals_and_verifies(tmp_path):
+    """The published example runs as written and its receipt verifies (E3)."""
+    import os
+    import shutil
+    src = PKG / "examples" / "five-minute"
+    for name in ("sample_server.py", "drive.py"):
+        shutil.copy(src / name, tmp_path / name)
+    env = {k: v for k, v in os.environ.items() if k != "ORC_SEAL_API_KEY"}
+    env["PYTHONPATH"] = str(PKG)
+    p = subprocess.run([sys.executable, str(tmp_path / "drive.py"), "did:web:example.com"],
+                       capture_output=True, text=True, timeout=30, env=env)
+    assert p.returncode == 0, p.stderr
+    assert '"price_usd": 120.0' in p.stdout and "not registered (INTACT)" in p.stdout
+    receipt = json.loads((tmp_path / "receipt.json").read_text())
+    assert verify(receipt)["label"] == "INTACT"
+    assert receipt["issuer"]["id"] == "did:web:example.com"
