@@ -233,3 +233,41 @@ async def test_no_matching_source_is_an_error_not_an_empty_watch(radar):
     core, _pages, _store = radar
     got = await poll(core, jurisdiction="jp")
     assert got["status"] == "error" and "nothing would be watched" in got["message"]
+
+
+@pytest.mark.asyncio
+async def test_rw7_public_status_reads_state_only_and_exposes_no_diff_text(radar):
+    core, pages, store = radar
+    empty = core.watch_status()
+    assert empty["status"] == "available" and empty["sweeps_recorded"] == 0
+    assert empty["last_sweep_at"] is None and len(empty["sources"]) == len(ALL)
+    assert all(source["last_retrieved_at"] is None for source in empty["sources"])
+    assert pages.fetches == []                              # never fetches
+
+    await poll(core, jurisdiction="us")
+    pages.text[SEC] = BASE + "Secret phrase zebra-quartz appears in the new text."
+    age_last_sweep(store, 30)
+    await poll(core, jurisdiction="us")
+    pages.fetches.clear()
+    status = core.watch_status()
+    assert pages.fetches == []
+    assert status["sweeps_recorded"] == 2 and status["changes_logged"] == 1
+    assert status["first_sweep_at"] <= status["last_sweep_at"]
+    by_id = {source["source_id"]: source for source in status["sources"]}
+    assert by_id[SEC]["changes_logged"] == 1 and by_id[CARB]["changes_logged"] == 0
+    assert by_id[SEC]["source_url"].startswith("https://www.sec.gov/")
+    latest = status["latest_changes"][0]
+    assert latest["source_id"] == SEC and latest["previous_sha256"] != latest["sha256"]
+    assert set(latest) == {"source_id", "authority", "title", "detected_at",
+                           "previous_sha256", "sha256"}
+    flat = json.dumps(status)
+    assert "zebra-quartz" not in flat and "diff_excerpt" not in flat
+    assert "event_id" not in flat and "seq" not in flat
+    assert core.watch_status(recent=0)["latest_changes"] == []
+
+
+def test_rw7_public_status_is_unavailable_without_a_store():
+    core = RegulatoryRadarCore(live_fetcher=Pages(), live_fetch_enabled=True)
+    core.snapshot_store_path = None
+    got = core.watch_status()
+    assert got["status"] == "unavailable" and got["sources"] == []

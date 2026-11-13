@@ -1457,6 +1457,67 @@ class RegulatoryRadarCore:
             "source_errors": source_errors,
         }
 
+    def watch_status(self, recent: int = 5) -> Dict[str, any]:
+        """Public summary of the watch: what is watched and when it last ran.
+
+        RW7  reads stored state only (never fetches) and exposes no diff text:
+             sources, retrieval times, text hashes, sweep and change counts,
+             and for the most recent changes only which source changed and
+             when. The excerpts and the cursor log are the seat's service.
+        """
+        if not self.live_fetch_enabled or self.snapshot_store_path is None:
+            return {"status": "unavailable", "sources": [], "changes_logged": 0,
+                    "sweeps_recorded": 0, "last_sweep_at": None,
+                    "latest_changes": []}
+        try:
+            store = load_snapshot_store(self.snapshot_store_path)
+            log = load_change_log(self.snapshot_store_path)
+        except Exception:
+            return {"status": "unavailable", "sources": [], "changes_logged": 0,
+                    "sweeps_recorded": 0, "last_sweep_at": None,
+                    "latest_changes": []}
+        sweeps = [record for record in log if record.get("type") == "sweep"]
+        changes = [record for record in log if record.get("type") == "change"]
+        failed = set(sweeps[-1].get("failed_source_ids") or []) if sweeps else set()
+        sources = []
+        for source in sorted(OFFICIAL_SOURCES, key=lambda item: item.source_id):
+            snapshot = store.get("sources", {}).get(source.source_id) or {}
+            sources.append({
+                "source_id": source.source_id,
+                "title": source.title,
+                "authority": source.authority,
+                "jurisdiction": source.jurisdiction,
+                "source_url": source.url,
+                "last_retrieved_at": snapshot.get("retrieved_at"),
+                "sha256": snapshot.get("sha256"),
+                "retrieved_in_last_sweep": (
+                    bool(sweeps) and source.source_id not in failed),
+                "changes_logged": sum(
+                    1 for record in changes
+                    if record.get("source_id") == source.source_id),
+            })
+        return {
+            "status": "available",
+            "sources": sources,
+            "source_count": len(sources),
+            "sweeps_recorded": len(sweeps),
+            "first_sweep_at": sweeps[0]["at"] if sweeps else None,
+            "last_sweep_at": sweeps[-1]["at"] if sweeps else None,
+            "changes_logged": len(changes),
+            "latest_changes": [
+                {"source_id": record.get("source_id"),
+                 "authority": record.get("authority"),
+                 "title": record.get("title"),
+                 "detected_at": record.get("detected_at"),
+                 "previous_sha256": record.get("previous_sha256"),
+                 "sha256": record.get("sha256")}
+                for record in changes[-max(0, int(recent)):][::-1]
+            ] if recent > 0 else [],
+            "what_a_change_is": (
+                "a difference in the visible text of the listed official "
+                "page between two retrievals; not a legal determination"),
+        }
+
     async def watch_changes(
         self,
         jurisdiction: Jurisdiction,
