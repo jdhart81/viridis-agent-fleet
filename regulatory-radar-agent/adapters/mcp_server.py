@@ -160,6 +160,35 @@ async def monitor_changes(jurisdiction: str, since_days: int = 90,
 
 
 @mcp.tool(annotations=_LIVE_WRITE)
+async def watch_changes(jurisdiction: Optional[str] = None,
+                        topics: Optional[List[str]] = None,
+                        since: int = 0,
+                        max_age_hours: int = 24,
+                        payment_ref: Optional[str] = None,
+                        request_id: Optional[str] = None) -> str:
+    """Poll for text changes on official regulator pages since your last poll.
+
+    Radar Watch keeps a durable log of every detected change to the
+    registry-owned official sources (SEC, European Commission, EFRAG, CARB).
+    Pass the `cursor` from your previous answer as `since` to receive only
+    what is new; 0 returns the whole log for your selection. Each change has
+    the source, both text hashes, the detection time and a short diff
+    excerpt. The answer lists exactly which sources were watched and when
+    they were last retrieved, plus the curated deadline calendar. Sources are
+    re-retrieved when the last sweep is older than `max_age_hours`. A change
+    is a text difference on an official page, not a legal determination.
+
+    Example arguments: {"jurisdiction": "california", "since": 0}"""
+    return await _run({"action": "watch_changes",
+                       "jurisdiction": jurisdiction or "",
+                       "topics": topics or [], "since": since,
+                       "max_age_hours": max_age_hours,
+                       **({"payment_ref": payment_ref} if payment_ref else {}),
+                       **({"request_id": request_id}
+                          if request_id is not None else {})})
+
+
+@mcp.tool(annotations=_LIVE_WRITE)
 async def build_evidence_pack(
     jurisdiction: str,
     topics: Optional[List[str]] = None,

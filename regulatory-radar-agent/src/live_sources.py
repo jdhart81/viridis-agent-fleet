@@ -480,5 +480,131 @@ def collect_source_evidence(
     return evidence, persisted, errors
 
 
+# ---------------------------------------------------------------------------
+# Change log (Radar Watch). The snapshot store keeps only the latest text of
+# each source, so whoever observes a change first consumes it. The log keeps
+# every detected change so any watcher can ask "what changed since my cursor".
+#
+# RW1  one change record per (source, previous sha, new sha); baselines and
+#      normalizer resets are never recorded as changes
+# RW2  append-only JSON lines; a record's seq is its 1-based line number
+# RW6  a record carries hashes and the bounded diff excerpt, never the text
+CHANGE_LOG_SCHEMA = "viridis-regulatory-change-log-v1"
+
+
+def change_log_path(store_path: Path) -> Path:
+    return store_path.with_suffix(store_path.suffix + ".changes.jsonl")
+
+
+def load_change_log(store_path: Path | None) -> list[dict[str, Any]]:
+    """Return every log record in order, each with its seq."""
+    if store_path is None:
+        return []
+    path = change_log_path(store_path)
+    if not path.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for number, line in enumerate(handle, start=1):
+            line = line.strip()
+            if not line:
+                raise ValueError(f"regulatory change log has a blank line at {number}")
+            record = json.loads(line)
+            if record.get("schema") != CHANGE_LOG_SCHEMA:
+                raise ValueError("unsupported regulatory change log schema")
+            record["seq"] = number
+            records.append(record)
+    return records
+
+
+def change_records_from_evidence(
+    evidence: list[dict[str, Any]],
+    previous_store: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Build change records for evidence items whose text changed (RW1)."""
+    previous_sources = previous_store.get("sources", {})
+    records = []
+    for item in evidence:
+        if item.get("change_status") != "changed":
+            continue
+        previous = previous_sources.get(item["source_id"]) or {}
+        previous_sha = str(previous.get("sha256") or "")
+        event_id = sha256(
+            f"{item['source_id']}|{previous_sha}|{item['sha256']}".encode("utf-8")
+        ).hexdigest()
+        records.append({
+            "schema": CHANGE_LOG_SCHEMA,
+            "type": "change",
+            "event_id": event_id,
+            "detected_at": item.get("retrieved_at") or _utc_now(),
+            "source_id": item["source_id"],
+            "title": item.get("title"),
+            "authority": item.get("authority"),
+            "jurisdiction": item.get("jurisdiction"),
+            "topics": list(item.get("topics") or []),
+            "source_url": item.get("source_url"),
+            "previous_sha256": previous_sha,
+            "previous_retrieved_at": previous.get("retrieved_at"),
+            "sha256": item["sha256"],
+            "diff_excerpt": list(item.get("diff_excerpt") or []),
+            "review_focus": item.get("review_focus"),
+        })
+    return records
+
+
+def sweep_record(checked: int, changed: int, failed: list[str]) -> dict[str, Any]:
+    return {
+        "schema": CHANGE_LOG_SCHEMA,
+        "type": "sweep",
+        "at": _utc_now(),
+        "sources_checked": checked,
+        "changed": changed,
+        "failed_source_ids": sorted(failed),
+    }
+
+
+def append_change_records(
+    store_path: Path, records: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Append records under an exclusive lock; skip change records already logged.
+
+    Returns the records actually written, each with its seq.
+    """
+    if not records:
+        return []
+    path = change_log_path(store_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    written: list[dict[str, Any]] = []
+    with path.open("a+", encoding="utf-8") as handle:
+        try:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        except ImportError:  # platform without flock; single-writer deployments only
+            pass
+        handle.seek(0)
+        seen: set[str] = set()
+        count = 0
+        for line in handle:
+            if not line.strip():
+                continue
+            count += 1
+            existing = json.loads(line)
+            if existing.get("type") == "change":
+                seen.add(str(existing.get("event_id")))
+        handle.seek(0, os.SEEK_END)
+        for record in records:
+            if record.get("type") == "change":
+                if record["event_id"] in seen:
+                    continue
+                seen.add(record["event_id"])
+            stored = {key: value for key, value in record.items() if key != "seq"}
+            handle.write(json.dumps(stored, sort_keys=True) + "\n")
+            count += 1
+            written.append({**stored, "seq": count})
+        handle.flush()
+        os.fsync(handle.fileno())
+    return written
+
+
 def public_source_catalog() -> list[dict[str, Any]]:
     return [asdict(source) for source in OFFICIAL_SOURCES]

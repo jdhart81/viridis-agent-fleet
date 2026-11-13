@@ -35,6 +35,7 @@ from .validation import (
     validate_compliance_assessment_input,
     validate_monitor_changes_input,
     validate_evidence_pack_input,
+    validate_watch_changes_input,
     ValidationError,
     ValidationWarning,
     jurisdiction_reading,
@@ -43,8 +44,13 @@ from .applicability import (
     OUT_OF_SCOPE, UNCONFIRMED, describe_gate, evaluate_gate,
 )
 from .live_sources import (
+    OFFICIAL_SOURCES,
     PACK_SCHEMA,
+    append_change_records,
+    change_records_from_evidence,
     collect_source_evidence,
+    load_change_log,
+    sweep_record,
     fetch_official_source,
     load_snapshot_store,
     public_source_catalog,
@@ -412,7 +418,7 @@ FIRST_CALL_HELP = {
     ],
     "discover_with": "describe_agent",
 }
-_FC1_ACTIONS = frozenset({"scan", "assess", "monitor_changes"})
+_FC1_ACTIONS = frozenset({"scan", "assess", "monitor_changes", "watch_changes"})
 
 
 def _sector_or_teach(value):
@@ -432,7 +438,8 @@ class RegulatoryRadarCore:
     Core intelligence engine for regulatory monitoring and compliance assessment.
     """
     KNOWN_ACTIONS = frozenset({
-        "scan", "assess", "monitor_changes", "build_evidence_pack",
+        "scan", "assess", "monitor_changes", "watch_changes",
+        "build_evidence_pack",
     })
     READ_ACTIONS = frozenset()
 
@@ -550,6 +557,18 @@ class RegulatoryRadarCore:
                     active_projects=validated["active_projects"],
                     lookback_days=validated["lookback_days"],
                 )
+            elif action == "watch_changes":
+                validated = validate_watch_changes_input(input_data)
+                validation_warnings = [
+                    str(w) for w in validated.pop("_validation_warnings", [])
+                ]
+                result = await self.watch_changes(
+                    jurisdiction=Jurisdiction(validated["jurisdiction"]),
+                    topics=validated["topics"],
+                    since=validated["since"],
+                    max_age_hours=validated["max_age_hours"],
+                    lookback_days=validated["lookback_days"],
+                )
             elif action == "build_evidence_pack":
                 validated = validate_evidence_pack_input(input_data)
                 validation_warnings = [
@@ -571,7 +590,7 @@ class RegulatoryRadarCore:
                     "message": (
                         f"Unknown action: {action}. "
                         "Supported: scan, assess, monitor_changes, "
-                        "build_evidence_pack"
+                        "watch_changes, build_evidence_pack"
                     ),
                     "timestamp": datetime.utcnow().isoformat(),
                 }
@@ -618,6 +637,7 @@ class RegulatoryRadarCore:
                 "scan_regulations",
                 "assess_compliance",
                 "monitor_changes",
+                "watch_changes",
                 "build_evidence_pack",
             ],
             "live_source_monitoring": {
@@ -1289,6 +1309,13 @@ class RegulatoryRadarCore:
                     "snapshot_store": str(self.snapshot_store_path),
                     "journal": journal_record,
                 })
+                # RW1: a change observed here is logged for every watcher,
+                # not consumed by this caller.
+                await asyncio.to_thread(
+                    append_change_records,
+                    self.snapshot_store_path,
+                    change_records_from_evidence(evidence, previous_store),
+                )
 
         curated = await self.monitor_changes(
             jurisdiction=jurisdiction,
@@ -1371,6 +1398,179 @@ class RegulatoryRadarCore:
             "would_buy_again": None,
         }
         return pack
+
+    # ------------------------------------------------------------------
+    # Radar Watch
+    #
+    # RW3  a watch never fetches while the last sweep is younger than
+    #      max_age_hours; when it sweeps, it sweeps every registered source,
+    #      so the log's completeness does not depend on who asked for what
+    # RW4  without a configured store the watch fails closed; it never
+    #      answers "no changes" for sources it could not compare
+    # RW5  the answer names the sources watched, when they were last swept
+    #      and which could not be retrieved; "no changes" covers only those
+    async def sweep_sources(self) -> Dict[str, any]:
+        """Fetch every registered official source once and log text changes."""
+        if not self.live_fetch_enabled or self.snapshot_store_path is None:
+            return {
+                "status": "error",
+                "error_type": "ContextError",
+                "message": (
+                    "source watching needs live retrieval and a snapshot "
+                    "store on this runtime (REGULATORY_RADAR_LIVE_FETCH_ENABLED=1 "
+                    "and REGULATORY_RADAR_SNAPSHOT_STORE)"
+                ),
+                "watch_status": "unavailable",
+            }
+        try:
+            previous_store = load_snapshot_store(self.snapshot_store_path)
+        except Exception as exc:
+            return {"status": "error", "error_type": "ContextError",
+                    "message": f"cannot read the source snapshot store: {exc}"}
+        sources = sorted(OFFICIAL_SOURCES, key=lambda source: source.source_id)
+        evidence, persistable, source_errors = await asyncio.to_thread(
+            collect_source_evidence, sources, previous_store,
+            fetcher=self.live_fetcher,
+        )
+        if persistable:
+            merged = dict(previous_store.get("sources", {}))
+            merged.update({snap["source_id"]: snap for snap in persistable})
+            await asyncio.to_thread(
+                save_snapshot_store, self.snapshot_store_path,
+                list(merged.values()))
+        changes = change_records_from_evidence(evidence, previous_store)
+        written = await asyncio.to_thread(
+            append_change_records, self.snapshot_store_path,
+            changes + [sweep_record(
+                len(evidence), len(changes),
+                [error["source_id"] for error in source_errors])],
+        )
+        return {
+            "status": "success",
+            "swept_at": written[-1]["at"],
+            "sources_checked": len(evidence),
+            "baselines_created": sum(
+                1 for item in evidence
+                if item["change_status"].startswith("baseline_")),
+            "changes_logged": sum(
+                1 for record in written if record["type"] == "change"),
+            "source_errors": source_errors,
+        }
+
+    async def watch_changes(
+        self,
+        jurisdiction: Jurisdiction,
+        topics: Optional[List[str]] = None,
+        since: int = 0,
+        max_age_hours: int = 24,
+        lookback_days: int = 30,
+    ) -> Dict[str, any]:
+        """Report official-source text changes logged after cursor ``since``."""
+        if not self.live_fetch_enabled or self.snapshot_store_path is None:
+            return {
+                "status": "error",
+                "error_type": "ContextError",
+                "message": (
+                    "source watching is not available on this runtime; use "
+                    "monitor_changes for the curated deadline calendar"
+                ),
+                "watch_status": "unavailable",
+            }
+        try:
+            sources = select_sources(jurisdiction.value, topics or [], [])
+        except ValueError as exc:
+            return {"status": "error", "error_type": "ValidationError",
+                    "field": "topics", "message": str(exc)}
+        if not sources:
+            return {
+                "status": "error",
+                "error_type": "ValidationError",
+                "field": "topics",
+                "message": (
+                    "no registered official source matches this jurisdiction "
+                    "and topic selection; nothing would be watched"
+                ),
+            }
+        try:
+            log = await asyncio.to_thread(
+                load_change_log, self.snapshot_store_path)
+        except Exception as exc:
+            return {"status": "error", "error_type": "ContextError",
+                    "message": f"cannot read the change log: {exc}"}
+
+        def last_sweep(records):
+            sweeps = [r for r in records if r.get("type") == "sweep"]
+            return sweeps[-1] if sweeps else None
+
+        swept_now = None
+        latest = last_sweep(log)
+        age_hours = None
+        if latest is not None:
+            swept_at = datetime.fromisoformat(
+                str(latest["at"]).replace("Z", "+00:00")).replace(tzinfo=None)
+            age_hours = (datetime.utcnow() - swept_at).total_seconds() / 3600
+        if latest is None or age_hours > max_age_hours:
+            swept_now = await self.sweep_sources()
+            if swept_now.get("status") != "success":
+                return swept_now
+            log = await asyncio.to_thread(
+                load_change_log, self.snapshot_store_path)
+            latest = last_sweep(log)
+
+        watched_ids = {source.source_id for source in sources}
+        changes = [
+            record for record in log
+            if record.get("type") == "change"
+            and record["seq"] > since
+            and record.get("source_id") in watched_ids
+        ]
+        cursor = log[-1]["seq"] if log else 0
+        failed = sorted(set(latest.get("failed_source_ids") or []) & watched_ids)
+        store = await asyncio.to_thread(
+            load_snapshot_store, self.snapshot_store_path)
+        watched = []
+        for source in sources:
+            snapshot = store.get("sources", {}).get(source.source_id) or {}
+            watched.append({
+                "source_id": source.source_id,
+                "title": source.title,
+                "authority": source.authority,
+                "jurisdiction": source.jurisdiction,
+                "source_url": source.url,
+                "last_retrieved_at": snapshot.get("retrieved_at"),
+                "sha256": snapshot.get("sha256"),
+                "retrieved_in_last_sweep": source.source_id not in failed,
+            })
+        calendar = await self.monitor_changes(
+            jurisdiction=jurisdiction, topics=topics,
+            lookback_days=lookback_days)
+        return {
+            "status": "success",
+            "watch_status": "complete" if not failed else "partial",
+            "jurisdiction": jurisdiction.value,
+            "topics": topics or [],
+            "since": since,
+            "cursor": cursor,
+            "changes": changes,
+            "change_count": len(changes),
+            "sources_watched": watched,
+            "last_sweep_at": latest["at"],
+            "swept_for_this_call": swept_now is not None,
+            "sources_not_retrieved_in_last_sweep": failed,
+            "coverage_note": (
+                "A change means the visible text of a listed official page "
+                "differed between two retrievals. It is not a legal "
+                "determination, and nothing is claimed about sources not "
+                "listed. An empty change list means no difference was "
+                "logged for the listed sources after the cursor."
+            ),
+            "next_poll": {
+                "tool": "watch_changes",
+                "arguments": {"jurisdiction": jurisdiction.value,
+                              "topics": topics or [], "since": cursor},
+            },
+            "deadline_calendar": calendar,
+        }
 
     async def detect_opportunities(
         self,
@@ -1714,6 +1914,7 @@ class RegulatoryRadarCore:
                 "regulatory_forecast",
                 "generate_alerts",
                 "monitor_changes",
+                "watch_changes",
                 "build_evidence_pack",
             ],
             "inputs": [
