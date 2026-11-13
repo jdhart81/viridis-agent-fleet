@@ -31,6 +31,7 @@ import functools
 import hashlib
 import inspect
 import json
+import sys
 import math
 import urllib.error
 import urllib.request
@@ -115,10 +116,22 @@ class RegistryClient:
                 return None
             return {"method": "registry", "url": proof["url"]}
         except urllib.error.HTTPError as exc:
-            self.last_error = f"http {exc.code}"
+            self.last_error = f"http {exc.code}" + _registry_reason(exc)
         except Exception as exc:  # network, JSON, anything: fail open
             self.last_error = type(exc).__name__
         return None
+
+
+def _registry_reason(exc) -> str:
+    """The registry's own short reason for a refusal, if it gave one."""
+    try:
+        data = json.loads(exc.read().decode() or "{}")
+        reason = data.get("error") if isinstance(data, dict) else None
+        if isinstance(reason, str) and reason.strip():
+            return ": " + " ".join(reason.split())[:160]
+    except Exception:
+        pass
+    return ""
 
 
 class Sealer:
@@ -149,7 +162,28 @@ class Sealer:
             proof = self.registry.register(receipt)
             if proof:
                 receipt["issuer_proof"] = proof
+            else:
+                self._note_registration_failure(self.registry.last_error)
         return receipt
+
+    def _note_registration_failure(self, error: Optional[str]) -> None:
+        """M8: say once per distinct cause, on stderr, that receipts are INTACT only.
+
+        Registration still fails open (M4) and the result is never changed
+        (M1). stdout carries the MCP protocol, so the note goes to stderr.
+        The API key is never written.
+        """
+        try:
+            cause = str(error or "unknown error")
+            seen = self.__dict__.setdefault("_registration_failures_noted", set())
+            if cause in seen:
+                return
+            seen.add(cause)
+            print(f"orc-seal: registration failed ({cause}); this receipt is "
+                  "INTACT (L1) and was not recorded by the registry. Results "
+                  "are unaffected.", file=sys.stderr, flush=True)
+        except Exception:
+            pass
 
     # -- JSON-RPC (MCP wire) mode -------------------------------------------
     def seal_tools_call(self, request: dict, response: dict) -> dict:

@@ -2,4 +2,4 @@
 from .sealer import (META_KEY, RegistryClient, Sealer, normalize, sealed,  # noqa: F401
                      verify)
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
