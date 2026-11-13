@@ -271,6 +271,21 @@ curl -s https://mcp.viridisconservation.com/eco-funding/mcp \
 #    conjecture. K is not a price; any real funding pool needs legal review before money moves.
 ```
 
+**Settle an agreement on a published number** — settlement-engine (reads free; `compile_contract` and `settle_contract` are priced):
+```bash
+curl -s https://mcp.viridisconservation.com/settlement-engine/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"register_series","arguments":{
+       "name":"ERCOT North weekly RT avg","unit":"$/MWh","aggregate":"mean","n_expected":8,
+       "value_min":-251,"value_max":5000,"source":"https://www.ercot.com/mp/data-products/np6-905-cd",
+       "period_start":"2026-11-03T00:00:00-06:00","period_end":"2026-11-10T00:00:00-06:00","strikes":[30,35]}}}'
+# -> a series_id. `ingest` adds sourced, hashed observations; `period_status` and
+#    `required_remainder` (free) say what the rest of the period must do; a strike is "decided"
+#    only when arithmetic on the published part settles it. `compile_contract` then
+#    `settle_contract` return YES / NO / UNDECIDED with every observation hash used, and
+#    `verify_settlement` (free) lets anyone recompute it. It never forecasts and never guesses.
+```
+
 **Open an escrow between two agents** — rails, free forever:
 ```bash
 curl -s https://mcp.viridisconservation.com/escrow/mcp \
