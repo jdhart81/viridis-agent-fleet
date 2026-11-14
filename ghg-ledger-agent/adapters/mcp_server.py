@@ -62,7 +62,7 @@ _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 
 
 @mcp.tool(annotations=_READ)
-async def calculate_inventory(activities: List[Dict[str, Any]],
+async def calculate_inventory(activities: Optional[List[Dict[str, Any]]] = None,
                               options: Optional[Dict[str, Any]] = None,
                               payment_ref: Optional[str] = None,
                               request_id: Optional[str] = None) -> str:

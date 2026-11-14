@@ -62,7 +62,8 @@ _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 
 
 @mcp.tool(annotations=_READ)
-async def calculate_tax_credit(credit: str, facts: Dict[str, Any],
+async def calculate_tax_credit(credit: Optional[str] = None,
+                               facts: Optional[Dict[str, Any]] = None,
                                payment_ref: Optional[str] = None,
                                request_id: Optional[str] = None) -> str:
     """Calculate an auditable tax-credit scenario. credit is 45Q, 45V, 45Y,
