@@ -495,6 +495,22 @@ class RegulatoryRadarCore:
         )
         logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
+    async def _paid_preflight(self, payload):
+        """NC1: a request that lacks the inputs this tool computes from is
+        answered before any quota, credit or seat call is spent. The answer is
+        the engine's own error with first_call_help. Anything the engine can
+        attempt returns None here and takes the normal path."""
+        if not isinstance(payload, dict) or payload.get("action") not in {"scan", "monitor_changes"}:
+            return None
+        if (isinstance(payload.get("jurisdiction"), str)
+                and payload["jurisdiction"].strip()):
+            return None
+        # The class's own process, not an instance wrapper: no gate, no seal.
+        answer = await type(self).process(self, dict(payload))
+        if isinstance(answer, dict) and answer.get("status") == "error":
+            return answer
+        return None
+
     async def process(self, input_data: dict) -> dict:
         """Run one action; add caller guidance beside the result (FC1, J2)."""
         response = await self._process(input_data)

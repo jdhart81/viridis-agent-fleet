@@ -294,6 +294,22 @@ class DisclosureCompilerCore:
                 "value": value, "constraint": constraint, "message": message,
                 "timestamp": _now()}
 
+    async def _paid_preflight(self, payload):
+        """NC1: a request that lacks the inputs this tool computes from is
+        answered before any quota, credit or seat call is spent. The answer is
+        the engine's own error with first_call_help. Anything the engine can
+        attempt returns None here and takes the normal path."""
+        if not isinstance(payload, dict) or payload.get("action") not in {"compile_disclosure"}:
+            return None
+        if (isinstance(payload.get("framework"), str)
+                and isinstance(payload.get("company_facts"), dict)):
+            return None
+        # The class's own process, not an instance wrapper: no gate, no seal.
+        answer = await type(self).process(self, dict(payload))
+        if isinstance(answer, dict) and answer.get("status") == "error":
+            return answer
+        return None
+
     async def process(self, input_data: dict) -> dict:
         """FC1: a compilation that fails returns a working example beside the error."""
         response = await self._process(input_data)
