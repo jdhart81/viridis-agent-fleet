@@ -12,10 +12,13 @@ import pytest
 from fleet_utils.mcp_errors import flag_error_results, is_error_result
 
 mcp_types = pytest.importorskip("mcp.types")
-from mcp.server.fastmcp import FastMCP  # noqa: E402
-from mcp.shared.memory import create_connected_server_and_client_session  # noqa: E402
+try:  # MCP SDK 2.x (serves 2026-07-28 and the handshake versions)
+    from mcp.server.mcpserver import MCPServer as FastMCP
+except ModuleNotFoundError:  # MCP SDK 1.x
+    from mcp.server.fastmcp import FastMCP
 
 from fleet_utils.mcp_output import FleetToolResult, structured_result  # noqa: E402
+from fleet_utils.mcp_compat import connect, field  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 ERROR = {"status": "error", "error_type": "ValidationError", "message": "bad input"}
@@ -61,12 +64,12 @@ def _server():
 
 
 async def _call(mcp, name, args=None):
-    async with create_connected_server_and_client_session(mcp._mcp_server) as client:
+    async with connect(mcp) as client:
         return await client.call_tool(name, args or {})
 
 
 async def _list(mcp):
-    async with create_connected_server_and_client_session(mcp._mcp_server) as client:
+    async with connect(mcp) as client:
         return [t.model_dump() for t in (await client.list_tools()).tools]
 
 
@@ -93,11 +96,11 @@ def test_error_envelope_sets_is_error_and_keeps_body(name):
     assert flag_error_results(flagged) == 6
     after = _run(_call, flagged, name, {"fail": True})
 
-    assert before.isError is False  # the bug this module fixes
-    assert after.isError is True  # E1
+    assert field(before, "isError") is False  # the bug this module fixes
+    assert field(after, "isError") is True  # E1
     assert [c.model_dump() for c in after.content] == \
         [c.model_dump() for c in before.content]  # E2
-    assert after.structuredContent == before.structuredContent  # E2
+    assert field(after, "structuredContent") == field(before, "structuredContent")  # E2
 
 
 @pytest.mark.parametrize("name,args", [("async_text", {}), ("sync_text", {}),
@@ -109,7 +112,7 @@ def test_other_results_unchanged(name, args):
     flag_error_results(flagged)
     before = _run(_call, plain, name, args)
     after = _run(_call, flagged, name, args)
-    assert after.isError is False  # E3
+    assert field(after, "isError") is False  # E3
     assert after.model_dump() == before.model_dump()
 
 
@@ -119,7 +122,7 @@ def test_exceptions_propagate_as_before():
     flag_error_results(flagged)
     before = _run(_call, plain, "raises")
     after = _run(_call, flagged, "raises")
-    assert after.isError is True and after.model_dump() == before.model_dump()  # E8
+    assert field(after, "isError") is True and after.model_dump() == before.model_dump()  # E8
 
 
 def test_direct_calls_and_listing_unchanged_and_idempotent():

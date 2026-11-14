@@ -16,6 +16,7 @@ os.environ.setdefault("MARKET_STATE_DB", ":memory:")
 import adapters.mcp_server as market_mcp  # noqa: E402
 from client import AgentMarketSigner  # noqa: E402
 from src.core import MarketNetworkCore  # noqa: E402
+from fleet_utils.mcp_compat import connect, field  # noqa: E402
 
 
 mcp = market_mcp.mcp
@@ -24,11 +25,11 @@ mcp = market_mcp.mcp
 def call_tool(name, arguments):
     result = asyncio.run(mcp.call_tool(name, arguments))
     if isinstance(result, CallToolResult):  # error envelopes are sent with isError
-        structured = result.structuredContent
+        structured = field(result, "structuredContent")
     else:
         _content, structured = result
     schema = next(
-        tool.outputSchema for tool in asyncio.run(mcp.list_tools())
+        field(tool, "outputSchema") for tool in asyncio.run(mcp.list_tools())
         if tool.name == name)
     Draft202012Validator(schema).validate(structured)
     return structured
@@ -87,7 +88,9 @@ def test_mcp_exposes_complete_market_loop():
 
 
 def test_mcp_transport_has_dns_rebinding_protection():
-    settings = mcp.settings.transport_security
+    from adapters.mcp_server import _TRANSPORT_SECURITY as settings
+    if hasattr(mcp.settings, "transport_security"):      # SDK 1.x keeps it on the server
+        assert mcp.settings.transport_security is settings
     assert settings.enable_dns_rebinding_protection is True
     assert "mcp.viridisconservation.com" in settings.allowed_hosts
     assert "127.0.0.1:*" in settings.allowed_hosts
@@ -98,12 +101,12 @@ def test_mcp_tools_advertise_structured_results_and_safety_hints():
     tools = asyncio.run(mcp.list_tools())
     assert len(tools) == 23
     for tool in tools:
-        assert tool.outputSchema is not None, tool.name
-        assert tool.outputSchema["properties"]["status"]["type"] == "string"
+        assert field(tool, "outputSchema") is not None, tool.name
+        assert field(tool, "outputSchema")["properties"]["status"]["type"] == "string"
         assert tool.annotations is not None, tool.name
-        assert tool.annotations.destructiveHint is False, tool.name
-        assert tool.annotations.idempotentHint is True, tool.name
-        assert tool.annotations.openWorldHint is False, tool.name
+        assert field(tool.annotations, "destructiveHint") is False, tool.name
+        assert field(tool.annotations, "idempotentHint") is True, tool.name
+        assert field(tool.annotations, "openWorldHint") is False, tool.name
 
     by_name = {tool.name: tool for tool in tools}
     for name in {
@@ -112,9 +115,9 @@ def test_mcp_tools_advertise_structured_results_and_safety_hints():
         "search_work", "get_work",
         "network_status", "describe_network",
     }:
-        assert by_name[name].annotations.readOnlyHint is True
-    assert by_name["post_work"].annotations.readOnlyHint is False
-    assert by_name["confirm_work_funding"].annotations.readOnlyHint is False
+        assert field(by_name[name].annotations, "readOnlyHint") is True
+    assert field(by_name["post_work"].annotations, "readOnlyHint") is False
+    assert field(by_name["confirm_work_funding"].annotations, "readOnlyHint") is False
 
 
 def test_mcp_result_schema_accepts_success_and_error_envelopes():
@@ -125,10 +128,13 @@ def test_mcp_result_schema_accepts_success_and_error_envelopes():
     assert error["status"] == "error"
     assert error["error_type"] == "ValidationError"
     raw = asyncio.run(mcp.call_tool("get_work", {"work_id": "missing-work"}))
-    assert isinstance(raw, CallToolResult) and raw.isError is True
+    assert isinstance(raw, CallToolResult) and field(raw, "isError") is True
 
     success_raw = asyncio.run(mcp.call_tool("network_status", {}))
-    assert not isinstance(success_raw, CallToolResult)
+    # SDK 1.x returns (content, structured) for a success; SDK 2.x always
+    # returns a CallToolResult. Either way a success is not flagged an error.
+    if isinstance(success_raw, CallToolResult):
+        assert field(success_raw, "isError") is False
 
 
 def test_mcp_full_signed_work_funnel_validates_every_result(tmp_path, monkeypatch):

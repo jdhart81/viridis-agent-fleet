@@ -16,7 +16,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
-from adapters.mcp_server import PORT, PUBLIC_BASE, agent, mcp
+from adapters.mcp_server import PORT, PUBLIC_BASE, agent, http_app, mcp
 
 
 async def healthz(_request):
@@ -71,7 +71,7 @@ async def lifespan(_app):
             agent.close()
 
 
-mcp_app = mcp.streamable_http_app()
+mcp_app = http_app()
 app = Starlette(routes=[
     Route("/healthz", healthz, methods=["GET"]),
     Route("/catalog", catalog, methods=["GET"]),

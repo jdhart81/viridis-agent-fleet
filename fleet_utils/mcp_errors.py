@@ -69,12 +69,19 @@ def _error_call_result(tool: Any, result: Any, call_tool_result: type) -> Any:
         converted = tool.fn_metadata.convert_result(result)
     except Exception:  # pragma: no cover - leave anything unconvertible as it was
         return result
+    if isinstance(converted, call_tool_result):
+        # SDK 2.x converts straight to a CallToolResult: same result, flag set.
+        data = converted.model_dump(by_alias=True)
+        data["isError"] = True
+        return call_tool_result.model_validate(data)
     if isinstance(converted, tuple):
         content, structured = converted
     else:
         content, structured = converted, None
-    return call_tool_result(content=list(content), structuredContent=structured,
-                            isError=True)
+    # Wire names, validated: SDK 1.x fields are camelCase, SDK 2.x fields are
+    # snake_case with camelCase aliases. Both accept the wire form here.
+    return call_tool_result.model_validate(
+        {"content": list(content), "structuredContent": structured, "isError": True})
 
 
 def _wrap(fn: Any, tool: Any, call_tool_result: type) -> Any:

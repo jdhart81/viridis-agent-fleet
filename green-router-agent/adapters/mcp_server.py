@@ -14,7 +14,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
-    from mcp.server.fastmcp import FastMCP
+    try:  # MCP SDK 2.x (serves 2026-07-28 and the handshake versions)
+        from mcp.server.mcpserver import MCPServer as FastMCP
+    except ModuleNotFoundError:  # MCP SDK 1.x
+        from mcp.server.fastmcp import FastMCP
     HAS_MCP = True
 except ImportError:  # pragma: no cover
     HAS_MCP = False

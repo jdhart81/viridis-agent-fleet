@@ -35,6 +35,19 @@ try:  # legacy prototype: kept importable for snapshot compatibility only
 except Exception:  # pragma: no cover - absent in fresh checkouts
     pass
 
+# The vendored package imports mcp.server.fastmcp, which MCP SDK 2.x removed.
+# On SDK 2.x the fleet's compatibility module stands in for it, so the same
+# wheel serves the handshake protocol versions and 2026-07-28.
+try:
+    import mcp.server.fastmcp  # noqa: F401  (SDK 1.x)
+except ModuleNotFoundError:
+    _fleet_root = Path(__file__).resolve().parents[2]
+    if (_fleet_root / "fleet_utils").is_dir() and str(_fleet_root) not in sys.path:
+        sys.path.append(str(_fleet_root))
+    from fleet_utils.mcp_compat import install_legacy_fastmcp_module
+    if not install_legacy_fastmcp_module():
+        raise
+
 from wavefunction_field.fleet.gateway import build_gateway_surface  # noqa: E402
 
 mcp, agent = build_gateway_surface()

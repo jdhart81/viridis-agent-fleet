@@ -24,7 +24,10 @@ if SRC not in sys.path:
 from viridis_eco_funding.fleet import AGENT_NAME, INSTRUCTIONS, build  # noqa: E402
 
 try:  # mcp 1.x, as pinned by the gateway
-    from mcp.server.fastmcp import FastMCP
+    try:  # MCP SDK 2.x (serves 2026-07-28 and the handshake versions)
+        from mcp.server.mcpserver import MCPServer as FastMCP
+    except ModuleNotFoundError:  # MCP SDK 1.x
+        from mcp.server.fastmcp import FastMCP
     from mcp.types import ToolAnnotations
     _ANNOTATION_KEYS = ("readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint")
 except ImportError:  # pragma: no cover - exercised only on mcp 2.x
