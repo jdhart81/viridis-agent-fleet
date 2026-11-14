@@ -129,3 +129,54 @@ def test_scan_with_no_emissions_rule_offers_no_inventory_hand_off():
     empty = engine("regulatory-radar", {"action": "scan", "jurisdiction": "US",
                                         "query": "zzzqqq"})["response"]
     assert "next_calls" not in empty.get("data", empty)
+
+
+# ---- RH2 / SB 253: a California scan ends in a complete first-cycle draft ----
+def test_california_scan_names_the_sb253_draft_and_the_chain_completes_it():
+    scan = engine("regulatory-radar", {"action": "scan", "jurisdiction": "california",
+                                       "sector": "energy"})["response"]
+    body = scan.get("data", scan)
+    step = body["next_calls"][0]
+    then = step["then"]
+    assert (then["agent"], then["tool"], then["framework"]) == (
+        "disclosure-compiler", "compile_disclosure", "ca-sb253")
+    assert then["because"] in step["because"] and then["because"] in {r["id"] for r in body["regulations"]}
+
+    inventory = follow(step, scan)["response"]
+    to_draft = inventory["next_calls"][0]
+    # the agent does what `then.why` says: same request, this framework
+    arguments = json.loads(json.dumps(to_draft["arguments"]))
+    arguments["framework"] = then["framework"]
+    arguments["options"]["applicability"] = {
+        "framework": then["framework"], "applies": True,
+        "reason": "entity does business in California with revenue over $1 billion"}
+    draft = follow({**to_draft, "arguments": arguments}, inventory)["response"]
+    assert draft["status"] == "ok", draft
+    data = draft["data"]
+    assert data["framework"]["id"] == "ca-sb253"
+    assert data["draft_status"] == "complete" and not data["gaps"]
+    filled = {item["id"]: item for item in data["filled_datapoints"]}
+    assert {"entity_name", "reporting_period", "gross_scope_1",
+            "gross_scope_2_location_based"} <= set(filled)
+    # encouraged datapoints are filled from the inventory's own lineage, never invented
+    assert filled["emission_factor_sources"]["value"] == inventory["data"]["lineage"]["source_ids_used"]
+    assert filled["gwp_values"]["value"] == inventory["data"]["factor_pack"]["gwp_set_id"]
+    assert "gross_scope_3" not in filled and "assurance_status" not in filled
+    assert data["label"] == "disclosure draft for professional review"
+
+
+def test_every_framework_a_scan_can_name_exists_in_the_compiler():
+    listed = engine("disclosure-compiler", {"action": "list_frameworks"})["response"]
+    known = {item["id"] for item in listed.get("data", listed)["frameworks"]}
+    sys.path.insert(0, str(FLEET / "regulatory-radar-agent"))
+    source = (FLEET / "regulatory-radar-agent" / "src" / "core.py").read_text()
+    import re
+    block = re.search(r"_DRAFT_FOR_RULE = \((.*?)\n\)", source, re.S).group(1)
+    named = set(re.findall(r'"\s*,\s*"([a-z0-9\-]+)"\)', block))
+    assert named and named <= known
+
+
+def test_a_scan_outside_california_names_no_sb253_draft():
+    scan = engine("regulatory-radar", {"action": "scan", "jurisdiction": "eu"})["response"]
+    for step in scan.get("data", scan).get("next_calls", []):
+        assert step.get("then", {}).get("framework") != "ca-sb253"

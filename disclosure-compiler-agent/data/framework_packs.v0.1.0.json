@@ -1,7 +1,7 @@
 {
   "schema_version": "viridis.disclosure.framework-packs.v1",
-  "pack_version": "2026.07.13-v0.1.0",
-  "effective_as_of": "2026-07-13",
+  "pack_version": "2026.11.14-v0.2.0",
+  "effective_as_of": "2026-11-14",
   "disclaimer": "Disclosure draft for professional review only. This deterministic assembly is not a filed, assured, audited, or legally sufficient report and is not legal, accounting, assurance, or regulatory advice. Missing fields remain explicit gaps; applicability and materiality must be confirmed by qualified professionals.",
   "ghg_verifier": {
     "producer_agent_id": "ghg-ledger-agent",
@@ -62,6 +62,23 @@
       "date": "2026-07-13",
       "url": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/deployment/REVENUE_TOOLS_BUILD_LIST.md",
       "note": "Implementation pin only; it does not replace the underlying framework text or professional judgment."
+    },
+    {
+      "id": "ca-hsc-38532",
+      "authority": "California Health and Safety Code section 38532",
+      "title": "Climate Corporate Data Accountability Act (SB 253, as amended)",
+      "publisher": "State of California",
+      "date": "2023-10-07",
+      "url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=HSC&sectionNum=38532"
+    },
+    {
+      "id": "carb-sb253-reporting-guidance-2026",
+      "authority": "California Air Resources Board, 2026 SB 253 Reporting Guidance; Initial Regulation, 17 CCR 96070-96077",
+      "title": "2026 SB 253 Reporting Guidance",
+      "publisher": "California Air Resources Board",
+      "date": "2026-09",
+      "url": "https://ww2.arb.ca.gov/sites/default/files/2026-09/2026_SB253_Reporting_Guidance.pdf",
+      "note": "Covers the first reporting cycle only (Scope 1 and Scope 2, due on or before 2026-11-10). Scope 3 and assurance for later cycles are under separate rulemaking. This pack never presumes that an entity is covered."
     }
   ],
   "frameworks": {
@@ -130,6 +147,24 @@
         {"id": "leap_process", "section": "risk_and_impact_management", "label": "LEAP-aligned assessment process", "requirement": "Describe the process used to locate, evaluate, assess, and prepare for nature-related issues.", "required": true, "expected_input": {"source": "company_facts", "path": "leap_process"}, "source_id": "tnfd-final-recommendations-2023"},
         {"id": "nature_metrics", "section": "metrics_and_targets", "label": "Nature metrics", "requirement": "Disclose metrics used to assess and manage material nature-related dependencies, impacts, risks, and opportunities.", "required": true, "expected_input": {"source": "company_facts", "path": "nature_metrics"}, "source_id": "tnfd-final-recommendations-2023"},
         {"id": "nature_targets", "section": "metrics_and_targets", "label": "Nature targets", "requirement": "Disclose targets and performance used to manage nature-related issues.", "required": true, "expected_input": {"source": "company_facts", "path": "nature_targets"}, "source_id": "tnfd-final-recommendations-2023"}
+      ]
+    },
+    "ca-sb253": {
+      "name": "California SB 253 — first-cycle Scope 1 and Scope 2 report, structured draft",
+      "status": "mvp_structured_datapoints_professional_applicability_review_required",
+      "note": "First reporting cycle only: annual Scope 1 and Scope 2 emissions for the applicable preceding fiscal year, due to CARB on or before 2026-11-10. Scope 3 and assurance are not part of this cycle. Whether an entity is covered (doing business in California, revenue over $1 billion, exemptions) is not determined here. An entity that was not collecting this data when CARB issued its December 2024 Enforcement Notice may submit a statement of non-reporting instead; this draft does not produce that statement. Methodology, boundary, factor and assurance datapoints are encouraged by CARB, not required, and are filled only when supplied.",
+      "source_ids": ["ca-hsc-38532", "carb-sb253-reporting-guidance-2026", "viridis-disclosure-builder-spec-v0.1.0"],
+      "datapoints": [
+        {"id": "entity_name", "section": "basis", "label": "Reporting entity name", "requirement": "Identify the reporting entity.", "required": true, "expected_input": {"source": "company_facts", "path": "company_name"}, "source_id": "carb-sb253-reporting-guidance-2026"},
+        {"id": "reporting_period", "section": "basis", "label": "Fiscal year reported", "requirement": "State the applicable preceding fiscal year the emissions cover.", "required": true, "expected_input": {"source": "company_facts", "path": "reporting_period"}, "source_id": "carb-sb253-reporting-guidance-2026"},
+        {"id": "gross_scope_1", "section": "ghg_emissions", "label": "Scope 1 emissions", "requirement": "Report annual Scope 1 emissions for the fiscal year.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_1"}, "source_id": "carb-sb253-reporting-guidance-2026"},
+        {"id": "gross_scope_2_location_based", "section": "ghg_emissions", "label": "Scope 2 emissions (location-based)", "requirement": "Report annual Scope 2 emissions for the fiscal year.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_2_location_based"}, "source_id": "carb-sb253-reporting-guidance-2026"},
+        {"id": "gross_scope_2_market_based", "section": "ghg_emissions", "label": "Scope 2 emissions (market-based)", "requirement": "Market-based Scope 2 emissions, when the entity reports them.", "required": false, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_2_market_based"}, "source_id": "carb-sb253-reporting-guidance-2026"},
+        {"id": "organizational_boundary", "section": "methodology", "label": "Organizational boundary", "requirement": "Encouraged: describe the organizational boundary and the entities the report covers.", "required": false, "expected_input": {"source": "company_facts", "path": "organizational_boundary"}, "source_id": "carb-sb253-reporting-guidance-2026"},
+        {"id": "ghg_methodology", "section": "methodology", "label": "Methodology and data sources", "requirement": "Encouraged: describe the methodology, data sources and assumptions used.", "required": false, "expected_input": {"source": "company_facts", "path": "ghg_methodology"}, "source_id": "carb-sb253-reporting-guidance-2026"},
+        {"id": "emission_factor_sources", "section": "methodology", "label": "Emission factor sources", "requirement": "Encouraged: identify the emission factors used and their sources.", "required": false, "expected_input": {"source": "ghg_result", "path": "lineage.source_ids_used"}, "source_id": "carb-sb253-reporting-guidance-2026"},
+        {"id": "gwp_values", "section": "methodology", "label": "Global warming potential values", "requirement": "Encouraged: identify the global warming potential values used.", "required": false, "expected_input": {"source": "ghg_result", "path": "factor_pack.gwp_set_id"}, "source_id": "carb-sb253-reporting-guidance-2026"},
+        {"id": "assurance_status", "section": "assurance", "label": "Assurance status", "requirement": "Encouraged: state whether assurance was obtained; CARB accepts first-cycle submissions with or without it.", "required": false, "expected_input": {"source": "company_facts", "path": "assurance_status"}, "source_id": "carb-sb253-reporting-guidance-2026"}
       ]
     }
   }

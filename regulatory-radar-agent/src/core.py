@@ -457,9 +457,10 @@ def _query_words(query: str) -> List[str]:
 NEXT_CALL_INVENTORY = {
     "agent": "ghg-ledger",
     "tool": "calculate_inventory",
-    "why": ("the rules listed in `because` ask for greenhouse gas emissions "
-            "figures; this computes a Scope 1/2/3 inventory with factor "
-            "lineage, and its result hands on to a disclosure draft"),
+    "why": ("the rules listed in `because` mention greenhouse gas emissions "
+            "(check each rule's legal_status: some are stayed or voluntary); "
+            "this computes a Scope 1/2/3 inventory with factor lineage, and "
+            "its result hands on to a disclosure draft"),
     "arguments": {
         "activities": [
             {"id": "office-electricity", "activity_type": "purchased_electricity",
@@ -472,6 +473,11 @@ NEXT_CALL_INVENTORY = {
     },
     "replace_before_sending": ["activities"],
 }
+# RH2: returned rule id -> disclosure-compiler framework id. A fleet test
+# checks every framework named here exists in the compiler's pack.
+_DRAFT_FOR_RULE = (
+    ("ca-sb253-2026", "ca-sb253"),
+)
 _EMISSIONS_TERMS = re.compile(
     r"greenhouse|\bghg\b|scope\s*[123]|\bemissions?\b", re.IGNORECASE)
 
@@ -854,6 +860,23 @@ class RegulatoryRadarCore:
             if asking:
                 step = deepcopy(NEXT_CALL_INVENTORY)
                 step["because"] = sorted(asking)
+                # RH2: name the draft that fits a rule this scan returned, so
+                # the chain ends in the right framework without reading docs.
+                for rule_id, framework in _DRAFT_FOR_RULE:
+                    if rule_id in asking:
+                        step["then"] = {
+                            "agent": "disclosure-compiler",
+                            "tool": "compile_disclosure",
+                            "framework": framework,
+                            "because": rule_id,
+                            "why": ("after the inventory, draft this "
+                                    "framework from its result; the "
+                                    "inventory's own next_calls shows the "
+                                    "request, with `framework` and "
+                                    "`options.applicability.framework` set "
+                                    "to this value"),
+                        }
+                        break
                 result["next_calls"] = [step]
 
             logger.info(f"Scanned {len(regs)} regulations for {jurisdiction.value}")
