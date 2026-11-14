@@ -452,6 +452,35 @@ def _query_words(query: str) -> List[str]:
     return seen[:12]
 
 
+# RH1: the request below is the GHG ledger's own published example; a fleet
+# test keeps the two identical. Engines never import each other.
+NEXT_CALL_INVENTORY = {
+    "agent": "ghg-ledger",
+    "tool": "calculate_inventory",
+    "why": ("the rules listed in `because` ask for greenhouse gas emissions "
+            "figures; this computes a Scope 1/2/3 inventory with factor "
+            "lineage, and its result hands on to a disclosure draft"),
+    "arguments": {
+        "activities": [
+            {"id": "office-electricity", "activity_type": "purchased_electricity",
+             "quantity": "12000", "unit": "kWh", "region": "US", "year": 2023},
+            {"id": "backup-generator",
+             "activity_type": "stationary_combustion_diesel",
+             "quantity": "400", "unit": "gallons", "region": "US", "year": 2025},
+        ],
+        "options": {},
+    },
+    "replace_before_sending": ["activities"],
+}
+_EMISSIONS_TERMS = re.compile(
+    r"greenhouse|\bghg\b|scope\s*[123]|\bemissions?\b", re.IGNORECASE)
+
+
+def _asks_for_emissions(reg) -> bool:
+    return any(_EMISSIONS_TERMS.search(text or "")
+               for text in (reg.name, reg.description, *reg.requirements))
+
+
 def _reg_contains(reg, needle: str) -> bool:
     return (needle in reg.name.lower()
             or needle in reg.description.lower()
@@ -818,6 +847,14 @@ class RegulatoryRadarCore:
 
             if query_read_as is not None:
                 result["query_read_as"] = query_read_as
+
+            # RH1: when a returned rule asks for emissions figures, hand the
+            # caller the call that produces them.
+            asking = [r.id for r in regs if _asks_for_emissions(r)]
+            if asking:
+                step = deepcopy(NEXT_CALL_INVENTORY)
+                step["because"] = sorted(asking)
+                result["next_calls"] = [step]
 
             logger.info(f"Scanned {len(regs)} regulations for {jurisdiction.value}")
             return result
