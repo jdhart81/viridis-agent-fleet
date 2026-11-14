@@ -190,7 +190,8 @@ def _validate_pack() -> None:
         raise RuntimeError("DC2: framework pack is missing required top-level fields")
     if len(_SOURCE_BY_ID) != len(PACK["sources"]):
         raise RuntimeError("DC2: duplicate framework source id")
-    if set(PACK["frameworks"]) != {"esrs-e1", "sec-climate", "ifrs-s2", "tnfd"}:
+    if set(PACK["frameworks"]) != {"esrs-e1", "sec-climate", "ifrs-s2", "tnfd",
+                                    "ca-sb253"}:
         raise RuntimeError("DC2: MVP framework coverage drift")
     for framework_id, framework in PACK["frameworks"].items():
         source_ids = set(framework.get("source_ids", []))

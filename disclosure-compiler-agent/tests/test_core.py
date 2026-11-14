@@ -99,7 +99,7 @@ class DisclosureCompilerInvariants(unittest.TestCase):
         listed = self.core.list_frameworks()
         self.assertEqual(listed["sha256"], FRAMEWORK_PACK_SHA256)
         self.assertEqual({item["id"] for item in listed["frameworks"]},
-                         {"esrs-e1", "sec-climate", "ifrs-s2", "tnfd"})
+                         {"esrs-e1", "sec-climate", "ifrs-s2", "tnfd", "ca-sb253"})
         esrs = self.core.get_framework("esrs-e1")
         self.assertEqual(esrs["framework_pack"]["version"], PACK["pack_version"])
         self.assertTrue(all(source["url"].startswith("https://")
