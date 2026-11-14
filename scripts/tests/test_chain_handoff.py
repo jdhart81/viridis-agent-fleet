@@ -10,13 +10,15 @@ import sys
 from pathlib import Path
 
 FLEET = Path(__file__).resolve().parents[2]
-DIRS = {"ghg-ledger": "ghg-ledger-agent", "disclosure-compiler": "disclosure-compiler-agent"}
+DIRS = {"ghg-ledger": "ghg-ledger-agent", "disclosure-compiler": "disclosure-compiler-agent",
+        "regulatory-radar": "regulatory-radar-agent"}
 RUN = r"""
 import asyncio, json, sys
 sys.path[:0] = [sys.argv[1], sys.argv[2]]
 from src import core
 request = json.loads(sys.stdin.read())
-print(json.dumps({"response": asyncio.run(core.build().process(request)),
+build = getattr(core, "build", None) or getattr(core, "RegulatoryRadarCore")
+print(json.dumps({"response": asyncio.run(build().process(request)),
                   "example": core.EXAMPLE_REQUEST}, default=str))
 """
 
@@ -89,3 +91,41 @@ def test_handoff_sits_beside_data_and_only_on_computed_results():
                                    "activities": [{"type": "electricity"}],
                                    "options": {}})["response"]
     assert "next_calls" not in failed and "first_call_help" in failed
+
+
+# ---- RH1: a regulatory scan hands on to the inventory, and on to a draft (E4) ----
+def test_scan_to_inventory_to_draft_using_only_the_responses():
+    radar = engine("regulatory-radar", {"action": "scan"})
+    scan = engine("regulatory-radar", {"action": "scan", **radar["example"]})["response"]
+    body = scan.get("data", scan)
+    assert body["total_regulations"] > 0
+
+    to_inventory = body["next_calls"][0]
+    assert (to_inventory["agent"], to_inventory["tool"]) == ("ghg-ledger", "calculate_inventory")
+    listed = {r["id"] for r in body["regulations"]}
+    assert to_inventory["because"] and set(to_inventory["because"]) <= listed
+    assert to_inventory["replace_before_sending"] == ["activities"]
+
+    inventory = follow(to_inventory, scan)["response"]
+    assert inventory["status"] == "ok"
+    assert inventory["data"]["inventory_status"] == "complete_for_supplied_activities"
+
+    to_draft = inventory["next_calls"][0]
+    assert (to_draft["agent"], to_draft["tool"]) == ("disclosure-compiler", "compile_disclosure")
+    draft = follow(to_draft, inventory)["response"]
+    assert draft["status"] == "ok"
+    assert not {"gross_scope_1", "gross_scope_2_location_based"} & gap_ids(draft)
+
+
+def test_scan_hand_off_request_is_the_ledgers_own_published_example():
+    radar = engine("regulatory-radar", {"action": "scan"})
+    scan = engine("regulatory-radar", {"action": "scan", **radar["example"]})["response"]
+    step = scan.get("data", scan)["next_calls"][0]
+    ledger = engine("ghg-ledger", {"action": "calculate_inventory"})["example"]
+    assert step["arguments"] == ledger
+
+
+def test_scan_with_no_emissions_rule_offers_no_inventory_hand_off():
+    empty = engine("regulatory-radar", {"action": "scan", "jurisdiction": "US",
+                                        "query": "zzzqqq"})["response"]
+    assert "next_calls" not in empty.get("data", empty)
