@@ -62,7 +62,8 @@ _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 
 
 @mcp.tool(annotations=_WRITE)
-async def compile_disclosure(framework: str, company_facts: Dict[str, Any],
+async def compile_disclosure(framework: Optional[str] = None,
+                             company_facts: Optional[Dict[str, Any]] = None,
                              ghg_result: Optional[Dict[str, Any]] = None,
                              options: Optional[Dict[str, Any]] = None,
                              payment_ref: Optional[str] = None,

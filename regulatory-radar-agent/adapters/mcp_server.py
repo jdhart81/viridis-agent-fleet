@@ -143,7 +143,7 @@ async def assess_compliance(company_name: str, sector: str, jurisdiction: str,
 
 
 @mcp.tool(annotations=_READ)
-async def monitor_changes(jurisdiction: str, since_days: int = 90,
+async def monitor_changes(jurisdiction: Optional[str] = None, since_days: int = 90,
                           topics: Optional[List[str]] = None,
                           payment_ref: Optional[str] = None,
                           request_id: Optional[str] = None) -> str:
