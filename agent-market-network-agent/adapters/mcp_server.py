@@ -4,7 +4,10 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional, TypedDict
 
-from mcp.server.fastmcp import FastMCP
+try:  # MCP SDK 2.x (serves 2026-07-28 and the handshake versions)
+    from mcp.server.mcpserver import MCPServer as FastMCP
+except ModuleNotFoundError:  # MCP SDK 1.x
+    from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
@@ -16,20 +19,13 @@ PORT = int(os.environ.get("MARKET_PORT", "8410"))
 PUBLIC_BASE = os.environ.get(
     "MARKET_PUBLIC_BASE", "https://mcp.viridisconservation.com/network").rstrip("/")
 
-mcp = FastMCP(
-    "viridis-agent-market-network",
-    instructions=(
+_INSTRUCTIONS = (
         "A signed agent-to-agent discovery, messaging, and work marketplace. "
         "Read tools are public. Every write uses an Ed25519 signature over the "
         "canonical payload returned by prepare_signature. The network never "
         "accepts private keys or moves money; awards route through existing "
-        "x402 or Viridis cash-escrow rails."),
-    host=HOST,
-    port=PORT,
-    streamable_http_path="/mcp",
-    stateless_http=True,
-)
-mcp.settings.transport_security = TransportSecuritySettings(
+        "x402 or Viridis cash-escrow rails.")
+_TRANSPORT_SECURITY = TransportSecuritySettings(
     enable_dns_rebinding_protection=True,
     allowed_hosts=[
         "mcp.viridisconservation.com",
@@ -45,6 +41,31 @@ mcp.settings.transport_security = TransportSecuritySettings(
         "http://localhost:8410",
     ],
 )
+
+try:  # MCP SDK 1.x: transport settings live on the server
+    mcp = FastMCP(
+        "viridis-agent-market-network",
+        instructions=_INSTRUCTIONS,
+        host=HOST,
+        port=PORT,
+        streamable_http_path="/mcp",
+        stateless_http=True,
+    )
+    mcp.settings.transport_security = _TRANSPORT_SECURITY
+except TypeError:  # MCP SDK 2.x: they are arguments of streamable_http_app()
+    mcp = FastMCP("viridis-agent-market-network", instructions=_INSTRUCTIONS)
+
+
+def http_app():
+    """The streamable-HTTP ASGI app with this service's transport settings, on
+    either SDK generation."""
+    try:
+        return mcp.streamable_http_app(
+            streamable_http_path="/mcp", stateless_http=True,
+            transport_security=_TRANSPORT_SECURITY)
+    except TypeError:
+        return mcp.streamable_http_app()
+
 
 agent = build()
 

@@ -15,11 +15,15 @@ for directory in (FLEET, AGENT):
     if str(directory) not in sys.path:
         sys.path.insert(0, str(directory))
 
-from mcp.server.fastmcp import FastMCP
+try:  # MCP SDK 2.x (serves 2026-07-28 and the handshake versions)
+    from mcp.server.mcpserver import MCPServer as FastMCP
+except ModuleNotFoundError:  # MCP SDK 1.x
+    from mcp.server.fastmcp import FastMCP
 from src.core import MarketNetworkCore
 from vcx.demo import run_demo
 from vcx.exchange import ComputeExchange
 from vcx.providers import TAKEOFF_SERVICE
+from fleet_utils.mcp_compat import connect, field  # noqa: E402
 
 
 def load_adapter():
@@ -63,9 +67,9 @@ def test_tool_catalog_is_explicit_local_and_has_no_financial_admin_surface():
     assert not names & {"seed_account", "top_up", "set_policy", "confirm_simulated_payment",
                         "create_payment", "create_payout", "execute_transfer", "onboard_seller"}
     annotations = {tool.name: tool.annotations for tool in tools}
-    assert annotations["list_capacity"].readOnlyHint is True
-    assert annotations["get_compute_quotes"].readOnlyHint is False
-    assert all(tool.annotations.openWorldHint is False for tool in tools)
+    assert field(annotations["list_capacity"], "readOnlyHint") is True
+    assert field(annotations["get_compute_quotes"], "readOnlyHint") is False
+    assert all(field(tool.annotations, "openWorldHint") is False for tool in tools)
     assert exchange.calls == []
 
 

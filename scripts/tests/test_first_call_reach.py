@@ -47,7 +47,7 @@ async def call(arguments):
 
 async def main():
     tools = {t.name: t for t in await adapter.mcp.list_tools()}
-    schema = tools[tool].inputSchema
+    schema = tools[tool].model_dump(by_alias=True)["inputSchema"]
     example = None
     try:
         from src import core

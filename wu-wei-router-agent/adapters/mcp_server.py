@@ -2,7 +2,10 @@ import json
 import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from mcp.server.fastmcp import FastMCP
+try:  # MCP SDK 2.x (serves 2026-07-28 and the handshake versions)
+    from mcp.server.mcpserver import MCPServer as FastMCP
+except ModuleNotFoundError:  # MCP SDK 1.x
+    from mcp.server.fastmcp import FastMCP
 from src.core import WuWeiRouterCore
 mcp=FastMCP('wu-wei-router-agent')
 agent=WuWeiRouterCore()
