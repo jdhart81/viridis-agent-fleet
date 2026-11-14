@@ -30,7 +30,7 @@ jobs:
           python -m pip install build twine
           python -m build
           python -m twine check dist/*
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: orc-seal-dist
           path: products/orc-seal/dist/*
@@ -45,9 +45,9 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: orc-seal-dist
           path: dist
       - name: Publish with PyPI Trusted Publishing
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
