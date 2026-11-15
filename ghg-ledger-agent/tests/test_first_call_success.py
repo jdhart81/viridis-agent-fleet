@@ -64,18 +64,43 @@ class FirstCallSuccess(unittest.TestCase):
             self.assertIn("no bundled conversion", line["reason"])
             self.assertIn("accepted units: gallon_us, liter, litre", line["reason"])
 
-    def test_missing_year_fails_closed_and_names_the_bundled_years(self):
+    def test_a_later_activity_year_uses_the_latest_earlier_factor_and_says_so(self):
         data = run([{"id": "dc", "activity_type": "purchased_electricity",
                      "quantity": "250000", "unit": "kWh", "region": "US-ERCT", "year": 2025}])
+        line = data["line_items"][0]
+        self.assertEqual(line["status"], "determinate")
+        self.assertEqual(line["factor_vintage"]["factor_year"], 2023)
+        exact = run([{"id": "dc", "activity_type": "purchased_electricity",
+                      "quantity": "250000", "unit": "kWh", "region": "US-ERCT", "year": 2023}])
+        self.assertEqual(line["kg_co2e"], exact["line_items"][0]["kg_co2e"])   # same factor, same number
+        self.assertNotIn("factor_vintage", exact["line_items"][0])
+
+    def test_an_activity_year_before_every_bundled_factor_fails_closed(self):
+        data = run([{"id": "dc", "activity_type": "purchased_electricity",
+                     "quantity": "250000", "unit": "kWh", "region": "US-ERCT", "year": 2021}])
         line = data["line_items"][0]
         self.assertEqual(line["status"], "indeterminate")
         self.assertTrue(line["excluded_from_totals"])
         self.assertEqual(data["grand_total"]["kg_co2e"], "0.000")   # nothing substituted
         self.assertIn("factor not in pack", line["reason"])
         self.assertIn("US-ERCT 2023", line["reason"])
-        retry = run([{"id": "dc", "activity_type": "purchased_electricity",
-                      "quantity": "250000", "unit": "kWh", "region": "US-ERCT", "year": 2023}])
-        self.assertEqual(retry["line_items"][0]["status"], "determinate")
+
+    def test_one_object_or_a_json_string_is_read_as_the_activity_list(self):
+        import asyncio, json
+        from src import core as ghg
+        item = {"id": "e", "activity_type": "purchased_electricity", "quantity": "100",
+                "unit": "kWh", "region": "US", "year": 2023}
+        engine = ghg.build()
+        want = asyncio.run(engine.process({"action": "calculate_inventory", "activities": [item]}))
+        for shape in (item, json.dumps([item]), json.dumps(item)):
+            got = asyncio.run(engine.process({"action": "calculate_inventory", "activities": shape,
+                                              "options": None}))
+            self.assertEqual(got["status"], "ok", shape)
+            self.assertEqual(got["data"]["audit_sha256"], want["data"]["audit_sha256"])
+        for shape in (None, "not json", 7, "[broken"):
+            got = asyncio.run(engine.process({"action": "calculate_inventory", "activities": shape}))
+            self.assertEqual(got["status"], "error")
+            self.assertIn("first_call_help", got)
 
     def test_unknown_activity_type_says_so(self):
         line = run([{"id": "x", "activity_type": "jet_fuel", "quantity": "1",

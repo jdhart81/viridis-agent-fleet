@@ -180,3 +180,27 @@ def test_a_scan_outside_california_names_no_sb253_draft():
     scan = engine("regulatory-radar", {"action": "scan", "jurisdiction": "eu"})["response"]
     for step in scan.get("data", scan).get("next_calls", []):
         assert step.get("then", {}).get("framework") != "ca-sb253"
+
+
+# ---- GH6 revised: a real single-year inventory computes and drafts ----
+def test_a_fiscal_2025_inventory_computes_and_fills_the_sb253_draft():
+    activities = [
+        {"id": "elec", "activity_type": "purchased_electricity", "quantity": 480000.5,
+         "unit": "kWh", "region": "US-CAMX", "year": 2025},
+        {"id": "gas", "activity_type": "stationary_combustion_natural_gas", "quantity": 12000,
+         "unit": "therms", "region": "US", "year": 2025},
+    ]
+    inventory = engine("ghg-ledger", {"action": "calculate_inventory", "activities": activities})["response"]
+    data = inventory["data"]
+    assert data["inventory_status"] == "complete_for_supplied_activities"
+    assert data["factor_vintage_notes"] == [
+        {"id": "elec", "factor_id": "epa_egrid2023_camx_ar6", "activity_year": 2025, "factor_year": 2023}]
+    assert data["inputs"]["activities"][0]["quantity"] == "480000.5"      # audited as text, not a float
+    to_draft = inventory["next_calls"][0]
+    arguments = json.loads(json.dumps(to_draft["arguments"]))
+    arguments["framework"] = "ca-sb253"
+    arguments["options"]["applicability"] = {"framework": "ca-sb253", "applies": True,
+                                             "reason": "scenario entity in scope"}
+    draft = follow({**to_draft, "arguments": arguments}, inventory)["response"]
+    assert draft["status"] == "ok", draft
+    assert draft["data"]["draft_status"] == "complete"

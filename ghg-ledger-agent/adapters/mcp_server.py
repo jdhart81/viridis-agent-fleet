@@ -4,7 +4,7 @@ import asyncio
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -65,7 +65,8 @@ _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 
 
 @mcp.tool(annotations=_READ)
-async def calculate_inventory(activities: Optional[List[Dict[str, Any]]] = None,
+async def calculate_inventory(activities: Union[List[Dict[str, Any]], Dict[str, Any],
+                                                str, None] = None,
                               options: Optional[Dict[str, Any]] = None,
                               payment_ref: Optional[str] = None,
                               request_id: Optional[str] = None) -> str:
@@ -76,6 +77,10 @@ async def calculate_inventory(activities: Optional[List[Dict[str, Any]]] = None,
     Price: $1.00 per call after 10 free calls/day. Pay at
     /x402/ghg-ledger/calculate_inventory with Base USDC, cash-fund payment_ref
     through escrow_checkout + confirm_escrow_funding, or use /seats.
+    Each activity needs activity_type, quantity, unit, region and year (the
+    year the activity took place; the latest bundled factor dated on or before
+    it is used and recorded on the line). list_factor_packs names the bundled
+    activity types and regions. One activity object is accepted as a list of one.
     If a call returns indeterminate, the response includes first_call_help.
     Example arguments: {"activities": [{"id": "office-electricity", "activity_type": "purchased_electricity", "quantity": "12000", "unit": "kWh", "region": "US", "year": 2023}, {"id": "backup-generator", "activity_type": "stationary_combustion_diesel", "quantity": "400", "unit": "gallons", "region": "US", "year": 2025}], "options": {}}"""
     return await _run({"action": "calculate_inventory", "activities": activities,

@@ -55,9 +55,16 @@ class GHGLedgerInvariants(unittest.TestCase):
                           if isinstance(node, ast.Constant)
                           and isinstance(node.value, float)]
         self.assertEqual(float_literals, [])
-        rejected = self.calculate([grid(quantity=1000.0)])
-        self.assertEqual(rejected["inventory_status"], "indeterminate")
-        self.assertIn("binary floats are rejected", rejected["indeterminate"][0]["reason"])
+        # GF3: a JSON-number quantity is read as its decimal text and audited
+        # as a string; the result equals the string form's. No float arithmetic.
+        as_number = self.calculate([grid(quantity=1000.0)])
+        self.assertEqual(as_number["grand_total"]["kg_co2e"], "349.742")
+        self.assertEqual(as_number["inputs"]["activities"][0]["quantity"], "1000.0")
+        self.assertEqual(self.calculate([grid(quantity=0.1)])["line_items"][0]["input"]["quantity"], "0.1")
+        for bad in (float("nan"), float("inf")):
+            rejected = self.calculate([grid(quantity=bad)])
+            self.assertEqual(rejected["inventory_status"], "indeterminate")
+            self.assertIn("binary floats are rejected", rejected["indeterminate"][0]["reason"])
 
     # GH2 — literal factor schema, source links, version, and raw-file digest.
     def test_GH2_bundled_versioned_source_linked_pack(self):
@@ -138,16 +145,49 @@ class GHGLedgerInvariants(unittest.TestCase):
 
     # GH6 — unknown activity/year is explicit and excluded from totals.
     def test_GH6_unknown_fails_closed_and_never_nearest_year(self):
+        """GH6 (revised 2026-11-15): `year` is the activity year. An exact-year
+        factor is used unchanged; otherwise the latest bundled factor for the
+        same activity type and region dated on or before it, recorded on the
+        line. Never a later factor, another region or another activity type.
+        `options.factor_year_policy = exact` restores strict matching."""
         unknown = {"id": "unknown", "activity_type": "space_magic",
                    "quantity": "99", "unit": "kg", "region": "MARS", "year": 2026}
         wrong_year = grid(id="wrong-year", year=2026)
+        strict = self.calculate([grid(), unknown, wrong_year],
+                                {"factor_year_policy": "exact"})
+        self.assertEqual(strict["inventory_status"], "partial_indeterminate")
+        self.assertEqual(strict["grand_total"]["kg_co2e"], "349.742")
+        self.assertEqual(strict["grand_total"]["indeterminate_line_count"], 2)
+        self.assertTrue(all(item["excluded_from_totals"] for item in strict["indeterminate"]))
+        self.assertIn("factor not in pack", strict["indeterminate"][0]["reason"])
+        self.assertIn("bundled activity types: ", strict["indeterminate"][0]["reason"])
+        self.assertIn("year=2026", strict["indeterminate"][1]["reason"])
+        self.assertNotIn("factor_vintage_notes", strict)
+
         result = self.calculate([grid(), unknown, wrong_year])
-        self.assertEqual(result["inventory_status"], "partial_indeterminate")
-        self.assertEqual(result["grand_total"]["kg_co2e"], "349.742")
-        self.assertEqual(result["grand_total"]["indeterminate_line_count"], 2)
-        self.assertTrue(all(item["excluded_from_totals"] for item in result["indeterminate"]))
-        self.assertIn("factor not in pack", result["indeterminate"][0]["reason"])
-        self.assertIn("year=2026", result["indeterminate"][1]["reason"])
+        self.assertEqual(result["grand_total"]["indeterminate_line_count"], 1)   # only the unknown type
+        self.assertEqual(result["grand_total"]["kg_co2e"], "699.484")
+        later = result["line_items"][2]
+        self.assertEqual((later["input"]["year"], later["factor"]["year"]), (2026, 2023))
+        self.assertEqual(later["factor_vintage"]["activity_year"], 2026)
+        self.assertEqual(later["factor_vintage"]["factor_year"], 2023)
+        self.assertEqual(result["factor_vintage_notes"], [
+            {"id": "wrong-year", "factor_id": later["factor"]["id"],
+             "activity_year": 2026, "factor_year": 2023}])
+        self.assertNotIn("factor_vintage", result["line_items"][0])              # exact year: unchanged
+        self.assertTrue(self.core.verify_result(result)["valid"])
+
+        # never a later factor: natural gas is bundled for 2025 only
+        earlier = self.calculate([natural_gas(year=2024)])
+        self.assertEqual(earlier["inventory_status"], "indeterminate")
+        self.assertIn("US 2025", earlier["indeterminate"][0]["reason"])
+        # never a future activity year, never another region
+        self.assertEqual(self.calculate([grid(year=2031)])["inventory_status"], "indeterminate")
+        self.assertEqual(self.calculate([grid(region="FR", year=2025)])["inventory_status"],
+                         "indeterminate")
+        bad = call(self.core, {"action": "calculate_inventory", "activities": [grid()],
+                               "options": {"factor_year_policy": "nearest"}})
+        self.assertEqual(bad["data"]["inventory_status"], "indeterminate")
 
         mobile_missing = self.calculate([{
             "activity_type": "mobile_combustion_gasoline", "quantity": "1",
