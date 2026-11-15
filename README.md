@@ -26,13 +26,44 @@ Free tier: 10 calls/day per service; the rails (identity, escrow, metering…) a
 
 ## Registry servers with their own docs
 
-Each registered MCP server has a README with its tools, inputs and outputs, an example, client config and pricing:
+Every registered MCP server has a page with its tools and every input, a real example request and response, client config, authentication and pricing, and how the hosted endpoint relates to this repository:
 
 | Registry name | Remote endpoint | Docs |
 |---|---|---|
-| `io.github.jdhart81/security-preflight` | `https://mcp.viridis-security.com/security-preflight/mcp` | [security-preflight-agent/README.md](security-preflight-agent/README.md) |
-| `io.github.jdhart81/regulatory-radar` | `https://mcp.viridisconservation.com/regulatory-radar/mcp` | [regulatory-radar-agent/README.md](regulatory-radar-agent/README.md) |
-| `io.github.jdhart81/ghg-ledger` | `https://mcp.viridisconservation.com/ghg-ledger/mcp` | [ghg-ledger-agent/README.md](ghg-ledger-agent/README.md) |
+| `io.github.jdhart81/agent-arbitration` | `https://mcp.viridisconservation.com/arbitration/mcp` | [docs/servers/agent-arbitration.md](docs/servers/agent-arbitration.md) |
+| `io.github.jdhart81/agent-compute-ledger` | `https://mcp.viridisconservation.com/compute-ledger/mcp` | [docs/servers/agent-compute-ledger.md](docs/servers/agent-compute-ledger.md) |
+| `io.github.jdhart81/agent-covenant` | `https://mcp.viridisconservation.com/covenant/mcp` | [docs/servers/agent-covenant.md](docs/servers/agent-covenant.md) |
+| `io.github.jdhart81/agent-erc8004-bridge` | `https://mcp.viridisconservation.com/erc8004/mcp` | [docs/servers/agent-erc8004-bridge.md](docs/servers/agent-erc8004-bridge.md) |
+| `io.github.jdhart81/agent-escrow` | `https://mcp.viridisconservation.com/escrow/mcp` | [docs/servers/agent-escrow.md](docs/servers/agent-escrow.md) |
+| `io.github.jdhart81/agent-hive-orchestrator` | `https://mcp.viridisconservation.com/hive/mcp` | [docs/servers/agent-hive-orchestrator.md](docs/servers/agent-hive-orchestrator.md) |
+| `io.github.jdhart81/agent-identity-registry` | `https://mcp.viridisconservation.com/identity/mcp` | [docs/servers/agent-identity-registry.md](docs/servers/agent-identity-registry.md) |
+| `io.github.jdhart81/agent-market-network` | `https://mcp.viridisconservation.com/network/mcp` | [docs/servers/agent-market-network.md](docs/servers/agent-market-network.md) |
+| `io.github.jdhart81/agent-metering` | `https://mcp.viridisconservation.com/metering/mcp` | [docs/servers/agent-metering.md](docs/servers/agent-metering.md) |
+| `io.github.jdhart81/agent-notary` | `https://mcp.viridisconservation.com/notary/mcp` | [docs/servers/agent-notary.md](docs/servers/agent-notary.md) |
+| `io.github.jdhart81/agent-offset-clearinghouse` | `https://mcp.viridisconservation.com/offsets/mcp` | [docs/servers/agent-offset-clearinghouse.md](docs/servers/agent-offset-clearinghouse.md) |
+| `io.github.jdhart81/agent-provenance` | `https://mcp.viridisconservation.com/provenance/mcp` | [docs/servers/agent-provenance.md](docs/servers/agent-provenance.md) |
+| `io.github.jdhart81/agent-surety` | `https://mcp.viridisconservation.com/surety/mcp` | [docs/servers/agent-surety.md](docs/servers/agent-surety.md) |
+| `io.github.jdhart81/agent-trust-oracle` | `https://mcp.viridisconservation.com/trust/mcp` | [docs/servers/agent-trust-oracle.md](docs/servers/agent-trust-oracle.md) |
+| `io.github.jdhart81/agent-verified-relay` | `https://mcp.viridisconservation.com/verified/mcp` | [docs/servers/agent-verified-relay.md](docs/servers/agent-verified-relay.md) |
+| `io.github.jdhart81/disclosure-compiler` | `https://mcp.viridisconservation.com/disclosure-compiler/mcp` | [docs/servers/disclosure-compiler.md](docs/servers/disclosure-compiler.md) |
+| `io.github.jdhart81/eco-funding` | `https://mcp.viridisconservation.com/eco-funding/mcp` | [docs/servers/eco-funding.md](docs/servers/eco-funding.md) |
+| `io.github.jdhart81/ghg-ledger` | `https://mcp.viridisconservation.com/ghg-ledger/mcp` | [docs/servers/ghg-ledger.md](docs/servers/ghg-ledger.md) · [ghg-ledger-agent/README.md](ghg-ledger-agent/README.md) |
+| `io.github.jdhart81/green-router` | `https://mcp.viridisconservation.com/green-router/mcp` | [docs/servers/green-router.md](docs/servers/green-router.md) |
+| `io.github.jdhart81/maxwell-defense` | `https://mcp.viridis-security.com/maxwell-defense/mcp` | [docs/servers/maxwell-defense.md](docs/servers/maxwell-defense.md) |
+| `io.github.jdhart81/narrative-engine` | `https://mcp.viridisconservation.com/narrative-engine/mcp` | [docs/servers/narrative-engine.md](docs/servers/narrative-engine.md) |
+| `io.github.jdhart81/neurogenesis` | `https://mcp.viridisconservation.com/neurogenesis/mcp` | [docs/servers/neurogenesis.md](docs/servers/neurogenesis.md) |
+| `io.github.jdhart81/protogen` | `https://mcp.viridisconservation.com/protogen/mcp` | [docs/servers/protogen.md](docs/servers/protogen.md) |
+| `io.github.jdhart81/quantity-takeoff` | `https://mcp.viridisconservation.com/quantity-takeoff/mcp` | [docs/servers/quantity-takeoff.md](docs/servers/quantity-takeoff.md) |
+| `io.github.jdhart81/regulatory-radar` | `https://mcp.viridisconservation.com/regulatory-radar/mcp` | [docs/servers/regulatory-radar.md](docs/servers/regulatory-radar.md) · [regulatory-radar-agent/README.md](regulatory-radar-agent/README.md) |
+| `io.github.jdhart81/security-preflight` | `https://mcp.viridis-security.com/security-preflight/mcp` | [docs/servers/security-preflight.md](docs/servers/security-preflight.md) · [security-preflight-agent/README.md](security-preflight-agent/README.md) |
+| `io.github.jdhart81/settlement-engine` | `https://mcp.viridisconservation.com/settlement-engine/mcp` | [docs/servers/settlement-engine.md](docs/servers/settlement-engine.md) |
+| `io.github.jdhart81/smartscale` | `https://mcp.viridisconservation.com/smartscale/mcp` | [docs/servers/smartscale.md](docs/servers/smartscale.md) |
+| `io.github.jdhart81/subscriptions` | `https://mcp.viridisconservation.com/subscriptions/mcp` | [docs/servers/subscriptions.md](docs/servers/subscriptions.md) |
+| `io.github.jdhart81/taxcredit-engine` | `https://mcp.viridisconservation.com/taxcredit-engine/mcp` | [docs/servers/taxcredit-engine.md](docs/servers/taxcredit-engine.md) |
+| `io.github.jdhart81/verdigraph` | `https://mcp.viridisconservation.com/verdigraph/mcp` | [docs/servers/verdigraph.md](docs/servers/verdigraph.md) |
+| `io.github.jdhart81/viridisos` | `https://mcp.viridisconservation.com/viridisos/mcp` | [docs/servers/viridisos.md](docs/servers/viridisos.md) |
+| `io.github.jdhart81/wavefunction-search` | `https://mcp.viridisconservation.com/wavefunction/mcp` | [docs/servers/wavefunction-search.md](docs/servers/wavefunction-search.md) |
+| `io.github.jdhart81/wu-wei-router` | `https://mcp.viridisconservation.com/wu-wei-router/mcp` | [docs/servers/wu-wei-router.md](docs/servers/wu-wei-router.md) |
 
 Connecting any hosted server (Claude, ChatGPT, VS Code, APIs), payments and ownership: [docs/HOSTED_MCP.md](docs/HOSTED_MCP.md).
 
