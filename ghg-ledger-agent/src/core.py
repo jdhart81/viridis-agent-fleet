@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import logging
 import os
 import re
@@ -31,6 +32,8 @@ DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "factor_packs.v0.1.0.
 _RAW_PACK = DATA_PATH.read_bytes()
 PACK = json.loads(_RAW_PACK)
 FACTOR_PACK_SHA256 = hashlib.sha256(_RAW_PACK).hexdigest()
+_PACK_YEAR = int(str(PACK["effective_as_of"])[:4])
+FACTOR_YEAR_POLICY = "latest_on_or_before"   # GH6 revised; options.factor_year_policy=exact restores strict matching
 KG_QUANTUM = Decimal("0.001")
 GAS_QUANTUM = Decimal("0.000001")
 TONNE_QUANTUM = Decimal("0.000001")
@@ -129,6 +132,10 @@ def _digest(value: Any) -> str:
 
 
 def _decimal(value: Any, field: str, *, minimum: Optional[Decimal] = None) -> Decimal:
+    if isinstance(value, float) and math.isfinite(value):
+        # GF3: a JSON number arrives as a float; it is read as its shortest
+        # decimal text (the text a client wrote), never used in float arithmetic.
+        value = repr(value)
     if value is None or isinstance(value, (bool, float)):
         raise ValidationError(
             f"'{field}' must be an integer or decimal string (binary floats are rejected)",
@@ -144,6 +151,34 @@ def _decimal(value: Any, field: str, *, minimum: Optional[Decimal] = None) -> De
         raise ValidationError(f"'{field}' must be >= {minimum}", field, value,
                               f">= {minimum}")
     return result
+
+
+def _read_activities(value: Any) -> Any:
+    """First-call tolerance, lossless only (GF1-GF3).
+
+    GF1 one activity object is read as a list of one.
+    GF2 a JSON string holding an array or object is parsed.
+    GF3 a JSON-number quantity is stored as its decimal text, so the audited
+        inputs never hold a binary float.
+    Anything else is returned unchanged and fails validation as before."""
+    if isinstance(value, str):
+        text = value.strip()
+        if text[:1] in ("[", "{"):
+            try:
+                value = json.loads(text)
+            except ValueError:
+                return value
+    if isinstance(value, dict):
+        value = [value]
+    if not isinstance(value, list):
+        return value
+    out = []
+    for item in value:
+        if (isinstance(item, dict) and isinstance(item.get("quantity"), float)
+                and math.isfinite(item["quantity"])):
+            item = {**item, "quantity": repr(item["quantity"])}
+        out.append(item)
+    return out
 
 
 def _year(value: Any, field: str = "year") -> int:
@@ -328,8 +363,10 @@ class GHGLedgerCore:
                                       type(input_data).__name__, "object")
             action = input_data.get("action")
             if action == "calculate_inventory":
-                activities = input_data.get("activities")
+                activities = _read_activities(input_data.get("activities"))
                 options = input_data.get("options", {})
+                if options is None:
+                    options = {}
                 if not isinstance(activities, list):
                     raise ValidationError("'activities' must be an array", "activities",
                                           activities, "array")
@@ -512,7 +549,8 @@ class GHGLedgerCore:
                 "scope3_category": scope3, "method": method,
                 "field_sources": field_sources}
 
-    def _find_factor(self, activity: dict) -> tuple[str, dict]:
+    def _find_factor(self, activity: dict,
+                     options: Optional[dict] = None) -> tuple[str, dict]:
         required = ("activity_type", "region", "year")
         missing = [field for field in required
                    if field not in activity or activity[field] in (None, "")]
@@ -539,21 +577,43 @@ class GHGLedgerCore:
         matches = [(fid, factor) for fid, factor in PACK["factors"].items()
                    if factor["activity_type"] == activity_type
                    and factor["region"] == region and factor["year"] == year]
+        policy = (options or {}).get("factor_year_policy", FACTOR_YEAR_POLICY)
+        if policy not in ("latest_on_or_before", "exact"):
+            raise ValidationError(
+                "'options.factor_year_policy' must be latest_on_or_before or exact",
+                "options.factor_year_policy", policy, "latest_on_or_before|exact")
+        if not matches and policy == "latest_on_or_before" and year <= _PACK_YEAR:
+            # GH6 (revised 2026-11-15): `year` is the year the activity took
+            # place. With no factor dated that year, the latest bundled factor
+            # for the same activity type and region dated on or before it is
+            # used, and the line records both years. Never a later factor,
+            # never another region or activity type; nothing is interpolated.
+            earlier = [(fid, factor) for fid, factor in PACK["factors"].items()
+                       if factor["activity_type"] == activity_type
+                       and factor["region"] == region and factor["year"] < year]
+            if earlier:
+                latest = max(factor["year"] for _fid, factor in earlier)
+                matches = [(fid, factor) for fid, factor in earlier
+                           if factor["year"] == latest]
         if not matches:
-            # T1: a failed lookup teaches the exact retry. GH6 is unchanged:
-            # the line still fails closed and no other year is substituted.
+            # T1: a failed lookup teaches the exact retry; the line fails closed.
             bundled = sorted({(factor["region"], factor["year"])
                               for factor in PACK["factors"].values()
                               if factor["activity_type"] == activity_type})
             hint = ("; bundled region/year for this activity_type: "
                     + ", ".join(f"{r} {y}" for r, y in bundled)
-                    if bundled else "; activity_type is not in this pack")
+                    + " (a factor is used for its own year and later activity years)"
+                    if bundled else
+                    "; activity_type is not in this pack; bundled activity types: "
+                    + ", ".join(sorted({factor["activity_type"]
+                                        for factor in PACK["factors"].values()})))
             raise ValidationError(
                 f"factor not in pack {PACK['pack_version']} for activity_type="
                 f"{activity_type}, region={region}, year={year}{hint}",
                 "activity_type/region/year",
                 {"activity_type": activity_type, "region": region, "year": year},
-                "exact bundled factor; nearest-year substitution is forbidden")
+                "a bundled factor for this activity type and region dated on or "
+                "before the activity year; a later factor is never used")
         if len(matches) != 1:
             raise ValidationError("multiple factors match; factor_id is required",
                                   "factor_id", None, "one exact bundled factor")
@@ -717,7 +777,8 @@ class GHGLedgerCore:
 
     def _calculate_line(self, activity: dict, options: dict, index: int) -> tuple[dict, dict]:
         line_id = str(activity.get("id") or f"line-{index + 1:04d}")
-        factor_id, factor = self._find_factor(activity)
+        factor_id, factor = self._find_factor(activity, options)
+        activity_year = _year(activity["year"])
         if "quantity" not in activity:
             raise ValidationError("missing required field: quantity", "quantity", None,
                                   "required")
@@ -756,6 +817,13 @@ class GHGLedgerCore:
             "gas_breakdown": breakdown,
             "kg_co2e": _kg(line_total),
         }
+        if factor["year"] != activity_year:                    # GH6 revised
+            line["input"]["year"] = activity_year
+            line["factor_vintage"] = {
+                "activity_year": activity_year, "factor_year": factor["year"],
+                "rule": ("no bundled factor is dated the activity year; the "
+                         "latest bundled factor on or before it was used"),
+            }
         market_internal = None
         if classification["scope"] == "scope_2":
             try:
@@ -921,6 +989,12 @@ class GHGLedgerCore:
             "input_sha256": input_sha,
             "line_items": lines,
             "indeterminate": indeterminate,
+            **({"factor_vintage_notes": [
+                {"id": line["id"], "factor_id": line["factor"]["id"],
+                 **{k: line["factor_vintage"][k]
+                    for k in ("activity_year", "factor_year")}}
+                for line in lines if "factor_vintage" in line]}
+               if any("factor_vintage" in line for line in lines) else {}),
             "gas_breakdown_kg_co2e": {gas: _kg(value)
                                        for gas, value in sorted(gas_values.items())},
             "scope_totals_kg_co2e": scope_totals,
