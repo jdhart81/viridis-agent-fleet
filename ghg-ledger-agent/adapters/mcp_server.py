@@ -47,6 +47,71 @@ mcp = _server(
 agent = build()
 
 
+# TS1-TS4: a typed description of one activity, so a host can form a valid
+# request from the schema alone.
+# TS1 it describes, it does not reject: every field is optional and unknown
+#     fields pass through, so a wrong request still reaches the engine and
+#     comes back with the engine's own reason and first_call_help.
+# TS2 the request the engine receives holds exactly the fields the caller
+#     sent (no defaults are added), so audit hashes are unchanged.
+# TS3 the activity types and regions named in the schema are read from the
+#     bundled factor pack, never typed by hand.
+# TS4 without pydantic (stdlib smoke shim) the argument is untyped.
+try:
+    from pydantic import BaseModel, ConfigDict, Field
+    from src import core as _core
+
+    _FACTORS = list(_core.PACK["factors"].values())
+    ACTIVITY_TYPES = sorted({f["activity_type"] for f in _FACTORS})
+    REGIONS = sorted({f["region"] for f in _FACTORS})
+
+    class Activity(BaseModel):
+        """One measured activity: what happened, how much, where and when."""
+        model_config = ConfigDict(extra="allow")
+        id: Optional[str] = Field(
+            None, description="Your label for this line; it is echoed in the result.")
+        activity_type: Optional[str] = Field(
+            None, examples=["purchased_electricity"],
+            description="What the activity is. One of: " + ", ".join(ACTIVITY_TYPES) + ".")
+        quantity: Union[int, float, str, None] = Field(
+            None, examples=[12000, "12000.5"],
+            description="Amount in `unit`, zero or more. A number or a decimal string.")
+        unit: Optional[str] = Field(
+            None, examples=["kWh"],
+            description=("Unit of `quantity`. Electricity: kWh or MWh. Natural gas: therm, "
+                         "mmbtu or kWh. Liquid fuels: gallon_us or litre. Refrigerants: kg "
+                         "or lb. Landfilled waste: short_ton or metric_tonne. Car travel: "
+                         "mile or km. Purchased goods by spend: usd."))
+        region: Optional[str] = Field(
+            None, examples=["US"],
+            description=("Where it happened. One of: " + ", ".join(REGIONS) + ". US-CAMX is "
+                         "the California grid and US-ERCT the Texas grid (electricity "
+                         "only); use US elsewhere in the United States; GLOBAL is for "
+                         "refrigerants."))
+        year: Union[int, str, None] = Field(
+            None, examples=[2025],
+            description=("The year the activity took place. The latest bundled factor "
+                         "dated on or before it is used and recorded on the line."))
+        mobile_source_class: Optional[str] = Field(
+            None, description=("Only for mobile fuels: nonroad_four_stroke for "
+                               "mobile_combustion_gasoline, nonroad for "
+                               "mobile_combustion_diesel."))
+
+    _Activities = Union[List[Activity], Activity, str, None]
+except ImportError:  # pragma: no cover - stdlib shim
+    Activity = None
+    _Activities = Any
+
+
+def _plain(value: Any) -> Any:
+    """TS2: back to exactly what the caller sent."""
+    if isinstance(value, list):
+        return [_plain(item) for item in value]
+    if hasattr(value, "model_dump"):
+        return value.model_dump(exclude_unset=True)
+    return value
+
+
 async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2, default=str)
 
@@ -65,8 +130,7 @@ _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 
 
 @mcp.tool(annotations=_READ)
-async def calculate_inventory(activities: Union[List[Dict[str, Any]], Dict[str, Any],
-                                                str, None] = None,
+async def calculate_inventory(activities: _Activities = None,
                               options: Optional[Dict[str, Any]] = None,
                               payment_ref: Optional[str] = None,
                               request_id: Optional[str] = None) -> str:
@@ -83,7 +147,7 @@ async def calculate_inventory(activities: Union[List[Dict[str, Any]], Dict[str, 
     activity types and regions. One activity object is accepted as a list of one.
     If a call returns indeterminate, the response includes first_call_help.
     Example arguments: {"activities": [{"id": "office-electricity", "activity_type": "purchased_electricity", "quantity": "12000", "unit": "kWh", "region": "US", "year": 2023}, {"id": "backup-generator", "activity_type": "stationary_combustion_diesel", "quantity": "400", "unit": "gallons", "region": "US", "year": 2025}], "options": {}}"""
-    return await _run({"action": "calculate_inventory", "activities": activities,
+    return await _run({"action": "calculate_inventory", "activities": _plain(activities),
                        "options": options or {},
                        **({"payment_ref": payment_ref} if payment_ref else {}),
                        **({"request_id": request_id}
