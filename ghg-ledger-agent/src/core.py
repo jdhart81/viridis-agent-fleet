@@ -681,10 +681,18 @@ class GHGLedgerCore:
             raw_masses: dict[str, Decimal] = {}
             contributions: dict[str, Decimal] = {}
             gases = {}
-            for gas, per_unit in definition.get("kg_per_unit", {}).items():
+            # A factor may publish gas masses in its source's own unit
+            # (`mass_per_unit` with `mass_unit`), so the pack holds the
+            # published figures digit for digit; `kg_per_unit` is unchanged.
+            if "mass_per_unit" in definition:
+                per_gas = definition["mass_per_unit"]
+                to_kg = self._mass_factor_to_kg(str(definition.get("mass_unit", "kg")))
+            else:
+                per_gas, to_kg = definition.get("kg_per_unit", {}), Decimal("1")
+            for gas, per_unit in per_gas.items():
                 if gas not in PACK["gwp_profile"]["values"]:
                     raise RuntimeError(f"GH3: no GWP for gas {gas}")
-                mass = quantity_in_factor_unit * Decimal(per_unit)
+                mass = quantity_in_factor_unit * Decimal(per_unit) * to_kg
                 contribution = mass * Decimal(PACK["gwp_profile"]["values"][gas])
                 raw_masses[gas] = mass
                 contributions[gas] = contribution

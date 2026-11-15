@@ -84,10 +84,11 @@ try:
                          "mile or km. Purchased goods by spend: usd."))
         region: Optional[str] = Field(
             None, examples=["US"],
-            description=("Where it happened. One of: " + ", ".join(REGIONS) + ". US-CAMX is "
-                         "the California grid and US-ERCT the Texas grid (electricity "
-                         "only); use US elsewhere in the United States; GLOBAL is for "
-                         "refrigerants."))
+            description=("Where it happened. One of: " + ", ".join(REGIONS) + ". The "
+                         "US-XXXX codes are EPA eGRID grid subregions, for electricity "
+                         "only (US-CAMX California, US-ERCT Texas, US-NYUP upstate New "
+                         "York, US-RFCE Mid-Atlantic, and so on); use US for fuels and "
+                         "when the subregion is unknown; GLOBAL is for refrigerants."))
         year: Union[int, str, None] = Field(
             None, examples=[2025],
             description=("The year the activity took place. The latest bundled factor "

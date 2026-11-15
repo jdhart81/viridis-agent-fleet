@@ -4,7 +4,7 @@ import asyncio
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -46,6 +46,67 @@ mcp = _server(
 )
 agent = build()
 
+# TS1-TS4 (see ghg-ledger-agent/adapters/mcp_server.py): parameter descriptions
+# a host can read from the schema. They describe and never reject; the values
+# named are read from this agent's own bundled data.
+try:
+    from typing import Annotated
+    from pydantic import Field as _Field
+
+    def _arg(kind, text):
+        return Annotated[kind, _Field(description=text)]
+except ImportError:  # pragma: no cover - stdlib shim
+    def _arg(kind, text):
+        return kind
+
+try:
+    from pydantic import BaseModel, ConfigDict
+    from src import core as _core
+
+    _ASSEMBLIES = sorted(_core.PACK["assemblies"])
+    _UNIT_SYSTEMS = sorted(_core.PACK["unit_systems"])
+
+    class TakeoffItem(BaseModel):
+        """One thing to quantify: an assembly and its dimensions."""
+        model_config = ConfigDict(extra="allow")
+        id: Optional[str] = _Field(
+            None, description="Your label for this item; it is echoed in the result.")
+        assembly: Optional[str] = _Field(
+            None, examples=["concrete_slab"],
+            description="What is being built. One of: " + ", ".join(_ASSEMBLIES) + ".")
+        unit_system: Optional[str] = _Field(
+            None, examples=["imperial"],
+            description="One of: " + ", ".join(_UNIT_SYSTEMS) + ".")
+        dimensions: Optional[Dict[str, Any]] = _Field(
+            None, examples=[{"length": {"value": "20", "unit": "ft"},
+                             "width": {"value": "30", "unit": "ft"},
+                             "thickness": {"value": "4", "unit": "in"}}],
+            description=("The measurements, each as {value, unit}. get_assembly names "
+                         "the dimensions an assembly needs."))
+
+    _Items = Union[List[TakeoffItem], TakeoffItem, str, None]
+except ImportError:  # pragma: no cover - stdlib shim
+    _Items = Any
+
+
+def _plain_items(value: Any) -> Any:
+    """Back to exactly what the caller sent; one item or a JSON string is read
+    as the item list (lossless)."""
+    if isinstance(value, str) and value.strip()[:1] in ("[", "{"):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return value
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(exclude_unset=True)
+    if isinstance(value, dict):
+        return [value]
+    if isinstance(value, list):
+        return [item.model_dump(exclude_unset=True) if hasattr(item, "model_dump") else item
+                for item in value]
+    return value
+
+
 
 async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2, default=str)
@@ -65,7 +126,7 @@ _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 
 
 @mcp.tool(annotations=_READ)
-async def calculate_takeoff(items: Optional[List[Dict[str, Any]]] = None,
+async def calculate_takeoff(items: _Items = None,
                             options: Optional[Dict[str, Any]] = None,
                             payment_ref: Optional[str] = None,
                             request_id: Optional[str] = None) -> str:
@@ -75,7 +136,7 @@ async def calculate_takeoff(items: Optional[List[Dict[str, Any]]] = None,
     estimate, not a guaranteed material order or professional certification.
     If a call returns indeterminate, the response includes first_call_help.
     Example arguments: {"items": [{"id": "slab-1", "assembly": "concrete_slab", "unit_system": "imperial", "dimensions": {"length": {"value": "20", "unit": "ft"}, "width": {"value": "30", "unit": "ft"}, "thickness": {"value": "4", "unit": "in"}}}], "options": {}}"""
-    return await _run({"action": "calculate_takeoff", "items": items,
+    return await _run({"action": "calculate_takeoff", "items": _plain_items(items),
                        "options": options or {},
                        **({"payment_ref": payment_ref} if payment_ref else {}),
                        **({"request_id": request_id}

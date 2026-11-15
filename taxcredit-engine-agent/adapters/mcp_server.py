@@ -46,6 +46,23 @@ mcp = _server(
 )
 agent = build()
 
+# TS1-TS4 (see ghg-ledger-agent/adapters/mcp_server.py): parameter descriptions
+# a host can read from the schema. They describe and never reject; the values
+# named are read from this agent's own bundled data.
+try:
+    from typing import Annotated
+    from pydantic import Field as _Field
+
+    def _arg(kind, text):
+        return Annotated[kind, _Field(description=text)]
+except ImportError:  # pragma: no cover - stdlib shim
+    def _arg(kind, text):
+        return kind
+
+from src import core as _core
+
+_CREDITS = sorted(_core.RULES["rule_packs"])
+
 
 async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2, default=str)
@@ -65,8 +82,15 @@ _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 
 
 @mcp.tool(annotations=_READ)
-async def calculate_tax_credit(credit: Optional[str] = None,
-                               facts: Optional[Dict[str, Any]] = None,
+async def calculate_tax_credit(
+        credit: _arg(Optional[str],
+                     "Which US clean-energy credit. One of: " + ", ".join(_CREDITS) + ".") = None,
+        facts: _arg(Optional[Dict[str, Any]],
+                    "The facts for that credit, as an object (dates as YYYY-MM-DD, "
+                    "amounts as numbers or decimal strings, yes/no as true/false). "
+                    "get_rule_pack shows a credit's rules; a missing fact comes back "
+                    "as indeterminate with its name, and the example shows a full "
+                    "48E request.") = None,
                                payment_ref: Optional[str] = None,
                                request_id: Optional[str] = None) -> str:
     """Calculate an auditable tax-credit scenario. credit is 45Q, 45V, 45Y,

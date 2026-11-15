@@ -130,3 +130,42 @@ class PartialResultStillTeaches(unittest.TestCase):
         self.assertEqual(response["data"]["inventory_status"], "partial_indeterminate")
         self.assertIn("first_call_help", response)
         self.assertNotIn("first_call_help", response["data"])
+
+
+class GridSubregions(unittest.TestCase):
+    """EG1-EG3: every EPA eGRID2023 subregion is bundled, as published."""
+    CODES = ("AKGD AKMS AZNM CAMX ERCT FRCC HIMS HIOA MROE MROW NEWE NWPP NYCW NYLI NYUP "
+             "PRMS RFCE RFCM RFCW RMPA SPNO SPSO SRMV SRMW SRSO SRTV SRVC").split()
+
+    def test_eg1_all_27_subregions_compute_for_a_2025_activity(self):
+        data = run([{"id": code, "activity_type": "purchased_electricity", "quantity": 1000,
+                     "unit": "kWh", "region": f"US-{code}", "year": 2025} for code in self.CODES])
+        self.assertEqual(data["inventory_status"], "complete_for_supplied_activities")
+        self.assertEqual(len(data["line_items"]), 27)
+        for line in data["line_items"]:
+            self.assertEqual(line["factor"]["year"], 2023)
+            self.assertEqual(line["factor_vintage"]["activity_year"], 2025)
+
+    def test_eg2_published_gas_rates_are_used_digit_for_digit(self):
+        from decimal import Decimal
+        from src.core import PACK
+        factor = PACK["factors"]["epa_egrid2023_nyup"]
+        self.assertEqual(factor["co2e_or_gas_breakdown"], {
+            "kind": "gas_breakdown", "mass_unit": "lb",
+            "mass_per_unit": {"co2": "242.1", "ch4_fossil": "0.011", "n2o": "0.001"}})
+        line = run([{"id": "ny", "activity_type": "purchased_electricity", "quantity": "1",
+                     "unit": "MWh", "region": "US-NYUP", "year": 2023}])["line_items"][0]
+        gwp = PACK["gwp_profile"]["values"]
+        lb = (Decimal("242.1") + Decimal("0.011") * Decimal(gwp["ch4_fossil"])
+              + Decimal("0.001") * Decimal(gwp["n2o"]))
+        want = (lb * Decimal("0.45359237")).quantize(Decimal("0.001"))
+        self.assertEqual(Decimal(line["kg_co2e"]), want)
+        self.assertEqual(line["gas_breakdown"]["resolution"], "gas_resolved")
+        self.assertIn("epa-egrid2023-summary-tables-rev2", line["factor"]["source_ids"])
+
+    def test_eg3_earlier_results_for_the_three_original_grid_factors_are_unchanged(self):
+        for region, want in (("US", "349.742"),):
+            line = run([{"id": "g", "activity_type": "purchased_electricity", "quantity": "1000",
+                         "unit": "kwh", "region": region, "year": 2023}])["line_items"][0]
+            self.assertEqual(line["kg_co2e"], want)
+            self.assertEqual(line["gas_breakdown"]["resolution"], "direct_co2e_only")
