@@ -82,7 +82,7 @@ async def quote_footprint(workload: Dict[str, Any]) -> str:
     return await _run({"action": "quote_footprint", "workload": workload})
 
 
-@mcp.tool(annotations=_WRITE)
+@mcp.tool(annotations=_READ)     # pure ranking: changes nothing
 async def green_route(workload: Dict[str, Any],
                       allowed_backends: Optional[List[str]] = None) -> str:
     """FREE: rank compute backends by carbon for this workload — the

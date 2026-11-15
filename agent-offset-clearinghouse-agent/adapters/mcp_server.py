@@ -68,7 +68,7 @@ _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
                                 idempotentHint=False, openWorldHint=False)
 
 
-@mcp.tool(annotations=_READ)
+@mcp.tool(annotations=_WRITE)   # adds a credit to the book; never read-only
 async def list_credit(issuer: str, project_id: str, mass_g: int,
                 price_minor_per_kg: int, verification_ref: str,
                 registry: str = "", vcs_project_id: str = "", vintage: str = "",
