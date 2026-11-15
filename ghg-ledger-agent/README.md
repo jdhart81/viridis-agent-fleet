@@ -4,10 +4,16 @@ Deterministic greenhouse-gas inventory calculations for explicit Scope 1, 2,
 and 3 activity data. The serving path uses Python stdlib, `Decimal`, and one
 bundled factor pack—no inference, network lookup, paid API, or guessed factor.
 
-The v0.1.0 pack deliberately covers a focused MVP: selected US stationary and
-mobile fuels, two refrigerants, US/eGRID and UK electricity, and starter Scope
-3 Categories 1, 5, and 6. Anything outside the exact activity/region/year pack
-returns `indeterminate` and is excluded from totals.
+The bundled pack (version 2026.11.15-v0.2.0) covers a focused set: selected US
+stationary and mobile fuels, two refrigerants, US electricity for the national
+total and all 27 EPA eGRID2023 subregions (`US-CAMX`, `US-NYUP`, ...), UK
+electricity, and starter Scope 3 Categories 1, 5, and 6. `year` is the year the
+activity took place: a factor dated that year is used as is; otherwise the
+latest bundled factor for the same activity type and region dated on or before
+it is used and both years are recorded on the line. A later factor is never
+used, and anything else outside the pack returns `indeterminate` and is
+excluded from totals. The sample output further down was produced with the
+earlier pack version; hashes and the pack version differ today.
 
 Every result includes gas/direct-CO2e resolution, Scope and category rollups,
 location- and market-based Scope 2, an ESRS E1-shaped summary, the specific

@@ -60,6 +60,24 @@ mcp = _mk_mcp(
 )
 agent = RegulatoryRadarCore()
 
+# TS1-TS4 (see ghg-ledger-agent/adapters/mcp_server.py): parameter descriptions
+# a host can read from the schema. They describe and never reject; the values
+# named are read from this agent's own bundled data.
+try:
+    from typing import Annotated
+    from pydantic import Field as _Field
+
+    def _arg(kind, text):
+        return Annotated[kind, _Field(description=text)]
+except ImportError:  # pragma: no cover - stdlib shim
+    def _arg(kind, text):
+        return kind
+
+from src import core as _core
+
+_JURISDICTIONS = ", ".join(item.value for item in _core.Jurisdiction)
+_SECTORS = ", ".join(sorted(item.value for item in _core.Sector))
+
 
 async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), default=str, indent=2)
@@ -83,9 +101,16 @@ _LIVE_WRITE = _ToolAnnotations(readOnlyHint=False, destructiveHint=False,
 
 
 @mcp.tool(annotations=_READ)
-async def scan_regulations(jurisdiction: Optional[str] = None,
-                           sector: Optional[str] = None,
-                           query: Optional[str] = None,
+async def scan_regulations(
+        jurisdiction: _arg(Optional[str],
+                           "Where the company operates. One of: " + _JURISDICTIONS + " "
+                           "(ca is Canada; use california for the US state). A US state "
+                           "or EU member state is read as us or eu.") = None,
+        sector: _arg(Optional[str],
+                     "Optional industry filter. One of: " + _SECTORS + ".") = None,
+        query: _arg(Optional[str],
+                    "Optional words to look for in rule names, descriptions and "
+                    "requirements, for example: scope 3.") = None,
                            payment_ref: Optional[str] = None,
                            request_id: Optional[str] = None) -> str:
     """Scan a jurisdiction (e.g. EU, US, california, or CA for Canada), optionally

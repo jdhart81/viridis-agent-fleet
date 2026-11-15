@@ -46,6 +46,29 @@ mcp = _server(
 )
 agent = build()
 
+# TS1-TS4 (see ghg-ledger-agent/adapters/mcp_server.py): parameter descriptions
+# a host can read from the schema. They describe and never reject; the values
+# named are read from this agent's own bundled data.
+try:
+    from typing import Annotated
+    from pydantic import Field as _Field
+
+    def _arg(kind, text):
+        return Annotated[kind, _Field(description=text)]
+except ImportError:  # pragma: no cover - stdlib shim
+    def _arg(kind, text):
+        return kind
+
+from src import core as _core
+
+_FRAMEWORKS = sorted(_core.PACK["frameworks"])
+_FACT_KEYS = "; ".join(
+    f"{name}: " + ", ".join(sorted({
+        point["expected_input"]["path"].split(".")[0]
+        for point in _core.PACK["frameworks"][name]["datapoints"]
+        if point["expected_input"]["source"] == "company_facts"}))
+    for name in _FRAMEWORKS)
+
 
 async def _run(payload: Dict[str, Any]) -> str:
     return json.dumps(await agent.process(payload), indent=2, default=str)
@@ -65,10 +88,20 @@ _DESTRUCTIVE = _ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 
 
 @mcp.tool(annotations=_WRITE)
-async def compile_disclosure(framework: Optional[str] = None,
-                             company_facts: Optional[Dict[str, Any]] = None,
-                             ghg_result: Optional[Dict[str, Any]] = None,
-                             options: Optional[Dict[str, Any]] = None,
+async def compile_disclosure(
+        framework: _arg(Optional[str],
+                        "Which disclosure to draft. One of: " + ", ".join(_FRAMEWORKS) + ".") = None,
+        company_facts: _arg(Optional[Dict[str, Any]],
+                            "Facts about the company, as an object. Only supplied facts are "
+                            "used; anything missing is listed as a gap. Keys read, by "
+                            "framework: " + _FACT_KEYS + ".") = None,
+        ghg_result: _arg(Optional[Dict[str, Any]],
+                         "Optional. The `data` object of a ghg-ledger calculate_inventory "
+                         "result, passed unchanged; it fills the emission datapoints and "
+                         "is verified before use.") = None,
+        options: _arg(Optional[Dict[str, Any]],
+                      "Must hold `applicability`: {framework: the same framework id, "
+                      "applies: true, reason: why it applies to this company}.") = None,
                              payment_ref: Optional[str] = None,
                              request_id: Optional[str] = None) -> str:
     """Compile a deterministic, cited disclosure draft from supplied company

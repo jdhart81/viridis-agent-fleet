@@ -1,13 +1,13 @@
 {
   "schema_version": "viridis.disclosure.framework-packs.v1",
-  "pack_version": "2026.11.14-v0.2.0",
-  "effective_as_of": "2026-11-14",
+  "pack_version": "2026.11.15-v0.2.1",
+  "effective_as_of": "2026-11-15",
   "disclaimer": "Disclosure draft for professional review only. This deterministic assembly is not a filed, assured, audited, or legally sufficient report and is not legal, accounting, assurance, or regulatory advice. Missing fields remain explicit gaps; applicability and materiality must be confirmed by qualified professionals.",
   "ghg_verifier": {
     "producer_agent_id": "ghg-ledger-agent",
     "producer_version": "0.1.0",
-    "factor_pack_version": "2026.07.13-v0.1.0",
-    "factor_pack_sha256": "a5d65d87b44e945f24d887a8722991cea131f594b59c867d816862ef27042469",
+    "factor_pack_version": "2026.11.15-v0.2.0",
+    "factor_pack_sha256": "6f6961af27d72cbc0a4562d78c5ec3a92bb5dab7a532b0de4fbcc5896c4d702a",
     "audit_profile": "viridis.ghg-ledger.audit.v0.1.0",
     "required_checks": ["audit_hash", "conservation", "notary_payload", "offset_weave", "factor_pack_current"]
   },
