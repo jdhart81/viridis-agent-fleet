@@ -129,6 +129,9 @@ print(json.dumps({
     "other_action": run({"action": "describe"}),
     "not_a_dict": run("nope"),
     "example": run({"action": action, **example}) if example else "no-example",
+    "unreadable_jurisdiction": run({"action": action, key: "north america"}) if key == "jurisdiction" else "n/a",
+    "unreadable_sector": run({"action": action, key: "california", "sector": "space mining"}) if key == "jurisdiction" else "n/a",
+    "readable_state": run({"action": action, key: "Texas", "sector": "Energy"}) if key == "jurisdiction" else "n/a",
     "instance_wrapper_calls": len(calls),
 }, default=str))
 '''
@@ -171,3 +174,18 @@ def test_nc1_preflight_never_runs_the_instance_wrapper(nc):
     sealer; the admission check must not pass through either."""
     _agent, got = nc
     assert got["instance_wrapper_calls"] == 0
+
+
+def test_nc1_radar_refuses_an_unreadable_jurisdiction_or_sector_before_charge(nc):
+    """2026-11-15: an outside call with a present but unreadable jurisdiction
+    spent a free call. Present-but-unreadable is refused like missing."""
+    agent, got = nc
+    if agent != "regulatory-radar-agent":
+        pytest.skip("radar only")
+    answer = got["unreadable_jurisdiction"]
+    assert isinstance(answer, dict) and answer["status"] == "error"
+    assert "first_call_help" in answer
+    # The engine decides: monitor_changes attempts an unknown sector, so the
+    # preflight passes it on (scan refuses one; covered in the gateway test).
+    assert got["unreadable_sector"] is None
+    assert got["readable_state"] is None          # a state is read as us: normal path

@@ -39,6 +39,10 @@ from .validation import (
     ValidationError,
     ValidationWarning,
     jurisdiction_reading,
+    normalize_jurisdiction,
+    normalize_sector,
+    VALID_JURISDICTIONS,
+    VALID_SECTORS,
 )
 from .applicability import (
     OUT_OF_SCOPE, UNCONFIRMED, describe_gate, evaluate_gate,
@@ -421,6 +425,20 @@ FIRST_CALL_HELP = {
 _FC1_ACTIONS = frozenset({"scan", "assess", "monitor_changes", "watch_changes"})
 
 
+def _readable_scope(payload: dict) -> bool:
+    """NC1: True when the jurisdiction (and the sector, if given) resolve to
+    values the engine covers; the same normalizers the engine itself uses."""
+    jurisdiction = payload.get("jurisdiction")
+    if not isinstance(jurisdiction, str) or not jurisdiction.strip():
+        return False
+    if normalize_jurisdiction(jurisdiction) not in VALID_JURISDICTIONS:
+        return False
+    sector = payload.get("sector")
+    if sector in (None, ""):
+        return True
+    return isinstance(sector, str) and normalize_sector(sector) in VALID_SECTORS
+
+
 def _sector_or_teach(value):
     """Return the Sector, or a teaching error instead of an internal one."""
     if not value:
@@ -537,9 +555,11 @@ class RegulatoryRadarCore:
         attempt returns None here and takes the normal path."""
         if not isinstance(payload, dict) or payload.get("action") not in {"scan", "monitor_changes"}:
             return None
-        if (isinstance(payload.get("jurisdiction"), str)
-                and payload["jurisdiction"].strip()):
+        if _readable_scope(payload):
             return None
+        # NC1 (2026-11-15): an unreadable jurisdiction or sector is refused
+        # here too, not only a missing one: the engine cannot attempt it, so
+        # it must not spend a free call, credit or seat call.
         # The class's own process, not an instance wrapper: no gate, no seal.
         answer = await type(self).process(self, dict(payload))
         if isinstance(answer, dict) and answer.get("status") == "error":
