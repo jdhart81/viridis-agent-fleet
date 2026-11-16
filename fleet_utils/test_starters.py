@@ -43,9 +43,11 @@ async def main():
     out = {}
     async with connect(adapter.mcp) as client:
         inst = getattr(client, "instructions", None)  # SDK 2.x Client
-        if inst is None:  # SDK 1.x ClientSession keeps the initialize result
-            init = getattr(client, "_initialize_result", None) or getattr(client, "initialize_result", None)
-            inst = field(init, "instructions") if init is not None else None
+        if inst is None:  # SDK 1.x: the client keeps no initialize result, so
+            # read the options the server answers initialize with
+            low = getattr(adapter.mcp, "_mcp_server", None)
+            if low is not None:
+                inst = low.create_initialization_options().instructions
         out["instructions"] = inst
         tools = await client.list_tools()
         out["tools"] = sorted(
