@@ -38,6 +38,9 @@ def test_rm2_listing_version_is_the_hosted_release():
             continue
         data = entry["data"]
         release = data["_meta"][rm.META_KEY]["viridis"]["release"]
+        if entry["short"] in rm.SELF_VERSIONED:                       # RM8
+            assert data["version"] == release == rm.agent_release(entry)
+            continue
         assert data["version"] == rm.hosted_version(release)
         assert rm._semver(data["version"]) > rm._semver(release)
         assert "+" not in data["version"]          # build metadata does not sort

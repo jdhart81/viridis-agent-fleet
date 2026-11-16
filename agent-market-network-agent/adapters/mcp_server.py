@@ -386,3 +386,11 @@ except ImportError:  # loaded without the fleet root on sys.path, as the gateway
         def flag_error_results(server):
             return 0
 flag_error_results(mcp)
+
+
+try:  # MD1-MD4: input descriptions and the agent's own serverInfo.version
+    from adapters.tool_docs import apply as _apply_tool_docs
+except ImportError:  # loaded as a plain module path
+    from tool_docs import apply as _apply_tool_docs
+from src.core import VERSION as _RELEASE
+TOOL_DOCS_REPORT = _apply_tool_docs(mcp, _RELEASE)

@@ -29,6 +29,9 @@ RM3 Name, repository and remotes are never changed here. A description is
 RM4 Entries in HOLD are left untouched, with the reason recorded.
 RM5 Existing hand-made icons are kept; generated icons are deterministic.
 RM6 apply is idempotent.
+RM8 A SELF_VERSIONED server's listing version is its agent.yaml release
+    exactly; it must sort above the registry's latest, so it changes only
+    with a real release.
 RM7 deploy/mcp-publish holds an older copy of the same registry names; a
     managed entry's copy there is kept identical, so no manifest in the
     repository disagrees with the version the server reports.
@@ -49,9 +52,11 @@ HOSTED_BUILD = "h1115b"         # names the publish tag: registry-meta-v<HOSTED_
 META_KEY = "io.modelcontextprotocol.registry/publisher-provided"
 
 HOLD = {
-    "agent-market-network": "own container still reports the SDK version; republish after its SDK 2 port",
     "security-preflight": "registry lists 1.3.1 while the code is 1.2.0, and GitHub review is in progress",
 }
+# Servers that run outside the hosted gateway and report their own release as
+# serverInfo.version: the listing version is the release in agent.yaml (RM8).
+SELF_VERSIONED = {"agent-market-network"}
 
 # short name -> (title, glyph on the tile, existing logo file or None)
 SERVERS = {
@@ -220,6 +225,16 @@ def _semver(version: str) -> tuple:
     return tuple(int(part) for part in core.split("."))
 
 
+def agent_release(entry: dict) -> str:
+    """The release in the server's agent.yaml (RM8)."""
+    import re as _re
+    text = (ROOT / entry["path"].parent.name / "agent.yaml").read_text()
+    match = _re.search(r'^version:\s*"?([0-9][^"\s]*)"?', text, _re.M)
+    if not match:
+        raise SystemExit(f"RM8: no version in {entry['path'].parent.name}/agent.yaml")
+    return match.group(1)
+
+
 def hosted_version(release: str) -> str:
     major, minor, patch = _semver(release)
     return f"{major}.{minor}.{patch + 1}"
@@ -235,8 +250,12 @@ def wanted(entry: dict) -> dict:
     data["websiteUrl"] = DOCS + f"{short}.md"
     data["icons"] = [{"src": RAW + "assets/listing-logos/" + logo_file(short),
                       "mimeType": "image/png", "sizes": ["400x400"]}]
-    release = release_of(data)
-    data["version"] = hosted_version(release)
+    if short in SELF_VERSIONED:                                         # RM8
+        release = agent_release(entry)
+        data["version"] = release
+    else:
+        release = release_of(data)
+        data["version"] = hosted_version(release)
     data["_meta"] = {META_KEY: {"viridis": {"release": release, "hostedBuild": HOSTED_BUILD}}}
     order = ["$schema", "name", "title", "description", "version", "websiteUrl",
              "icons", "repository", "remotes", "_meta"]
@@ -270,23 +289,31 @@ if __name__ == "__main__":
         print("\n".join(write_icons()) or "no new icons")
     elif mode == "apply":
         print("\n".join(apply()) or "up to date")
-    elif mode == "latest-check":                                       # RM2
+    elif mode in ("latest-check", "to-publish"):                       # RM2
+        import urllib.parse
         import urllib.request
-        behind = []
+        behind, publish = [], []
         for entry in entries():
             if entry["short"] in HOLD:
                 continue
             name = entry["data"]["name"]
-            url = f"https://registry.modelcontextprotocol.io/v0/servers?search={name}"
-            data = json.loads(urllib.request.urlopen(url, timeout=30).read())
-            latest = [x["server"]["version"] for x in data.get("servers", [])
-                      if x["server"]["name"] == name and
-                      x["_meta"]["io.modelcontextprotocol.registry/official"].get("isLatest")]
-            if latest and _semver(entry["data"]["version"]) <= _semver(latest[0]):
-                behind.append((name, entry["data"]["version"], latest[0]))
+            url = ("https://registry.modelcontextprotocol.io/v0/servers/"
+                   + urllib.parse.quote(name, safe="") + "/versions/latest")
+            try:
+                latest = json.loads(urllib.request.urlopen(url, timeout=30).read())["server"]["version"]
+            except Exception:
+                latest = None                                 # never published
+            mine = entry["data"]["version"]
+            if latest is None or _semver(mine) > _semver(latest):
+                publish.append(str(entry["path"]))
+            elif _semver(mine) < _semver(latest):
+                behind.append((name, mine, latest))
         if behind:
             raise SystemExit(f"would not become latest: {behind}")
-        print("every managed listing sorts above the registry's latest")
+        if mode == "to-publish":
+            print(" ".join(publish))
+        else:
+            print(f"{len(publish)} listing(s) to publish; the rest are already latest")
     elif mode == "check":
         missing = [e["short"] for e in entries() if not (LOGOS / logo_file(e["short"])).exists()]
         stale = apply(write=False)

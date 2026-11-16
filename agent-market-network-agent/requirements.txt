@@ -1,6 +1,6 @@
-# Exact runtime contract. MCP 2.x removed the FastMCP import path used by this
-# service, so unconstrained resolution is not safe for release images.
-mcp==1.30.0
+# Exact runtime contract. Since 0.8.2 the adapter imports MCPServer (SDK 2.x)
+# with a FastMCP fallback; release images pin the gateway's SDK 2.3.0.
+mcp==2.3.0
 uvicorn==0.54.0
 starlette==1.10.0
 cryptography==50.0.2
