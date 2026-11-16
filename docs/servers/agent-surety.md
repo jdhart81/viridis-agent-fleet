@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-surety
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-surety)](https://mcptry.com/servers/io.github.jdhart81/agent-surety)
+
 Counterparty risk transfer for the agent economy: bonds behind promises, ruling-gated slashing, conservation-checked balances, tamper-evident audit. The trust oracle scores counterparties; surety BACKS them.
 
 | | |

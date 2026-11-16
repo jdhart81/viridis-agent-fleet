@@ -1,5 +1,7 @@
 # io.github.jdhart81/maxwell-defense
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/maxwell-defense)](https://mcptry.com/servers/io.github.jdhart81/maxwell-defense)
+
 Model proof-of-work policy and latency for AI agents. $1 USDC rehearsal; no runtime protection.
 
 | | |

@@ -1,5 +1,7 @@
 # io.github.jdhart81/subscriptions
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/subscriptions)](https://mcptry.com/servers/io.github.jdhart81/subscriptions)
+
 Verified monthly-seat catalog, account attribution, quota, overage, and MRR infrastructure.
 
 | | |

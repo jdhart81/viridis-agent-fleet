@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-provenance
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-provenance)](https://mcptry.com/servers/io.github.jdhart81/agent-provenance)
+
 Genesis certificates, lineage, and cascading recalls: birth certificates + bloodlines for the agent economy. The founding cohort is provably first.
 
 | | |

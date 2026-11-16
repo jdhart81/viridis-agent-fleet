@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-erc8004-bridge
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-erc8004-bridge)](https://mcptry.com/servers/io.github.jdhart81/agent-erc8004-bridge)
+
 The MCP-native bridge to ERC-8004 (on-chain agent identity/reputation/validation, EF+Google+Coinbase, 170k+ agents): resolve registrations, score feedback with decay-weighted math, bind on-chain identities to DIDs, export unsigned attestations. No keys, no chain writes.
 
 | | |

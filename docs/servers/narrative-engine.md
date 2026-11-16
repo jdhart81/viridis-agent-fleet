@@ -1,5 +1,7 @@
 # io.github.jdhart81/narrative-engine
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/narrative-engine)](https://mcptry.com/servers/io.github.jdhart81/narrative-engine)
+
 Translates ecological intelligence into investor, policy, grant, and media-ready narratives
 
 | | |

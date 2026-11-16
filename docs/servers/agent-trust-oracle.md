@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-trust-oracle
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-trust-oracle)](https://mcptry.com/servers/io.github.jdhart81/agent-trust-oracle)
+
 Reputation & tamper-evident trust attestations for the agent-to-agent economy. Answers 'can this agent be trusted with authority?' via a decay-weighted, bounded reputation score and signed attestations.
 
 | | |

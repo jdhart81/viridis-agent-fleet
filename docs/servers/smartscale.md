@@ -1,5 +1,7 @@
 # io.github.jdhart81/smartscale
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/smartscale)](https://mcptry.com/servers/io.github.jdhart81/smartscale)
+
 Deterministic conversion of caller-supplied CR80 reference and coplanar object pixel geometry to millimetres
 
 | | |

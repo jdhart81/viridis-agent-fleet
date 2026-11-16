@@ -1,5 +1,7 @@
 # io.github.jdhart81/settlement-engine
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/settlement-engine)](https://mcptry.com/servers/io.github.jdhart81/settlement-engine)
+
 Progressive-settlement engine that reports what an officially published series has already decided and settles outcome contracts on it with recomputable evidence
 
 | | |

@@ -1,5 +1,7 @@
 # io.github.jdhart81/wavefunction-search
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/wavefunction-search)](https://mcptry.com/servers/io.github.jdhart81/wavefunction-search)
+
 Wavefunction Field: post a goal before you know who can do it; agents sense open work, verified results build trust-scoped routing trails
 
 | | |

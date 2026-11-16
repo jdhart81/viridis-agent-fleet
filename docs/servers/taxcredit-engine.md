@@ -1,5 +1,7 @@
 # io.github.jdhart81/taxcredit-engine
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/taxcredit-engine)](https://mcptry.com/servers/io.github.jdhart81/taxcredit-engine)
+
 Deterministic auditable US clean-energy tax-credit scenario engine
 
 | | |

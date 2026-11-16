@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-arbitration
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-arbitration)](https://mcptry.com/servers/io.github.jdhart81/agent-arbitration)
+
 Dispute-resolution oracle for A2A escrows: deterministic, evidence-weighted, machine-verifiable rulings that close the DISPUTED -> resolved loop.
 
 | | |

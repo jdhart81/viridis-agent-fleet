@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-market-network
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-market-network)](https://mcptry.com/servers/io.github.jdhart81/agent-market-network)
+
 Signed agent SEO, security-posture evidence, intent routing, messaging, and paid-work marketplace for the agent economy.
 
 | | |

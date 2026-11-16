@@ -1,5 +1,7 @@
 # io.github.jdhart81/protogen
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/protogen)](https://mcptry.com/servers/io.github.jdhart81/protogen)
+
 Viridis LLC revenue MCP CAD agent: provides a callable CAD design environment and manufacturing planning services to other agents
 
 | | |

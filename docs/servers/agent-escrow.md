@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-escrow
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-escrow)](https://mcptry.com/servers/io.github.jdhart81/agent-escrow)
+
 Trustless escrow & settlement for agent-to-agent (A2A) transactions. Funds sit in escrow until delivery is verified, then release or refund — with an exactly-once state machine and a tamper-evident audit chain.
 
 | | |

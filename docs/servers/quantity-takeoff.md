@@ -1,5 +1,7 @@
 # io.github.jdhart81/quantity-takeoff
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/quantity-takeoff)](https://mcptry.com/servers/io.github.jdhart81/quantity-takeoff)
+
 Deterministic, auditable construction material takeoff engine
 
 | | |

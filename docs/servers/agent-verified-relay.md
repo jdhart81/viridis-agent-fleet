@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-verified-relay
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-verified-relay)](https://mcptry.com/servers/io.github.jdhart81/agent-verified-relay)
+
 Viridis Verified: the consequence wrapper for the agent economy. Wraps any third-party MCP server with tamper-evident delivery receipts, metered per-call fees, and dispute-ready evidence — rails revenue that scales with other people's services.
 
 | | |

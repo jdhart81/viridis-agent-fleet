@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-metering
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-metering)](https://mcptry.com/servers/io.github.jdhart81/agent-metering)
+
 Usage metering + SLA accounting for agent services: the meter behind the x402/HTTP-402 micropayment idiom. Counts the work honestly so escrow knows how much to settle and trust knows whether promises were kept.
 
 | | |

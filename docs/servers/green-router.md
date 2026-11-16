@@ -1,5 +1,7 @@
 # io.github.jdhart81/green-router
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/green-router)](https://mcptry.com/servers/io.github.jdhart81/green-router)
+
 Carbon-accounted agent compute: free honest footprint quotes and carbon-ranked routing; paid certificates backed by REAL verified offset retirement through the fleet's own clearinghouse (Verra provenance, x402-C verifiable).
 
 | | |

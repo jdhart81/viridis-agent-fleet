@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-covenant
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-covenant)](https://mcptry.com/servers/io.github.jdhart81/agent-covenant)
+
 Machine-checkable authority leases for agents: scoped, budgeted, expiring, revocable, audited. Deny-by-default power of attorney for the agent economy.
 
 | | |
