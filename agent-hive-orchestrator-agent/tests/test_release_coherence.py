@@ -34,4 +34,5 @@ def test_hive_release_versions_are_coherent_across_private_and_public_layouts():
         )
         path = next((item for item in candidates if item.is_file()), None)
         assert path is not None
-        assert json.loads(path.read_text())["version"] == VERSION
+        # registry versions may carry a hosted-build tag: <release>+<build>
+        assert json.loads(path.read_text())["version"].split("+", 1)[0] == VERSION
