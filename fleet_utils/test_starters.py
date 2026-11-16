@@ -184,3 +184,13 @@ def test_rendered_texts_carry_the_users_numbers():
     assert "US-CAMX" in draft and "ca-sb253" in draft and "filing" in draft
     assert "since=7" in starters._what_changed("california", "7")
     assert "since=0" in starters._what_changed("california")
+
+
+def test_footprint_prompt_never_swaps_in_another_region():
+    # The ledger refuses to apply one region's grid factor to electricity used
+    # in another (core.py returns indeterminate). The prompt must not tell the
+    # host to work around that by recalculating with a different region.
+    text = starters._footprint_from_bills("12000", "2025", "DE")
+    assert "do not calculate with another region" in text
+    assert "keep that line indeterminate" in text
+    assert "region you used instead" not in text
