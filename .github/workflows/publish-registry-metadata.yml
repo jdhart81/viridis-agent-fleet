@@ -3,7 +3,7 @@ name: Publish registry metadata
 # Republishes every MCP Registry entry that scripts/registry_metadata.py
 # manages (icon, title, website, clean description, hosted-build version).
 # Entries in its HOLD list are skipped. Run by pushing a tag
-# registry-meta-v<build>, e.g. registry-meta-vh1115.
+# registry-meta-v<HOSTED_BUILD>, e.g. registry-meta-vh1115b.
 on:
   push:
     tags:
@@ -29,6 +29,9 @@ jobs:
         run: |
           build=$(python3 -c "import sys; sys.path.insert(0,'scripts'); import registry_metadata as r; print(r.HOSTED_BUILD)")
           [ "${GITHUB_REF_NAME}" = "registry-meta-v${build}" ] || { echo "tag ${GITHUB_REF_NAME} does not match build ${build}"; exit 1; }
+
+      - name: Each new version sorts above the registry's latest (RM2)
+        run: python3 scripts/registry_metadata.py latest-check
 
       - name: Install MCP publisher
         run: |

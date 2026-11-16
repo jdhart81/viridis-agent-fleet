@@ -6,7 +6,7 @@ Evidence-constrained workload routing plans with explicit modeled net savings
 |---|---|
 | Registry name | `io.github.jdhart81/wu-wei-router` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/wu-wei-router/mcp` |
-| Version | 0.1.0+h1115 |
+| Version | 0.1.1 |
 | Tools | 2 |
 | Source | [`wu-wei-router-agent/`](../../wu-wei-router-agent/) |
 

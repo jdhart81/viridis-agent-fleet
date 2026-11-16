@@ -6,7 +6,7 @@ Usage metering + SLA accounting for agent services: the meter behind the x402/HT
 |---|---|
 | Registry name | `io.github.jdhart81/agent-metering` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/metering/mcp` |
-| Version | 0.2.0+h1115 |
+| Version | 0.2.1 |
 | Tools | 11 |
 | Source | [`agent-metering-agent/`](../../agent-metering-agent/) |
 

@@ -6,7 +6,7 @@ Progressive-settlement engine that reports what an officially published series h
 |---|---|
 | Registry name | `io.github.jdhart81/settlement-engine` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/settlement-engine/mcp` |
-| Version | 0.1.0+h1115 |
+| Version | 0.1.1 |
 | Tools | 12 |
 | Source | [`settlement-engine-agent/`](../../settlement-engine-agent/) |
 

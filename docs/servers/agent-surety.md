@@ -6,7 +6,7 @@ Counterparty risk transfer for the agent economy: bonds behind promises, ruling-
 |---|---|
 | Registry name | `io.github.jdhart81/agent-surety` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/surety/mcp` |
-| Version | 0.2.0+h1115 |
+| Version | 0.2.1 |
 | Tools | 10 |
 | Source | [`agent-surety-agent/`](../../agent-surety-agent/) |
 

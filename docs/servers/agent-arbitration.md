@@ -6,7 +6,7 @@ Dispute-resolution oracle for A2A escrows: deterministic, evidence-weighted, mac
 |---|---|
 | Registry name | `io.github.jdhart81/agent-arbitration` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/arbitration/mcp` |
-| Version | 0.2.0+h1115 |
+| Version | 0.2.1 |
 | Tools | 8 |
 | Source | [`agent-arbitration-agent/`](../../agent-arbitration-agent/) |
 

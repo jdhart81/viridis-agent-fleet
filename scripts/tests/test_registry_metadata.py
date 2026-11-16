@@ -32,12 +32,15 @@ def test_rm1_every_listing_is_complete():
         assert (ROOT / "docs" / "servers" / f"{short}.md").exists()
 
 
-def test_rm2_version_is_release_plus_hosted_build():
+def test_rm2_listing_version_is_the_hosted_release():
     for entry in rm.entries():
         if entry["short"] in rm.HOLD:
             continue
-        release, build = entry["data"]["version"].split("+")
-        assert build == rm.HOSTED_BUILD and release.count(".") == 2
+        data = entry["data"]
+        release = data["_meta"][rm.META_KEY]["viridis"]["release"]
+        assert data["version"] == rm.hosted_version(release)
+        assert rm._semver(data["version"]) > rm._semver(release)
+        assert "+" not in data["version"]          # build metadata does not sort
 
 
 def test_rm3_descriptions_fit_the_registry():

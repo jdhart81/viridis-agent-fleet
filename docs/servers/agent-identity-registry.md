@@ -6,7 +6,7 @@ The passport + directory of the agent-to-agent economy: verifiable agent identit
 |---|---|
 | Registry name | `io.github.jdhart81/agent-identity-registry` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/identity/mcp` |
-| Version | 0.1.1+h1115 |
+| Version | 0.1.2 |
 | Tools | 6 |
 | Source | [`agent-identity-registry-agent/`](../../agent-identity-registry-agent/) |
 

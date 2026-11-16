@@ -3,7 +3,7 @@
   "name": "io.github.jdhart81/agent-notary",
   "title": "Agent Notary",
   "description": "Verifiable delivery for agent jobs: commit-reveal notarization of delivered content.",
-  "version": "0.2.0+h1115",
+  "version": "0.2.1",
   "websiteUrl": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/servers/agent-notary.md",
   "icons": [
     {
@@ -23,5 +23,13 @@
       "type": "streamable-http",
       "url": "https://mcp.viridisconservation.com/notary/mcp"
     }
-  ]
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "viridis": {
+        "release": "0.2.0",
+        "hostedBuild": "h1115b"
+      }
+    }
+  }
 }

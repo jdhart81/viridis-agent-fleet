@@ -6,7 +6,7 @@ Verified monthly-seat catalog, account attribution, quota, overage, and MRR infr
 |---|---|
 | Registry name | `io.github.jdhart81/subscriptions` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/subscriptions/mcp` |
-| Version | 0.1.1+h1115 |
+| Version | 0.1.2 |
 | Tools | 10 |
 
 ## Connect

@@ -6,7 +6,7 @@ Deterministic auditable US clean-energy tax-credit scenario engine
 |---|---|
 | Registry name | `io.github.jdhart81/taxcredit-engine` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/taxcredit-engine/mcp` |
-| Version | 0.1.0+h1115 |
+| Version | 0.1.1 |
 | Tools | 5 |
 | Source | [`taxcredit-engine-agent/`](../../taxcredit-engine-agent/) |
 
