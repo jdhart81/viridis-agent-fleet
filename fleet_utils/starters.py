@@ -105,8 +105,9 @@ def _footprint_from_bills(electricity_kwh: str, year: str,
         + "\n".join(lines)
         + "\nShow the total in tCO2e, each line's emission factor and source, and "
         "any line that came back indeterminate with its reason. If my region "
-        "is not one the ledger lists, use list_factor_packs and tell me which "
-        "region you used instead."
+        "is not one the ledger lists, do not calculate with another region: "
+        "keep that line indeterminate, show me the regions list_factor_packs "
+        "offers, and ask me which one applies."
     )
 
 
