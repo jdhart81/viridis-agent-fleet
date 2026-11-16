@@ -75,16 +75,25 @@ invariant — an integration test, fleet-demo style.
 $5.00 per model-backed solve. Read-only tools and unpaid preflight remain free,
 but execution has no free tier because every solve incurs provider cost. The
 public profile is bounded to 4 subtasks × redundancy 3 (12 hires and 12 reviews). Gateway
-workers use the pinned `gpt-5-mini-2025-08-07` cost profile, a 20,000-character
-prompt ceiling, 2,048 solve tokens, and 256 review tokens. At $0.25 per solver
-contribution, worst-case solver settlements are $3.00 and the conservative
-provider ceiling is below $0.18, leaving at least $1.82 contribution margin
+workers use the pinned `gpt-6-luna` cost profile ($0.10 input / $0.50 output per
+1M tokens, OpenAI Standard), a 20,000-character prompt ceiling, 2,048 solve
+tokens, and 256 review tokens. At $0.25 per solver contribution, worst-case
+solver settlements are $3.00 and the conservative provider ceiling is below
+$0.07, leaving at least $1.93 contribution margin
 before fixed infrastructure. Sub-hires settle through escrow at each solver's
 list price; `fee_bps` is frozen at open.
 
 The gateway enforces a 35% minimum contribution-margin floor at boot. The
-current conservative profile clears it at 36.4%; an unsupported model or a
-future cost/profile change that falls below the floor fails closed.
+current conservative profile clears it at 38.6%; an unsupported model or a
+future cost/profile change that falls below the floor fails closed, both at
+boot and when the gateway wires a model.
+
+OpenAI shuts down `gpt-5-mini` and `gpt-5-mini-2025-08-07` on
+2026-12-11; both are refused with a message that names the replacement.
+`gpt-6.1-terra` (OpenAI's named successor to gpt-5-mini) is priced in the
+profile table but does not clear the 35% floor at $5.00 per solve (27.6%),
+so selecting it fails closed until the service price or solver settlement
+changes.
 
 ## Agent Market seller worker
 

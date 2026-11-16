@@ -57,8 +57,8 @@ def test_public_economics_leave_healthy_contribution_margin():
     assert adapter.SERVICE_PRICE_MINOR == 500
     assert adapter.FREE_SOLVES_PER_DAY == 0
     assert adapter.MAX_SOLVER_SETTLEMENT_MINOR == 300
-    assert adapter.MAX_API_COST_USD < 0.18
-    assert adapter.MIN_CONTRIBUTION_MARGIN_MINOR >= 182
+    assert adapter.MAX_API_COST_USD < 0.07
+    assert adapter.MIN_CONTRIBUTION_MARGIN_MINOR >= 193
     assert adapter.CONTRIBUTION_MARGIN_BPS >= 3_500
     assert adapter.CONTRIBUTION_MARGIN_BPS >= \
         adapter.MIN_REQUIRED_CONTRIBUTION_MARGIN_BPS
@@ -79,8 +79,9 @@ def test_describe_and_manifest_advertise_the_enforced_zero_execution_free_tier()
     assert "$5.00 per model-backed solve" in manifest
     assert "no execution free tier" in manifest
     assert "$3.00 in solver settlements" in manifest
-    assert "$0.18" in manifest
-    assert "$1.82 / 36.4% contribution margin" in manifest
+    assert "$0.07" in manifest
+    assert "$1.93 / 38.6% contribution margin" in manifest
+    assert "gpt-6-luna" in manifest
     assert "OpenAI Standard processing" in manifest
 
 
@@ -142,3 +143,55 @@ def test_paid_preflight_enforces_fixed_margin_profile_before_job_mutation(
         "depth": 0, "redundancy": 3, "fee_bps": 0})
     assert accepted is None
     assert len(core.jobs) == before
+
+
+def test_default_model_is_supported_and_clears_the_margin_floor():
+    assert adapter.DEFAULT_MODEL == "gpt-6-luna"
+    assert adapter.contribution_margin_bps("gpt-6-luna") == 3_860
+    assert adapter.CONTRIBUTION_MARGIN_BPS == \
+        adapter.contribution_margin_bps(adapter.DEFAULT_MODEL)
+    adapter.require_margin_floor("gpt-6-luna")
+
+
+def test_gateway_refuses_a_priced_model_that_breaches_the_floor():
+    # gpt-6.1-terra is OpenAI's named successor to gpt-5-mini, but at
+    # $5.00/solve its conservative ceiling ($0.62) leaves 27.6% margin.
+    assert adapter.contribution_margin_bps("gpt-6.1-terra") == 2_760
+    rails = {name: Rail() for name in (
+        "trust", "covenant", "escrow", "metering", "ledger")}
+    with pytest.raises(RuntimeError, match="minimum contribution margin"):
+        adapter.configure_gateway(
+            rails, transport_factory=fake_transport_factory,
+            model="gpt-6.1-terra")
+
+
+@pytest.mark.parametrize("model", [
+    "gpt-5-mini", "gpt-5-mini-2025-08-07", "not-a-model"])
+def test_gateway_refuses_retired_and_unknown_models_before_wiring(model):
+    rails = {name: Rail() for name in (
+        "trust", "covenant", "escrow", "metering", "ledger")}
+    with pytest.raises(RuntimeError, match="HIVE_LLM_MODEL"):
+        adapter.configure_gateway(
+            rails, transport_factory=fake_transport_factory, model=model)
+
+
+def _import_with_env(model):
+    import os
+    import subprocess
+    root = Path(__file__).resolve().parents[1]
+    env = {**os.environ, "HIVE_LLM_MODEL": model}
+    return subprocess.run(
+        [sys.executable, "-c", "import adapters.mcp_server"],
+        cwd=root, env=env, capture_output=True, text=True, timeout=60)
+
+
+def test_stale_retired_env_pin_fails_boot_with_actionable_message():
+    proc = _import_with_env("gpt-5-mini-2025-08-07")
+    assert proc.returncode != 0
+    assert "retired by OpenAI on 2026-12-11" in proc.stderr
+    assert "gpt-6-luna" in proc.stderr
+
+
+def test_explicit_supported_env_pin_boots():
+    proc = _import_with_env("gpt-6-luna")
+    assert proc.returncode == 0, proc.stderr

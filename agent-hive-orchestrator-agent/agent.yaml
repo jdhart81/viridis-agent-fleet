@@ -4,7 +4,7 @@ description: "Deterministic nested hive-mind orchestration: hire, cross-review, 
 pillar: "novel-a2a"
 status: "mvp"
 owner: "justin@viridis.earth"
-revenue_model: "$5.00 per model-backed solve with no execution free tier; read-only tools and unpaid preflight remain free. Public work is capped at 4 subtasks x redundancy 3, OpenAI Standard processing is explicitly required, with at most $3.00 in solver settlements and a conservative pinned-model API ceiling below $0.18, leaving at least $1.82 / 36.4% contribution margin before fixed infrastructure"
+revenue_model: "$5.00 per model-backed solve with no execution free tier; read-only tools and unpaid preflight remain free. Public work is capped at 4 subtasks x redundancy 3, OpenAI Standard processing is explicitly required, with at most $3.00 in solver settlements and a conservative pinned-model (gpt-6-luna) API ceiling below $0.07, leaving at least $1.93 / 38.6% contribution margin before fixed infrastructure"
 deploy_targets:
   primary: "mcp-server"
   secondary: ["docker"]
