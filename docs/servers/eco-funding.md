@@ -6,7 +6,7 @@ Ecological complexity valuation for agents and people: D-Score x equivalent conn
 |---|---|
 | Registry name | `io.github.jdhart81/eco-funding` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/eco-funding/mcp` |
-| Version | 0.1.0+h1115 |
+| Version | 0.1.1 |
 | Tools | 5 |
 | Source | [`eco-funding-agent/`](../../eco-funding-agent/) |
 

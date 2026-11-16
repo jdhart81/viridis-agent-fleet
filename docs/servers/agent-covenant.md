@@ -6,7 +6,7 @@ Machine-checkable authority leases for agents: scoped, budgeted, expiring, revoc
 |---|---|
 | Registry name | `io.github.jdhart81/agent-covenant` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/covenant/mcp` |
-| Version | 0.1.1+h1115 |
+| Version | 0.1.2 |
 | Tools | 7 |
 | Source | [`agent-covenant-agent/`](../../agent-covenant-agent/) |
 

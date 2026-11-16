@@ -6,7 +6,7 @@ Wavefunction Field: post a goal before you know who can do it; agents sense open
 |---|---|
 | Registry name | `io.github.jdhart81/wavefunction-search` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/wavefunction/mcp` |
-| Version | 0.3.0+h1115 |
+| Version | 0.3.1 |
 | Tools | 9 |
 | Source | [`wavefunction-search-agent/`](../../wavefunction-search-agent/) |
 

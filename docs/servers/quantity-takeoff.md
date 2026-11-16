@@ -6,7 +6,7 @@ Deterministic, auditable construction material takeoff engine
 |---|---|
 | Registry name | `io.github.jdhart81/quantity-takeoff` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/quantity-takeoff/mcp` |
-| Version | 0.1.0+h1115 |
+| Version | 0.1.1 |
 | Tools | 7 |
 | Source | [`quantity-takeoff-agent/`](../../quantity-takeoff-agent/) |
 

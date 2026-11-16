@@ -6,7 +6,7 @@ ViridisOS: theorem-backed conservation certification and the fleet's trust root.
 |---|---|
 | Registry name | `io.github.jdhart81/viridisos` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/viridisos/mcp` |
-| Version | 1.0.0+h1115 |
+| Version | 1.0.1 |
 | Tools | 7 |
 | Source | [`viridisos/`](../../viridisos/) |
 

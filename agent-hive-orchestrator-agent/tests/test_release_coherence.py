@@ -34,5 +34,9 @@ def test_hive_release_versions_are_coherent_across_private_and_public_layouts():
         )
         path = next((item for item in candidates if item.is_file()), None)
         assert path is not None
-        # registry versions may carry a hosted-build tag: <release>+<build>
-        assert json.loads(path.read_text())["version"].split("+", 1)[0] == VERSION
+        manifest = json.loads(path.read_text())
+        # a hosted listing records the open-core release it builds on
+        recorded = (manifest.get("_meta", {})
+                    .get("io.modelcontextprotocol.registry/publisher-provided", {})
+                    .get("viridis", {}).get("release"))
+        assert (recorded or manifest["version"]) == VERSION

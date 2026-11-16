@@ -13,9 +13,15 @@ assets/listing-logos tiles.
 RM1 Every entry in PUBLISH has an icon (PNG, 400x400, served from this repo
     on GitHub), a title of at most 100 characters, and a websiteUrl pointing
     at its docs page (docs/servers/<name>.md).
-RM2 The version is the agent's release plus the hosted-build tag
-    (`<release>+h<build>`). The hosted gateway reports the same string as
-    serverInfo.version, so the registry and the live server never disagree.
+RM2 The listing version is the hosted release: the agent's open-core release
+    with the patch number raised by one (0.2.0 -> 0.2.1). The open-core
+    release it builds on is recorded under _meta publisher-provided
+    viridis.release. The hosted gateway reports the listing version as
+    serverInfo.version exactly when its own release equals that record, so
+    registry and server never disagree. (SemVer build metadata such as
+    0.2.0+h1115 was tried first: it sorts equal to 0.2.0, so the registry kept
+    the old listing as latest.) `latest-check` confirms each new version sorts
+    above the registry's current latest before publishing.
 RM3 Name, repository and remotes are never changed here. A description is
     replaced only where DESCRIPTIONS gives one: the registry caps descriptions
     at 100 characters and 18 had been cut off mid-word; each replacement is a
@@ -39,7 +45,8 @@ MIRROR = ROOT / "deploy" / "mcp-publish"      # older copy of the same names
 LOGOS = ROOT / "assets" / "listing-logos"
 RAW = "https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/"
 DOCS = "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/servers/"
-HOSTED_BUILD = "h1115"          # must equal the gateway's HOSTED_BUILD (RM2)
+HOSTED_BUILD = "h1115b"         # names the publish tag: registry-meta-v<HOSTED_BUILD>
+META_KEY = "io.modelcontextprotocol.registry/publisher-provided"
 
 HOLD = {
     "agent-market-network": "own container still reports the SDK version; republish after its SDK 2 port",
@@ -202,8 +209,20 @@ def write_icons() -> list[str]:
     return written
 
 
-def release_of(version: str) -> str:
-    return version.split("+", 1)[0]
+def release_of(data: dict) -> str:
+    """The open-core release a listing builds on (RM2)."""
+    recorded = ((data.get("_meta") or {}).get(META_KEY) or {}).get("viridis", {}).get("release")
+    return recorded or str(data["version"]).split("+", 1)[0]
+
+
+def _semver(version: str) -> tuple:
+    core = version.split("+", 1)[0].split("-", 1)[0]
+    return tuple(int(part) for part in core.split("."))
+
+
+def hosted_version(release: str) -> str:
+    major, minor, patch = _semver(release)
+    return f"{major}.{minor}.{patch + 1}"
 
 
 def wanted(entry: dict) -> dict:
@@ -216,9 +235,11 @@ def wanted(entry: dict) -> dict:
     data["websiteUrl"] = DOCS + f"{short}.md"
     data["icons"] = [{"src": RAW + "assets/listing-logos/" + logo_file(short),
                       "mimeType": "image/png", "sizes": ["400x400"]}]
-    data["version"] = f"{release_of(data['version'])}+{HOSTED_BUILD}"
+    release = release_of(data)
+    data["version"] = hosted_version(release)
+    data["_meta"] = {META_KEY: {"viridis": {"release": release, "hostedBuild": HOSTED_BUILD}}}
     order = ["$schema", "name", "title", "description", "version", "websiteUrl",
-             "icons", "repository", "remotes"]
+             "icons", "repository", "remotes", "_meta"]
     return {k: data[k] for k in order if k in data} | {k: v for k, v in data.items() if k not in order}
 
 
@@ -249,6 +270,23 @@ if __name__ == "__main__":
         print("\n".join(write_icons()) or "no new icons")
     elif mode == "apply":
         print("\n".join(apply()) or "up to date")
+    elif mode == "latest-check":                                       # RM2
+        import urllib.request
+        behind = []
+        for entry in entries():
+            if entry["short"] in HOLD:
+                continue
+            name = entry["data"]["name"]
+            url = f"https://registry.modelcontextprotocol.io/v0/servers?search={name}"
+            data = json.loads(urllib.request.urlopen(url, timeout=30).read())
+            latest = [x["server"]["version"] for x in data.get("servers", [])
+                      if x["server"]["name"] == name and
+                      x["_meta"]["io.modelcontextprotocol.registry/official"].get("isLatest")]
+            if latest and _semver(entry["data"]["version"]) <= _semver(latest[0]):
+                behind.append((name, entry["data"]["version"], latest[0]))
+        if behind:
+            raise SystemExit(f"would not become latest: {behind}")
+        print("every managed listing sorts above the registry's latest")
     elif mode == "check":
         missing = [e["short"] for e in entries() if not (LOGOS / logo_file(e["short"])).exists()]
         stale = apply(write=False)

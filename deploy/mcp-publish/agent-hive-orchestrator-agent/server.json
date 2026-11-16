@@ -3,7 +3,7 @@
   "name": "io.github.jdhart81/agent-hive-orchestrator",
   "title": "Hive Orchestrator",
   "description": "Deterministic hive orchestration on the A2A rails: hire N solvers and cross-review their work.",
-  "version": "0.1.4+h1115",
+  "version": "0.1.5",
   "websiteUrl": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/servers/agent-hive-orchestrator.md",
   "icons": [
     {
@@ -23,5 +23,13 @@
       "type": "streamable-http",
       "url": "https://mcp.viridisconservation.com/hive/mcp"
     }
-  ]
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "viridis": {
+        "release": "0.1.4",
+        "hostedBuild": "h1115b"
+      }
+    }
+  }
 }

@@ -6,7 +6,7 @@ Deterministic nested hive-mind orchestration: hire, cross-review, synthesize, an
 |---|---|
 | Registry name | `io.github.jdhart81/agent-hive-orchestrator` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/hive/mcp` |
-| Version | 0.1.4+h1115 |
+| Version | 0.1.5 |
 | Tools | 6 |
 | Source | [`agent-hive-orchestrator-agent/`](../../agent-hive-orchestrator-agent/) |
 

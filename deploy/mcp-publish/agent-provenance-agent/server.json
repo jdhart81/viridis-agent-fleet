@@ -3,7 +3,7 @@
   "name": "io.github.jdhart81/agent-provenance",
   "title": "Agent Provenance",
   "description": "Birth certificates, lineage and cascading recalls for agents.",
-  "version": "0.2.0+h1115",
+  "version": "0.2.1",
   "websiteUrl": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/servers/agent-provenance.md",
   "icons": [
     {
@@ -23,5 +23,13 @@
       "type": "streamable-http",
       "url": "https://mcp.viridisconservation.com/provenance/mcp"
     }
-  ]
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "viridis": {
+        "release": "0.2.0",
+        "hostedBuild": "h1115b"
+      }
+    }
+  }
 }

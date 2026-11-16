@@ -6,7 +6,7 @@ The MCP-native bridge to ERC-8004 (on-chain agent identity/reputation/validation
 |---|---|
 | Registry name | `io.github.jdhart81/agent-erc8004-bridge` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/erc8004/mcp` |
-| Version | 0.2.0+h1115 |
+| Version | 0.2.1 |
 | Tools | 10 |
 | Source | [`agent-erc8004-bridge-agent/`](../../agent-erc8004-bridge-agent/) |
 
