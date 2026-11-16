@@ -25,6 +25,8 @@ SD4 prices come from the live x402 catalog; nothing is priced by hand.
 SD5 connection, payment and ownership text is the same on every page and
     points to docs/HOSTED_MCP.md.
 SD6 build is deterministic: the same snapshot gives the same bytes.
+SD8 every page and README row shows the mcptry live-status badge (all
+    listings are claimed by jdhart81, so the badge reports live checks).
 SD7 the root README's registry table lists every entry with its page; a
     hand-written agent README stays linked beside its page.
 """
@@ -253,12 +255,17 @@ def _prices(catalog: dict, mount: str) -> dict:
     return out
 
 
+def badge(name: str) -> str:
+    """mcptry's live status and score for a claimed listing (SD8)."""
+    return f"[![mcptry](https://mcptry.com/badge/{name})](https://mcptry.com/servers/{name})"
+
+
 def render(entry: dict, record: dict, catalog: dict, captured_at: str) -> str:
     tools = record["tools"]
     prices = _prices(catalog, entry["mount"])
     folder = entry["folder"]
     has_folder = (ROOT / folder).is_dir()
-    lines = [f"# {entry['name']}", "",
+    lines = [f"# {entry['name']}", "", badge(entry["name"]), "",
              f"{_cell(_summary(entry, record))}", "",
              "| | |", "|---|---|",
              f"| Registry name | `{entry['name']}` |",
@@ -346,7 +353,7 @@ def render(entry: dict, record: dict, catalog: dict, captured_at: str) -> str:
 
 
 README = ROOT / "README.md"
-TABLE_START = "| Registry name | Remote endpoint | Docs |"
+TABLE_START = "| Registry name | Remote endpoint | Docs | Live status |"
 DEDICATED = {"security-preflight", "regulatory-radar", "ghg-ledger"}
 
 
@@ -354,12 +361,12 @@ def readme_text() -> str:
     text = README.read_text()
     start = text.index(TABLE_START)
     end = text.index("\n\n", start)
-    rows = [TABLE_START, "|---|---|---|"]
+    rows = [TABLE_START, "|---|---|---|---|"]
     for entry in registry_entries():
         links = [f"[docs/servers/{entry['short']}.md](docs/servers/{entry['short']}.md)"]
         if entry["short"] in DEDICATED:
             links.append(f"[{entry['folder']}/README.md]({entry['folder']}/README.md)")
-        rows.append(f"| `{entry['name']}` | `{entry['url']}` | {' · '.join(links)} |")
+        rows.append(f"| `{entry['name']}` | `{entry['url']}` | {' · '.join(links)} | {badge(entry['name'])} |")
     return text[:start] + "\n".join(rows) + text[end:]
 
 

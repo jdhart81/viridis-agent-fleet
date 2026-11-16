@@ -1,5 +1,7 @@
 # io.github.jdhart81/security-preflight
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/security-preflight)](https://mcptry.com/servers/io.github.jdhart81/security-preflight)
+
 Evidence-bounded MCP manifest and tool-policy security preflight with signed receipts
 
 | | |

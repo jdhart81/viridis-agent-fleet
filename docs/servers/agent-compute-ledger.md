@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-compute-ledger
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-compute-ledger)](https://mcptry.com/servers/io.github.jdhart81/agent-compute-ledger)
+
 Compute-is-carbon cost/energy ledger for agent work: joules, gCO2e, and Landauer-limit efficiency per unit of agent cognition, with content-addressed attestations.
 
 | | |

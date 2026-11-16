@@ -1,5 +1,7 @@
 # io.github.jdhart81/eco-funding
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/eco-funding)](https://mcptry.com/servers/io.github.jdhart81/eco-funding)
+
 Ecological complexity valuation for agents and people: D-Score x equivalent connected area of verified habitat (HDFM links, GSIP soil) -> sealed, re-runnable receipts, plus pledge-pool simulation with milestone and outcome-linked release rules. Read-only; no money movement; the intelligence-bound capacity term is labelled conjecture.
 
 | | |

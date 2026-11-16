@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-identity-registry
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-identity-registry)](https://mcptry.com/servers/io.github.jdhart81/agent-identity-registry)
+
 The passport + directory of the agent-to-agent economy: verifiable agent identity (content-addressed DIDs), capability advertising, and capability-based discovery. Supply-side complement to intent routing.
 
 | | |

@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-notary
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-notary)](https://mcptry.com/servers/io.github.jdhart81/agent-notary)
+
 Commit-reveal content notarization: sellers commit to a deliverable's hash before handover; reveals verify exactly; late reveals expire. Turns escrow delivery proofs into cryptographic receipts. Digests only — never raw content.
 
 | | |

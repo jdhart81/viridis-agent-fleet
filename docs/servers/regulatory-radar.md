@@ -1,5 +1,7 @@
 # io.github.jdhart81/regulatory-radar
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/regulatory-radar)](https://mcptry.com/servers/io.github.jdhart81/regulatory-radar)
+
 Live authoritative-source regulatory change evidence, compliance screening, and deadline monitoring
 
 | | |

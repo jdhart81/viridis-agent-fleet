@@ -1,5 +1,7 @@
 # io.github.jdhart81/ghg-ledger
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/ghg-ledger)](https://mcptry.com/servers/io.github.jdhart81/ghg-ledger)
+
 Deterministic auditable Scope 1, 2, and 3 greenhouse-gas inventory engine
 
 | | |

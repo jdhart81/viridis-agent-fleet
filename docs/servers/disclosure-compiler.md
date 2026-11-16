@@ -1,5 +1,7 @@
 # io.github.jdhart81/disclosure-compiler
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/disclosure-compiler)](https://mcptry.com/servers/io.github.jdhart81/disclosure-compiler)
+
 Deterministic cited compliance disclosure drafts with verified GHG lineage.
 
 | | |

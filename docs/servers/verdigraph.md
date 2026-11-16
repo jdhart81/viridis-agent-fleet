@@ -1,5 +1,7 @@
 # io.github.jdhart81/verdigraph
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/verdigraph)](https://mcptry.com/servers/io.github.jdhart81/verdigraph)
+
 Verifiable cognition: compile any agent file into a deterministic, content-addressed brain_id with a machine-checkable 9-invariant report. Same bytes -> same brain. Pin it, cite it, notarize it.
 
 | | |

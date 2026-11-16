@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-hive-orchestrator
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-hive-orchestrator)](https://mcptry.com/servers/io.github.jdhart81/agent-hive-orchestrator)
+
 Deterministic nested hive-mind orchestration: hire, cross-review, synthesize, and settle N solver agents through the A2A rails
 
 | | |

@@ -1,5 +1,7 @@
 # io.github.jdhart81/neurogenesis
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/neurogenesis)](https://mcptry.com/servers/io.github.jdhart81/neurogenesis)
+
 Developmental agents plus Wu Wei routing: choose reuse, rules, local, tool, or cloud execution—and explicitly defer low-value work—under hard quality, reliability, locality, capability, cost, latency, and energy contracts with hash-bound decision and outcome receipts.
 
 | | |

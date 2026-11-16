@@ -1,5 +1,7 @@
 # io.github.jdhart81/wu-wei-router
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/wu-wei-router)](https://mcptry.com/servers/io.github.jdhart81/wu-wei-router)
+
 Evidence-constrained workload routing plans with explicit modeled net savings
 
 | | |

@@ -1,5 +1,7 @@
 # io.github.jdhart81/viridisos
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/viridisos)](https://mcptry.com/servers/io.github.jdhart81/viridisos)
+
 ViridisOS: theorem-backed conservation certification and the fleet's trust root.
 
 | | |

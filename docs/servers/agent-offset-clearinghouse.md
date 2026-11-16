@@ -1,5 +1,7 @@
 # io.github.jdhart81/agent-offset-clearinghouse
 
+[![mcptry](https://mcptry.com/badge/io.github.jdhart81/agent-offset-clearinghouse)](https://mcptry.com/servers/io.github.jdhart81/agent-offset-clearinghouse)
+
 Verified conservation credits matched to agent compute emissions: cheapest-first matching, exactly-once retirement, content-addressed offset certificates. The first economy born carbon-accountable.
 
 | | |
