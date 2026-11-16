@@ -12,7 +12,7 @@ SNAPSHOT = json.loads(sd.SNAPSHOT.read_text())
 # Ratchets: may shrink, never grow. agent-market-network runs in its own
 # container (not the gateway), so the gateway's argument descriptions do not
 # reach it yet.
-UNDESCRIBED_SERVERS = {"io.github.jdhart81/agent-market-network"}
+UNDESCRIBED_SERVERS: set = set()   # empty since market 0.8.2 (Nov 16)
 
 
 def test_sd1_one_page_per_registry_entry():
