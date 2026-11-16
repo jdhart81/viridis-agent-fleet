@@ -6,7 +6,7 @@ Genesis certificates, lineage, and cascading recalls: birth certificates + blood
 |---|---|
 | Registry name | `io.github.jdhart81/agent-provenance` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/provenance/mcp` |
-| Version | 0.2.0 |
+| Version | 0.2.0+h1115 |
 | Tools | 11 |
 | Source | [`agent-provenance-agent/`](../../agent-provenance-agent/) |
 

@@ -1,8 +1,19 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.jdhart81/agent-notary",
-  "description": "Verifiable delivery for the agent economy: commit-reveal content notarization. Sellers commit to a d",
-  "version": "0.2.0",
+  "title": "Agent Notary",
+  "description": "Verifiable delivery for agent jobs: commit-reveal notarization of delivered content.",
+  "version": "0.2.0+h1115",
+  "websiteUrl": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/servers/agent-notary.md",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/assets/listing-logos/viridis-agent-notary-400.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "400x400"
+      ]
+    }
+  ],
   "repository": {
     "url": "https://github.com/jdhart81/viridis-agent-fleet",
     "source": "github"

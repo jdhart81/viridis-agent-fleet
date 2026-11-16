@@ -6,7 +6,7 @@ Live authoritative-source regulatory change evidence, compliance screening, and 
 |---|---|
 | Registry name | `io.github.jdhart81/regulatory-radar` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/regulatory-radar/mcp` |
-| Version | 0.2.0 |
+| Version | 0.2.0+h1115 |
 | Tools | 6 |
 | Source | [`regulatory-radar-agent/`](../../regulatory-radar-agent/) |
 

@@ -1,8 +1,19 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.jdhart81/agent-verified-relay",
-  "description": "Viridis Verified \u2014 wrap any MCP server with tamper-evident delivery receipts, metered fees, and disp",
-  "version": "0.1.0",
+  "title": "Verified Relay",
+  "description": "Wraps any MCP server with tamper-evident delivery receipts, metered fees and disputes.",
+  "version": "0.1.0+h1115",
+  "websiteUrl": "https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/servers/agent-verified-relay.md",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/jdhart81/viridis-agent-fleet/main/assets/listing-logos/viridis-agent-verified-relay-400.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "400x400"
+      ]
+    }
+  ],
   "repository": {
     "url": "https://github.com/jdhart81/viridis-agent-fleet",
     "source": "github"

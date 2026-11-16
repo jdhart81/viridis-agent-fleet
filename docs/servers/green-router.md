@@ -6,7 +6,7 @@ Carbon-accounted agent compute: free honest footprint quotes and carbon-ranked r
 |---|---|
 | Registry name | `io.github.jdhart81/green-router` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/green-router/mcp` |
-| Version | 0.1.0 |
+| Version | 0.1.0+h1115 |
 | Tools | 6 |
 | Source | [`green-router-agent/`](../../green-router-agent/) |
 

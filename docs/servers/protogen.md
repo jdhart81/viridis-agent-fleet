@@ -6,7 +6,7 @@ Viridis LLC revenue MCP CAD agent: provides a callable CAD design environment an
 |---|---|
 | Registry name | `io.github.jdhart81/protogen` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/protogen/mcp` |
-| Version | 0.3.1 |
+| Version | 0.3.1+h1115 |
 | Tools | 6 |
 | Source | [`protogen-agent/`](../../protogen-agent/) |
 

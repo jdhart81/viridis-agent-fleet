@@ -6,7 +6,7 @@ Reputation & tamper-evident trust attestations for the agent-to-agent economy. A
 |---|---|
 | Registry name | `io.github.jdhart81/agent-trust-oracle` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/trust/mcp` |
-| Version | 0.1.1 |
+| Version | 0.1.1+h1115 |
 | Tools | 6 |
 | Source | [`agent-trust-oracle-agent/`](../../agent-trust-oracle-agent/) |
 

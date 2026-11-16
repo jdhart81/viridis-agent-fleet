@@ -6,7 +6,7 @@ Deterministic conversion of caller-supplied CR80 reference and coplanar object p
 |---|---|
 | Registry name | `io.github.jdhart81/smartscale` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/smartscale/mcp` |
-| Version | 0.9.4 |
+| Version | 0.9.4+h1115 |
 | Tools | 4 |
 | Source | [`smartscale-agent/`](../../smartscale-agent/) |
 

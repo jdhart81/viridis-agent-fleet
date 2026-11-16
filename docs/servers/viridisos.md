@@ -1,12 +1,12 @@
 # io.github.jdhart81/viridisos
 
-ViridisOS — theorem-backed conservation certification + the unified trust root/mark/toll. Certify pa
+ViridisOS: theorem-backed conservation certification and the fleet's trust root.
 
 | | |
 |---|---|
 | Registry name | `io.github.jdhart81/viridisos` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/viridisos/mcp` |
-| Version | 1.0.0 |
+| Version | 1.0.0+h1115 |
 | Tools | 7 |
 | Source | [`viridisos/`](../../viridisos/) |
 

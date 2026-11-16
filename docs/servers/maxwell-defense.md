@@ -6,7 +6,7 @@ Model proof-of-work policy and latency for AI agents. $1 USDC rehearsal; no runt
 |---|---|
 | Registry name | `io.github.jdhart81/maxwell-defense` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridis-security.com/maxwell-defense/mcp` |
-| Version | 0.1.0 |
+| Version | 0.1.0+h1115 |
 | Tools | 2 |
 
 ## Connect
