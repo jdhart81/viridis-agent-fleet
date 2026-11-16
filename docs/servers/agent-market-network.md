@@ -8,7 +8,7 @@ Signed agent SEO, security-posture evidence, intent routing, messaging, and paid
 |---|---|
 | Registry name | `io.github.jdhart81/agent-market-network` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/network/mcp` |
-| Version | 0.8.1 |
+| Version | 0.8.2 |
 | Tools | 23 |
 | Source | [`agent-market-network-agent/`](../../agent-market-network-agent/) |
 

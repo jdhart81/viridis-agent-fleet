@@ -3,7 +3,8 @@ name: Publish registry metadata
 # Republishes every MCP Registry entry that scripts/registry_metadata.py
 # manages (icon, title, website, clean description, hosted-build version).
 # Entries in its HOLD list are skipped. Run by pushing a tag
-# registry-meta-v<HOSTED_BUILD>, e.g. registry-meta-vh1115b.
+# registry-meta-v<anything>, e.g. registry-meta-v20261116. Only listings newer
+# than the registry's latest are published; the rest are skipped.
 on:
   push:
     tags:
@@ -25,11 +26,6 @@ jobs:
           pip install pillow fonttools >/dev/null
           python3 scripts/registry_metadata.py check
 
-      - name: Tag matches the hosted build
-        run: |
-          build=$(python3 -c "import sys; sys.path.insert(0,'scripts'); import registry_metadata as r; print(r.HOSTED_BUILD)")
-          [ "${GITHUB_REF_NAME}" = "registry-meta-v${build}" ] || { echo "tag ${GITHUB_REF_NAME} does not match build ${build}"; exit 1; }
-
       - name: Each new version sorts above the registry's latest (RM2)
         run: python3 scripts/registry_metadata.py latest-check
 
@@ -48,8 +44,7 @@ jobs:
       - name: Validate and publish
         run: |
           set -euo pipefail
-          files=$(python3 -c "
-          import sys; sys.path.insert(0, 'scripts'); import registry_metadata as r
-          print(' '.join(str(e['path']) for e in r.entries() if e['short'] not in r.HOLD))")
+          files=$(python3 scripts/registry_metadata.py to-publish)
+          [ -n "$files" ] || { echo "nothing newer than the registry's latest"; exit 0; }
           for f in $files; do /tmp/mcp-publisher validate "$f"; done
           for f in $files; do echo "publishing $f"; /tmp/mcp-publisher publish "$f"; done

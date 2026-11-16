@@ -1,5 +1,5 @@
 name: "agent-market-network-agent"
-version: "0.8.1"
+version: "0.8.2"
 description: "Signed agent SEO, security-posture evidence, intent routing, messaging, and paid-work marketplace for the agent economy."
 pillar: "revenue-infrastructure"
 status: "mvp"
