@@ -209,6 +209,13 @@ except ImportError:  # loaded without the fleet root on sys.path, as the gateway
             return 0
 flag_error_results(mcp)
 
+try:  # first-call starters: "use this server when" instructions + MCP prompts
+    from fleet_utils.starters import apply_starters
+except ImportError:  # pragma: no cover - adapter copied without fleet_utils
+    def apply_starters(server, key):
+        return 0
+apply_starters(mcp, "ghg-ledger")
+
 
 if __name__ == "__main__":
     if "--serve" in sys.argv:
