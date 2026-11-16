@@ -6,7 +6,7 @@ Developmental agents plus Wu Wei routing: choose reuse, rules, local, tool, or c
 |---|---|
 | Registry name | `io.github.jdhart81/neurogenesis` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/neurogenesis/mcp` |
-| Version | 0.2.0 |
+| Version | 0.2.0+h1115 |
 | Tools | 14 |
 | Source | [`neurogenesis-agent/`](../../neurogenesis-agent/) |
 

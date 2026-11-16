@@ -6,7 +6,7 @@ Deterministic cited compliance disclosure drafts with verified GHG lineage.
 |---|---|
 | Registry name | `io.github.jdhart81/disclosure-compiler` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/disclosure-compiler/mcp` |
-| Version | 0.1.0 |
+| Version | 0.1.0+h1115 |
 | Tools | 5 |
 | Source | [`disclosure-compiler-agent/`](../../disclosure-compiler-agent/) |
 

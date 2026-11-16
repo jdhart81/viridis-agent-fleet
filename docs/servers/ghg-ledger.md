@@ -6,7 +6,7 @@ Deterministic auditable Scope 1, 2, and 3 greenhouse-gas inventory engine
 |---|---|
 | Registry name | `io.github.jdhart81/ghg-ledger` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/ghg-ledger/mcp` |
-| Version | 0.1.0 |
+| Version | 0.1.0+h1115 |
 | Tools | 6 |
 | Source | [`ghg-ledger-agent/`](../../ghg-ledger-agent/) |
 

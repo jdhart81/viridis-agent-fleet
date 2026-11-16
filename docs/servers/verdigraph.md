@@ -6,7 +6,7 @@ Verifiable cognition: compile any agent file into a deterministic, content-addre
 |---|---|
 | Registry name | `io.github.jdhart81/verdigraph` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/verdigraph/mcp` |
-| Version | 0.1.0 |
+| Version | 0.1.0+h1115 |
 | Tools | 4 |
 | Source | [`verdigraph-brain-agent/`](../../verdigraph-brain-agent/) |
 

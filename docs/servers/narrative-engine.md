@@ -6,7 +6,7 @@ Translates ecological intelligence into investor, policy, grant, and media-ready
 |---|---|
 | Registry name | `io.github.jdhart81/narrative-engine` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/narrative-engine/mcp` |
-| Version | 0.1.1 |
+| Version | 0.1.1+h1115 |
 | Tools | 2 |
 | Source | [`narrative-engine-agent/`](../../narrative-engine-agent/) |
 

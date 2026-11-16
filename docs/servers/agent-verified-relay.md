@@ -6,7 +6,7 @@ Viridis Verified: the consequence wrapper for the agent economy. Wraps any third
 |---|---|
 | Registry name | `io.github.jdhart81/agent-verified-relay` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/verified/mcp` |
-| Version | 0.1.0 |
+| Version | 0.1.0+h1115 |
 | Tools | 7 |
 | Source | [`agent-verified-relay-agent/`](../../agent-verified-relay-agent/) |
 

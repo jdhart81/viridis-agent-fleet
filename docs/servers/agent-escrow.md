@@ -6,7 +6,7 @@ Trustless escrow & settlement for agent-to-agent (A2A) transactions. Funds sit i
 |---|---|
 | Registry name | `io.github.jdhart81/agent-escrow` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/escrow/mcp` |
-| Version | 0.1.3 |
+| Version | 0.1.3+h1115 |
 | Tools | 9 |
 | Source | [`agent-escrow-agent/`](../../agent-escrow-agent/) |
 

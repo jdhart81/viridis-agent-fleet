@@ -6,7 +6,7 @@ Compute-is-carbon cost/energy ledger for agent work: joules, gCO2e, and Landauer
 |---|---|
 | Registry name | `io.github.jdhart81/agent-compute-ledger` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/compute-ledger/mcp` |
-| Version | 0.3.0 |
+| Version | 0.3.0+h1115 |
 | Tools | 13 |
 | Source | [`agent-compute-ledger-agent/`](../../agent-compute-ledger-agent/) |
 

@@ -1,0 +1,52 @@
+name: Publish registry metadata
+
+# Republishes every MCP Registry entry that scripts/registry_metadata.py
+# manages (icon, title, website, clean description, hosted-build version).
+# Entries in its HOLD list are skipped. Run by pushing a tag
+# registry-meta-v<build>, e.g. registry-meta-vh1115.
+on:
+  push:
+    tags:
+      - "registry-meta-v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Metadata is current (RM1-RM6)
+        run: |
+          pip install pillow fonttools >/dev/null
+          python3 scripts/registry_metadata.py check
+
+      - name: Tag matches the hosted build
+        run: |
+          build=$(python3 -c "import sys; sys.path.insert(0,'scripts'); import registry_metadata as r; print(r.HOSTED_BUILD)")
+          [ "${GITHUB_REF_NAME}" = "registry-meta-v${build}" ] || { echo "tag ${GITHUB_REF_NAME} does not match build ${build}"; exit 1; }
+
+      - name: Install MCP publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz" \
+            -o /tmp/mcp-publisher.tar.gz
+          echo "ab128162b0616090b47cf245afe0a23f3ef08936fdce19074f5ba0a4469281ac  /tmp/mcp-publisher.tar.gz" \
+            | sha256sum --check --strict
+          tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
+          chmod +x /tmp/mcp-publisher
+
+      - name: Authenticate with GitHub OIDC
+        run: /tmp/mcp-publisher login github-oidc
+
+      - name: Validate and publish
+        run: |
+          set -euo pipefail
+          files=$(python3 -c "
+          import sys; sys.path.insert(0, 'scripts'); import registry_metadata as r
+          print(' '.join(str(e['path']) for e in r.entries() if e['short'] not in r.HOLD))")
+          for f in $files; do /tmp/mcp-publisher validate "$f"; done
+          for f in $files; do echo "publishing $f"; /tmp/mcp-publisher publish "$f"; done

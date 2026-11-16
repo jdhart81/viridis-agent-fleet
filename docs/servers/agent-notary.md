@@ -6,7 +6,7 @@ Commit-reveal content notarization: sellers commit to a deliverable's hash befor
 |---|---|
 | Registry name | `io.github.jdhart81/agent-notary` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/notary/mcp` |
-| Version | 0.2.0 |
+| Version | 0.2.0+h1115 |
 | Tools | 8 |
 | Source | [`agent-notary-agent/`](../../agent-notary-agent/) |
 

@@ -6,7 +6,7 @@ Verified conservation credits matched to agent compute emissions: cheapest-first
 |---|---|
 | Registry name | `io.github.jdhart81/agent-offset-clearinghouse` |
 | Endpoint (Streamable HTTP) | `https://mcp.viridisconservation.com/offsets/mcp` |
-| Version | 0.6.0 |
+| Version | 0.6.0+h1115 |
 | Tools | 19 |
 | Source | [`agent-offset-clearinghouse-agent/`](../../agent-offset-clearinghouse-agent/) |
 
