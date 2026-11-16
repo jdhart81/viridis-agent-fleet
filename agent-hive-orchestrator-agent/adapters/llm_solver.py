@@ -19,20 +19,46 @@ from typing import Any, Awaitable, Callable, Dict, Optional
 
 Transport = Callable[[Dict[str, Any]], Awaitable[str]]
 
-DEFAULT_MODEL = os.getenv("HIVE_LLM_MODEL", "gpt-5-mini-2025-08-07")
+DEFAULT_MODEL = os.getenv("HIVE_LLM_MODEL", "gpt-6-luna")
 DEFAULT_PROVIDER = os.getenv("HIVE_LLM_PROVIDER", "openai")
 OPENAI_SERVICE_TIER = "default"
 MAX_PROMPT_CHARS = 20_000
 MAX_SOLVE_OUTPUT_TOKENS = 2_048
 MAX_REVIEW_OUTPUT_TOKENS = 256
 
-# Pinned 2026-07-25 from the official GPT-5 mini model page. The gateway
-# accepts only this priced profile so its $5 service margin cannot silently
-# disappear when somebody changes HIVE_LLM_MODEL.
+# Standard-tier USD per 1M tokens, read 2026-11-16 from OpenAI's pricing page
+# (developers.openai.com/api/docs/pricing). The gateway accepts only a priced
+# profile so its $5 service margin cannot silently disappear when somebody
+# changes HIVE_LLM_MODEL. A priced profile still has to clear the gateway's
+# contribution-margin floor before it can be wired.
 OPENAI_PRICE_USD_PER_MILLION = {
-    "gpt-5-mini": {"input": 0.25, "output": 2.00},
-    "gpt-5-mini-2025-08-07": {"input": 0.25, "output": 2.00},
+    "gpt-6-luna": {"input": 0.10, "output": 0.50},
+    "gpt-6.1-terra": {"input": 1.00, "output": 5.00},
 }
+
+# OpenAI shut-down dates (developers.openai.com/api/docs/deprecations, notice
+# 2026-06-11). Kept only so a stale HIVE_LLM_MODEL pin fails with an
+# actionable message instead of a bare "unsupported" error.
+RETIRED_MODELS = {
+    "gpt-5-mini": "2026-12-11",
+    "gpt-5-mini-2025-08-07": "2026-12-11",
+}
+
+
+def model_rates(model: str) -> Dict[str, float]:
+    """Return the pinned cost profile for ``model`` or fail closed."""
+    rates = OPENAI_PRICE_USD_PER_MILLION.get(model)
+    if rates is not None:
+        return rates
+    if model in RETIRED_MODELS:
+        raise RuntimeError(
+            f"HIVE_LLM_MODEL {model!r} is retired by OpenAI on "
+            f"{RETIRED_MODELS[model]}; unset HIVE_LLM_MODEL to use "
+            f"'gpt-6-luna' or pick one of "
+            f"{sorted(OPENAI_PRICE_USD_PER_MILLION)}")
+    raise RuntimeError(
+        f"unsupported HIVE_LLM_MODEL cost profile: {model!r}")
+
 
 SOLVE_INSTRUCTIONS = (
     "You are one solver inside a hive of independent solvers. Attack the "
@@ -54,9 +80,7 @@ def openai_transport(api_key: Optional[str] = None,
     The key and httpx are both required only when a solver actually calls the
     provider. Gateway boot therefore stays side-effect free and testable.
     """
-    if model not in OPENAI_PRICE_USD_PER_MILLION:
-        raise RuntimeError(
-            f"unsupported HIVE_LLM_MODEL cost profile: {model!r}")
+    model_rates(model)  # fail closed before any provider call
 
     async def _call(payload: Dict[str, Any]) -> str:
         key = api_key or os.getenv("OPENAI_API_KEY")
@@ -98,7 +122,7 @@ def conservative_request_cost_usd(max_output_tokens: int,
     Treat every input character as a token. This is intentionally more
     conservative than ordinary text tokenization.
     """
-    rates = OPENAI_PRICE_USD_PER_MILLION[model]
+    rates = model_rates(model)
     return (
         MAX_PROMPT_CHARS * rates["input"]
         + max_output_tokens * rates["output"]

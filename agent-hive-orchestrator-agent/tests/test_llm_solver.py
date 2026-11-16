@@ -15,8 +15,12 @@ from adapters.llm_solver import (  # noqa: E402
     MAX_REVIEW_OUTPUT_TOKENS,
     MAX_SOLVE_OUTPUT_TOKENS,
     LLMSolverAdapter,
+    DEFAULT_MODEL,
+    OPENAI_PRICE_USD_PER_MILLION,
     OPENAI_SERVICE_TIER,
+    RETIRED_MODELS,
     conservative_request_cost_usd,
+    model_rates,
     openai_transport,
 )
 from src.core import build  # noqa: E402
@@ -130,6 +134,7 @@ def test_openai_transport_pins_standard_service_tier(monkeypatch):
     }))
 
     assert result == "ok"
+    assert captured["json"]["model"] == "gpt-6-luna"
     assert captured["json"]["service_tier"] == OPENAI_SERVICE_TIER
     assert OPENAI_SERVICE_TIER == "default"
 
@@ -138,3 +143,43 @@ def test_cost_bound_is_conservative_and_small():
     solve = conservative_request_cost_usd(MAX_SOLVE_OUTPUT_TOKENS)
     review = conservative_request_cost_usd(MAX_REVIEW_OUTPUT_TOKENS)
     assert 0 < review < solve < 0.01
+
+
+def test_default_model_is_the_priced_gpt_5_mini_replacement():
+    assert DEFAULT_MODEL == "gpt-6-luna"
+    assert model_rates("gpt-6-luna") == {"input": 0.10, "output": 0.50}
+    assert model_rates("gpt-6.1-terra") == {"input": 1.00, "output": 5.00}
+
+
+def test_no_retired_model_is_still_priced():
+    assert not set(RETIRED_MODELS) & set(OPENAI_PRICE_USD_PER_MILLION)
+    assert set(RETIRED_MODELS) == {"gpt-5-mini", "gpt-5-mini-2025-08-07"}
+
+
+@pytest.mark.parametrize("model", sorted(OPENAI_PRICE_USD_PER_MILLION))
+def test_transport_accepts_every_priced_model(model):
+    assert callable(openai_transport(api_key="k", model=model))
+
+
+@pytest.mark.parametrize("model", ["gpt-5-mini", "gpt-5-mini-2025-08-07"])
+def test_transport_refuses_retired_models_with_replacement_hint(model):
+    with pytest.raises(RuntimeError, match="retired by OpenAI on 2026-12-11"):
+        openai_transport(api_key="k", model=model)
+    with pytest.raises(RuntimeError, match="gpt-6-luna"):
+        conservative_request_cost_usd(MAX_SOLVE_OUTPUT_TOKENS, model)
+
+
+@pytest.mark.parametrize("model", ["gpt-4o", "", "GPT-6-LUNA"])
+def test_transport_and_cost_bound_refuse_unknown_models(model):
+    with pytest.raises(RuntimeError, match="unsupported HIVE_LLM_MODEL"):
+        openai_transport(api_key="k", model=model)
+    with pytest.raises(RuntimeError, match="unsupported HIVE_LLM_MODEL"):
+        conservative_request_cost_usd(MAX_SOLVE_OUTPUT_TOKENS, model)
+
+
+def test_luna_cost_bound_matches_hand_calculation():
+    # 20,000 chars-as-tokens input + capped output, standard rates.
+    assert conservative_request_cost_usd(
+        MAX_SOLVE_OUTPUT_TOKENS, "gpt-6-luna") == pytest.approx(0.003024)
+    assert conservative_request_cost_usd(
+        MAX_REVIEW_OUTPUT_TOKENS, "gpt-6-luna") == pytest.approx(0.002128)

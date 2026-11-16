@@ -53,25 +53,49 @@ MAX_PUBLIC_PROBLEM_CHARS = 12_000
 MAX_PUBLIC_SUBTASK_CHARS = 4_000
 MAX_MODEL_CALLS_PER_SOLVE = (
     MAX_PUBLIC_SUBTASKS * MAX_PUBLIC_REDUNDANCY * 2)
-MAX_API_COST_USD = round(
-    MAX_PUBLIC_SUBTASKS * MAX_PUBLIC_REDUNDANCY * (
-        conservative_request_cost_usd(MAX_SOLVE_OUTPUT_TOKENS)
-        + conservative_request_cost_usd(MAX_REVIEW_OUTPUT_TOKENS)),
-    6,
-)
+
+
+def max_api_cost_usd(model: str = DEFAULT_MODEL) -> float:
+    """Conservative provider ceiling for one public solve on ``model``."""
+    return round(
+        MAX_PUBLIC_SUBTASKS * MAX_PUBLIC_REDUNDANCY * (
+            conservative_request_cost_usd(MAX_SOLVE_OUTPUT_TOKENS, model)
+            + conservative_request_cost_usd(MAX_REVIEW_OUTPUT_TOKENS, model)),
+        6,
+    )
+
+
 MAX_SOLVER_SETTLEMENT_MINOR = (
     MAX_PUBLIC_SUBTASKS * MAX_PUBLIC_REDUNDANCY * SOLVER_PRICE_MINOR)
-MIN_CONTRIBUTION_MARGIN_MINOR = (
-    SERVICE_PRICE_MINOR
-    - MAX_SOLVER_SETTLEMENT_MINOR
-    - int(MAX_API_COST_USD * 100 + 0.999999)
-)
 MIN_REQUIRED_CONTRIBUTION_MARGIN_BPS = 3_500
-CONTRIBUTION_MARGIN_BPS = (
-    MIN_CONTRIBUTION_MARGIN_MINOR * 10_000 // SERVICE_PRICE_MINOR)
-if CONTRIBUTION_MARGIN_BPS < MIN_REQUIRED_CONTRIBUTION_MARGIN_BPS:
-    raise RuntimeError(
-        "Hive commercial profile violates the minimum contribution margin")
+
+
+def contribution_margin_minor(model: str = DEFAULT_MODEL) -> int:
+    return (
+        SERVICE_PRICE_MINOR
+        - MAX_SOLVER_SETTLEMENT_MINOR
+        - int(max_api_cost_usd(model) * 100 + 0.999999)
+    )
+
+
+def contribution_margin_bps(model: str = DEFAULT_MODEL) -> int:
+    return contribution_margin_minor(model) * 10_000 // SERVICE_PRICE_MINOR
+
+
+def require_margin_floor(model: str) -> None:
+    """Fail closed when ``model`` would breach the contribution floor."""
+    bps = contribution_margin_bps(model)
+    if bps < MIN_REQUIRED_CONTRIBUTION_MARGIN_BPS:
+        raise RuntimeError(
+            "Hive commercial profile violates the minimum contribution "
+            f"margin for model {model!r}: {bps} bps < "
+            f"{MIN_REQUIRED_CONTRIBUTION_MARGIN_BPS} bps")
+
+
+MAX_API_COST_USD = max_api_cost_usd(DEFAULT_MODEL)
+MIN_CONTRIBUTION_MARGIN_MINOR = contribution_margin_minor(DEFAULT_MODEL)
+CONTRIBUTION_MARGIN_BPS = contribution_margin_bps(DEFAULT_MODEL)
+require_margin_floor(DEFAULT_MODEL)
 
 
 def _server(name: str, description: str):
@@ -100,6 +124,7 @@ def configure_gateway(rails: Dict[str, Any], *,
                       transport_factory=openai_transport,
                       model: str = DEFAULT_MODEL):
     """Bind the hive to the gateway's shared rails and three paid workers."""
+    require_margin_floor(model)
     required = {"trust", "covenant", "escrow", "metering", "ledger"}
     missing = sorted(required - set(rails))
     if missing:
