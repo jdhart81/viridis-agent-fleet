@@ -60,3 +60,13 @@ def test_rm4_held_entries_have_reasons():
 
 def test_rm6_apply_is_idempotent():
     assert rm.apply(write=False) == []
+
+
+def test_rm4_held_listing_records_its_release():
+    """A held listing still says which release it is built on, so the gateway
+    reports the listing version (SV6) and never disagrees with the registry."""
+    for entry in rm.entries():
+        if entry["short"] not in rm.HOLD:
+            continue
+        recorded = entry["data"]["_meta"][rm.META_KEY]["viridis"]["release"]
+        assert recorded == rm.agent_release(entry), entry["short"]

@@ -52,7 +52,9 @@ HOSTED_BUILD = "h1115b"         # names the publish tag: registry-meta-v<HOSTED_
 META_KEY = "io.modelcontextprotocol.registry/publisher-provided"
 
 HOLD = {
-    "security-preflight": "registry lists 1.3.1 while the code is 1.2.0, and GitHub review is in progress",
+    # Listing 1.3.1 records release 1.2.0 (_meta), so the gateway reports 1.3.1
+    # and agrees with the registry. Not republished while GitHub reviews it.
+    "security-preflight": "listing frozen during GitHub MCP Registry review (1.3.1 on release 1.2.0)",
 }
 # Servers that run outside the hosted gateway and report their own release as
 # serverInfo.version: the listing version is the release in agent.yaml (RM8).

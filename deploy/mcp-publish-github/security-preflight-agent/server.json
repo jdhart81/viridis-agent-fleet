@@ -12,5 +12,13 @@
       "type": "streamable-http",
       "url": "https://mcp.viridis-security.com/security-preflight/mcp"
     }
-  ]
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "viridis": {
+        "release": "1.2.0",
+        "hostedBuild": "h1116-sp"
+      }
+    }
+  }
 }
