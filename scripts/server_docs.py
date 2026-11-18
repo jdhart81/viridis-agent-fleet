@@ -260,6 +260,16 @@ def badge(name: str) -> str:
     return f"[![mcptry](https://mcptry.com/badge/{name})](https://mcptry.com/servers/{name})"
 
 
+# Servers that are also published ChatGPT apps (OpenAI plugin directory,
+# Nov 18 2026). ChatGPT users add the app from its page; no MCP setup.
+CHATGPT_APPS = {
+    "ghg-ledger": ("Viridis GHG Ledger",
+                   "https://chatgpt.com/plugins/plugin_asdk_app_6aebb509f8d8819196202a14ab8627b5"),
+    "regulatory-radar": ("Viridis Regulatory Radar",
+                         "https://chatgpt.com/plugins/plugin_asdk_app_6aebb404b6c48191a42638fe14367e6b"),
+}
+
+
 def render(entry: dict, record: dict, catalog: dict, captured_at: str) -> str:
     tools = record["tools"]
     prices = _prices(catalog, entry["mount"])
@@ -279,7 +289,12 @@ def render(entry: dict, record: dict, catalog: dict, captured_at: str) -> str:
               "```json", json.dumps({"mcpServers": {f"viridis-{entry['short']}": {
                   "type": "http", "url": entry["url"]}}}, indent=2), "```", "",
               f"Claude Code: `claude mcp add --transport http viridis-{entry['short']} {entry['url']}`",
-              "",
+              ""]
+    app = CHATGPT_APPS.get(entry["mount"])
+    if app:
+        lines += [f"ChatGPT: published app [{app[0]}]({app[1]}). Open it in ChatGPT "
+                  "and add it; no connector setup or developer mode.", ""]
+    lines += [
               "Claude, ChatGPT, VS Code, API and stdio-only clients: "
               "[docs/HOSTED_MCP.md](../HOSTED_MCP.md#connect-a-client).", "",
               "## Tools", ""]

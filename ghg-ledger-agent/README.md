@@ -35,6 +35,8 @@ Tools: `calculate_inventory`, `classify_activity`, `list_factor_packs`,
 
 Registry name: `io.github.jdhart81/ghg-ledger`. Hosted route (Streamable
 HTTP, no account or API key): `https://mcp.viridisconservation.com/ghg-ledger/mcp`.
+In ChatGPT it is a published app: open [Viridis GHG Ledger](https://chatgpt.com/plugins/plugin_asdk_app_6aebb509f8d8819196202a14ab8627b5)
+and add it, no setup.
 Client setup for Claude, ChatGPT, VS Code and the Claude, OpenAI and xAI APIs,
 payment options and how the hosted service relates to this repo:
 [docs/HOSTED_MCP.md](../docs/HOSTED_MCP.md).

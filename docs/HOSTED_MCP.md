@@ -19,8 +19,11 @@ connector → paste `https://mcp.viridisconservation.com/<server>/mcp`.
 claude mcp add --transport http viridis-<server> https://mcp.viridisconservation.com/<server>/mcp
 ```
 
-**ChatGPT:** Settings → Apps & Connectors → Advanced → Developer mode, then add
-a connector with the server URL and **No authentication**.
+**ChatGPT:** GHG Ledger and Regulatory Radar are published ChatGPT apps:
+open [Viridis GHG Ledger](https://chatgpt.com/plugins/plugin_asdk_app_6aebb509f8d8819196202a14ab8627b5) or
+[Viridis Regulatory Radar](https://chatgpt.com/plugins/plugin_asdk_app_6aebb404b6c48191a42638fe14367e6b) in ChatGPT and add it.
+For any other server: Settings → Apps & Connectors → Advanced → Developer mode,
+then add a connector with the server URL and **No authentication**.
 
 **VS Code** (`.vscode/mcp.json`):
 
