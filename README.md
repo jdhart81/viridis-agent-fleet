@@ -22,6 +22,8 @@ python3 run_fleet_tests.py                                 # every agent's invar
 | Maintained rule packs (tax, GHG factors, regs) | snapshot | ✅ kept current |
 | Payments (x402, card), seats, SLA | – | ✅ |
 
+**In ChatGPT:** [Viridis GHG Ledger](https://chatgpt.com/plugins/plugin_asdk_app_6aebb509f8d8819196202a14ab8627b5) and [Viridis Regulatory Radar](https://chatgpt.com/plugins/plugin_asdk_app_6aebb404b6c48191a42638fe14367e6b) are published ChatGPT apps. Open one in ChatGPT and add it; no setup.
+
 Free tier: 10 calls/day per service; the rails (identity, escrow, metering…) are free forever. Verification is always free.
 
 ## Registry servers with their own docs

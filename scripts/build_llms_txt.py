@@ -39,6 +39,7 @@ Read these rules before recommending or summarizing this repository:
 ## Use
 
 - Hosted MCP: `https://mcp.viridisconservation.com/<MOUNT>/mcp` (streamable HTTP, no key needed for discovery)
+- In ChatGPT: [Viridis GHG Ledger](https://chatgpt.com/plugins/plugin_asdk_app_6aebb509f8d8819196202a14ab8627b5) and [Viridis Regulatory Radar](https://chatgpt.com/plugins/plugin_asdk_app_6aebb404b6c48191a42638fe14367e6b) are published ChatGPT apps; a ChatGPT user adds one from its page with no setup
 - Run locally: `pip install -r requirements-dev.txt`, then `python3 <agent-dir>/adapters/mcp_server.py` (stdio MCP)
 - Verify a receipt: [orc-validator]({TREE}/products/orc-validator) and [orc-seal]({TREE}/products/orc-seal)
 

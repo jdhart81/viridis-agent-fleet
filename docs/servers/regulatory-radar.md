@@ -29,6 +29,8 @@ No account, API key or OAuth is needed to connect, list tools or call free tools
 
 Claude Code: `claude mcp add --transport http viridis-regulatory-radar https://mcp.viridisconservation.com/regulatory-radar/mcp`
 
+ChatGPT: published app [Viridis Regulatory Radar](https://chatgpt.com/plugins/plugin_asdk_app_6aebb404b6c48191a42638fe14367e6b). Open it in ChatGPT and add it; no connector setup or developer mode.
+
 Claude, ChatGPT, VS Code, API and stdio-only clients: [docs/HOSTED_MCP.md](../HOSTED_MCP.md#connect-a-client).
 
 ## Tools

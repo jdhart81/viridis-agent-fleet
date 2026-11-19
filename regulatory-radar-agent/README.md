@@ -74,6 +74,8 @@ Response from the live server (first of 7 regulations shown):
 
 ## Connect, pricing and ownership
 
+In ChatGPT it is a published app: open
+[Viridis Regulatory Radar](https://chatgpt.com/plugins/plugin_asdk_app_6aebb404b6c48191a42638fe14367e6b) and add it, no setup.
 No account or API key is needed. Client setup for Claude, ChatGPT, VS Code and
 the Claude, OpenAI and xAI APIs, plus payment options and how the hosted
 service relates to this repo: [docs/HOSTED_MCP.md](../docs/HOSTED_MCP.md).
