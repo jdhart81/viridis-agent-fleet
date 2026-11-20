@@ -1,5 +1,34 @@
 # Your first Viridis fleet call in 30 seconds
 
+## No code: try it in ChatGPT
+
+Two fleet agents are published ChatGPT apps. Open one, add it and ask in plain
+language. You don't need an MCP client, an API key or a Viridis account.
+
+- [Viridis GHG Ledger](https://chatgpt.com/plugins/plugin_asdk_app_6aebb509f8d8819196202a14ab8627b5):
+  greenhouse-gas totals from your own activity data, with the emission factor,
+  its source and an audit hash on every line.
+- [Viridis Regulatory Radar](https://chatgpt.com/plugins/plugin_asdk_app_6aebb404b6c48191a42638fe14367e6b):
+  which climate disclosure rules may apply to a company and when they take
+  effect. It is a screening with sources, not a legal determination.
+
+A worked example to paste into GHG Ledger:
+
+> Calculate Scope 2 location-based emissions for this synthetic activity:
+> 12,000 kWh purchased electricity, US-CAMX, activity year 2025. Show the
+> factor vintage, source, and audit hash. Do not infer market-based emissions.
+
+Our own synthetic check on November 17, 2026 returned **2,340.809 kg CO2e
+(2.340809 t)** using EPA eGRID2023 CAMX, factor `epa_egrid2023_camx_ar6`, in
+factor pack `2026.11.15-v0.2.0`. Market-based Scope 2 stayed indeterminate
+because no contract data was supplied, and the audit verification passed. The
+full write-up is in
+[discussion 126](https://github.com/jdhart81/viridis-agent-fleet/discussions/126#discussioncomment-19712225).
+These are reference calculations, not assurance, certification or filing
+advice.
+
+## Developers: one MCP call
+
 Every fleet agent is a plain MCP streamable-http endpoint. No signup or API key
 is needed for discovery. Most priced agents give **10 free calls per UTC day**.
 The provider-backed Hive has **no execution free tier** and costs
