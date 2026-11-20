@@ -12,18 +12,26 @@ In your MCP client config, prefix the server command:
 ```
 Install: `pip install orc-seal` (stdlib only, Python ≥ 3.10).
 
+No Python? The [Node port](../orc-seal-js) takes the same flags and makes interchangeable receipts: `npx -y orc-seal --issuer did:web:yourdomain.com -- <server command>`.
+
 ## Levels
 | Level | What it proves | How you get it |
 |---|---|---|
 | **INTACT** (L1) | The result was not altered after sealing | Default. Nothing leaves your machine. |
 | **ISSUED** (L2) | A public registry recorded this exact seal, with a timestamp | Set `ORC_SEAL_API_KEY`. Free tier: 1,000 receipts/month. |
 
-The registry only ever sees the commitment, digest, salt, profile and tool name. **Your outputs and tool arguments never leave the process.** Arguments are not in the receipt either; only their SHA-256 is.
+The registry only ever sees the commitment, digest, salt, profile, tool name, issuer and time. **Your outputs and tool arguments never leave the process.** Arguments are not in the receipt either; only their SHA-256 is.
 
 ## Verify
 - In a browser: open the receipt's `verify.page` link (runs locally in the page).
 - CLI: `orc-seal verify receipt.json`
 - Python: `from orc_seal import verify`
+
+## Show it
+Add this badge to your server's README so users know its results come with receipts:
+```markdown
+[![ORC sealed](https://img.shields.io/badge/ORC-sealed-2e7d32)](https://github.com/jdhart81/viridis-agent-fleet/blob/main/docs/standards/OUTCOME_RECEIPT_v0.1.md)
+```
 
 ## Python decorator (optional)
 ```python
