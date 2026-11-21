@@ -38,7 +38,7 @@ quote(1000)  # -> {"result": {...}, "orc": {...receipt...}}
 M1 result never changed · M2 every receipt verifies · M3 arguments and outputs never sent · M4 registry failures fail open · M5 deterministic float handling · M6 errors are not sealed · M7 oversized results pass through unsealed · M8 a failed registration is reported once on stderr, never on stdout · P1 non-tool traffic is byte-identical.
 
 ## Try it in five minutes
-[`examples/five-minute`](examples/five-minute) has a sample server and a short client: install, seal one result, verify it.
+[`examples/five-minute`](https://github.com/jdhart81/viridis-agent-fleet/tree/main/products/orc-seal/examples/five-minute) has a sample server and a short client: install, seal one result, verify it.
 
 If registration fails (bad key, quota, network), results still come back sealed as INTACT and `orc-seal` says why once on stderr. Use your own issuer id; `did:web:viridisconservation.com` is reserved.
 
