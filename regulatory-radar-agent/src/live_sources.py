@@ -173,6 +173,29 @@ OFFICIAL_SOURCES: tuple[OfficialSource, ...] = (
             "enforcement guidance, and the SB 261 docket status."
         ),
     ),
+    OfficialSource(
+        source_id="eu-cbam-news",
+        title="Carbon Border Adjustment Mechanism communication and news",
+        authority="European Commission",
+        jurisdiction="eu",
+        topics=("cbam", "customs", "carbon-border", "emissions", "trade",
+                "climate"),
+        url=(
+            "https://taxation-customs.ec.europa.eu/"
+            "carbon-border-adjustment-mechanism/cbam-communication-and-news_en"
+        ),
+        published_on=None,
+        screening_summary=(
+            "The Taxation and Customs Union page lists the Commission's CBAM "
+            "announcements: scope extensions, declarant and verifier "
+            "procedures, certificate prices, guidance, and registry changes."
+        ),
+        review_focus=(
+            "Open the new announcement, confirm the legal act and the date it "
+            "applies from, and check which imports, declarants, and customs "
+            "territories it covers."
+        ),
+    ),
 )
 
 
