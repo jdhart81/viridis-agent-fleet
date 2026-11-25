@@ -309,6 +309,8 @@ class SecurityPreflightCore:
 
     KNOWN_ACTIONS = frozenset({"scan", "get_receipt", "scan_source", "screen_injection"})
     READ_ACTIONS = frozenset({"get_receipt"})
+    # I1: exposed on the instance so the gateway never resolves it by module name.
+    server_key = staticmethod(server_key)
 
     def __init__(self, receipt_db_path: Optional[str] = None):
         configured_path = (

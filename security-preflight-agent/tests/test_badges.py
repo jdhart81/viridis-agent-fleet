@@ -127,3 +127,7 @@ def test_server_key_prefers_url_then_manifest_digest():
     k2 = C.server_key({"manifest": {"auth": "none", "tools": []}})
     assert k1 == k2 and k1.startswith("manifest:")
     assert C.server_key({"manifest": "nope"}) is None
+
+
+def test_server_key_is_reachable_on_the_core_instance(core):
+    assert core.server_key(payload("https://a.example/mcp")) == "url:https://a.example/mcp"
