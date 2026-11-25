@@ -40,6 +40,58 @@ MAX_TOOLS = 100
 MAX_SAMPLES = 20
 MAX_SAMPLE_CHARS = 8_192
 RECEIPT_TTL_DAYS = 30
+BADGE_PROTOCOL = "viridis-preflight-badge-v1"
+BADGE_RECEIPT_ID_RE = re.compile(r"^vsr_[a-f0-9]{24}$")
+MAX_SERVER_URL_CHARS = 512
+
+
+def normalize_server_url(raw: Any) -> Optional[str]:
+    """B1: canonical public form of a manifest endpoint, or None.
+
+    http(s) only; lowercase host; default ports, credentials, query and
+    fragment dropped; trailing slashes removed. Path case is preserved.
+    Never fetched. None for anything else, so callers fall back to the
+    manifest digest.
+    """
+    from urllib.parse import urlsplit
+    if not isinstance(raw, str) or not raw.strip() or len(raw) > MAX_SERVER_URL_CHARS:
+        return None
+    try:
+        parts = urlsplit(raw.strip())
+        scheme = parts.scheme.lower()
+        host = (parts.hostname or "").lower().rstrip(".")
+        port = parts.port
+    except ValueError:
+        return None
+    if scheme not in {"http", "https"} or not host or any(c in host for c in "<>\"\' "):
+        return None
+    default = {"http": 80, "https": 443}[scheme]
+    netloc = host if port in (None, default) else f"{host}:{port}"
+    if ":" in host and not host.startswith("["):
+        netloc = f"[{host}]" if port in (None, default) else f"[{host}]:{port}"
+    path = parts.path.rstrip("/")
+    if any(c in path for c in "<>\"\' "):
+        return None
+    return f"{scheme}://{netloc}{path}"
+
+
+def server_key(payload: Any) -> Optional[str]:
+    """I1 key for the free first Preflight: normalized endpoint, else manifest digest."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("manifest"), dict):
+        return None
+    url = normalize_server_url(payload["manifest"].get("endpoint"))
+    if url:
+        return "url:" + url
+    try:
+        return "manifest:" + _sha256(payload["manifest"])
+    except (TypeError, ValueError):
+        return None
+
+
+def badge_base() -> str:
+    return os.environ.get(
+        "SECURITY_PREFLIGHT_BADGE_BASE",
+        "https://mcp.viridis-security.com/security-preflight").rstrip("/")
 STATIC_WORKERS = threading.BoundedSemaphore(2)
 STATIC_BOUNDARY = (
     "Deterministic indicators in caller-supplied text or source only. "
@@ -257,6 +309,8 @@ class SecurityPreflightCore:
 
     KNOWN_ACTIONS = frozenset({"scan", "get_receipt", "scan_source", "screen_injection"})
     READ_ACTIONS = frozenset({"get_receipt"})
+    # I1: exposed on the instance so the gateway never resolves it by module name.
+    server_key = staticmethod(server_key)
 
     def __init__(self, receipt_db_path: Optional[str] = None):
         configured_path = (
@@ -282,6 +336,12 @@ class SecurityPreflightCore:
             "record_json TEXT NOT NULL,"
             "issued_at TEXT NOT NULL,"
             "expires_at TEXT NOT NULL,"
+            "created_at TEXT NOT NULL"
+            ")")
+        self._receipt_db.execute(
+            "CREATE TABLE IF NOT EXISTS security_preflight_badges ("
+            "receipt_id TEXT PRIMARY KEY,"
+            "record_json TEXT NOT NULL,"
             "created_at TEXT NOT NULL"
             ")")
         self._receipt_db.commit()
@@ -735,10 +795,13 @@ class SecurityPreflightCore:
             },
         }
         self._store_receipt(public_record)
+        badge = (self._issue_badge(key, receipt_id, data["manifest"], issued)
+                 if verdict == "pass" else None)
         market_eligible = bool(data["subject_profile_sha256"])
         return {
             **public_record,
             "verdict": verdict,
+            "badge": badge,
             "market_import": {
                 "automatic": False,
                 "eligible": market_eligible,
@@ -856,6 +919,81 @@ class SecurityPreflightCore:
                              "instruction": "Retain this result; buy a new scan only for changed inputs or rules, with a fresh quote and budget."}}
         self._store_receipt(record)
         return record
+
+    def _issue_badge(self, key, receipt_id: str, manifest: dict,
+                     issued: datetime) -> Optional[dict]:
+        """B2/B3: a separate signed record for a PASSED scan only.
+
+        Carries exactly {protocol, receipt_id, server, date, result}; no
+        findings, counts, agent id, wallet or requester (I6). The original
+        receipt is not modified. Returns None when the manifest has no
+        public http(s) endpoint (nothing to name on a badge) or storage fails;
+        a badge failure never fails the paid scan.
+        """
+        server = normalize_server_url(manifest.get("endpoint"))
+        if not server:
+            return None
+        record = {"protocol": BADGE_PROTOCOL, "receipt_id": receipt_id,
+                  "server": server, "date": issued.date().isoformat(),
+                  "result": "passed"}
+        signed = {"badge": record,
+                  "signature_b64": _b64url(key.sign(_stable(record).encode("utf-8")))}
+        try:
+            with self._receipt_lock:
+                self._receipt_db.execute(
+                    "INSERT INTO security_preflight_badges(receipt_id,record_json,created_at) "
+                    "VALUES(?,?,?) ON CONFLICT(receipt_id) DO NOTHING",
+                    (receipt_id, _stable(signed), _iso(_now())))
+                self._receipt_db.commit()
+        except sqlite3.Error:
+            return None
+        base = badge_base()
+        svg, verify = f"{base}/badge/{receipt_id}.svg", f"{base}/verify/{receipt_id}"
+        return {"receipt_id": receipt_id, "server": server, "date": record["date"],
+                "svg_url": svg, "verify_url": verify,
+                "markdown": f"[![Preflight passed · Viridis Security]({svg})]({verify})"}
+
+    def badge_view(self, receipt_id: Any) -> dict:
+        """B4 fail-closed verification for the public badge and verify page.
+
+        Returns {"state":"passed", receipt_id, server, date} only when the id
+        is well formed, a badge record exists, its fields are exactly the
+        allowed set, its signature verifies under the current signing key,
+        and the underlying receipt exists with a pass verdict. Everything
+        else, including any exception, is {"state":"not_verified"}.
+        """
+        nv = {"state": "not_verified"}
+        try:
+            if not isinstance(receipt_id, str) or not BADGE_RECEIPT_ID_RE.fullmatch(receipt_id):
+                return nv
+            with self._receipt_lock:
+                row = self._receipt_db.execute(
+                    "SELECT record_json FROM security_preflight_badges WHERE receipt_id=?",
+                    (receipt_id,)).fetchone()
+            if not row:
+                return nv
+            signed = json.loads(row[0])
+            record = signed["badge"]
+            if (set(record) != {"protocol", "receipt_id", "server", "date", "result"}
+                    or record["protocol"] != BADGE_PROTOCOL
+                    or record["receipt_id"] != receipt_id
+                    or record["result"] != "passed"
+                    or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(record["date"]))
+                    or normalize_server_url(record["server"]) != record["server"]):
+                return nv
+            sig = signed["signature_b64"]
+            _load_signing_key().public_key().verify(
+                base64.urlsafe_b64decode(sig + "=" * (-len(sig) % 4)),
+                _stable(record).encode("utf-8"))
+            underlying = self._stored_receipt(receipt_id)
+            if (not underlying or underlying.get("status") != "ok"
+                    or underlying.get("evidence", {}).get("verdict") != "pass"
+                    or underlying.get("receipt", {}).get("receipt_id") != receipt_id):
+                return nv
+            return {"state": "passed", "receipt_id": receipt_id,
+                    "server": record["server"], "date": record["date"]}
+        except Exception:
+            return nv
 
     def _get_receipt(self, receipt_id: Any) -> dict:
         if not isinstance(receipt_id, str) or not receipt_id.startswith("vsr_"):
