@@ -328,8 +328,11 @@ class GHGLedgerCore:
         attempt returns None here and takes the normal path."""
         if not isinstance(payload, dict) or payload.get("action") not in {"calculate_inventory"}:
             return None
-        if isinstance(payload.get("activities"), list):
+        activities = payload.get("activities")
+        if isinstance(activities, list) and activities:
             return None
+        # EL2: an empty list computes nothing, so it is refused here like a
+        # missing one, before any quota, credit or seat call is spent.
         # The class's own process, not an instance wrapper: no gate, no seal.
         answer = await type(self).process(self, dict(payload))
         if isinstance(answer, dict) and answer.get("status") == "error":
@@ -370,6 +373,12 @@ class GHGLedgerCore:
                 if not isinstance(activities, list):
                     raise ValidationError("'activities' must be an array", "activities",
                                           activities, "array")
+                if not activities:
+                    # EL1: an empty list is refused like a missing one, so the
+                    # caller gets first_call_help, not an empty "complete" inventory.
+                    raise ValidationError(
+                        "'activities' must be a non-empty array: send at least one "
+                        "activity record", "activities", activities, "non-empty array")
                 if not isinstance(options, dict):
                     raise ValidationError("'options' must be an object", "options",
                                           options, "object")
