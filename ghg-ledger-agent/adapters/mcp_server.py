@@ -72,7 +72,9 @@ try:
             None, description="Your label for this line; it is echoed in the result.")
         activity_type: Optional[str] = Field(
             None, examples=["purchased_electricity"],
-            description="What the activity is. One of: " + ", ".join(ACTIVITY_TYPES) + ".")
+            description=("What the activity is. One of: " + ", ".join(ACTIVITY_TYPES) + ". "
+                         "Plain words such as electricity or power are read as "
+                         "purchased_electricity, and the line says so."))
         quantity: Union[int, float, str, None] = Field(
             None, examples=[12000, "12000.5"],
             description="Amount in `unit`, zero or more. A number or a decimal string.")
@@ -81,22 +83,32 @@ try:
             description=("Unit of `quantity`. Electricity: kWh or MWh. Natural gas: therm, "
                          "mmbtu or kWh. Liquid fuels: gallon_us or litre. Refrigerants: kg "
                          "or lb. Landfilled waste: short_ton or metric_tonne. Car travel: "
-                         "mile or km. Purchased goods by spend: usd."))
+                         "mile or km. Air, rail and bus travel: passenger_mile or km "
+                         "(passenger-km). Purchased goods by spend: usd."))
         region: Optional[str] = Field(
             None, examples=["US"],
             description=("Where it happened. One of: " + ", ".join(REGIONS) + ". The "
                          "US-XXXX codes are EPA eGRID grid subregions, for electricity "
                          "only (US-CAMX California, US-ERCT Texas, US-NYUP upstate New "
                          "York, US-RFCE Mid-Atlantic, and so on); use US for fuels and "
-                         "when the subregion is unknown; GLOBAL is for refrigerants."))
+                         "when the subregion is unknown; GLOBAL is for refrigerants. For "
+                         "electricity, a US state name or code (Vermont, VT) is read as its "
+                         "eGRID subregion only when the state sits in one subregion; a "
+                         "split state such as Texas comes back indeterminate with the "
+                         "subregions to choose from."))
         year: Union[int, str, None] = Field(
             None, examples=[2025],
             description=("The year the activity took place. The latest bundled factor "
                          "dated on or before it is used and recorded on the line."))
         mobile_source_class: Optional[str] = Field(
-            None, description=("Only for mobile fuels: nonroad_four_stroke for "
-                               "mobile_combustion_gasoline, nonroad for "
-                               "mobile_combustion_diesel."))
+            None, description=("Only for mobile fuels. on_road for trucks, vans and "
+                               "cars (either fuel); nonroad_four_stroke for non-road "
+                               "gasoline equipment; nonroad for non-road diesel "
+                               "equipment."))
+        flight_haul: Optional[str] = Field(
+            None, description=("Only for business_travel_air: short (under 300 miles "
+                               "per flight), medium (300 to 2300 miles) or long (2300 "
+                               "miles and over). Send one line per haul."))
 
     _Activities = Union[List[Activity], Activity, str, None]
 except ImportError:  # pragma: no cover - stdlib shim

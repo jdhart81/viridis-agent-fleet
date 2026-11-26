@@ -102,6 +102,156 @@ NEXT_CALLS = [{
 }]
 
 
+# AL1-AL5 (ALIAS-1121): plain-language spellings of grid electricity, and US
+# states as its region.
+# AL1 an alias only renames: the line still uses one exact bundled factor, and
+#     records how the caller's words were read (input_read_as).
+# AL2 no alias fires on an exact pack activity type or region, so every call
+#     that computed before computes byte for byte the same (same audit hash).
+# AL3 region aliases apply to electricity lines only; other activity types keep
+#     their exact-match rules and messages.
+# AL4 a state is read as one eGRID subregion only when at least 99% of its zip
+#     codes are served by that subregion alone (EPA Power Profiler zip table,
+#     eGRID2023 rev 1). EPA recommends subregion rates for electricity use.
+# AL5 any other state is never guessed: the line is indeterminate and the
+#     reason names each candidate subregion with its share of zip codes.
+_ELECTRICITY_ACTIVITY = "purchased_electricity"
+_ACTIVITY_ALIASES = {name: _ELECTRICITY_ACTIVITY for name in (
+    "electricity", "grid_electricity", "electricity_grid", "purchased_electricity",
+    "electricity_purchased", "purchased_power", "power", "grid_power",
+    "electric_power", "electricity_use", "electricity_consumption",
+    "utility_electricity")}
+_STATE_MAP_MIN_SHARE = Decimal("0.99")
+_STATE_TABLE_SOURCE = ("EPA Power Profiler zip code tool v14.2 (2025-01-21, "
+                       "eGRID2023 rev 1), Zip-subregion sheet")
+_STATE_ZIP_SUBREGIONS = {
+    "AK": ("Alaska", 273, {"AKMS": 179, "AKGD": 89},
+           {"AKMS": 184, "AKGD": 94}),
+    "AL": ("Alabama", 821, {"SRSO": 488, "SRTV": 128},
+           {"SRSO": 693, "SRTV": 333}),
+    "AR": ("Arkansas", 708, {"SRMV": 522, "SPSO": 53},
+           {"SRMV": 648, "SPSO": 180, "SPNO": 7, "SRMW": 5, "SRTV": 1}),
+    "AZ": ("Arizona", 561, {"AZNM": 510, "NWPP": 24},
+           {"AZNM": 537, "NWPP": 51}),
+    "CA": ("California", 2616, {"CAMX": 2502, "NWPP": 39, "AZNM": 17},
+           {"CAMX": 2560, "NWPP": 74, "AZNM": 40}),
+    "CO": ("Colorado", 657, {"RMPA": 643},
+           {"RMPA": 657, "NWPP": 5, "SPNO": 4, "AZNM": 3, "SPSO": 3}),
+    "CT": ("Connecticut", 433, {"NEWE": 433},
+           {"NEWE": 433}),
+    "DC": ("District of Columbia", 290, {"RFCE": 288, "SRVC": 2},
+           {"RFCE": 288, "SRVC": 2}),
+    "DE": ("Delaware", 96, {"RFCE": 96},
+           {"RFCE": 96}),
+    "FL": ("Florida", 1478, {"FRCC": 1339, "SRSO": 95},
+           {"FRCC": 1383, "SRSO": 139}),
+    "GA": ("Georgia", 960, {"SRSO": 887, "SRTV": 18, "SRVC": 1},
+           {"SRSO": 941, "SRTV": 57, "SRVC": 18}),
+    "HI": ("Hawaii", 138, {"HIOA": 70, "HIMS": 68},
+           {"HIOA": 70, "HIMS": 68}),
+    "IA": ("Iowa", 1058, {"MROW": 1017, "SRMW": 3},
+           {"MROW": 1055, "SRMW": 41}),
+    "ID": ("Idaho", 320, {"NWPP": 320},
+           {"NWPP": 320}),
+    "IL": ("Illinois", 1582, {"SRMW": 901, "RFCW": 524, "MROW": 29},
+           {"SRMW": 1009, "RFCW": 594, "MROW": 93, "MROE": 16}),
+    "IN": ("Indiana", 979, {"RFCW": 979},
+           {"RFCW": 979}),
+    "KS": ("Kansas", 749, {"SPNO": 728, "SPSO": 7},
+           {"SPNO": 742, "SPSO": 21}),
+    "KY": ("Kentucky", 954, {"SRTV": 723, "RFCW": 67},
+           {"SRTV": 887, "RFCW": 231}),
+    "LA": ("Louisiana", 723, {"SRMV": 451, "SPSO": 138},
+           {"SRMV": 585, "SPSO": 272}),
+    "MA": ("Massachusetts", 695, {"NEWE": 695},
+           {"NEWE": 695}),
+    "MD": ("Maryland", 611, {"RFCE": 506, "RFCW": 86},
+           {"RFCE": 525, "RFCW": 105}),
+    "ME": ("Maine", 486, {"NEWE": 486},
+           {"NEWE": 486}),
+    "MI": ("Michigan", 1168, {"RFCM": 931, "MROE": 79, "RFCW": 69, "MROW": 4},
+           {"RFCM": 999, "RFCW": 148, "MROE": 96, "MROW": 10}),
+    "MN": ("Minnesota", 1027, {"MROW": 1027},
+           {"MROW": 1027}),
+    "MO": ("Missouri", 1164, {"SRMW": 718, "SPNO": 185, "SPSO": 12},
+           {"SRMW": 967, "SPNO": 411, "SPSO": 38, "SRMV": 10}),
+    "MS": ("Mississippi", 532, {"SRTV": 134, "SRSO": 112, "SRMV": 101},
+           {"SRTV": 262, "SRMV": 255, "SRSO": 233}),
+    "MT": ("Montana", 404, {"NWPP": 349, "MROW": 28, "RMPA": 6},
+           {"NWPP": 370, "MROW": 44, "RMPA": 12}),
+    "NC": ("North Carolina", 1081, {"SRVC": 974, "SRTV": 8},
+           {"SRVC": 1073, "SRTV": 107}),
+    "ND": ("North Dakota", 406, {"MROW": 401, "NWPP": 1},
+           {"MROW": 405, "NWPP": 5}),
+    "NE": ("Nebraska", 620, {"MROW": 550, "RMPA": 40},
+           {"MROW": 580, "RMPA": 70}),
+    "NH": ("New Hampshire", 284, {"NEWE": 284},
+           {"NEWE": 284}),
+    "NJ": ("New Jersey", 725, {"RFCE": 676, "NYUP": 9, "SRSO": 2},
+           {"RFCE": 714, "NYUP": 47, "SRSO": 2}),
+    "NM": ("New Mexico", 426, {"AZNM": 315, "SPSO": 45, "NWPP": 17, "ERCT": 1, "RMPA": 1},
+           {"AZNM": 361, "SPSO": 68, "NWPP": 38, "ERCT": 9, "RMPA": 1}),
+    "NV": ("Nevada", 254, {"NWPP": 124, "AZNM": 122, "CAMX": 1},
+           {"NWPP": 131, "AZNM": 129, "CAMX": 1}),
+    "NY": ("New York", 2168, {"NYUP": 1535, "NYCW": 372, "NYLI": 198, "NEWE": 1},
+           {"NYUP": 1582, "NYCW": 401, "NYLI": 213, "RFCE": 33, "NEWE": 1}),
+    "OH": ("Ohio", 1434, {"RFCW": 1433},
+           {"RFCW": 1434, "SRTV": 1}),
+    "OK": ("Oklahoma", 765, {"SPSO": 601, "SRMW": 14, "SPNO": 4, "SRMV": 1},
+           {"SPSO": 746, "SRMW": 146, "SRMV": 15, "SPNO": 11, "AZNM": 2}),
+    "OR": ("Oregon", 476, {"NWPP": 476},
+           {"NWPP": 476}),
+    "PA": ("Pennsylvania", 2191, {"RFCE": 1512, "RFCW": 459, "NYUP": 2},
+           {"RFCE": 1730, "RFCW": 675, "NYUP": 4}),
+    "PR": ("Puerto Rico", 176, {"PRMS": 176},
+           {"PRMS": 176}),
+    "RI": ("Rhode Island", 90, {"NEWE": 90},
+           {"NEWE": 90}),
+    "SC": ("South Carolina", 540, {"SRVC": 540},
+           {"SRVC": 540}),
+    "SD": ("South Dakota", 386, {"MROW": 348, "RMPA": 23},
+           {"MROW": 363, "RMPA": 38}),
+    "TN": ("Tennessee", 787, {"SRTV": 681},
+           {"SRTV": 787, "SRMV": 90, "SRVC": 12, "RFCW": 4}),
+    "TX": ("Texas", 2634, {"ERCT": 1918, "SPSO": 190, "AZNM": 144, "SRMV": 93},
+           {"ERCT": 2197, "SPSO": 325, "SRMV": 253, "AZNM": 151}),
+    "UT": ("Utah", 347, {"NWPP": 343},
+           {"NWPP": 347, "RMPA": 4}),
+    "VA": ("Virginia", 1220, {"SRVC": 768, "RFCW": 241, "RFCE": 56, "SRTV": 14},
+           {"SRVC": 894, "RFCW": 382, "RFCE": 56, "SRTV": 29}),
+    "VT": ("Vermont", 309, {"NEWE": 309},
+           {"NEWE": 309}),
+    "WA": ("Washington", 726, {"NWPP": 726},
+           {"NWPP": 726}),
+    "WI": ("Wisconsin", 898, {"MROE": 391, "MROW": 208, "RFCW": 179},
+           {"MROE": 511, "RFCW": 267, "MROW": 241}),
+    "WV": ("West Virginia", 850, {"RFCW": 850},
+           {"RFCW": 850}),
+    "WY": ("Wyoming", 195, {"RMPA": 77, "NWPP": 66, "MROW": 2},
+           {"RMPA": 127, "NWPP": 112, "MROW": 9}),
+}
+_STATE_ALIASES = {}
+for _code, (_name, *_rest) in _STATE_ZIP_SUBREGIONS.items():
+    for _alias in (_code, _name, "us " + _code, "state of " + _name):
+        _STATE_ALIASES[_alias.lower()] = _code
+for _alias in ("washington dc", "washington d c", "d c"):
+    _STATE_ALIASES[_alias] = "DC"
+_COUNTRY_ALIASES = {"us": "US", "usa": "US", "united states": "US",
+                    "united states of america": "US", "uk": "UK",
+                    "united kingdom": "UK"}
+
+
+def _alias_key(value: Any) -> str:
+    """Lowercase, drop dots and commas, and read -, _ and runs of spaces as one space."""
+    text = str(value).strip().lower().replace(".", " ").replace(",", " ")
+    return " ".join(text.replace("-", " ").replace("_", " ").split())
+
+
+def _share(count: int, total: int) -> str:
+    return str((Decimal(count) * 100 / Decimal(total)).quantize(
+        Decimal("0.1"), rounding=ROUND_HALF_UP)) + "%"
+
+
 @dataclass
 class AgentConfig:
     name: str = "ghg-ledger-agent"
@@ -493,6 +643,38 @@ class GHGLedgerCore:
                     f"not in pack {PACK['pack_version']}",
                     field, supplied, f"exact value {expected!r}")
 
+    @staticmethod
+    def _applicability_met(activity: dict, factor: dict) -> bool:
+        requirements = (factor.get("applicability") or {}).get("requires") or {}
+        return all(activity.get(field) == expected
+                   for field, expected in requirements.items())
+
+    def _select_applicable(self, activity: dict,
+                           matches: list) -> list:
+        """AP1: when several bundled factors share activity type, region and
+        year, they must differ by applicability (for example on-road vs
+        non-road fuel, or flight haul). The activity's own fields pick exactly
+        one; nothing is defaulted. If none is picked, the error names every
+        accepted value so the caller can retry in one step."""
+        if len(matches) <= 1:
+            return matches
+        chosen = [(fid, factor) for fid, factor in matches
+                  if self._applicability_met(activity, factor)]
+        if chosen:
+            return chosen
+        options = []
+        for _fid, factor in sorted(matches, key=lambda item: item[0]):
+            for field, expected in sorted(
+                    ((factor.get("applicability") or {}).get("requires") or {}).items()):
+                options.append(f"{field}={expected!r}")
+        fields = sorted({option.split("=", 1)[0] for option in options})
+        raise ValidationError(
+            f"factor applicability requires one of {' or '.join(options)}; "
+            f"set {', '.join(fields)} on the activity (pack {PACK['pack_version']})",
+            fields[0] if fields else "applicability",
+            {field: activity.get(field) for field in fields},
+            " | ".join(options))
+
     def _classification(self, activity: dict, factor: dict) -> dict:
         mapped = PACK["classification_map"].get(factor["activity_type"])
         caller_supplied = "scope" in activity and activity.get("scope") is not None
@@ -548,6 +730,85 @@ class GHGLedgerCore:
         return {"scope": scope, "category": str(category),
                 "scope3_category": scope3, "method": method,
                 "field_sources": field_sources}
+
+    def _read_aliases(self, activity: dict) -> tuple[dict, Optional[dict]]:
+        """AL1-AL5: read plain-language electricity and US-state spellings.
+
+        Returns the activity as the factor lookup should see it, and how each
+        renamed field was read (None when nothing was renamed, which leaves the
+        line exactly as before)."""
+        factors = PACK["factors"].values()
+        activity_types = {factor["activity_type"] for factor in factors}
+        read_as: dict = {}
+        resolved = activity
+        supplied_type = activity.get("activity_type")
+        if (isinstance(supplied_type, str) and supplied_type not in activity_types):
+            key = _alias_key(supplied_type).replace(" ", "_")
+            target = _ACTIVITY_ALIASES.get(key)
+            if target and target in activity_types:
+                resolved = {**resolved, "activity_type": target}
+                read_as["activity_type"] = {"supplied": supplied_type,
+                                            "read_as": target}
+        if resolved.get("activity_type") != _ELECTRICITY_ACTIVITY:
+            return resolved, (read_as or None)
+        regions = {factor["region"] for factor in factors
+                   if factor["activity_type"] == _ELECTRICITY_ACTIVITY}
+        supplied_region = resolved.get("region")
+        if not isinstance(supplied_region, str) or supplied_region in regions:
+            return resolved, (read_as or None)
+        key = _alias_key(supplied_region)
+        target = None
+        entry = None
+        compact = key.replace(" ", "").upper()
+        if key in _COUNTRY_ALIASES:
+            target = _COUNTRY_ALIASES[key]
+            entry = {"supplied": supplied_region, "read_as": target,
+                     "basis": "spelling of a bundled region code"}
+        elif compact.startswith("US") and "US-" + compact[2:] in regions:
+            target = "US-" + compact[2:]
+            entry = {"supplied": supplied_region, "read_as": target,
+                     "basis": "spelling of a bundled eGRID subregion code"}
+        elif "US-" + compact in regions:
+            target = "US-" + compact
+            entry = {"supplied": supplied_region, "read_as": target,
+                     "basis": "spelling of a bundled eGRID subregion code"}
+        elif key in _STATE_ALIASES:
+            code = _STATE_ALIASES[key]
+            name, total, sole, served = _STATE_ZIP_SUBREGIONS[code]
+            best = max(sorted(sole), key=lambda sub: sole[sub])
+            if Decimal(sole[best]) >= _STATE_MAP_MIN_SHARE * total:
+                target = "US-" + best
+                entry = {
+                    "supplied": supplied_region, "read_as": target,
+                    "state": code,
+                    "basis": (f"{_STATE_TABLE_SOURCE}: {sole[best]} of {name}'s "
+                              f"{total} zip codes are served by eGRID subregion "
+                              f"{best} alone ({_share(sole[best], total)})"),
+                    "rule": ("a US state is read as one eGRID subregion only when "
+                             "at least 99% of its zip codes are served by that "
+                             "subregion alone; EPA recommends eGRID subregion "
+                             "rates for electricity use"),
+                }
+            else:
+                candidates = sorted(served, key=lambda sub: (-served[sub], sub))
+                listed = ", ".join(f"US-{sub} ({_share(served[sub], total)})"
+                                   for sub in candidates)
+                raise ValidationError(
+                    f"region {supplied_region!r} is {name}, whose zip codes are "
+                    f"served by more than one EPA eGRID subregion, so no "
+                    f"subregion is guessed. Share of its zip codes each serves "
+                    f"({_STATE_TABLE_SOURCE}; a zip code can be served by more "
+                    f"than one): {listed}. Send region as one of "
+                    + ", ".join(f"US-{sub}" for sub in candidates)
+                    + " (EPA Power Profiler gives the subregion for a zip code), "
+                    "or US for the national average",
+                    "region", supplied_region,
+                    "|".join([f"US-{sub}" for sub in candidates] + ["US"]))
+        if target is None or target not in regions:
+            return resolved, (read_as or None)
+        resolved = {**resolved, "region": target}
+        read_as["region"] = entry
+        return resolved, read_as
 
     def _find_factor(self, activity: dict,
                      options: Optional[dict] = None) -> tuple[str, dict]:
@@ -614,6 +875,7 @@ class GHGLedgerCore:
                 {"activity_type": activity_type, "region": region, "year": year},
                 "a bundled factor for this activity type and region dated on or "
                 "before the activity year; a later factor is never used")
+        matches = self._select_applicable(activity, matches)
         if len(matches) != 1:
             raise ValidationError("multiple factors match; factor_id is required",
                                   "factor_id", None, "one exact bundled factor")
@@ -647,6 +909,7 @@ class GHGLedgerCore:
     _UNIT_ALIASES = {
         "liters": "liter", "litres": "litre", "l": "litre",
         "miles": "mile", "mi": "mile",
+        "passenger_miles": "passenger_mile", "pmt": "passenger_mile",
         "kilometer": "km", "kilometre": "km", "kilometers": "km", "kilometres": "km",
         "therms": "therm",
         "tonne": "metric_tonne", "tonnes": "metric_tonne",
@@ -785,6 +1048,7 @@ class GHGLedgerCore:
 
     def _calculate_line(self, activity: dict, options: dict, index: int) -> tuple[dict, dict]:
         line_id = str(activity.get("id") or f"line-{index + 1:04d}")
+        activity, read_as = self._read_aliases(activity)              # AL1
         factor_id, factor = self._find_factor(activity, options)
         activity_year = _year(activity["year"])
         if "quantity" not in activity:
@@ -825,6 +1089,8 @@ class GHGLedgerCore:
             "gas_breakdown": breakdown,
             "kg_co2e": _kg(line_total),
         }
+        if read_as:                                              # AL1
+            line["input_read_as"] = read_as
         if factor["year"] != activity_year:                    # GH6 revised
             line["input"]["year"] = activity_year
             line["factor_vintage"] = {

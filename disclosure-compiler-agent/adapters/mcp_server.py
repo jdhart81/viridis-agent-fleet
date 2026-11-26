@@ -108,7 +108,9 @@ async def compile_disclosure(
     facts and an optional verified GHG-ledger result. Missing required
     datapoints remain explicit gaps; no prose or values are fabricated.
     Frameworks: esrs-e1, ifrs-s2, sec-climate, tnfd, ca-sb253 (California
-    SB 253 first-cycle Scope 1 and 2); list_frameworks gives the current set.
+    SB 253 first-cycle Scope 1 and 2), supplier-statement (a supplier's Scope
+    1 and 2 statement for a customer's emissions request, GHG Protocol
+    Chapter 9 items); list_frameworks gives the current set.
     If a call fails, the response includes first_call_help.
     Example arguments: {"framework": "esrs-e1", "company_facts": {"company_name": "Acme Climate Works", "reporting_period": "2026", "transition_plan": {"status": "board-approved", "target_year": 2035}, "climate_targets": {"scope": "Scopes 1-3", "target": "50% by 2035"}, "ghg_intensity": {"value": "0.012", "unit": "tCO2e/USDm revenue"}}, "options": {"applicability": {"framework": "esrs-e1", "applies": true, "reason": "company is in CSRD scope"}}}"""
     return await _run({"action": "compile_disclosure", "framework": framework,

@@ -191,7 +191,7 @@ def _validate_pack() -> None:
     if len(_SOURCE_BY_ID) != len(PACK["sources"]):
         raise RuntimeError("DC2: duplicate framework source id")
     if set(PACK["frameworks"]) != {"esrs-e1", "sec-climate", "ifrs-s2", "tnfd",
-                                    "ca-sb253"}:
+                                    "ca-sb253", "supplier-statement"}:
         raise RuntimeError("DC2: MVP framework coverage drift")
     for framework_id, framework in PACK["frameworks"].items():
         source_ids = set(framework.get("source_ids", []))

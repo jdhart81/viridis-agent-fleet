@@ -1,17 +1,26 @@
 {
   "schema_version": "viridis.disclosure.framework-packs.v1",
-  "pack_version": "2026.11.15-v0.2.1",
-  "effective_as_of": "2026-11-15",
+  "pack_version": "2026.11.19-v0.3.0",
+  "effective_as_of": "2026-11-19",
   "disclaimer": "Disclosure draft for professional review only. This deterministic assembly is not a filed, assured, audited, or legally sufficient report and is not legal, accounting, assurance, or regulatory advice. Missing fields remain explicit gaps; applicability and materiality must be confirmed by qualified professionals.",
   "ghg_verifier": {
     "producer_agent_id": "ghg-ledger-agent",
     "producer_version": "0.1.0",
-    "factor_pack_version": "2026.11.15-v0.2.0",
-    "factor_pack_sha256": "6f6961af27d72cbc0a4562d78c5ec3a92bb5dab7a532b0de4fbcc5896c4d702a",
+    "factor_pack_version": "2026.11.19-v0.3.0",
+    "factor_pack_sha256": "18b1801146e674892651a36d62f6da30f8ed282921f486ca3b55fc9491e7cefe",
     "audit_profile": "viridis.ghg-ledger.audit.v0.1.0",
     "required_checks": ["audit_hash", "conservation", "notary_payload", "offset_weave", "factor_pack_current"]
   },
   "sources": [
+    {
+      "id": "ghg-protocol-corporate-standard-ch9",
+      "authority": "GHG Protocol Corporate Accounting and Reporting Standard (Revised Edition), Chapter 9: Reporting GHG Emissions",
+      "title": "A Corporate Accounting and Reporting Standard, required information in a public GHG emissions report",
+      "publisher": "World Resources Institute and World Business Council for Sustainable Development",
+      "date": "2004-03",
+      "url": "https://ghgprotocol.org/corporate-standard",
+      "note": "Chapter 9 lists what a GHG report must contain: the company and inventory boundary, the reporting period, Scope 1 and Scope 2 separately, emissions by gas, methodologies and emission factor references, and any exclusions. This pack uses that list as the basis of a supplier statement; it is not a customer's or CDP's own questionnaire."
+    },
     {
       "id": "eu-esrs-e1-2023",
       "authority": "Commission Delegated Regulation (EU) 2023/2772, ESRS E1",
@@ -165,6 +174,30 @@
         {"id": "emission_factor_sources", "section": "methodology", "label": "Emission factor sources", "requirement": "Encouraged: identify the emission factors used and their sources.", "required": false, "expected_input": {"source": "ghg_result", "path": "lineage.source_ids_used"}, "source_id": "carb-sb253-reporting-guidance-2026"},
         {"id": "gwp_values", "section": "methodology", "label": "Global warming potential values", "requirement": "Encouraged: identify the global warming potential values used.", "required": false, "expected_input": {"source": "ghg_result", "path": "factor_pack.gwp_set_id"}, "source_id": "carb-sb253-reporting-guidance-2026"},
         {"id": "assurance_status", "section": "assurance", "label": "Assurance status", "requirement": "Encouraged: state whether assurance was obtained; CARB accepts first-cycle submissions with or without it.", "required": false, "expected_input": {"source": "company_facts", "path": "assurance_status"}, "source_id": "carb-sb253-reporting-guidance-2026"}
+      ]
+    },
+    "supplier-statement": {
+      "name": "Supplier Carbon Statement: Scope 1 and Scope 2 statement for a customer request, structured draft",
+      "status": "mvp_structured_datapoints_customer_review",
+      "note": "For a supplier answering a customer's or program's request for its own emissions. Built on the GHG Protocol Corporate Standard Chapter 9 required-information list. It is not a CDP, SBTi or customer questionnaire, not assurance, and covers only the activities supplied. Scope 3 is optional and reported by category only for supplied activities.",
+      "source_ids": ["ghg-protocol-corporate-standard-ch9", "viridis-disclosure-builder-spec-v0.1.0"],
+      "datapoints": [
+        {"id": "entity_name", "section": "basis", "label": "Reporting company", "requirement": "Identify the company the statement covers.", "required": true, "expected_input": {"source": "company_facts", "path": "company_name"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "reporting_period", "section": "basis", "label": "Reporting period", "requirement": "State the period the emissions cover (for example calendar year 2025).", "required": true, "expected_input": {"source": "company_facts", "path": "reporting_period"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "organizational_boundary", "section": "basis", "label": "Organizational boundary and consolidation approach", "requirement": "Describe the facilities and entities included and the consolidation approach (operational control, financial control or equity share).", "required": true, "expected_input": {"source": "company_facts", "path": "organizational_boundary"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "requested_by", "section": "basis", "label": "Requested by", "requirement": "The customer or program the statement answers, when one asked for it.", "required": false, "expected_input": {"source": "company_facts", "path": "requested_by"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "gross_scope_1", "section": "ghg_emissions", "label": "Scope 1 emissions", "requirement": "Report Scope 1 emissions separately.", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_1"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "gross_scope_2_location_based", "section": "ghg_emissions", "label": "Scope 2 emissions (location-based)", "requirement": "Report Scope 2 emissions separately (location-based).", "required": true, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_2_location_based"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "gross_scope_2_market_based", "section": "ghg_emissions", "label": "Scope 2 emissions (market-based)", "requirement": "Market-based Scope 2, when supplier, contract or residual-mix factors are supplied.", "required": false, "unit": "metric_tonnes_co2e", "expected_input": {"source": "ghg_result", "path": "esrs_e1.gross_scope_2_market_based"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "gross_scope_3", "section": "ghg_emissions", "label": "Scope 3 emissions reported", "requirement": "Optional Scope 3 categories reported, by category, for the supplied activities only.", "required": false, "unit": "kg_co2e", "expected_input": {"source": "ghg_result", "path": "category_rollups_kg_co2e.scope_3"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "emissions_by_gas", "section": "ghg_emissions", "label": "Emissions by gas", "requirement": "Report emissions of each greenhouse gas separately, in CO2e.", "required": true, "unit": "kg_co2e", "expected_input": {"source": "ghg_result", "path": "gas_breakdown_kg_co2e"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "emission_factor_sources", "section": "methodology", "label": "Emission factor sources", "requirement": "Reference the emission factors and calculation methods used.", "required": true, "expected_input": {"source": "ghg_result", "path": "lineage.source_ids_used"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "gwp_values", "section": "methodology", "label": "Global warming potential values", "requirement": "Identify the GWP values used to convert gases to CO2e.", "required": true, "expected_input": {"source": "ghg_result", "path": "factor_pack.gwp_set_id"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "calculation_coverage", "section": "methodology", "label": "Calculation coverage", "requirement": "State whether every supplied activity was calculated, and which were not.", "required": true, "expected_input": {"source": "ghg_result", "path": "grand_total.coverage_complete"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "exclusions", "section": "methodology", "label": "Exclusions", "requirement": "Disclose any sources, facilities or operations excluded and why.", "required": true, "expected_input": {"source": "company_facts", "path": "exclusions"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "base_year", "section": "methodology", "label": "Base year", "requirement": "The base year chosen for tracking, when one is set.", "required": false, "expected_input": {"source": "company_facts", "path": "base_year"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "audit_hash", "section": "assurance", "label": "Audit hash", "requirement": "A recomputable SHA-256 of the calculation, so the customer can verify the figures were not changed.", "required": true, "expected_input": {"source": "ghg_result", "path": "audit_sha256"}, "source_id": "ghg-protocol-corporate-standard-ch9"},
+        {"id": "assurance_status", "section": "assurance", "label": "Assurance status", "requirement": "State whether a third party verified the inventory.", "required": false, "expected_input": {"source": "company_facts", "path": "assurance_status"}, "source_id": "ghg-protocol-corporate-standard-ch9"}
       ]
     }
   }

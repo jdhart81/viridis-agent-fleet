@@ -1,7 +1,7 @@
 {
   "schema_version": "viridis.ghg.factor-packs.v1",
-  "pack_version": "2026.11.15-v0.2.0",
-  "effective_as_of": "2026-11-15",
+  "pack_version": "2026.11.19-v0.3.0",
+  "effective_as_of": "2026-11-19",
   "disclaimer": "Deterministic activity-data calculation only. Not assurance, legal, accounting, lifecycle-analysis, regulatory-compliance, or filing advice. Results cover only supplied activities and do not establish inventory completeness, organizational boundaries, materiality, or ESRS compliance.",
   "gwp_profile": {
     "id": "ipcc_ar6_gwp100_v0.1.0",
@@ -65,6 +65,11 @@
     },
     "distance_vehicle_mile": {
       "vehicle_mile": "1",
+      "mile": "1",
+      "km": "0.621371192237334"
+    },
+    "distance_passenger_mile": {
+      "passenger_mile": "1",
       "mile": "1",
       "km": "0.621371192237334"
     },
@@ -159,7 +164,10 @@
     "purchased_electricity": {"scope": "scope_2", "category": "purchased_electricity", "scope3_category": null},
     "purchased_goods_spend": {"scope": "scope_3", "category": "purchased_goods_and_services", "scope3_category": "category_1_purchased_goods_and_services"},
     "waste_landfilled_mixed_msw": {"scope": "scope_3", "category": "waste_generated_in_operations", "scope3_category": "category_5_waste_generated_in_operations"},
-    "business_travel_passenger_car": {"scope": "scope_3", "category": "business_travel", "scope3_category": "category_6_business_travel"}
+    "business_travel_passenger_car": {"scope": "scope_3", "category": "business_travel", "scope3_category": "category_6_business_travel"},
+    "business_travel_air": {"scope": "scope_3", "category": "business_travel", "scope3_category": "category_6_business_travel"},
+    "business_travel_rail": {"scope": "scope_3", "category": "business_travel", "scope3_category": "category_6_business_travel"},
+    "business_travel_bus": {"scope": "scope_3", "category": "business_travel", "scope3_category": "category_6_business_travel"}
   },
   "factors": {
     "epa_2025_stationary_natural_gas": {
@@ -237,6 +245,46 @@
           "mobile_source_class": "nonroad"
         },
         "description": "EPA Table 2 fuel CO2 plus Table 5 non-road diesel CH4/N2O. Other vehicle classes and model years are outside this MVP."
+      },
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025"]
+    },
+    "epa_2025_onroad_diesel_co2": {
+      "activity_type": "mobile_combustion_diesel",
+      "unit": "gallon_us",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_1",
+      "category": "mobile_combustion",
+      "scope3_category": null,
+      "conversion_group": "volume_us_gallon",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"co2": "10.21"}, "coverage_note": "On-road vehicles: fuel CO2 only (EPA Table 2). CH4 and N2O depend on vehicle type, model year and miles (EPA Tables 3 and 4) and are not included; they are typically a small share of on-road CO2e."},
+      "applicability": {
+        "id": "epa_2025_onroad_diesel_co2",
+        "requires": {
+          "mobile_source_class": "on_road"
+        },
+        "description": "EPA Table 2 diesel fuel CO2 for on-road trucks, vans and cars. CH4/N2O excluded (see coverage note)."
+      },
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025"]
+    },
+    "epa_2025_onroad_gasoline_co2": {
+      "activity_type": "mobile_combustion_gasoline",
+      "unit": "gallon_us",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_1",
+      "category": "mobile_combustion",
+      "scope3_category": null,
+      "conversion_group": "volume_us_gallon",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"co2": "8.78"}, "coverage_note": "On-road vehicles: fuel CO2 only (EPA Table 2). CH4 and N2O depend on vehicle type, model year and miles (EPA Tables 3 and 4) and are not included; they are typically a small share of on-road CO2e."},
+      "applicability": {
+        "id": "epa_2025_onroad_gasoline_co2",
+        "requires": {
+          "mobile_source_class": "on_road"
+        },
+        "description": "EPA Table 2 motor gasoline CO2 for on-road cars, vans and light trucks. CH4/N2O excluded (see coverage note)."
       },
       "source_id": "epa-ghg-factor-hub-2025",
       "source_ids": ["epa-ghg-factor-hub-2025"]
@@ -705,6 +753,92 @@
       "scope3_category": "category_6_business_travel",
       "conversion_group": "distance_vehicle_mile",
       "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "kg_per_unit": {"co2": "0.297", "ch4_fossil": "0.0000059", "n2o": "0.0000053"}},
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15", "ghg-protocol-corporate-and-scope3"]
+    },
+    "epa_2025_air_short_haul": {
+      "activity_type": "business_travel_air",
+      "unit": "passenger_mile",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_3",
+      "category": "business_travel",
+      "scope3_category": "category_6_business_travel",
+      "conversion_group": "distance_passenger_mile",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "mass_unit": "g", "mass_per_unit": {"co2": "207", "ch4_fossil": "0.0064", "n2o": "0.0066"}},
+      "applicability": {
+        "id": "epa_2025_air_short_haul",
+        "requires": {
+          "flight_haul": "short"
+        },
+        "description": "EPA Table 10 Air Travel - Short Haul (< 300 miles), per passenger-mile. Report each flight's passenger-miles under its own haul."
+      },
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15", "ghg-protocol-corporate-and-scope3"]
+    },
+    "epa_2025_air_medium_haul": {
+      "activity_type": "business_travel_air",
+      "unit": "passenger_mile",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_3",
+      "category": "business_travel",
+      "scope3_category": "category_6_business_travel",
+      "conversion_group": "distance_passenger_mile",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "mass_unit": "g", "mass_per_unit": {"co2": "129", "ch4_fossil": "0.0006", "n2o": "0.0041"}},
+      "applicability": {
+        "id": "epa_2025_air_medium_haul",
+        "requires": {
+          "flight_haul": "medium"
+        },
+        "description": "EPA Table 10 Air Travel - Medium Haul (>= 300 miles, < 2300 miles), per passenger-mile."
+      },
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15", "ghg-protocol-corporate-and-scope3"]
+    },
+    "epa_2025_air_long_haul": {
+      "activity_type": "business_travel_air",
+      "unit": "passenger_mile",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_3",
+      "category": "business_travel",
+      "scope3_category": "category_6_business_travel",
+      "conversion_group": "distance_passenger_mile",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "mass_unit": "g", "mass_per_unit": {"co2": "163", "ch4_fossil": "0.0006", "n2o": "0.0052"}},
+      "applicability": {
+        "id": "epa_2025_air_long_haul",
+        "requires": {
+          "flight_haul": "long"
+        },
+        "description": "EPA Table 10 Air Travel - Long Haul (>= 2300 miles), per passenger-mile."
+      },
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15", "ghg-protocol-corporate-and-scope3"]
+    },
+    "epa_2025_intercity_rail": {
+      "activity_type": "business_travel_rail",
+      "unit": "passenger_mile",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_3",
+      "category": "business_travel",
+      "scope3_category": "category_6_business_travel",
+      "conversion_group": "distance_passenger_mile",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "mass_unit": "g", "mass_per_unit": {"co2": "96", "ch4_fossil": "0.0080", "n2o": "0.0020"}},
+      "source_id": "epa-ghg-factor-hub-2025",
+      "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15", "ghg-protocol-corporate-and-scope3"]
+    },
+    "epa_2025_bus": {
+      "activity_type": "business_travel_bus",
+      "unit": "passenger_mile",
+      "region": "US",
+      "year": 2025,
+      "scope": "scope_3",
+      "category": "business_travel",
+      "scope3_category": "category_6_business_travel",
+      "conversion_group": "distance_passenger_mile",
+      "co2e_or_gas_breakdown": {"kind": "gas_breakdown", "mass_unit": "g", "mass_per_unit": {"co2": "66", "ch4_fossil": "0.0046", "n2o": "0.0019"}},
       "source_id": "epa-ghg-factor-hub-2025",
       "source_ids": ["epa-ghg-factor-hub-2025", "ipcc-ar6-wgi-ch7-table-7-15", "ghg-protocol-corporate-and-scope3"]
     }

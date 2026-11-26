@@ -40,7 +40,7 @@ class TypedSchema(unittest.TestCase):
         activity = schema["$defs"]["Activity"]
         self.assertEqual(set(activity["properties"]),
                          {"id", "activity_type", "quantity", "unit", "region", "year",
-                          "mobile_source_class"})
+                          "mobile_source_class", "flight_haul"})
         self.assertNotIn("required", activity)                       # TS1
         self.assertIsNot(activity.get("additionalProperties"), False)
         for value in {f["activity_type"] for f in core.PACK["factors"].values()} | \
